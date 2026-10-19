@@ -64,8 +64,8 @@ struct custom_protocol {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char* buffer, std::size_t size) {
-    input_.append(buffer, size);
+  void on_bytes_received(std::string_view input) {
+    input_.append(input);
     std::size_t consumed = 0;
     for (;;) {
       const std::string_view remaining(input_.data() + consumed,

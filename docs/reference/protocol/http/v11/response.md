@@ -451,15 +451,22 @@ Stores small payloads in response storage; larger ones use a raw writer.
 response& set_body(body::reader* source);
 ```
 
-Copies decoded payloads into response storage.
+Reads decoded payload bytes from *source* during this call and copies them into
+the response body. The response does not retain the pointer or take ownership
+of the reader. Reading advances the reader's position; large bodies may spill
+to file-backed storage. Passing `nullptr` replaces the current body with an
+empty one. A common source is
+[`request::get_body_reader()`](request.md#method-get-body-reader).
 
 **Parameters:**
 
-- **source:** Source data or object to read from. Declaration: `body::reader* source`.
+- **source:** Borrowed reader used only for this call, or `nullptr` for an
+  empty body. Declaration: `body::reader* source`.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
+**Errors:** Throws `std::runtime_error` if reading or writing the body fails.
+Other errors from the reader or storage may propagate.
 
 **Source:** [include/protocol/http/v11/response.h:472](../../../../../include/protocol/http/v11/response.h#L472)
 

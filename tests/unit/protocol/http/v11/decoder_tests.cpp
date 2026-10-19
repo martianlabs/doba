@@ -3747,3 +3747,37 @@ DOBA_TEST("decoder completes every residual split then returns to direct input")
     }
   }
 }
+
+DOBA_TEST("decoder replies own their bytes across reuse and destruction") {
+  for (const bool interim : {false, true}) {
+    std::optional<response> held;
+    {
+      decoder<request, response> value({});
+      const std::string source = interim
+          ? "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n"
+            "Content-Length: 3\r\n\r\n"
+          : "GET / HTTP/1.1\r\n\r\n";
+      std::string_view input(source);
+      auto result = value.deserialize(input);
+      DOBA_EXPECT_EQUAL(result.code,
+                        interim ? deserialization_status::kMoreBytesNeeded
+                                : deserialization_status::kInvalidSource);
+      DOBA_EXPECT(result.response.has_value());
+      held.emplace(std::move(*result.response));
+      if (interim) {
+        std::string_view body("abc");
+        auto completed = value.deserialize(body);
+        DOBA_EXPECT_EQUAL(completed.code, deserialization_status::kSucceeded);
+      }
+      std::string_view invalid("GET / HTTP/1.1\r\n\r\n");
+      auto following = value.deserialize(invalid);
+      DOBA_EXPECT_EQUAL(following.code, deserialization_status::kInvalidSource);
+      DOBA_EXPECT(following.response.has_value());
+    }
+    auto wire = held->serialize();
+    DOBA_EXPECT(wire.head.starts_with(interim ? "HTTP/1.1 100 Continue\r\n"
+                                              : "HTTP/1.1 400 Bad Request\r\n"));
+    DOBA_EXPECT_EQUAL(wire.body, interim ? std::string_view{}
+                                       : std::string_view("Invalid request content!"));
+  }
+}

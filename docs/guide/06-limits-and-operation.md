@@ -141,8 +141,9 @@ later responses; the policies do not preallocate their maximum sizes. The
 response itself borrows these strings until the transport has preserved the
 output in `on_send`. Replies queued behind pending asynchronous work are
 copied into the existing output queue before the strings are reused. Decoder
-interim and rejection replies use the same engine storage. Asynchronous
-handlers keep independent response storage throughout their execution.
+interim and rejection replies own their storage in the returned result.
+Asynchronous handlers keep independent response storage throughout their
+execution.
 
 An accepted body does not have to stay inline. The
 *request_body_memory_threshold* defaults to **16 KiB**; a larger incoming

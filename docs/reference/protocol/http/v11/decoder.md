@@ -58,20 +58,20 @@ Provides the http 1.1 decoder implementation.
 **METHOD** · *protocol::http::v11::decoder*
 
 ```cpp
-deserialization_result<RQty, RSty> deserialize(
-      std::string_view& input, std::string* reply_head = nullptr,
-      std::string* reply_body = nullptr);
+deserialization_result<RQty, RSty> deserialize(std::string_view& input);
 ```
 
 Consume one message, retaining only an unfinished message across calls.
+The input view advances past the consumed bytes. Interim and rejection
+responses returned in the result own their head and body storage; they do
+not borrow output buffers from the engine or decoder.
 
 **Parameters:**
 
 - **input:** Input data to process. Declaration: `std::string_view& input`.
-- **reply_head:** Optional output buffer for the response head. Declaration: `std::string* reply_head = nullptr`.
-- **reply_body:** Optional output buffer for the response body. Declaration: `std::string* reply_body = nullptr`.
 
-**Returns:** A value of type `deserialization_result<RQty, RSty>`.
+**Returns:** The decoding status, an optional completed request, and an
+optional owned interim or rejection response in `deserialization_result<RQty, RSty>`.
 
 **Source:** [include/protocol/http/v11/decoder.h:170](../../../../../include/protocol/http/v11/decoder.h#L170)
 
@@ -91,7 +91,7 @@ Returns the decoder's configuration.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/decoder.h:289](../../../../../include/protocol/http/v11/decoder.h#L289)
+**Source:** [include/protocol/http/v11/decoder.h:285](../../../../../include/protocol/http/v11/decoder.h#L285)
 
 <a id="method-make-response"></a>
 
@@ -107,7 +107,7 @@ Creates a response that owns its bytes, with the configured limits.
 
 **Returns:** A value of type `RSty`.
 
-**Source:** [include/protocol/http/v11/decoder.h:295](../../../../../include/protocol/http/v11/decoder.h#L295)
+**Source:** [include/protocol/http/v11/decoder.h:291](../../../../../include/protocol/http/v11/decoder.h#L291)
 
 <a id="method-make-response-2"></a>
 
@@ -128,4 +128,4 @@ Creates response.
 
 **Returns:** A value of type `RSty`.
 
-**Source:** [include/protocol/http/v11/decoder.h:299](../../../../../include/protocol/http/v11/decoder.h#L299)
+**Source:** [include/protocol/http/v11/decoder.h:295](../../../../../include/protocol/http/v11/decoder.h#L295)

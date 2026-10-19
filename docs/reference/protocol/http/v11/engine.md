@@ -160,15 +160,14 @@ Stops the engine lifecycle.
 **METHOD** · *protocol::http::v11::engine*
 
 ```cpp
-void on_bytes_received(const char* buffer, std::size_t size);
+void on_bytes_received(std::string_view input);
 ```
 
 Handles bytes received from the transport.
 
 **Parameters:**
 
-- **buffer:** Buffer used for the operation. Declaration: `const char* buffer`.
-- **size:** Number of elements or bytes, according to the declared type. Declaration: `std::size_t size`.
+- **input:** A borrowed view of the newly received bytes. Declaration: `std::string_view input`. The transport keeps these bytes immutable and valid throughout the call.
 
 **Returns:** No value (`void`).
 

@@ -99,7 +99,9 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char* bytes, std::size_t size) {
+  void on_bytes_received(std::string_view input) {
+    const auto* bytes = input.data();
+    const auto size = input.size();
     if (receive) { receive(*this, bytes, size); return; }
     if (capture) {
       capture(send);

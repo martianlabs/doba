@@ -125,17 +125,15 @@ class engine {
   // +-------------------------------------------------------------------------+
   // | Handles bytes received from the transport.                              |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char* buffer, std::size_t size) {
-    if (closed_ || !size) return;
-    std::string_view input(buffer, size);
+  void on_bytes_received(std::string_view input) {
+    if (closed_ || input.empty()) return;
     while (!closed_) {
       if (!synchronous_) {
         if (!async_->accepting()) return;
         if (async_->idle()) synchronous_ = true;
       }
       try {
-        deserialization_result result = decoder_.deserialize(
-            input, &response_head_, &response_body_);
+        deserialization_result result = decoder_.deserialize(input);
         if (result.code != deserialization_status::kSucceeded) {
           const bool rejected =
               result.code == deserialization_status::kInvalidSource;

@@ -51,23 +51,23 @@ A function that takes the head and body data, plus an optional source.
 
 ```cpp
 template <typename ENty>
-concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
+concept engine = requires(ENty& engine, std::string_view input,
                           protocol::send_delegate output,
                           std::function<void()> close) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-  { engine.on_bytes_received(buf, sze) } -> std::same_as<void>;
+  { engine.on_bytes_received(input) } -> std::same_as<void>;
 };
 ```
 
-Protocol engine contract. Input callbacks are serialized per connection and stop when closing begins. The output delegate accepts concurrent submissions from any thread. The transport owns and drains submitted output independently of the engine.
+Protocol engine contract. Input callbacks are serialized per connection and stop when closing begins. Input views borrow bytes that remain immutable and valid throughout the callback. The output delegate accepts concurrent submissions from any thread. The transport owns and drains submitted output independently of the engine.
 
 **Template parameters:**
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:63](../../../include/protocol/contracts.h#L63)
+**Source:** [include/protocol/contracts.h:64](../../../include/protocol/contracts.h#L64)
 
 <a id="concept-completion-engine"></a>
 
@@ -89,7 +89,7 @@ A stopped engine reports when all work accepted by it has completed. A false res
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:81](../../../include/protocol/contracts.h#L81)
+**Source:** [include/protocol/contracts.h:82](../../../include/protocol/contracts.h#L82)
 
 <a id="concept-engine-factory"></a>
 
@@ -112,4 +112,4 @@ Protocol engine factory contract.
 - **FNty:** `typename FNty`.
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:94](../../../include/protocol/contracts.h#L94)
+**Source:** [include/protocol/contracts.h:95](../../../include/protocol/contracts.h#L95)

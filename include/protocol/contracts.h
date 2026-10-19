@@ -54,19 +54,20 @@ namespace martianlabs::doba::protocol::contracts {
 // | Protocol engine contract.                                                 |
 // +---------------------------------------------------------------------------+
 // | Input callbacks are serialized per connection and stop when closing       |
-// | begins. The output delegate accepts concurrent submissions from           |
-// | any thread. The transport owns and drains submitted output independently  |
+// | begins. Input bytes stay immutable and valid during the callback.         |
+// | The output delegate accepts concurrent submissions from any thread.      |
+// | The transport owns and drains submitted output independently              |
 // | of the engine.                                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
-concept engine = requires(ENty& engine, const char* buf, std::size_t sze,
+concept engine = requires(ENty& engine, std::string_view input,
                           protocol::send_delegate output,
                           std::function<void()> close) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-  { engine.on_bytes_received(buf, sze) } -> std::same_as<void>;
+  { engine.on_bytes_received(input) } -> std::same_as<void>;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

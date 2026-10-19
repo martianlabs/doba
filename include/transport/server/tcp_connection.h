@@ -83,7 +83,7 @@ struct tcp_connection {
     if (received > capacity) {
       throw std::out_of_range("TCP receive size exceeds buffer");
     }
-    engine.on_bytes_received(buffer.get(), received);
+    engine.on_bytes_received({buffer.get(), received});
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |

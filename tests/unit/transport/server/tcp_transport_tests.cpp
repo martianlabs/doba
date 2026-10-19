@@ -26,6 +26,7 @@
 #include <functional>
 #include <limits>
 #include <stdexcept>
+#include <string_view>
 
 #include "protocol/contracts.h"
 #include "test_helper.h"
@@ -43,7 +44,7 @@ struct policy_engine {
   using policies_type = int;
   void set_on_send(martianlabs::doba::protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
-  void on_bytes_received(const char*, std::size_t) {
+  void on_bytes_received(std::string_view) {
     return;
   }
 };

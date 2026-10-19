@@ -33,6 +33,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 
@@ -91,7 +92,8 @@ struct drain_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char* bytes, [[maybe_unused]] std::size_t size) {
+  void on_bytes_received(std::string_view input) {
+    const auto* bytes = input.data();
     state_->entered++;
     const auto deadline = std::chrono::steady_clock::now() + 5s;
     while (!state_->release.load()) {
@@ -247,7 +249,7 @@ struct reader_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char*, std::size_t) {
+  void on_bytes_received(std::string_view) {
     namespace common = martianlabs::doba::common;
     common::reader source;
     std::size_t prefix_size = state_->single ? 0 : 1;

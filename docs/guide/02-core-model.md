@@ -78,16 +78,17 @@ checks four pieces:
   calls it when it has bytes to send.
 - **Closure.** *set_on_close* receives a callback the engine can use to ask
   the transport to close the connection.
-- **Input.** *on_bytes_received* gets a buffer pointer and the number of newly
-  received bytes. It returns void. The engine must process or copy those
-  bytes before returning; the transport reuses the buffer on the next read.
+- **Input.** *on_bytes_received* gets a *std::string_view* of the newly
+  received bytes, immutable throughout the call. It returns void. The engine
+  must process or copy those bytes before returning; the transport reuses
+  the buffer on the next read.
 
 Here are the three calls as the concept checks them:
 
 ```cpp
 { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
 { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-{ engine.on_bytes_received(buf, sze) } -> std::same_as<void>;
+{ engine.on_bytes_received(input) } -> std::same_as<void>;
 ```
 
 The [send delegate](../../include/protocol/contracts.h) is that output

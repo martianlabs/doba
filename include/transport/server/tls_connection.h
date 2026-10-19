@@ -246,7 +246,7 @@ struct tls_connection {
       }
       if (result.state != tls_session::status::ready) return true;
       if (!result.size) return true;
-      engine.on_bytes_received(plaintext_.get(), result.size);
+      engine.on_bytes_received({plaintext_.get(), result.size});
       if (close_requested_) return true;
     }
   }

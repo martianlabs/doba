@@ -26,6 +26,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "http_server.h"
@@ -115,7 +116,7 @@ struct fake_transport {
         if (source) source->read_all(observed.bytes);
       });
       value.set_on_close([]() {});
-      value.on_bytes_received(request.data(), request.size());
+      value.on_bytes_received(request);
     }
   }
   // +=========================================================================+
@@ -189,7 +190,7 @@ struct bad_engine : http::engine<http::request, http::response> {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct bad_receive_engine : http::engine<http::request, http::response> {
-  void on_bytes_received(const char*, std::size_t, std::size_t);
+  void on_bytes_received(const char*, std::size_t);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -212,7 +213,7 @@ struct custom_engine {
   custom_engine(const policies_type&, const ROty&) {}
   void set_on_send(protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
-  void on_bytes_received(const char*, std::size_t) {
+  void on_bytes_received(std::string_view) {
     return;
   }
 };
@@ -527,20 +528,19 @@ DOBA_TEST("engine factories preserve policies and independence") {
     engines[i]->set_on_close([&, i]() { closed[i]++; });
   }
   const std::string partial = "GET /first HTTP/1.1\r\nHost: local";
-  first.on_bytes_received(partial.data(), partial.size());
+  first.on_bytes_received(partial);
   const std::string complete = partial + "host\r\n\r\n";
-  second.on_bytes_received(complete.data(), complete.size());
+  second.on_bytes_received(complete);
   DOBA_EXPECT(bytes[0].empty());
   DOBA_EXPECT(bytes[1].ends_with("\r\n\r\nfirst"));
   DOBA_EXPECT_EQUAL(calls, 1);
-  first.on_bytes_received(complete.data() + partial.size(),
-                          complete.size() - partial.size());
+  first.on_bytes_received(std::string_view(complete).substr(partial.size()));
   DOBA_EXPECT_EQUAL(calls, 2);
   const std::string rejected =
       "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n";
   for (int i = 0; i < 2; i++) {
     bytes[i].clear();
-    engines[i]->on_bytes_received(rejected.data(), rejected.size());
+    engines[i]->on_bytes_received(rejected);
     DOBA_EXPECT(bytes[i].starts_with("HTTP/1.1 413 "));
     DOBA_EXPECT_EQUAL(closed[i], 1);
   }

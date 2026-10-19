@@ -65,16 +65,17 @@ The input method appends each new block to engine-owned storage and sends
 complete lines:
 
 ```cpp
-void on_bytes_received(const char* buffer, std::size_t size) {
-  input_.append(buffer, size);
+void on_bytes_received(std::string_view input) {
+  input_.append(input);
   std::size_t consumed = 0;
   for (;;) {
     const std::string_view remaining(input_.data() + consumed,
                                       input_.size() - consumed);
     const auto end = remaining.find('\n');
     if (end == std::string_view::npos) break;
-    on_send_("echo: ", remaining.substr(0, end + 1), nullptr);
-    consumed += end + 1;
+    const auto line = remaining.substr(0, end + 1);
+    on_send_("echo: ", line, nullptr);
+    consumed += line.size();
   }
   input_.erase(0, consumed);
 }

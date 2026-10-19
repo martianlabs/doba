@@ -32,6 +32,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 
 #include "protocol/contracts.h"
@@ -88,7 +89,9 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(const char* bytes, [[maybe_unused]] std::size_t size) {
+  void on_bytes_received(std::string_view input) {
+    const auto* bytes = input.data();
+    [[maybe_unused]] const auto size = input.size();
     if (!size) throw std::runtime_error("Invalid input");
     if (state->receive) { state->receive(*this, bytes, size); return; }
     echo(bytes, size);

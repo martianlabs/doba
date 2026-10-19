@@ -438,9 +438,14 @@ Returns target authority type.
 auto get_body_reader() const;
 ```
 
-Returns body reader.
+Returns a non-owning pointer to this request's body reader. Reading through
+the pointer advances the reader. Use it while the request is alive; do not
+delete it or keep it after the request's lifetime. It can be passed directly
+to [`response::set_body(body::reader*)`](response.md#method-set-body-2), which
+reads it during that call.
 
-**Returns:** A `body::reader*` when a reader exists; otherwise `nullptr`.
+**Returns:** A borrowed `body::reader*` when a reader exists; otherwise
+`nullptr`.
 
 **Source:** [include/protocol/http/v11/request.h:258](../../../../../include/protocol/http/v11/request.h#L258)
 

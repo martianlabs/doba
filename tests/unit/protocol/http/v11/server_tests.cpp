@@ -28,6 +28,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -97,7 +98,7 @@ struct memory_transport {
   // +-------------------------------------------------------------------------+
   std::string receive(std::string_view wire) {
     bytes.clear();
-    connection->on_bytes_received(wire.data(), wire.size());
+    connection->on_bytes_received(wire);
     return bytes;
   }
   // +=========================================================================+
