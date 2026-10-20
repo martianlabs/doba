@@ -54,19 +54,34 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install OpenSSL
+        if: matrix.tls == 'ON'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+
       - name: Configure
         run: >-
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
           -DDOBA_ENABLE_TLS=${{ matrix.tls }}
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
 
-      - name: Test
-        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+      - name: Verify test inventory
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
+          -DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}
+          -P cmake/ci_test_inventory.cmake
+
+      - name: Run Release tests
+        if: matrix.build_type == 'Release'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
 
       - name: Install
         if: matrix.name == 'GCC Release'
@@ -86,10 +101,6 @@ jobs:
       - name: Build package consumer (Debug)
         if: matrix.name == 'GCC Release'
         run: cmake --build out/build/package-consumer-debug
-
-      - name: Run package TLS consumer (Debug)
-        if: matrix.name == 'GCC Release'
-        run: out/build/package-consumer-debug/doba_package_tls_consumer
 
       - name: Configure package consumer (Release)
         if: matrix.name == 'GCC Release'
@@ -127,6 +138,20 @@ jobs:
         if: matrix.name == 'GCC Release'
         run: >-
           out/build/add-subdirectory-consumer/doba_package_tls_consumer
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: |
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+          retention-days: 14
 
   windows:
     name: Windows (MSVC ${{ matrix.build_type }})
@@ -191,8 +216,18 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.build_preset }}
 
-      - name: Test
-        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+      - name: Verify test inventory
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
+          -DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}
+          -P cmake/ci_test_inventory.cmake
+
+      - name: Run Release tests
+        if: matrix.build_type == 'Release'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
 
       - name: Install TLS package
         if: matrix.tls == 'ON'
@@ -237,8 +272,22 @@ jobs:
         run: >-
           out/build/add-subdirectory-tls/doba_package_tls_consumer.exe
 
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.build_type }}
+          path: |
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+          retention-days: 14
+
   sanitizer:
-    name: Ubuntu (${{ matrix.name }})
+    name: Ubuntu (${{ matrix.name }} Release TLS)
     runs-on: ubuntu-latest
 
     strategy:
@@ -265,19 +314,115 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install OpenSSL and symbolizer
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev llvm
+
       - name: Configure
         run: >-
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
-          "-DCMAKE_CXX_FLAGS=-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
+          -DDOBA_ENABLE_TLS=ON
+          "-DCMAKE_CXX_FLAGS=-g -fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
 
+      - name: Verify test inventory
+        run: >-
+          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
+          -DDOBA_CI_REQUIRE_TLS=ON -P cmake/ci_test_inventory.cmake
+
       - name: Test
-        run: ctest --test-dir ${{ matrix.build_dir }} --output-on-failure
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.name }}-Release-TLS
+          path: |
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+          retention-days: 14
+
+  windows-asan:
+    name: Windows (MSVC ASan Release TLS)
+    runs-on: windows-latest
+
+    env:
+      ASAN_OPTIONS: halt_on_error=1
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+
+      - name: Read vcpkg revision
+        id: vcpkg-revision
+        run: echo "revision=$(git -C C:/vcpkg rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-openssl-x64-windows-${{ steps.vcpkg-revision.outputs.revision }}
+
+      - name: Install OpenSSL
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite
+        run: vcpkg install openssl:x64-windows
+
+      - name: Configure
+        run: >-
+          cmake -S . -B out/build/msvc-asan -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          -DDOBA_ENABLE_TLS=ON
+          "-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /fsanitize=address /Zi"
+          "-DCMAKE_EXE_LINKER_FLAGS=/INCREMENTAL:NO /DEBUG"
+
+      - name: Build
+        run: cmake --build out/build/msvc-asan
+
+      - name: Verify test inventory
+        run: >-
+          cmake -DDOBA_CI_BUILD_DIR=out/build/msvc-asan
+          -DDOBA_CI_REQUIRE_TLS=ON -P cmake/ci_test_inventory.cmake
+
+      - name: Test
+        run: >-
+          ctest --test-dir out/build/msvc-asan
+          --output-on-failure --no-tests=error
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ASan-Release-TLS
+          path: |
+            out/build/msvc-asan/CMakeCache.txt
+            out/build/msvc-asan/CMakeFiles/CMakeConfigureLog.yaml
+            out/build/msvc-asan/CMakeFiles/*/CMakeCXXCompiler.cmake
+            out/build/msvc-asan/compile_commands.json
+            out/build/msvc-asan/ci-evidence/
+            out/build/msvc-asan/Testing/Temporary/
+            out/build/msvc-asan/**/*.pdb
+          retention-days: 14
 
   cmake-minimum:
     name: Ubuntu (CMake 3.20.6)
@@ -295,15 +440,38 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B out/build/cmake-3.20 -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=g++
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
         run: cmake --build out/build/cmake-3.20
 
+      - name: Verify test inventory
+        run: >-
+          cmake -DDOBA_CI_BUILD_DIR=out/build/cmake-3.20
+          -DDOBA_CI_REQUIRE_TLS=OFF -P cmake/ci_test_inventory.cmake
+
       - name: Test
-        run: ctest --test-dir out/build/cmake-3.20 --output-on-failure
+        run: >-
+          ctest --test-dir out/build/cmake-3.20
+          --output-on-failure --no-tests=error
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-cmake-minimum-Release
+          path: |
+            out/build/cmake-3.20/CMakeCache.txt
+            out/build/cmake-3.20/CMakeFiles/CMakeOutput.log
+            out/build/cmake-3.20/CMakeFiles/CMakeError.log
+            out/build/cmake-3.20/CMakeFiles/*/CMakeCXXCompiler.cmake
+            out/build/cmake-3.20/compile_commands.json
+            out/build/cmake-3.20/ci-evidence/
+            out/build/cmake-3.20/Testing/Temporary/
+          retention-days: 14
 
   release:
     name: Create GitHub Release
@@ -312,6 +480,7 @@ jobs:
       - linux
       - windows
       - sanitizer
+      - windows-asan
       - cmake-minimum
     runs-on: ubuntu-latest
     permissions:
