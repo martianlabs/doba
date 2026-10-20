@@ -559,6 +559,34 @@ jobs:
             out/build/fuzz/compile_commands.json
             out/build/fuzz/CMakeFiles/*/CMakeCXXCompiler.cmake
 
+  mutation:
+    name: Ubuntu (mutation detection Release ASan UBSan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install Clang runtime
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev
+      - name: Verify original tests and detect three mutants
+        run: >-
+          python3 tests/mutation/run_detection.py --compiler /usr/bin/clang++
+          --output out/mutations
+      - name: Upload mutation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-detection-Release
+          retention-days: 14
+          path: |
+            out/mutations/**/results.json
+            out/mutations/**/revision.txt
+            out/mutations/**/compiler.txt
+            out/mutations/**/source-sha256.json
+            out/mutations/**/mutation.diff
+            out/mutations/**/*.log
+
   release:
     name: Create GitHub Release
     if: github.event_name == 'workflow_dispatch' && inputs.create_release
@@ -569,6 +597,7 @@ jobs:
       - windows-asan
       - cmake-minimum
       - fuzz
+      - mutation
     runs-on: ubuntu-latest
     permissions:
       contents: write
