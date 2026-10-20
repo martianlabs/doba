@@ -251,158 +251,186 @@ C++20 requirement, and system threading dependency.
 
 *Correct is non-negotiable.*
 
-A segfault with excellent throughput is still a segfault. So, before doba
-gets anywhere near a victory lap, we poke it where it hurts.
+We like a good benchmark as much as the next person. But if a server needs
+well-behaved clients and a bit of luck to stay up, the numbers can wait.
+Here's what we put doba through before letting it brag about being fast.
 
 <a href="resources/readme/tests/unit.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow.svg">
-    <img src="resources/readme/tests/unit.svg" alt="1,000+ unit tests pick fights with the details." width="100%">
+    <img src="resources/readme/tests/unit.svg" alt="1,000+ unit tests. Yes, even for that." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/unit-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow-dark.svg">
-    <img src="resources/readme/tests/unit-dark.svg" alt="1,000+ unit tests pick fights with the details." width="100%">
+    <img src="resources/readme/tests/unit-dark.svg" alt="1,000+ unit tests. Yes, even for that." width="100%">
   </picture>
 </a>
 
-HTTP parsing, raw and
-chunked bodies, routing, authentication, storage, and byte ownership.
-The [unit suite](tests/unit) brings empty input, malformed headers,
-exact limits, and that one extra byte somebody swore would never arrive.
+An empty buffer. A header that's almost legal. A body that fits the limit
+exactly, followed by one that misses it by a single byte. This is where
+"surely nobody would send that" goes to die.
+
+The [unit suite](tests/unit) checks HTTP parsing, raw and chunked bodies,
+routing, authentication, storage, and who actually owns those bytes once
+the buffer gets reused. Small details. Expensive bugs.
 
 <a href="resources/readme/tests/integration.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow.svg">
-    <img src="resources/readme/tests/integration.svg" alt="160+ integration cases mess with real connections." width="100%">
+    <img src="resources/readme/tests/integration.svg" alt="160+ integration cases. Sockets included." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/integration-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow-dark.svg">
-    <img src="resources/readme/tests/integration-dark.svg" alt="160+ integration cases mess with real connections." width="100%">
+    <img src="resources/readme/tests/integration-dark.svg" alt="160+ integration cases. Sockets included." width="100%">
   </picture>
 </a>
 
-The
-[integration suite](tests/integration) fragments messages, pipelines requests,
-disconnects clients, and shuts down actual TCP and TLS servers. Hostile
-requests arrive with another request tucked behind them. Getting rejected
-doesn't buy the one behind a free pass to a handler.
+That lovely request from the example? It may turn up in pieces, with three
+more requests behind it, from a client that hangs up halfway through.
+The [integration suite](tests/integration) runs actual TCP and TLS servers
+and makes those situations happen, including shutdown while work is still
+in flight.
+
+We also send hostile requests with another request right behind them.
+Rejecting the first is only half the job: the second mustn't sneak through
+to a handler while everyone's busy showing the first one the door.
 
 <a href="resources/readme/tests/concurrency.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow.svg">
-    <img src="resources/readme/tests/concurrency.svg" alt="Handlers finish when we say so." width="100%">
+    <img src="resources/readme/tests/concurrency.svg" alt="Take your time. Stay in line." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/concurrency-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow-dark.svg">
-    <img src="resources/readme/tests/concurrency-dark.svg" alt="Handlers finish when we say so." width="100%">
+    <img src="resources/readme/tests/concurrency-dark.svg" alt="Take your time. Stay in line." width="100%">
   </picture>
 </a>
 
-We suspend them, release them out of
-order, and arrange inconvenient meetings between receives, completions,
-late callbacks, and shutdown. Responses still need to keep their place;
-objects still need to stay alive for their users. CI repeats the
+Request two finishes before request one. Meanwhile, another receive lands,
+shutdown starts, and a callback turns up late. You don't want to discover
+what that combination does on somebody else's server.
+
+So we suspend handlers and choose when to release them. We check response
+order and object lifetimes at those awkward overlaps, then repeat the
 [critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
-**200 times under ThreadSanitizer**.
+**200 times under ThreadSanitizer** in CI. The scheduler doesn't get to
+decide whether we exercised the interesting bit today.
 
 <a href="resources/readme/tests/resilience.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow.svg">
-    <img src="resources/readme/tests/resilience.svg" alt="Our test clients are absolute pests." width="100%">
+    <img src="resources/readme/tests/resilience.svg" alt="We wrote the clients nobody wants." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/resilience-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow-dark.svg">
-    <img src="resources/readme/tests/resilience-dark.svg" alt="Our test clients are absolute pests." width="100%">
+    <img src="resources/readme/tests/resilience-dark.svg" alt="We wrote the clients nobody wants." width="100%">
   </picture>
 </a>
 
-Tiny reads. Suspended handlers.
-Abrupt resets. The
-[resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
-mixes them across multiple TCP and TLS clients, spills bodies to disk,
-drains, restarts, and does it again. Then comes the headcount: payloads in
-order, handlers cleaned up, temporary files gone, handles/descriptors
-checked after draining. Memory use gets recorded after warmup, too.
+One client reads in tiny mouthfuls. Another resets the connection.
+Handlers are suspended, bodies spill to disk, and several TCP and TLS
+clients are doing this at once. Then we drain the server, restart it,
+and give the [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
+another go.
+
+Surviving isn't the whole check. Did the payloads arrive in order? Are the
+handlers gone? Did we leave temporary files lying around? We check
+handles/descriptors after draining and record memory use after warmup.
+"It didn't crash" is a fairly low bar for a server.
 
 <a href="resources/readme/tests/fuzzing.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow.svg">
-    <img src="resources/readme/tests/fuzzing.svg" alt="The fuzzers have terrible manners." width="100%">
+    <img src="resources/readme/tests/fuzzing.svg" alt="HTTP, as written by a fuzzer." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/fuzzing-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow-dark.svg">
-    <img src="resources/readme/tests/fuzzing-dark.svg" alt="The fuzzers have terrible manners." width="100%">
+    <img src="resources/readme/tests/fuzzing-dark.svg" alt="HTTP, as written by a fuzzer." width="100%">
   </picture>
 </a>
 
-Our
-[HTTP decoder and chunked harnesses](tests/fuzz/README.md) check consumption,
-message boundaries, fragmentation, buffer ownership, and memory/disk
-storage while libFuzzer supplies the questionable bytes. Each gets
-**60 seconds per CI run** under AddressSanitizer and UndefinedBehaviorSanitizer,
-with a cached corpus. If something breaks, we keep the input. Receipts matter.
+We can dream up plenty of bad HTTP. libFuzzer has more time for this sort
+of thing, and considerably less taste.
+
+Our [HTTP decoder and chunked harnesses](tests/fuzz/README.md) feed its bytes
+through checks for consumption, message boundaries, fragmentation, buffer
+ownership, and memory/disk storage. Each harness gets **60 seconds per CI
+run** under AddressSanitizer and UndefinedBehaviorSanitizer, using a cached
+corpus so it doesn't start from scratch every time.
+
+When an input breaks something, we keep it. That particular nonsense now
+has a permanent seat in the test suite.
 
 <a href="resources/readme/tests/mutation.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow.svg">
-    <img src="resources/readme/tests/mutation.svg" alt="Three bugs, planted on purpose." width="100%">
+    <img src="resources/readme/tests/mutation.svg" alt="We broke it. The tests had better notice." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/mutation-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow-dark.svg">
-    <img src="resources/readme/tests/mutation-dark.svg" alt="Three bugs, planted on purpose." width="100%">
+    <img src="resources/readme/tests/mutation-dark.svg" alt="We broke it. The tests had better notice." width="100%">
   </picture>
 </a>
 
-In private header copies, the
-[mutation checks](tests/mutation/README.md) disable a body limit, break
-response ordering, and allow dispatch after rejection. Each bug must trip
-its intended assertion; the original code must pass. Green is only useful
-if red still works.
+A green tick looks reassuring. You can also get one from a test that checks
+absolutely nothing useful.
+
+The [mutation checks](tests/mutation/README.md) deliberately sabotage private
+copies of the headers: remove a body limit, break response ordering, let
+requests reach a handler after rejection. Three bugs we very much want
+caught. Each has to trip its intended assertion, while the original code
+passes. If the broken version gets a green tick too, we've got work to do.
 
 <a href="resources/readme/tests/runners.svg#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow.svg">
-    <img src="resources/readme/tests/runners.svg" alt="Even the test runner gets interrogated." width="100%">
+    <img src="resources/readme/tests/runners.svg" alt="The test runner needs tests, too." width="100%">
   </picture>
 </a>
 <a href="resources/readme/tests/runners-dark.svg#gh-dark-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow-dark.svg">
-    <img src="resources/readme/tests/runners-dark.svg" alt="Even the test runner gets interrogated." width="100%">
+    <img src="resources/readme/tests/runners-dark.svg" alt="The test runner needs tests, too." width="100%">
   </picture>
 </a>
 
-Filters, failure reports, exceptions,
-timeouts, and cleanup paths have their own
-[unit](tests/unit/helpers/test_helper_tests.cpp) and
-[integration](tests/integration/helpers/test_helper_tests.cpp) metatests.
-A stuck test has a deadline and leaves its name at the scene.
+Nothing like spending an afternoon debugging the server and finding out
+the test runner was lying to you.
 
-The [CI matrix](.github/workflows/ci.yml) builds with **GCC and Clang on Linux**
-and **MSVC on Windows**, with strict warnings. Linux runs **ASan, UBSan, and
-TSan with TLS**; Windows runs **ASan with TLS**. **Release gets the workout,
-optimizations and all. Debug gets a compile check.** The test tooling itself
-uses C++ and CMake.
+Ours gets its own [unit](tests/unit/helpers/test_helper_tests.cpp) and
+[integration](tests/integration/helpers/test_helper_tests.cpp) metatests:
+filters must select the right cases, failures must get reported, and
+exceptions, timeouts, and cleanup paths must behave. A stuck test gets a
+deadline and a name in the report, so you have somewhere better to start
+than "well, CI hung."
 
-We also check **CMake 3.20**, then build and run separate applications using
-the installed package and **add_subdirectory**. A library should survive
-moving out of its parents' build directory.
+All of this has to get past the [CI matrix](.github/workflows/ci.yml):
+**GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
+Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan with TLS**.
+And yes, **the tests run in Release, optimizations and all**. That's the code
+we care about running. Debug gets a compile check. The test tooling uses
+C++ and CMake; building doba is quite enough setup for testing doba.
 
-For more awkward questions from outside the family, there are adapters for
-manual protocol checks with [h1spec](compliance/http/v11/h1spec/README.md) and
-[Http11Probe](compliance/http/v11/http11probe/README.md).
+We also check **CMake 3.20** and build and run separate applications using
+both the installed package and **add_subdirectory**. It would be a bit
+embarrassing if the library only worked inside its own build directory.
+
+Fancy a second opinion? There are also adapters for manual protocol checks
+with [h1spec](compliance/http/v11/h1spec/README.md) and
+[Http11Probe](compliance/http/v11/http11probe/README.md). We wrote the server
+and the tests; letting somebody else's tools have a go seems only fair.
 
 ---
 
