@@ -32,6 +32,11 @@ add_test(
   NAME doba_unit_tests
   COMMAND doba_unit_tests
 )
+add_test(
+  NAME doba_engine_concurrency_tests
+  COMMAND doba_unit_tests
+          --file protocol/http/v11/engine_concurrency_tests.cpp
+)
 
 add_executable(
   doba_unit_test_helper_probe
@@ -68,6 +73,7 @@ add_test(
 )
 set_tests_properties(
   doba_unit_tests
+  doba_engine_concurrency_tests
   doba_unit_test_helper
   PROPERTIES
   TIMEOUT 120

@@ -42,6 +42,7 @@
 #include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "../../../helpers/concurrency.h"
 #include "wait_count.h"
 #include "transport/server/tcp.h"
 
@@ -715,21 +716,26 @@ DOBA_TEST("quiesce waits for an accepting callback") {
   configuration.worker_count = 2;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::promise<void> entered;
-  std::promise<void> release;
+  martianlabs::doba::tests::manual_event release;
   auto active = entered.get_future();
-  auto ready = release.get_future().share();
   transport.set_on_connection([&]() {
     entered.set_value();
-    ready.wait();
+    release.wait();
   });
   transport.set_on_disconnection([]() {});
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    release.open();
+    transport.stop();
+  });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
   auto quiescing =
       std::async(std::launch::async, [&]() { transport.quiesce(); });
+  martianlabs::doba::tests::scope_exit release_before_join(
+      [&] { release.open(); });
   const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
-  release.set_value();
+  release.open();
   quiescing.get();
   client.close();
   transport.stop();
@@ -751,22 +757,27 @@ DOBA_TEST("stop preserves accepting callback order") {
   configuration.worker_count = 2;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::promise<void> entered;
-  std::promise<void> release;
+  martianlabs::doba::tests::manual_event release;
   auto active = entered.get_future();
-  auto ready = release.get_future().share();
   std::atomic<int> disconnected{0};
   transport.set_on_connection([&]() {
     entered.set_value();
-    ready.wait();
+    release.wait();
   });
   transport.set_on_disconnection([&]() { disconnected++; });
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    release.open();
+    transport.stop();
+  });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
   auto stopping = std::async(std::launch::async, [&]() { transport.stop(); });
+  martianlabs::doba::tests::scope_exit release_before_join(
+      [&] { release.open(); });
   const bool pending = stopping.wait_for(200ms) == std::future_status::timeout;
   const bool ordered = disconnected.load() == 0;
-  release.set_value();
+  release.open();
   stopping.get();
   client.close();
   DOBA_EXPECT(pending);
@@ -781,7 +792,7 @@ DOBA_TEST("stop preserves accepting callback order") {
 DOBA_TEST("quiesce waits for linux startup") {
   struct copy_gate {
     std::promise<void> entered;
-    std::shared_future<void> release;
+    martianlabs::doba::tests::manual_event release;
     std::atomic<bool> enabled{false};
     std::atomic<bool> once{false};
   };
@@ -802,8 +813,6 @@ DOBA_TEST("quiesce waits for linux startup") {
   auto state = std::make_shared<drain_state>();
   auto gate = std::make_shared<copy_gate>();
   auto copying = gate->entered.get_future();
-  std::promise<void> release;
-  gate->release = release.get_future().share();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -817,11 +826,13 @@ DOBA_TEST("quiesce waits for linux startup") {
   transport.set_on_disconnection([]() {});
   gate->enabled = true;
   auto starting = std::async(std::launch::async, [&]() { transport.start(); });
+  martianlabs::doba::tests::scope_exit release_start(
+      [&] { gate->release.open(); });
   DOBA_EXPECT(copying.wait_for(5s) == std::future_status::ready);
   auto quiescing =
       std::async(std::launch::async, [&]() { transport.quiesce(); });
   const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
-  release.set_value();
+  gate->release.open();
   starting.get();
   quiescing.get();
   transport.stop();
@@ -844,22 +855,24 @@ DOBA_TEST("quiesce permits callback updates to fail promptly") {
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<bool> prompt{false};
-  std::promise<void> attempt;
-  std::promise<void> done;
-  auto requested = attempt.get_future().share();
-  auto completed = done.get_future().share();
+  martianlabs::doba::tests::manual_event attempt, done;
   transport.set_on_connection([&]() { connected++; });
   transport.set_on_disconnection([&]() {
-    attempt.set_value();
-    prompt = completed.wait_for(1s) == std::future_status::ready;
+    attempt.open();
+    prompt = done.wait_for(1s);
   });
   std::jthread setter([&]() {
-    requested.wait();
+    attempt.wait();
     try {
       transport.set_on_connection([]() {});
     } catch (const std::runtime_error&) {
     }
-    done.set_value();
+    done.open();
+  });
+  martianlabs::doba::tests::scope_exit finish_setter([&] {
+    attempt.open();
+    if (setter.joinable()) setter.join();
+    transport.stop();
   });
   transport.start();
   DOBA_EXPECT(client.connect(port));

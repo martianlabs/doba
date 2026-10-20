@@ -31,6 +31,8 @@
 #include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "../../helpers/concurrency.h"
+#include "common/task.h"
 
 // +===========================================================================+
 // | [>] probe passes                                            ( test-case ) |
@@ -73,7 +75,45 @@ DOBA_TEST("probe continues after failures") {
 // | [>] probe blocks                                            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("probe blocks") {
-  std::this_thread::sleep_for(std::chrono::seconds(30));
+  struct blocked_cleanup {
+    ~blocked_cleanup() {
+      std::puts("probe blocked cleanup");
+      std::fflush(stdout);
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
+  } cleanup;
+}
+
+DOBA_TEST("probe failure releases suspended work and joins threads") {
+  using namespace martianlabs::doba;
+  tests::manual_event pending;
+  std::atomic<bool> completed{false};
+  tests::integration::tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  tests::scope_exit release_on_failure([&] { pending.open(); });
+  server.add_route("GET", "/", [&](const protocol::http::v11::request&,
+                                   protocol::http::v11::response& res)
+      -> common::task<void> {
+    co_await pending;
+    completed = true;
+    res.ok_200().set_body("done");
+  });
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET / HTTP/1.1\r\nHost: a\r\n\r\n"));
+  DOBA_EXPECT(pending.wait_for_waiters(1));
+  const auto exercise = [&]() {
+    std::jthread waiter([&] {
+      server.stop();
+    });
+    tests::scope_exit release([&] { pending.open(); });
+    DOBA_EXPECT(false);
+  };
+  exercise();
+  DOBA_EXPECT(completed.load());
+  std::puts("probe suspended cleanup complete");
 }
 
 // +===========================================================================+

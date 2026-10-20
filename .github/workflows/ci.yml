@@ -340,6 +340,13 @@ jobs:
           ctest --test-dir ${{ matrix.build_dir }}
           --output-on-failure --no-tests=error
 
+      - name: Repeat critical interleavings under TSan
+        if: matrix.sanitizer == 'thread'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          -R '^doba_engine_concurrency_tests$'
+          --repeat until-fail:200 --output-on-failure --no-tests=error
+
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@v4

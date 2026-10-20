@@ -626,52 +626,6 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
   DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nlater"));
 }
 
-DOBA_TEST("engine serializes concurrent asynchronous sends") {
-  router<request, response> routes;
-  std::coroutine_handle<> first;
-  std::coroutine_handle<> second;
-  routes.add("GET", "/first", [&first](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{first};
-    make_response(res, "first");
-  });
-  routes.add("GET", "/second", [&second](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{second};
-    make_response(res, "second");
-  });
-  connection current(routes);
-  std::atomic<bool> entered{false};
-  std::atomic<bool> release{false};
-  std::atomic<int> sending{0};
-  std::atomic<bool> overlap{false};
-  current.value.set_on_send(
-      [&](std::string_view head, std::string_view body,
-          std::unique_ptr<reader>) {
-        if (sending.fetch_add(1) != 0) overlap = true;
-        if (body == "first") {
-          entered = true;
-          while (!release.load()) std::this_thread::yield();
-        }
-        current.wire.append(head).append(body);
-        sending--;
-      });
-  current.receive(
-      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
-      "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  std::jthread first_thread([&]() { first.resume(); });
-  while (!entered.load()) std::this_thread::yield();
-  std::jthread second_thread([&]() { second.resume(); });
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  release = true;
-  first_thread.join();
-  second_thread.join();
-  DOBA_EXPECT(!overlap.load());
-  const auto next = current.wire.find("HTTP/1.1", 1);
-  DOBA_EXPECT(next != std::string::npos);
-  DOBA_EXPECT(current.wire.substr(0, next).ends_with("\r\n\r\nfirst"));
-  DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nsecond"));
-}
 
 DOBA_TEST("engine closes after an asynchronous handler error") {
   router<request, response> routes;

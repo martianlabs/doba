@@ -70,7 +70,13 @@ DOBA_TEST("probe continues after failures") {
 // | [>] probe blocks                                            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("probe blocks") {
-  std::this_thread::sleep_for(std::chrono::seconds(30));
+  struct blocked_cleanup {
+    ~blocked_cleanup() {
+      std::puts("probe blocked cleanup");
+      std::fflush(stdout);
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
+  } cleanup;
 }
 
 // +===========================================================================+
