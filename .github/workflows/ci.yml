@@ -480,6 +480,85 @@ jobs:
             out/build/cmake-3.20/Testing/Temporary/
           retention-days: 14
 
+  fuzz:
+    name: Ubuntu (fuzz ${{ matrix.harness }} Release ASan UBSan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: [decoder, chunked]
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Restore evolving corpus
+        uses: actions/cache@v4
+        with:
+          path: out/fuzz-corpus/${{ matrix.harness }}
+          key: fuzz-${{ runner.os }}-${{ matrix.harness }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fuzz-${{ runner.os }}-${{ matrix.harness }}-
+
+      - name: Install Clang fuzzing runtime
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
+
+      - name: Generate canonical seeds
+        run: python3 tests/fuzz/seed_corpus.py out/fuzz-corpus
+
+      - name: Configure Release fuzzers
+        run: >-
+          cmake -S . -B out/build/fuzz -G Ninja
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DDOBA_BUILD_FUZZERS=ON -DDOBA_BUILD_TESTS=OFF
+          -DDOBA_BUILD_EXAMPLES=OFF -DDOBA_ENABLE_STRICT_WARNINGS=ON
+
+      - name: Build harness
+        run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }}
+
+      - name: Record reproduction environment
+        shell: bash
+        run: |
+          mkdir -p out/fuzz-artifacts/${{ matrix.harness }}
+          git rev-parse HEAD > out/fuzz-artifacts/revision.txt
+          /usr/bin/clang++ --version > out/fuzz-artifacts/compiler.txt
+          uname -a > out/fuzz-artifacts/platform.txt
+
+      - name: Replay corpus
+        shell: bash
+        run: |
+          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }} \
+            -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
+            -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 | tee out/fuzz-artifacts/replay.log
+
+      - name: Fuzz for 60 seconds
+        shell: bash
+        run: |
+          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }} \
+            -max_total_time=60 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
+            -dict=tests/fuzz/http.dict -print_final_stats=1 \
+            -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 | tee out/fuzz-artifacts/campaign.log
+
+      - name: Upload fuzz evidence and reproducers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-${{ matrix.harness }}-Release
+          retention-days: 14
+          path: |
+            out/fuzz-corpus/${{ matrix.harness }}/
+            out/fuzz-artifacts/
+            out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}
+            out/build/fuzz/CMakeCache.txt
+            out/build/fuzz/compile_commands.json
+            out/build/fuzz/CMakeFiles/*/CMakeCXXCompiler.cmake
+
   release:
     name: Create GitHub Release
     if: github.event_name == 'workflow_dispatch' && inputs.create_release
@@ -489,6 +568,7 @@ jobs:
       - sanitizer
       - windows-asan
       - cmake-minimum
+      - fuzz
     runs-on: ubuntu-latest
     permissions:
       contents: write

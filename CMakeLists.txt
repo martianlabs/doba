@@ -73,6 +73,11 @@ option(
   "Enable TLS support"
   OFF
 )
+option(
+  DOBA_BUILD_FUZZERS
+  "Build Release-only Clang libFuzzer harnesses"
+  OFF
+)
 
 include(
   CMakePackageConfigHelpers
@@ -171,6 +176,10 @@ target_include_directories(
   "$<BUILD_INTERFACE:${DOBA_INCLUDE_DIR}>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
+
+if(DOBA_BUILD_FUZZERS)
+  add_subdirectory(tests/fuzz)
+endif()
 
 if(
   DOBA_ENABLE_TLS
