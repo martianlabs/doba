@@ -30,7 +30,7 @@
 #include "protocol/contracts.h"
 #include "transport/server/tcp_windows_overlapped_base.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] FORWARDs                                                   ( public ) |
@@ -58,6 +58,6 @@ struct overlapped_receive : overlapped_base {
   // +-------------------------------------------------------------------------+
   std::shared_ptr<context<ENty, CNty>> ctx;
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

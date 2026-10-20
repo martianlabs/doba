@@ -38,7 +38,7 @@
 #include "common/task.h"
 #include "protocol/http/common/router_handler_parametrized.h"
 
-namespace martianlabs::doba::protocol::http {
+namespace martianlabs::doba::protocol::http::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_parametrized_async                           ( class ) |
@@ -129,6 +129,6 @@ auto make_router_handler_parametrized_async(std::string_view pattern,
             *values);
       });
 }
-}  // namespace martianlabs::doba::protocol::http
+}  // namespace martianlabs::doba::protocol::http::detail
 
 #endif

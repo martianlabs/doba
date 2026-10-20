@@ -28,6 +28,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -40,11 +41,10 @@ namespace {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
+using martianlabs::doba::protocol::http::router;
 namespace http = martianlabs::doba::protocol::http::v11;
 using martianlabs::doba::common::reader;
-using routes_type =
-    martianlabs::doba::protocol::http::router<http::request, http::response>;
-using engine_type = http::engine<http::request, http::response>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -98,7 +98,7 @@ struct memory_transport {
   // +-------------------------------------------------------------------------+
   std::string receive(std::string_view wire) {
     bytes.clear();
-    connection->on_bytes_received(wire.data(), wire.size(), 8192);
+    connection->on_bytes_received(wire);
     return bytes;
   }
   // +=========================================================================+
@@ -118,11 +118,6 @@ struct memory_transport {
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using test_server = martianlabs::doba::http_server<
-    http::request, http::response, routes_type, engine_type, memory_transport>;
-using test_transport =
-    memory_transport<engine_type,
-                     http::engine_factory<engine_type, routes_type>>;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -131,9 +126,14 @@ using test_transport =
 // /////////////////////////////////////////////////////////////////////////////
 std::string send_request(std::string_view method = "GET",
                          std::string_view path = "/") {
-  return test_transport::instance->receive(
-      std::string(method) + " " + std::string(path) + " HTTP/1.1\r\nHost: " +
-      std::string(method == "CONNECT" ? path : "example.com") + "\r\n\r\n");
+  return memory_transport<http::engine<http::request, http::response>,
+                          http::detail::engine_factory<
+                              http::engine<http::request, http::response>,
+                              router<http::request, http::response>>>::instance
+      ->receive(std::string(method) + " " + std::string(path) +
+                " HTTP/1.1\r\nHost: " +
+                std::string(method == "CONNECT" ? path : "example.com") +
+                "\r\n\r\n");
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -171,10 +171,22 @@ struct controller {
 // | [>] server is neither copyable nor movable                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server is neither copyable nor movable") {
-  static_assert(!std::is_copy_constructible_v<test_server>);
-  static_assert(!std::is_move_constructible_v<test_server>);
-  static_assert(!std::is_copy_assignable_v<test_server>);
-  static_assert(!std::is_move_assignable_v<test_server>);
+  static_assert(
+      !std::is_copy_constructible_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_move_constructible_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_copy_assignable_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_move_assignable_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
   DOBA_EXPECT(true);
 }
 
@@ -182,13 +194,26 @@ DOBA_TEST("server is neither copyable nor movable") {
 // | [>] HTTP server builds transport after route registration  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP server builds transport after route registration") {
-  test_server value;
-  DOBA_EXPECT_EQUAL(test_transport::instance, nullptr);
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  DOBA_EXPECT_EQUAL((
+      memory_transport<http::engine<http::request, http::response>,
+                       http::detail::engine_factory<
+                           http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance),
+      nullptr);
   value.add_route("GET", "/", [](const http::request&, http::response& res) {
     res.ok_200();
   });
   value.start();
-  DOBA_EXPECT(test_transport::instance != nullptr);
+  DOBA_EXPECT((
+      memory_transport<http::engine<http::request, http::response>,
+                       http::detail::engine_factory<
+                           http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance !=
+      nullptr));
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
 }
 
@@ -196,7 +221,10 @@ DOBA_TEST("HTTP server builds transport after route registration") {
 // | [>] lifecycle routing and callbacks cover server behavior   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   DOBA_EXPECT_EQUAL(
       &value.add_route("GET", "/",
                        [](const http::request&, http::response& res) {
@@ -223,21 +251,37 @@ DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
 // | [>] server suppresses error bodies for known HEAD           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   value.start();
-  const auto bytes = test_transport::instance->receive(
-      "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
-      "Content-Length: invalid\r\n\r\n");
+  const auto bytes =
+      memory_transport<
+          http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
+                               router<http::request, http::response>>>::instance
+          ->receive(
+              "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
+              "Content-Length: invalid\r\n\r\n");
   DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
   DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
-  DOBA_EXPECT(test_transport::instance->closed);
+  DOBA_EXPECT((
+      memory_transport<
+          http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
+                               router<http::request, http::response>>>::instance
+          ->closed));
 }
 
 // +===========================================================================+
 // | [>] failed starts release the date server                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("failed starts release the date server") {
-  test_server value(true);
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value(true);
   bool failed = false;
   try {
     value.start();
@@ -248,7 +292,11 @@ DOBA_TEST("failed starts release the date server") {
   value.add_route("GET", "/", [](const http::request&, http::response& res) {
     res.ok_200();
   });
-  test_transport::instance->fail = false;
+  memory_transport<
+      http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance
+      ->fail = false;
   value.start();
   const auto bytes = send_request();
   DOBA_EXPECT(bytes.starts_with("HTTP/1.1 200 "));
@@ -259,7 +307,10 @@ DOBA_TEST("failed starts release the date server") {
 // | [>] server accepts new connections after handler failure ( test-case )    |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server accepts new connections after handler failure") {
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   value.add_route("GET", "/fail",
                   [](const http::request&, http::response&) -> void {
                     throw std::runtime_error("handler failed");
@@ -269,10 +320,23 @@ DOBA_TEST("server accepts new connections after handler failure") {
   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
-  DOBA_EXPECT(test_transport::instance->closed);
+  DOBA_EXPECT((
+      memory_transport<
+          http::engine<http::request, http::response>,
+          http::detail::engine_factory<http::engine<http::request, http::response>,
+                               router<http::request, http::response>>>::instance
+          ->closed));
   DOBA_EXPECT(send_request().empty());
-  test_transport::instance->stop();
-  test_transport::instance->start();
+  memory_transport<
+      http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance
+      ->stop();
+  memory_transport<
+      http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance
+      ->start();
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
 }
 
@@ -281,7 +345,10 @@ DOBA_TEST("server accepts new connections after handler failure") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server retains controllers and rejects live registration") {
   int calls = 0;
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   value.add_controller<controller>(calls);
   value.start();
   DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
@@ -303,15 +370,22 @@ DOBA_TEST("server retains controllers and rejects live registration") {
 // | [>] server rejects route registration during startup       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server rejects route registration during startup") {
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   std::promise<void> entered;
   std::promise<void> resume;
   auto entered_signal = entered.get_future();
   auto resume_signal = resume.get_future().share();
-  test_transport::on_start = [&]() {
-    entered.set_value();
-    resume_signal.wait();
-  };
+  memory_transport<
+      http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::on_start =
+      [&]() {
+        entered.set_value();
+        resume_signal.wait();
+      };
   auto starter = std::async(std::launch::async, [&]() { value.start(); });
   entered_signal.wait();
   auto registration = std::async(std::launch::async, [&]() {
@@ -332,7 +406,11 @@ DOBA_TEST("server rejects route registration during startup") {
   resume.set_value();
   starter.get();
   const bool rejected = registration.get();
-  test_transport::on_start = {};
+  memory_transport<
+      http::engine<http::request, http::response>,
+      http::detail::engine_factory<http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::on_start =
+      {};
   value.stop();
   DOBA_EXPECT(rejected_during_start);
   DOBA_EXPECT(rejected);
@@ -342,7 +420,10 @@ DOBA_TEST("server rejects route registration during startup") {
 // | [>] server accepts route registration after stop           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server accepts route registration after stop") {
-  test_server value;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
   value.start();
   value.stop();
   value.add_route("GET", "/late",

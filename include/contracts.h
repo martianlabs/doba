@@ -47,8 +47,8 @@ concept http_server =
     std::constructible_from<ENty, const typename ENty::policies_type&,
                             const ROty&> &&
     transport::server::contracts::transport<
-        TRty<ENty, protocol::http::v11::engine_factory<ENty, ROty>>, ENty,
-        protocol::http::v11::engine_factory<ENty, ROty>>;
+        TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>, ENty,
+        protocol::http::v11::detail::engine_factory<ENty, ROty>>;
 }  // namespace martianlabs::doba::contracts
 
 #endif

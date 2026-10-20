@@ -44,7 +44,7 @@
 #include "platform.h"
 #include "transport/server/tcp_linux_worker.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] basic_transport                                             ( class ) |
@@ -79,12 +79,12 @@ class basic_transport {
       : configuration_{configuration},
         create_engine_{std::move(create_engine)},
         shared_state_{std::move(shared_state)} {
-    if (!configuration_.recv_buffer_size ||
-        configuration_.recv_buffer_size >
+    if (!configuration_.receive_buffer_capacity ||
+        configuration_.receive_buffer_capacity >
             static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())) {
       throw std::runtime_error("Invalid receive buffer size!");
     }
-    if (!configuration_.max_send_buffer_size) {
+    if (!configuration_.max_buffered_send_bytes) {
       throw std::runtime_error("Invalid send buffer size!");
     }
     if (configuration_.listen_backlog < 0) {
@@ -283,6 +283,6 @@ class basic_transport {
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

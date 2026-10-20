@@ -28,7 +28,7 @@
 #include <cstddef>
 #include <string_view>
 
-namespace martianlabs::doba::common {
+namespace martianlabs::doba::common::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] ascii_to_lower                                           ( function ) |
@@ -105,6 +105,6 @@ struct base_equal {
     return true;
   }
 };
-}  // namespace martianlabs::doba::common
+}  // namespace martianlabs::doba::common::detail
 
 #endif

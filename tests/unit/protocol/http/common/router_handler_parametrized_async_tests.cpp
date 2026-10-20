@@ -33,25 +33,30 @@
 #include "test_helper.h"
 
 namespace {
-using request = martianlabs::doba::tests::unit::router_empty_request;
-using response = martianlabs::doba::tests::unit::router_value_response;
 using martianlabs::doba::common::task;
-using martianlabs::doba::protocol::http::make_router_handler_parametrized_async;
-using martianlabs::doba::protocol::http::router_handler_parametrized_async;
+using martianlabs::doba::protocol::http::detail::make_router_handler_parametrized_async;
+using martianlabs::doba::protocol::http::detail::router_handler_parametrized_async;
+using martianlabs::doba::tests::unit::router_empty_request;
+using martianlabs::doba::tests::unit::router_value_response;
 }  // namespace
 
 DOBA_TEST("asynchronous parametrized handler matches and invokes") {
-  auto handler = make_router_handler_parametrized_async<request, response, int>(
-      "/items/:id", [](const request&, response& res, int id) -> task<void> {
-        res.value = std::to_string(id);
-        co_return;
-      });
-  static_assert(std::same_as<decltype(handler),
-                             router_handler_parametrized_async<request,
-                                                               response>>);
+  auto handler =
+      make_router_handler_parametrized_async<router_empty_request,
+                                             router_value_response, int>(
+          "/items/:id",
+          [](const router_empty_request&, router_value_response& res,
+             int id) -> task<void> {
+            res.value = std::to_string(id);
+            co_return;
+          });
+  static_assert(
+      std::same_as<decltype(handler),
+                   router_handler_parametrized_async<router_empty_request,
+                                                     router_value_response>>);
   DOBA_EXPECT(handler.matches("/items/42"));
-  request req;
-  response res;
+  router_empty_request req;
+  router_value_response res;
   std::shared_ptr<void> parameters;
   auto work = handler.invoke(req, res, "/items/42", parameters);
   work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });

@@ -34,7 +34,7 @@
 #include <string>
 #include <utility>
 
-namespace martianlabs::doba::common {
+namespace martianlabs::doba::common::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] byte_storage_file [windowsTM]                               ( class ) |
@@ -137,6 +137,6 @@ class byte_storage_file {
   // +-------------------------------------------------------------------------+
   HANDLE file_{INVALID_HANDLE_VALUE};
 };
-}  // namespace martianlabs::doba::common
+}  // namespace martianlabs::doba::common::detail
 
 #endif

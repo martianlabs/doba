@@ -32,24 +32,27 @@
 #include "test_helper.h"
 
 namespace {
-using request = martianlabs::doba::tests::unit::router_empty_request;
-using response = martianlabs::doba::tests::unit::router_empty_response;
-using martianlabs::doba::protocol::http::router_handler_static_async;
 using martianlabs::doba::common::task;
+using martianlabs::doba::protocol::http::detail::router_handler_static_async;
+using martianlabs::doba::tests::unit::router_empty_request;
+using martianlabs::doba::tests::unit::router_empty_response;
 }  // namespace
 
 DOBA_TEST("asynchronous static alias accepts a coroutine") {
-  static_assert(std::same_as<router_handler_static_async<request, response>,
-                             std::function<task<void>(const request&,
-                                                      response&)>>);
+  static_assert(
+      std::same_as<router_handler_static_async<router_empty_request,
+                                               router_empty_response>,
+                   std::function<task<void>(const router_empty_request&,
+                                            router_empty_response&)>>);
   bool invoked = false;
-  router_handler_static_async<request, response> handler =
-      [&invoked](const request&, response&) -> task<void> {
+  router_handler_static_async<router_empty_request, router_empty_response>
+      handler = [&invoked](const router_empty_request&,
+                           router_empty_response&) -> task<void> {
     invoked = true;
     co_return;
   };
-  request req;
-  response res;
+  router_empty_request req;
+  router_empty_response res;
   auto work = handler(req, res);
   work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
   DOBA_EXPECT(invoked);

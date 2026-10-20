@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -74,12 +75,9 @@ class engine {
          std::function<void()> on_async_finished = {})
       : router_{router},
         decoder_{configuration},
-        on_async_started_{std::move(on_async_started)},
-        on_async_finished_{std::move(on_async_finished)} {
-    async_ = std::make_shared<engine_async>(
-        decoder_.configuration().max_pending_requests, on_async_started_,
-        on_async_finished_);
-  }
+        async_{std::make_shared<detail::engine_async>(
+            configuration.max_pending_requests, std::move(on_async_started),
+            std::move(on_async_finished))} {}
   engine(const engine&) = delete;
   engine(engine&&) noexcept = delete;
   ~engine() = default;
@@ -127,20 +125,15 @@ class engine {
   // +-------------------------------------------------------------------------+
   // | Handles bytes received from the transport.                              |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char* buffer, const std::size_t size,
-                                const std::size_t capacity) {
-    if (closed_) return size;
-    if (!size) return 0;
-    std::size_t total = 0;
-    while (total < size && !closed_) {
+  void on_bytes_received(std::string_view input) {
+    if (closed_ || input.empty()) return;
+    while (!closed_) {
       if (!synchronous_) {
-        if (!async_->accepting()) return size;
+        if (!async_->accepting()) return;
         if (async_->idle()) synchronous_ = true;
       }
-      std::size_t consumed = 0;
       try {
-        deserialization_result result = decoder_.deserialize(
-            buffer + total, size - total, capacity, consumed);
+        deserialization_result result = decoder_.deserialize(input);
         if (result.code != deserialization_status::kSucceeded) {
           const bool rejected =
               result.code == deserialization_status::kInvalidSource;
@@ -151,14 +144,14 @@ class engine {
                                  *result.response, closed_)
                            : async_->handle_interim<RQty, RSty, ROty>(
                                  *result.response);
-              if (!submitted) return size;
+              if (!submitted) return;
             } else {
-              engine_sync<RQty, RSty, ROty>::handle_response(
+              detail::engine_sync<RQty, RSty, ROty>::handle_response(
                   *result.response, rejected, on_send_);
               if (rejected) query_for_close();
             }
           }
-          return rejected ? size : total + consumed;
+          return;
         }
         RQty& request = *result.request;
         router_match_result<RQty, RSty> match{};
@@ -168,24 +161,24 @@ class engine {
           path = request.get_absolute_path();
           match = router_.match(request.get_method(), path);
         }
-        if (!synchronous_ || engine_async::handles(match)) {
+        if (!synchronous_ || detail::engine_async::handles(match)) {
           synchronous_ = false;
           if (!async_->handle_request(decoder_, router_, request, match, path,
-                                      execution_, async_, closed_)) {
-            return size;
+                                      execution_, async_, closed_,
+                                      response_head_, response_body_)) {
+            return;
           }
-        } else if (engine_sync<RQty, RSty, ROty>::handle_request(
-                       decoder_, router_, request, match, on_send_)) {
+        } else if (detail::engine_sync<RQty, RSty, ROty>::handle_request(
+                       decoder_, router_, request, match, on_send_,
+                       response_head_, response_body_)) {
           query_for_close();
         }
-        total += consumed;
         continue;
       } catch (...) {
         query_for_close();
-        return total + consumed;
+        return;
       }
     }
-    return total;
   }
 
  private:
@@ -205,10 +198,10 @@ class engine {
   // +-------------------------------------------------------------------------+
   const ROty& router_;
   decoder<RQty, RSty> decoder_;
-  std::function<void()> on_async_started_;
-  std::function<void()> on_async_finished_;
+  std::string response_head_;
+  std::string response_body_;
   std::function<void()> on_close_;
-  std::shared_ptr<engine_async> async_;
+  std::shared_ptr<detail::engine_async> async_;
   transport::server::execution_capacity execution_;
   protocol::send_delegate on_send_;
   bool closed_{false};

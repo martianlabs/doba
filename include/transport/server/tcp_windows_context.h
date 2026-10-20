@@ -46,7 +46,7 @@
 #include "transport/server/tcp_windows_overlapped_receive.h"
 #include "transport/server/tcp_windows_overlapped_send.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
@@ -67,15 +67,15 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  context(SOCKET in_socket, std::size_t recv_buffer_size,
+  context(SOCKET in_socket, std::size_t receive_buffer_capacity,
           std::size_t send_buffer_size, const FAty& create_engine,
           const std::atomic<bool>& stopping,
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
           std::function<void(context*)> on_retirement,
           typename CNty::shared_state shared_state,
-          std::size_t encrypted_receive_buffer_size = 0,
-          std::size_t network_bio_buffer_size = 0)
+          std::size_t encrypted_receive_buffer_capacity = 0,
+          std::size_t network_bio_buffer_capacity = 0)
       : socket_{in_socket},
         on_connection_{on_connection},
         on_disconnection_{on_disconnection},
@@ -85,12 +85,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
                                                 const FAty&,
                                                 typename CNty::shared_state,
                                                 std::size_t, std::size_t>) {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state, encrypted_receive_buffer_size,
-                        network_bio_buffer_size);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state,
+                        encrypted_receive_buffer_capacity,
+                        network_bio_buffer_capacity);
           } else {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state);
           }
         }()},
         stopping_{stopping},
@@ -168,7 +169,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | Gets the next receive operation ready. It locks the send mutex to keep  |
   // | things thread-safe, then checks whether the connection is quiescing     |
   // | or stopping. If so, it aborts the connection or closes the input.       |
-  // | It also aborts if the socket is invalid or the input buffer is full.    |
+  // | It also aborts if the socket is invalid or a receive cannot be armed.   |
   // | Otherwise, it starts another receive operation and returns true.        |
   // +-------------------------------------------------------------------------+
   bool arm_next_receive_operation() {
@@ -187,7 +188,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       cleanup_resources_();
       return false;
     }
-    if (input_.size == input_.capacity || !receive_()) {
+    if (!receive_()) {
       abort_();
       return false;
     }
@@ -200,7 +201,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | received and updates the input buffer. It locks the receive mutex to    |
   // | keep things thread-safe, then checks whether the connection is          |
   // | quiescing or stopping. If so, it aborts the connection or closes the    |
-  // | input. It also aborts if the socket is invalid or the input buffer is   |
+  // | input. It also aborts if the socket is invalid or processing fails.     |
   // | full. Otherwise, it processes the data and returns true. If no bytes    |
   // | were received, it marks receiving as closed and returns true. If        |
   // | anything goes wrong, it aborts the connection and returns false.        |
@@ -231,10 +232,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       processing_receive_ = size != 0;
     }
     if (!size) return true;
-    input_.size += size;
-    std::size_t processed;
     try {
-      processed = input_.process();
+      input_.process(size);
     } catch (...) {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       processing_receive_ = false;
@@ -243,11 +242,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (!input_.consume(processed) || input_.size == input_.capacity) {
-        processing_receive_ = false;
-        abort_();
-        return false;
-      }
       if (input_.peer_closed() && !closing_) {
         closing_ = true;
         if (!input_.close_output()) abort_();
@@ -423,12 +417,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | it marks receiving as active and returns true.                          |
   // +-------------------------------------------------------------------------+
   bool receive_() {
+    const auto target = input_.receive_buffer();
+    if (target.empty()) return false;
     DWORD f = 0, r = 0;
     overlapped_receive<ENty, CNty>* ovr = new (std::nothrow)
         overlapped_receive<ENty, CNty>(this->shared_from_this());
     if (!ovr) return false;
-    ovr_wsa_.buf = input_.buffer.get() + input_.size;
-    ovr_wsa_.len = static_cast<ULONG>(input_.capacity - input_.size);
+    ovr_wsa_.buf = target.data();
+    ovr_wsa_.len = static_cast<ULONG>(target.size());
     int res = WSARecv(socket_, &ovr_wsa_, 1, &r, &f, ovr, 0);
     if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovr;
@@ -544,7 +540,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
     if (!receiving_) {
       // Discard input until peer EOF to avoid resetting the final response.
-      input_.size = 0;
       if (!receive_()) abort_();
     }
   }
@@ -624,6 +619,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool engine_complete_{false};
   WSABUF ovr_wsa_{0};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

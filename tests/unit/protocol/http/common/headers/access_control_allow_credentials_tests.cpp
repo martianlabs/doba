@@ -29,8 +29,8 @@
 #include "test_helper.h"
 
 namespace {
-namespace headers = martianlabs::doba::protocol::http::headers;
-using header = headers::access_control_allow_credentials;
+using martianlabs::doba::protocol::http::headers::
+    access_control_allow_credentials;
 }  // namespace
 
 // +===========================================================================+
@@ -41,10 +41,10 @@ DOBA_TEST("check accepts valid values") {
       "true",
   };
   for (const auto source : cases) {
-    DOBA_EXPECT(header::check(source));
+    DOBA_EXPECT(access_control_allow_credentials::check(source));
     const std::string padded = "x" + std::string(source) + "y";
-    DOBA_EXPECT(
-        header::check(std::string_view(padded).substr(1, source.size())));
+    DOBA_EXPECT(access_control_allow_credentials::check(
+        std::string_view(padded).substr(1, source.size())));
   }
 }
 
@@ -57,7 +57,7 @@ DOBA_TEST("check rejects invalid values") {
       " true", "true ", "true,true", "\"true\"",
   };
   for (const auto source : cases) {
-    DOBA_EXPECT(!header::check(source));
+    DOBA_EXPECT(!access_control_allow_credentials::check(source));
   }
 }
 
@@ -65,11 +65,16 @@ DOBA_TEST("check rejects invalid values") {
 // | [>] check handles string view boundaries                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check handles string view boundaries") {
-  DOBA_EXPECT(!header::check(std::string_view{"\0", 1}));
-  DOBA_EXPECT(!header::check(std::string_view{"a\0", 2}));
-  DOBA_EXPECT(!header::check(std::string_view{"a\r", 2}));
-  DOBA_EXPECT(!header::check(std::string_view{"a\n", 2}));
-  DOBA_EXPECT(!header::check(std::string_view{"\x80", 1}));
+  DOBA_EXPECT(
+      !access_control_allow_credentials::check(std::string_view{"\0", 1}));
+  DOBA_EXPECT(
+      !access_control_allow_credentials::check(std::string_view{"a\0", 2}));
+  DOBA_EXPECT(
+      !access_control_allow_credentials::check(std::string_view{"a\r", 2}));
+  DOBA_EXPECT(
+      !access_control_allow_credentials::check(std::string_view{"a\n", 2}));
+  DOBA_EXPECT(
+      !access_control_allow_credentials::check(std::string_view{"\x80", 1}));
   constexpr std::string_view seed = "true";
   const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
   for (std::size_t position : positions) {
@@ -79,13 +84,14 @@ DOBA_TEST("check handles string view boundaries") {
       martianlabs::doba::tests::unit::test_helper::set_context(
           std::string(seed) + ", position " + std::to_string(position) +
           ", byte " + std::to_string(static_cast<unsigned char>(control)));
-      DOBA_EXPECT(!header::check(source));
+      DOBA_EXPECT(!access_control_allow_credentials::check(source));
     }
   }
   std::string padded(seed);
   padded.push_back('\0');
   padded += "suffix";
-  DOBA_EXPECT(header::check(std::string_view(padded.data(), seed.size())));
+  DOBA_EXPECT(access_control_allow_credentials::check(
+      std::string_view(padded.data(), seed.size())));
 }
 
 // +===========================================================================+
@@ -100,7 +106,7 @@ DOBA_TEST("check requires every byte of the literal true") {
       martianlabs::doba::tests::unit::test_helper::set_context(
           "position " + std::to_string(position) + ", byte " +
           std::to_string(byte));
-      DOBA_EXPECT_EQUAL(header::check(source),
+      DOBA_EXPECT_EQUAL(access_control_allow_credentials::check(source),
                         byte == static_cast<unsigned char>(seed[position]));
     }
   }

@@ -122,8 +122,8 @@ DOBA_TEST("tls serves HTTP with configured buffer capacities") {
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto configuration = server_policies(port);
-  configuration.encrypted_receive_buffer_size = 8192;
-  configuration.network_bio_buffer_size = 4096;
+  configuration.encrypted_receive_buffer_capacity = 8192;
+  configuration.network_bio_buffer_capacity = 4096;
   https_server<> http_server(configuration);
   http_server.add_route("GET", "/ready", [](const request&, response& res) {
     res.ok_200();
@@ -350,4 +350,30 @@ DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
   }
   client.socket.close();
   http_server.stop();
+}
+
+// +===========================================================================+
+// | [>] plaintext chunk size is independent of HTTP head size    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls receives HTTP heads across one byte plaintext blocks") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto configuration = server_policies(port);
+  configuration.receive_buffer_capacity = 1;
+  https_server<> server(configuration);
+  server.add_route("GET", "/ok", [](const request& req, response& res) {
+    res.ok_200().set_body(req.get_header("X-Pad").second);
+  });
+  server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  const std::string pad(256, 'x');
+  DOBA_EXPECT(client.send("GET /ok HTTP/1.1\r\nHost: a\r\nX-Pad: " +
+                          pad + "\r\n\r\n"));
+  const auto result = receive_response(client);
+  DOBA_EXPECT(result.has_value());
+  if (result) DOBA_EXPECT_EQUAL(*result, pad);
+  client.socket.close();
+  server.stop();
 }

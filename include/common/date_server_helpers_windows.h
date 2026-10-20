@@ -27,7 +27,7 @@
 
 #include <time.h>
 
-namespace martianlabs::doba::common {
+namespace martianlabs::doba::common::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] gm_time [windowsTM]                                      ( function ) |
@@ -36,6 +36,6 @@ namespace martianlabs::doba::common {
 static errno_t gm_time(struct tm* const gmt, time_t const* const now) {
   return gmtime_s(gmt, now);
 }
-}  // namespace martianlabs::doba::common
+}  // namespace martianlabs::doba::common::detail
 
 #endif

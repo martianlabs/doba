@@ -28,20 +28,15 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstring>
-#include <filesystem>
-#include <limits>
-#include <memory>
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "common/byte_storage_helpers.h"
-#include "common/filesystem.h"
 #include "common/hash_map.h"
 #include "protocol/http/v11/results.h"
 #include "protocol/http/common/header.h"
@@ -154,26 +149,14 @@ class decoder {
   // +-------------------------------------------------------------------------+
   explicit decoder(policies configuration = {}) {
     if (!configuration.max_request_head_size ||
-        !configuration.max_response_head_size ||
-        configuration.request_body_memory_threshold >
-            std::numeric_limits<std::size_t>::max() -
-                configuration.max_request_head_size ||
-        configuration.response_body_inline_capacity >
-            std::numeric_limits<std::size_t>::max() -
-                configuration.max_response_head_size) {
-      throw std::invalid_argument("Invalid HTTP buffer capacities");
+        !configuration.max_response_head_size) {
+      throw std::invalid_argument("Invalid HTTP head limits");
     }
-    buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.max_request_head_size +
-        configuration.request_body_memory_threshold);
-    response_buffer_ = std::make_unique_for_overwrite<char[]>(
-        configuration.max_response_head_size +
-        configuration.response_body_inline_capacity);
     context_.policies = configuration;
   }
   decoder(const decoder&) = delete;
   decoder(decoder&&) noexcept = delete;
-  ~decoder() { cleanup_body_file(); }
+  ~decoder() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -182,80 +165,56 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  deserialization_result<RQty, RSty> deserialize(const char* buffer,
-                                                 const std::size_t size,
-                                                 const std::size_t capacity,
-                                                 std::size_t& consumed) {
-    std::string_view source(buffer, size);
-    deserialization_result<RQty, RSty> result =
-        body_framer_ ? parse_body(source) : parse_core(source);
-    consumed = size - source.size();
+  // | Consume one message, retaining only an unfinished message across calls. |
+  // +-------------------------------------------------------------------------+
+  deserialization_result<RQty, RSty> deserialize(std::string_view& input) {
+    if (!reminder_active_) reminder_.clear();
+    if (input.empty()) return deserialization_status::kMoreBytesNeeded;
+    const auto message = input;
+    deserialization_result<RQty, RSty> result;
+    if (!reminder_active_) {
+      result = parse_core(input);
+      if (result.code == deserialization_status::kMoreBytesNeeded) {
+        const auto keep = body_framer_ && request_->body_is_stored()
+                              ? head_end_ : message.size();
+        const auto previous = reinterpret_cast<std::uintptr_t>(message.data());
+        reminder_.assign(message.data(), message.data() + keep);
+        reminder_active_ = true;
+        if (request_) request_->rebase_bytes(previous, reminder_.data());
+        input = {};
+      }
+    } else if (body_framer_) {
+      result = parse_body(input);
+    } else {
+      const auto take = head_fragment_size(input);
+      reminder_.insert(reminder_.end(), input.data(), input.data() + take);
+      input.remove_prefix(take);
+      std::string_view head(reminder_.data(), reminder_.size());
+      result = parse_core(head);
+      if (result.code == deserialization_status::kMoreBytesNeeded &&
+          body_framer_ && !input.empty()) {
+        auto body_result = parse_body(input);
+        if (body_result.code == deserialization_status::kMoreBytesNeeded) {
+          body_result.response = std::move(result.response);
+        }
+        result = std::move(body_result);
+      }
+    }
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ &&
-        (size == capacity || size >= context_.policies.max_request_head_size)) {
+        reminder_.size() >= context_.policies.max_request_head_size) {
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
-      try {
-        std::optional<std::string_view> host_host;
-        std::optional<std::string_view> host_port;
-        std::optional<helpers::host_type> host_type;
-        if (context_.has_host) {
-          host_host = context_.host.host;
-          host_port = context_.host.port;
-          host_type = context_.host.type;
-        }
-        std::optional<std::string_view> target_authority_host;
-        std::optional<std::string_view> target_authority_port;
-        std::optional<helpers::host_type> target_authority_type;
-        if (context_.has_target_authority) {
-          target_authority_host = context_.target_authority.host;
-          target_authority_port = context_.target_authority.port;
-          target_authority_type = context_.target_authority.type;
-        }
-        std::optional<body::reader> body_reader;
-        if (body_framer_) {
-          if (body_file_path_.empty()) {
-            std::span<const std::byte> wire(
-                reinterpret_cast<const std::byte*>(
-                    buffer_.get() + context_.policies.max_request_head_size),
-                body_size_);
-            body_reader =
-                context_.connection.chunked
-                    ? body::reader::chunked(
-                          wire, context_.policies.max_chunk_extension_size,
-                          context_.policies.max_trailer_section_size)
-                    : body::reader::raw(wire, context_.content_length);
-          } else {
-            common::filesystem_file file;
-            std::error_code error;
-            if (!file.open(body_file_path_.parent_path(),
-                           body_file_path_.filename().string(), error)) {
-              storage_failed_ = true;
-              result.code = deserialization_status::kInvalidSource;
-            } else {
-              const auto& limits = context_.policies;
-              body_reader = context_.connection.chunked
-                                ? body::reader::chunked(
-                                      std::move(file),
-                                      limits.max_chunk_extension_size,
-                                      limits.max_trailer_section_size)
-                                : body::reader::raw(std::move(file),
-                                                    context_.content_length);
-            }
-          }
-        }
-        if (result.code == deserialization_status::kSucceeded) {
-          RQty request = RQty::from(
-              method_, absolute_path_, target_, headers_, query_parameters_,
-              host_host, host_port, host_type, target_authority_host,
-              target_authority_port, target_authority_type,
-              context_.connection.close_requested, std::move(body_reader));
-          result.request.emplace(std::move(request));
-        }
-      } catch (...) {
-        cleanup_body_file();
-        throw;
+      if (body_framer_ &&
+          !request_->finish_body(context_.connection.chunked,
+                                 context_.content_length,
+                                 context_.policies.max_chunk_extension_size,
+                                 context_.policies.max_trailer_section_size)) {
+        storage_failed_ = true;
+        result.code = deserialization_status::kInvalidSource;
+      } else {
+        result.request.emplace(std::move(*request_));
       }
     }
     if (result.code == deserialization_status::kInvalidSource) {
@@ -294,10 +253,8 @@ class decoder {
     }
     if (result.code != deserialization_status::kMoreBytesNeeded ||
         !body_framer_) {
-      if (!body_file_path_.empty()) cleanup_body_file();
+      request_.reset();
       body_framer_.reset();
-      head_size_ = 0;
-      body_size_ = 0;
       storage_failed_ = false;
       method_ = {};
       target_ = target::kUnknown;
@@ -308,6 +265,15 @@ class decoder {
       const policies configuration = context_.policies;
       context_ = {};
       context_.policies = configuration;
+    }
+    if (result.code != deserialization_status::kMoreBytesNeeded) {
+      reminder_active_ = false;
+      if (result.code == deserialization_status::kInvalidSource) {
+        reminder_.clear();
+        input = {};
+      }
+    } else if (body_framer_ && request_->body_is_stored()) {
+      reminder_.resize(head_end_);
     }
     return result;
   }
@@ -320,42 +286,33 @@ class decoder {
   // +=========================================================================+
   // | [>] make_response                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a response object using the decoder's internal storage.         |
+  // | Creates a response that owns its bytes, with the configured limits. |
   // +-------------------------------------------------------------------------+
-  RSty make_response() { return make_response(response_storage()); }
-  // +=========================================================================+
-  // | [>] take_request_storage                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Takes ownership of the decoder's internal request storage.              |
-  // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> take_request_storage() {
-    auto replacement = std::make_unique_for_overwrite<char[]>(
-        context_.policies.max_request_head_size +
-        context_.policies.request_body_memory_threshold);
-    buffer_.swap(replacement);
-    return replacement;
+  RSty make_response() {
+    return RSty::from(context_.policies.max_response_head_size,
+                      context_.policies.response_body_memory_threshold);
   }
-  // +=========================================================================+
-  // | [>] make_response                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Creates a response object using the provided storage.                   |
-  // +-------------------------------------------------------------------------+
-  RSty make_response(std::span<char> storage) {
-    return RSty::from(storage, context_.policies.max_response_head_size,
-                     context_.policies.response_body_inline_capacity);
+  RSty make_response(std::string& head, std::string& body) {
+    return RSty::from(context_.policies.max_response_head_size,
+                      context_.policies.response_body_memory_threshold,
+                      head, body);
   }
 
  private:
-  // +=========================================================================+
-  // | [>] response_storage                                         ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Returns a span of the response buffer, which is used to store the       |
-  // | response head and body.                                                 |
-  // +-------------------------------------------------------------------------+
-  std::span<char> response_storage() noexcept {
-    return {response_buffer_.get(),
-            context_.policies.max_response_head_size +
-                context_.policies.response_body_inline_capacity};
+  // Find the first head terminator, including one crossing the receive boundary.
+  std::size_t head_fragment_size(std::string_view input) const noexcept {
+    constexpr std::string_view end = "\r\n\r\n";
+    std::size_t take = input.size();
+    const std::string_view previous(reminder_.data(), reminder_.size());
+    for (std::size_t split = 1; split < end.size() && split <= previous.size(); ++split) {
+      if (previous.ends_with(end.substr(0, split)) &&
+          input.starts_with(end.substr(split))) {
+        take = std::min(take, end.size() - split);
+      }
+    }
+    const auto at = input.find(end);
+    if (at != std::string_view::npos) take = std::min(take, at + end.size());
+    return take;
   }
   // +=========================================================================+
   // | [>] parse_core                                               ( public ) |
@@ -533,24 +490,26 @@ class decoder {
           if (!store_head(sv.substr(0, i))) {
             return deserialization_status::kInvalidSource;
           }
+          head_end_ = i;
           source.remove_prefix(i);
           // Check for a body and select its framing.
           bool body_expected =
               context_.connection.chunked ||
               (context_.has_content_length && context_.content_length > 0);
           if (body_expected) {
+            if (!request_->begin_body(
+                    context_.policies.request_body_memory_threshold,
+                    context_.connection.chunked ? 0
+                                                : context_.content_length)) {
+              storage_failed_ = true;
+              return deserialization_status::kInvalidSource;
+            }
             if (context_.connection.chunked) {
               body_framer_ = body::framer_chunked(
-                  context_.policies.max_content_length,
+                  context_.policies.max_request_body_size,
                   context_.policies.max_chunk_extension_size,
                   context_.policies.max_trailer_section_size);
             } else {
-              if (context_.content_length >
-                      context_.policies.request_body_memory_threshold &&
-                  !spill_body()) {
-                storage_failed_ = true;
-                return deserialization_status::kInvalidSource;
-              }
               body_framer_ = body::framer_raw(context_.content_length);
             }
           }
@@ -631,54 +590,27 @@ class decoder {
       return deserialization_status::kInvalidSource;
     }
     if (state.consumed) {
-      if (body_file_path_.empty() &&
-          state.consumed >
-              context_.policies.request_body_memory_threshold - body_size_ &&
-          !spill_body()) {
-        storage_failed_ = true;
-        return deserialization_status::kInvalidSource;
+      auto bytes = source.substr(0, state.consumed);
+      const auto threshold = context_.policies.request_body_memory_threshold;
+      if (reminder_active_ && !request_->body_is_stored() && threshold &&
+          request_->body_wire_size() <= threshold &&
+          state.consumed <= threshold - request_->body_wire_size()) {
+        const auto previous = reinterpret_cast<std::uintptr_t>(reminder_.data());
+        const auto offset = reminder_.size();
+        reminder_.insert(reminder_.end(), bytes.begin(), bytes.end());
+        if (previous != reinterpret_cast<std::uintptr_t>(reminder_.data())) {
+          request_->rebase_bytes(previous, reminder_.data());
+        }
+        bytes = {reminder_.data() + offset, state.consumed};
       }
-      if (body_file_path_.empty()) {
-        std::memcpy(buffer_.get() +
-                        context_.policies.max_request_head_size + body_size_,
-                    source.data(), state.consumed);
-      } else if (!body_file_.write(source.data(), state.consumed)) {
+      if (!request_->append_body(bytes)) {
         storage_failed_ = true;
         return deserialization_status::kInvalidSource;
       }
     }
-    body_size_ += state.consumed;
     source.remove_prefix(state.consumed);
     if (!state.complete) return deserialization_status::kMoreBytesNeeded;
     return deserialization_status::kSucceeded;
-  }
-  // +=========================================================================+
-  // | [>] spill_body                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  bool spill_body() {
-    std::error_code error;
-    const auto directory = std::filesystem::temp_directory_path(error);
-    if (error) return false;
-    std::filesystem::path path;
-    if (!body_file_.open(directory, path)) return false;
-    body_file_path_ = std::move(path);
-    if (body_size_ &&
-        !body_file_.write(buffer_.get() +
-                              context_.policies.max_request_head_size,
-                          body_size_)) {
-      return false;
-    }
-    return true;
-  }
-  // +=========================================================================+
-  // | [>] cleanup_body_file                                       ( private ) |
-  // +-------------------------------------------------------------------------+
-  void cleanup_body_file() noexcept {
-    body_file_.close();
-    if (body_file_path_.empty()) return;
-    std::error_code error;
-    std::filesystem::remove(body_file_path_, error);
-    body_file_path_.clear();
   }
   // +=========================================================================+
   // | [>] store_head                                              ( private ) |
@@ -692,13 +624,14 @@ class decoder {
     // pairs and set it in the request.
     query_parameters_.clear();
     if (!query_.empty()) {
-      std::array<std::string_view, policies::kMaxQueryParameters + 1>
-          key_stack, value_stack;
+      constexpr std::size_t kQueryParameterStackCapacity = 129;
+      std::array<std::string_view, kQueryParameterStackCapacity> key_stack,
+          value_stack;
       std::vector<std::string_view> key_extra, value_extra;
       const std::size_t possible = query_.size() / 2 + 1;
       const std::size_t limit = context_.policies.max_query_parameters;
-      const std::size_t slots = limit && limit < possible ? limit + 1
-                                                           : possible;
+      const std::size_t slots =
+          limit && limit < possible ? limit + 1 : possible;
       std::span<std::string_view> keys = key_stack;
       std::span<std::string_view> values = value_stack;
       if (slots > keys.size()) {
@@ -718,41 +651,21 @@ class decoder {
         query_parameters_.emplace_back(keys[q], values[q]);
       }
     }
-    std::memcpy(buffer_.get(), buffer_view.data(), buffer_view.size());
-    head_size_ = buffer_view.size();
-    auto rebase = [this, buffer_view](std::string_view value) {
-      if (value.empty()) return std::string_view{};
-      const std::size_t offset = value.data() - buffer_view.data();
-      return std::string_view(buffer_.get() + offset, value.size());
-    };
-    method_ = rebase(method_);
-    absolute_path_ = rebase(absolute_path_);
-    query_ = rebase(query_);
-    for (auto& header : headers_) {
-      header.first = rebase(header.first);
-      header.second = rebase(header.second);
-    }
-    for (auto& parameter : query_parameters_) {
-      parameter.first = rebase(parameter.first);
-      parameter.second = rebase(parameter.second);
-    }
-    if (context_.has_host) {
-      context_.host.host = rebase(context_.host.host);
-      context_.host.port = rebase(context_.host.port);
-      context_.host.scheme = rebase(context_.host.scheme);
-    }
-    if (context_.has_target_authority) {
-      context_.target_authority.host = rebase(context_.target_authority.host);
-      context_.target_authority.port = rebase(context_.target_authority.port);
-      context_.target_authority.scheme =
-          rebase(context_.target_authority.scheme);
-    }
-    for (auto& value : context_.connection.transfer_codings)
-      value = rebase(value);
-    for (auto& value : context_.connection.te_codings) value = rebase(value);
-    for (auto& value : context_.connection.trailer_names) value = rebase(value);
-    for (auto& value : context_.connection.upgrade_offer) value = rebase(value);
-    for (auto& value : context_.connection.options) value = rebase(value);
+    request_.emplace(RQty::from(
+        method_, absolute_path_, target_, headers_, query_parameters_,
+        context_.has_host ? std::optional(context_.host.host) : std::nullopt,
+        context_.has_host ? std::optional(context_.host.port) : std::nullopt,
+        context_.has_host ? std::optional(context_.host.type) : std::nullopt,
+        context_.has_target_authority
+            ? std::optional(context_.target_authority.host)
+            : std::nullopt,
+        context_.has_target_authority
+            ? std::optional(context_.target_authority.port)
+            : std::nullopt,
+        context_.has_target_authority
+            ? std::optional(context_.target_authority.type)
+            : std::nullopt,
+        context_.connection.close_requested, std::nullopt, true));
     return true;
   }
   // +=========================================================================+
@@ -1196,12 +1109,10 @@ class decoder {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::unique_ptr<char[]> buffer_;
-  std::unique_ptr<char[]> response_buffer_;
-  std::size_t head_size_ = 0;
-  std::size_t body_size_ = 0;
-  common::byte_storage_file body_file_;
-  std::filesystem::path body_file_path_;
+  std::vector<char> reminder_;
+  bool reminder_active_{false};
+  std::size_t head_end_{0};
+  std::optional<RQty> request_;
   bool storage_failed_ = false;
   std::optional<body_framer_t> body_framer_ = std::nullopt;
   context context_;

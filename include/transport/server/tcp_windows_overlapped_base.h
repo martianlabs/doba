@@ -29,7 +29,7 @@
 
 #include "platform.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] io_type                                                ( enum-class ) |
@@ -60,6 +60,6 @@ struct overlapped_base : OVERLAPPED {
   // +-------------------------------------------------------------------------+
   const io_type type;
 };
-} // namespace martianlabs::doba::transport::server
+} // namespace martianlabs::doba::transport::server::detail
 
 #endif

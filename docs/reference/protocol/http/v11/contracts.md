@@ -1,0 +1,242 @@
+<a id="contracts"></a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/title.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/title.svg" alt="contracts">
+</a>
+<a href="../../../../../resources/docs/reference/protocol/http/v11/contracts/title-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/protocol/http/v11/contracts/title-dark.svg" alt="contracts">
+</a>
+
+**Header:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
+
+This header declares the types and operations listed below.
+
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::contracts
+
+[request](#concept-request) ·
+[response](#concept-response) ·
+[router](#concept-router)
+
+<a id="api"></a>
+<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
+</a>
+<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
+</a>
+
+<a id="concept-request"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> request
+
+**CONCEPT** · *protocol::http::v11::contracts*
+
+```cpp
+template <typename RQty>
+concept request =
+    std::move_constructible<RQty> && std::assignable_from<RQty&, RQty> &&
+    requires(RQty& mutable_value, const RQty& value, std::string_view text,
+             std::size_t index,
+             std::vector<http::header_view> headers,
+             std::vector<http::query_parameter_view> query_parameters,
+             std::optional<body::reader> body_reader) {
+      {
+        RQty::from(text, text, http::target::kOriginForm, std::move(headers),
+                   std::move(query_parameters),
+                   std::optional<std::string_view>{},
+                   std::optional<std::string_view>{},
+                   std::optional<http::helpers::host_type>{},
+                   std::optional<std::string_view>{},
+                   std::optional<std::string_view>{},
+                   std::optional<http::helpers::host_type>{}, false,
+                   std::move(body_reader), true)
+      } -> std::same_as<RQty>;
+      { value.borrows_bytes() } -> std::same_as<bool>;
+      { value.body_is_stored() } -> std::same_as<bool>;
+      { mutable_value.make_owned() } -> std::same_as<void>;
+      { value.body_wire_size() } -> std::same_as<std::size_t>;
+      { mutable_value.rebase_bytes(std::uintptr_t{}, text.data()) } noexcept -> std::same_as<void>;
+      { mutable_value.begin_body(index, index) } -> std::same_as<bool>;
+      { mutable_value.append_body(text) } -> std::same_as<bool>;
+      { mutable_value.finish_body(false, index, index, index) }
+          -> std::same_as<bool>;
+      { value.get_method() } -> std::same_as<std::string_view>;
+      { value.get_target() } -> std::same_as<http::target>;
+      { value.get_absolute_path() } -> std::same_as<std::string_view>;
+      { value.get_header(index) } -> std::same_as<http::header_view>;
+      { value.get_header(text) } -> std::same_as<http::header_view>;
+      { value.exist_header(text) } -> std::same_as<bool>;
+      { value.get_headers_length() } -> std::same_as<std::size_t>;
+      {
+        value.get_query_parameter(index)
+      } -> std::same_as<http::query_parameter_view>;
+      {
+        value.get_query_parameter(text)
+      } -> std::same_as<std::optional<http::query_parameter_view>>;
+      { value.get_query_parameters_length() } -> std::same_as<std::size_t>;
+      { value.has_host() } -> std::same_as<bool>;
+      { value.get_host() } -> std::same_as<std::string_view>;
+      { value.get_host_port() } -> std::same_as<std::string_view>;
+      { value.get_host_type() } -> std::same_as<http::helpers::host_type>;
+      { value.has_target_authority() } -> std::same_as<bool>;
+      { value.get_target_authority_host() } -> std::same_as<std::string_view>;
+      { value.get_target_authority_port() } -> std::same_as<std::string_view>;
+      {
+        value.get_target_authority_type()
+      } -> std::same_as<http::helpers::host_type>;
+      { value.get_body_reader() } -> std::same_as<body::reader*>;
+      { value.has_body_reader() } -> std::same_as<bool>;
+      { value.wants_connection_close() } -> std::same_as<bool>;
+      {
+        value.get_cookie(text)
+      } -> std::same_as<std::optional<std::string_view>>;
+      {
+        value.get_cookies()
+      } -> std::same_as<
+          std::vector<std::pair<std::string_view, std::string_view>>>;
+    };
+```
+
+Checks the compile-time requirements for request.
+
+**Template parameters:**
+
+- **RQty:** `typename RQty`.
+
+**Source:** [include/protocol/http/v11/contracts.h:107](../../../../../include/protocol/http/v11/contracts.h#L107)
+
+<a id="concept-response"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> response
+
+**CONCEPT** · *protocol::http::v11::contracts*
+
+```cpp
+template <typename RSty>
+concept response =
+    std::move_constructible<RSty> && std::assignable_from<RSty&, RSty> &&
+    std::same_as<typename RSty::serialized_type, serialization_result> &&
+    requires(RSty& value, const RSty& constant, std::size_t size,
+             std::string& head_storage, std::string& body_storage,
+             std::string_view text, body::reader* body_reader,
+             body::body_writer body_writer, common::reader source) {
+      { RSty::from(size, size) } -> std::same_as<RSty>;
+      { RSty::from(size, size, head_storage, body_storage) } -> std::same_as<RSty>;
+      { value.serialize() } -> std::same_as<serialization_result>;
+      { value.add_header(text, text) } -> std::same_as<RSty&>;
+      { value.add_header(text, 1) } -> std::same_as<RSty&>;
+      { value.add_header(text, 1.0) } -> std::same_as<RSty&>;
+      { value.set_header(text, text) } -> std::same_as<RSty&>;
+      { value.set_header(text, 1) } -> std::same_as<RSty&>;
+      { value.set_header(text, 1.0) } -> std::same_as<RSty&>;
+      { constant.has_header(text) } -> std::same_as<bool>;
+      { constant.wants_connection_close() } -> std::same_as<bool>;
+      { constant.is_continue_100() } -> std::same_as<bool>;
+      {
+        constant.get_header(text)
+      } -> std::same_as<std::pair<std::string, std::string>>;
+      {
+        constant.get_header(size)
+      } -> std::same_as<std::pair<std::string, std::string>>;
+      { constant.get_headers_length() } -> std::same_as<std::size_t>;
+      { value.remove_header(text) } -> std::same_as<RSty&>;
+      { value.set_body(text) } -> std::same_as<RSty&>;
+      { value.set_body(body_reader) } -> std::same_as<RSty&>;
+      { value.set_body(std::move(body_writer)) } -> std::same_as<RSty&>;
+      { value.set_body(1) } -> std::same_as<RSty&>;
+      { value.set_body(1.0) } -> std::same_as<RSty&>;
+      { value.set_body(std::move(source), size) } -> std::same_as<RSty&>;
+      { value.clear_body() } -> std::same_as<RSty&>;
+      { value.suppress_body() } -> std::same_as<RSty&>;
+      { value.continue_100() } -> std::same_as<RSty&>;
+      { value.switching_protocols_101() } -> std::same_as<RSty&>;
+      { value.ok_200() } -> std::same_as<RSty&>;
+      { value.created_201() } -> std::same_as<RSty&>;
+      { value.accepted_202() } -> std::same_as<RSty&>;
+      { value.non_authoritative_info_203() } -> std::same_as<RSty&>;
+      { value.no_content_204() } -> std::same_as<RSty&>;
+      { value.reset_content_205() } -> std::same_as<RSty&>;
+      { value.partial_content_206() } -> std::same_as<RSty&>;
+      { value.multiple_choices_300() } -> std::same_as<RSty&>;
+      { value.moved_permanently_301() } -> std::same_as<RSty&>;
+      { value.found_302() } -> std::same_as<RSty&>;
+      { value.see_other_303() } -> std::same_as<RSty&>;
+      { value.not_modified_304() } -> std::same_as<RSty&>;
+      { value.use_proxy_305() } -> std::same_as<RSty&>;
+      { value.unused_306() } -> std::same_as<RSty&>;
+      { value.temporary_redirect_307() } -> std::same_as<RSty&>;
+      { value.permanent_redirect_308() } -> std::same_as<RSty&>;
+      { value.bad_request_400() } -> std::same_as<RSty&>;
+      { value.unauthorized_401() } -> std::same_as<RSty&>;
+      { value.payment_required_402() } -> std::same_as<RSty&>;
+      { value.forbidden_403() } -> std::same_as<RSty&>;
+      { value.not_found_404() } -> std::same_as<RSty&>;
+      { value.method_not_allowed_405() } -> std::same_as<RSty&>;
+      { value.not_acceptable_406() } -> std::same_as<RSty&>;
+      { value.proxy_auth_required_407() } -> std::same_as<RSty&>;
+      { value.request_timeout_408() } -> std::same_as<RSty&>;
+      { value.conflict_409() } -> std::same_as<RSty&>;
+      { value.gone_410() } -> std::same_as<RSty&>;
+      { value.length_required_411() } -> std::same_as<RSty&>;
+      { value.precondition_failed_412() } -> std::same_as<RSty&>;
+      { value.content_too_large_413() } -> std::same_as<RSty&>;
+      { value.uri_too_long_414() } -> std::same_as<RSty&>;
+      { value.unsupported_media_type_415() } -> std::same_as<RSty&>;
+      { value.range_not_satisfiable_416() } -> std::same_as<RSty&>;
+      { value.expectation_failed_417() } -> std::same_as<RSty&>;
+      { value.unused_418() } -> std::same_as<RSty&>;
+      { value.misdirected_request_421() } -> std::same_as<RSty&>;
+      { value.unprocessable_content_422() } -> std::same_as<RSty&>;
+      { value.upgrade_required_426() } -> std::same_as<RSty&>;
+      { value.request_header_fields_too_large_431() } -> std::same_as<RSty&>;
+      { value.internal_server_error_500() } -> std::same_as<RSty&>;
+      { value.not_implemented_501() } -> std::same_as<RSty&>;
+      { value.bad_gateway_502() } -> std::same_as<RSty&>;
+      { value.service_unavailable_503() } -> std::same_as<RSty&>;
+      { value.gateway_timeout_504() } -> std::same_as<RSty&>;
+      { value.http_version_not_supported_505() } -> std::same_as<RSty&>;
+    };
+```
+
+Checks the compile-time requirements for response.
+
+**Template parameters:**
+
+- **RSty:** `typename RSty`.
+
+**Source:** [include/protocol/http/v11/contracts.h:176](../../../../../include/protocol/http/v11/contracts.h#L176)
+
+<a id="concept-router"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> router
+
+**CONCEPT** · *protocol::http::v11::contracts*
+
+```cpp
+template <typename ROty, typename RQty, typename RSty>
+concept router =
+    std::default_initializable<ROty> &&
+    requires(ROty& routes, const ROty& constant, std::string_view text) {
+      {
+        routes.add(text, text, [](const RQty&, RSty&) {})
+      } -> std::same_as<void>;
+      {
+        routes.add(text, text,
+                   [](const RQty&, RSty&) -> common::task<void> { co_return; })
+      } -> std::same_as<void>;
+      { routes.template add_controller<RQty>() } -> std::same_as<void>;
+      {
+        constant.match(text, text)
+      } -> std::same_as<http::router_match_result<RQty, RSty>>;
+      { constant.allowed_methods(text) } -> std::same_as<std::string>;
+    };
+```
+
+Checks the compile-time requirements for router.
+
+**Template parameters:**
+
+- **ROty:** `typename ROty`.
+- **RQty:** `typename RQty`.
+- **RSty:** `typename RSty`.
+
+**Source:** [include/protocol/http/v11/contracts.h:266](../../../../../include/protocol/http/v11/contracts.h#L266)

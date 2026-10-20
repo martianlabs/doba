@@ -33,7 +33,7 @@
 namespace {
 using martianlabs::doba::common::filesystem_file;
 using martianlabs::doba::common::reader;
-using martianlabs::doba::transport::server::send_state;
+using martianlabs::doba::transport::server::detail::send_state;
 }  // namespace
 
 // +===========================================================================+

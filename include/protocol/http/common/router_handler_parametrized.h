@@ -243,7 +243,6 @@ void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
              values);
 }
 
-}  // namespace detail
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -321,6 +320,7 @@ auto make_router_handler_parametrized(std::string_view pattern, Hty&& handler) {
             handler, req, res, route_pattern, path);
       });
 }
+}  // namespace detail
 }  // namespace martianlabs::doba::protocol::http
 
 #endif

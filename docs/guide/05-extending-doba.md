@@ -1,9 +1,11 @@
 <a name="extending-doba"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-extending-doba-dark.svg">
+  <a href="../../resources/docs/guide/h1-extending-doba.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-extending-doba.svg" alt="Extending doba">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-extending-doba-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-extending-doba-dark.svg" alt="Extending doba">
+  </a>
 </h1>
 
 Want a protocol that isn't HTTP? Or a transport that doesn't use sockets?
@@ -13,10 +15,12 @@ small examples that put them to work.
 
 <a name="build-the-examples"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-build-the-examples-dark.svg">
+  <a href="../../resources/docs/guide/h2-build-the-examples.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-build-the-examples.svg" alt="Build the examples">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-build-the-examples-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-build-the-examples-dark.svg" alt="Build the examples">
+  </a>
 </h2>
 
 From the repository root, build both demos. They use plain TCP or memory,
@@ -33,10 +37,12 @@ for generators such as Visual Studio.
 
 <a name="your-own-protocol"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-your-own-protocol-dark.svg">
+  <a href="../../resources/docs/guide/h2-your-own-protocol.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-your-own-protocol.svg" alt="Your own protocol">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-protocol-dark.svg" alt="Your own protocol">
+  </a>
 </h2>
 
 The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
@@ -55,37 +61,39 @@ void set_on_send(protocol::send_delegate output) {
 void set_on_close(std::function<void()>) {}
 ```
 
-The input method looks for complete lines. It sends each one and returns the
-number of bytes consumed:
+The input method appends each new block to engine-owned storage and sends
+complete lines:
 
 ```cpp
-std::size_t on_bytes_received(const char* buffer, std::size_t size,
-                              std::size_t) {
+void on_bytes_received(std::string_view input) {
+  input_.append(input);
   std::size_t consumed = 0;
-  while (consumed < size) {
-    const std::string_view remaining(buffer + consumed, size - consumed);
-    const std::size_t end = remaining.find('\n');
+  for (;;) {
+    const std::string_view remaining(input_.data() + consumed,
+                                      input_.size() - consumed);
+    const auto end = remaining.find('\n');
     if (end == std::string_view::npos) break;
-    const std::string_view line = remaining.substr(0, end + 1);
+    const auto line = remaining.substr(0, end + 1);
     on_send_("echo: ", line, nullptr);
     consumed += line.size();
   }
-  return consumed;
+  input_.erase(0, consumed);
 }
 ```
 
-If the last line has no newline yet, the method leaves those bytes
-unconsumed. TCP keeps them in the connection's receive buffer and tries
-again when more data arrives. A line that fills the buffer without a newline
-cannot make progress, so TCP closes that connection. This is why the return
-value matters as much as the parser.
+Here input_ is a std::string member. Incomplete lines remain in that
+string. The transport delivers only fresh bytes, and may overwrite its
+receive buffer as soon as the callback returns. A production line protocol
+must enforce its own maximum line length.
 
 <a name="run-it-over-tcp"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg">
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-run-it-over-tcp.svg" alt="Run it over TCP">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg" alt="Run it over TCP">
+  </a>
 </h2>
 
 TCP needs a fresh engine for each connection, so the example gives the
@@ -120,10 +128,12 @@ with Ctrl+C when you're done.
 
 <a name="your-own-transport"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-your-own-transport-dark.svg">
+  <a href="../../resources/docs/guide/h2-your-own-transport.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-your-own-transport.svg" alt="Your own transport">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-transport-dark.svg" alt="Your own transport">
+  </a>
 </h2>
 
 The [custom_transport example][custom-transport] flips the experiment: it
@@ -155,10 +165,12 @@ the transport stops.
 
 <a name="run-http-in-memory"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-http-in-memory-dark.svg">
+  <a href="../../resources/docs/guide/h2-run-http-in-memory.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-run-http-in-memory.svg" alt="Run HTTP in memory">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-run-http-in-memory-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-http-in-memory-dark.svg" alt="Run HTTP in memory">
+  </a>
 </h2>
 
 The HTTP server accepts the transport as its final template argument. The
@@ -190,24 +202,55 @@ It prints an HTTP response that starts with **HTTP/1.1 200** and ends with
 
 <a name="keep-the-boundary-safe"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg">
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-keep-the-boundary-safe.svg" alt="Keep the boundary safe">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg" alt="Keep the boundary safe">
+  </a>
 </h2>
 
 The examples are small on purpose. When you move beyond them, keep three
 runtime rules from the [contracts](02-core-model.md#protocol-contract) in
 view:
 
-- **Input.** Report exactly how many bytes the engine consumed. Any
-  unconsumed bytes must remain available for the next call.
+- **Input.** Deliver only newly received bytes, with their pointer and size.
+  The engine processes or copies them before returning. Incomplete protocol
+  messages belong to the engine; the transport may immediately reuse its buffer.
 - **Output.** The two views passed to *send_delegate* do not own their bytes.
   If a transport sends later, it must preserve that data; it takes ownership
   of an optional body reader.
 - **Threads and closure.** Input calls for one connection are serialized.
   Output can arrive from different threads, and a close request must stop
   further input for that connection.
+
+Custom HTTP requests accept a final `borrow_bytes` argument in `from(...)`.
+The decoder supplies true so fields can reference its immutable input;
+standalone factory calls default to owned field storage. Requests expose
+`borrows_bytes()` and `make_owned()` for copying before async invocation.
+`rebase_bytes(previous_address, current_buffer) noexcept` supports residual
+relocation before dispatch; `body_is_stored()` and `body_wire_size()` determine
+whether fragmented body bytes need residual storage. Borrowed input must
+remain immutable; the standard request copies percent-encoded paths before
+decoding them.
+Their `begin_body(memory_threshold, declared_size)`,
+`append_body(wire_bytes)` and
+`finish_body(chunked, content_length, extension_limit, trailer_limit)`
+operations support construction across receives; a false result reports a
+storage failure. The decoder calls the factory once the head is complete,
+but dispatches the request only after its body is complete. Deriving from the
+built-in request supplies these operations.
+
+Custom HTTP responses provide an owning factory
+`from(max_head_size, body_memory_threshold)` and a synchronous factory
+`from(max_head_size, body_memory_threshold, head_storage, body_storage)`.
+The last two arguments are references to separate engine-owned `std::string`
+objects. The synchronous response starts with fresh message state and writes
+directly into them, reusing their capacity. These borrowed strings must outlive
+serialization and the transport's output capture. The limits remain
+operational bounds; no default capacity is reserved. Deriving from the
+standard response supplies both storage modes. The custom response example
+forwards both factories.
 
 The in-memory demo handles one fixed request synchronously. It shows where
 the pieces meet; a real network transport also needs connection management,

@@ -91,12 +91,12 @@ DOBA_TEST("interpret applies the configured limit") {
   policies policies;
   DOBA_EXPECT_EQUAL(content_length::interpret(0, connection, policies),
                     verdict::kAccept);
-  policies.max_content_length = 0;
+  policies.max_request_body_size = 0;
   DOBA_EXPECT_EQUAL(
       content_length::interpret(std::numeric_limits<std::size_t>::max(),
                                 connection, policies),
       verdict::kAccept);
-  policies.max_content_length = 10;
+  policies.max_request_body_size = 10;
   DOBA_EXPECT_EQUAL(content_length::interpret(0, connection, policies),
                     verdict::kAccept);
   DOBA_EXPECT_EQUAL(content_length::interpret(9, connection, policies),

@@ -26,7 +26,10 @@
 #define martianlabs_doba_protocol_http_v11_request_h
 
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -35,6 +38,7 @@
 #include <vector>
 
 #include "platform.h"
+#include "common/byte_storage.h"
 #include "common/hash_map.h"
 #include "protocol/http/v11/context.h"
 #include "protocol/http/common/query_parameter.h"
@@ -147,12 +151,13 @@ class request {
       std::optional<std::string_view> target_authority_host,
       std::optional<std::string_view> target_authority_port,
       std::optional<helpers::host_type> target_authority_type,
-      bool wants_connection_close, std::optional<body::reader> body_reader) {
+      bool wants_connection_close, std::optional<body::reader> body_reader,
+      bool borrow_bytes = false) {
     return request(method, abs_path, target_form, std::move(headers),
                    std::move(query_parameters), host, port, type,
                    target_authority_host, target_authority_port,
                    target_authority_type, wants_connection_close,
-                   std::move(body_reader));
+                   std::move(body_reader), borrow_bytes);
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
@@ -297,6 +302,120 @@ class request {
     return cookies;
   }
 
+  // Async execution must own its bytes before calling user code.
+  bool borrows_bytes() const noexcept { return borrowed_; }
+  void make_owned() {
+    if (!borrowed_) return;
+    std::size_t size = 0;
+    auto count = [&](std::string_view text) {
+      if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
+        throw std::length_error("request bytes are too large");
+      }
+      size += text.size();
+    };
+    count(method_);
+    count(abs_path_);
+    count(host_);
+    count(host_port_);
+    count(ta_host_);
+    count(ta_port_);
+    for (const auto& field : headers_) { count(field.first); count(field.second); }
+    for (const auto& field : query_parameters_) { count(field.first); count(field.second); }
+    count(body_bytes_);
+    std::vector<char> owned(size);
+    std::size_t offset = 0;
+    auto copy = [&](std::string_view& text) {
+      if (text.empty()) return;
+      char* target = owned.data() + offset;
+      std::memcpy(target, text.data(), text.size());
+      offset += text.size();
+      text = {target, text.size()};
+    };
+    copy(method_);
+    copy(abs_path_);
+    copy(host_);
+    copy(host_port_);
+    copy(ta_host_);
+    copy(ta_port_);
+    for (auto& field : headers_) { copy(field.first); copy(field.second); }
+    for (auto& field : query_parameters_) { copy(field.first); copy(field.second); }
+    copy(body_bytes_);
+    if (body_reader_ && !body_bytes_.empty()) {
+      body_reader_->rebind_borrowed(std::as_bytes(
+          std::span(body_bytes_.data(), body_bytes_.size())));
+    }
+    head_bytes_ = std::move(owned);
+    borrowed_ = false;
+  }
+  void rebase_bytes(std::uintptr_t previous, const char* current) noexcept {
+    auto rebase = [&](std::string_view& text) {
+      if (!text.empty()) {
+        const auto offset = reinterpret_cast<std::uintptr_t>(text.data()) - previous;
+        text = {current + offset, text.size()};
+      }
+    };
+    rebase(method_);
+    if (head_bytes_.empty()) rebase(abs_path_);
+    rebase(host_);
+    rebase(host_port_);
+    rebase(ta_host_);
+    rebase(ta_port_);
+    for (auto& field : headers_) { rebase(field.first); rebase(field.second); }
+    for (auto& field : query_parameters_) { rebase(field.first); rebase(field.second); }
+    rebase(body_bytes_);
+  }
+  bool body_is_stored() const noexcept { return body_storage_.has_value(); }
+  std::size_t body_wire_size() const noexcept { return body_wire_size_; }
+
+  // Inline wire bytes stay in the decoder; larger bodies use existing storage.
+  bool begin_body(std::size_t memory_threshold, std::size_t declared_size) {
+    body_threshold_ = memory_threshold;
+    body_wire_size_ = 0;
+    body_bytes_ = {};
+    if (borrowed_ && memory_threshold && declared_size <= memory_threshold) {
+      return true;
+    }
+    body_storage_.emplace(common::byte_storage_options{memory_threshold, {}});
+    return (memory_threshold && declared_size <= memory_threshold) ||
+           body_storage_->spill();
+  }
+  bool append_body(std::string_view bytes) {
+    if (bytes.empty()) return true;
+    if (!body_storage_ && bytes.size() <= body_threshold_ - body_wire_size_) {
+      if (body_bytes_.empty()) body_bytes_ = bytes;
+      else body_bytes_ = {body_bytes_.data(), body_bytes_.size() + bytes.size()};
+      body_wire_size_ += bytes.size();
+      return true;
+    }
+    if (!body_storage_) {
+      body_storage_.emplace(common::byte_storage_options{body_threshold_, {}});
+      if (!body_storage_->spill() ||
+          !body_storage_->write(body_bytes_.data(), body_bytes_.size())) return false;
+      body_bytes_ = {};
+    }
+    if (!body_storage_->write(bytes.data(), bytes.size())) return false;
+    body_wire_size_ += bytes.size();
+    return true;
+  }
+  bool finish_body(bool chunked, std::size_t content_length,
+                   std::size_t extension_limit, std::size_t trailer_limit) {
+    if (!body_storage_) {
+      const auto bytes = std::as_bytes(std::span(body_bytes_.data(), body_bytes_.size()));
+      body_reader_ = chunked ? body::reader::chunked(bytes, extension_limit, trailer_limit)
+                             : body::reader::raw(bytes, content_length);
+      return true;
+    }
+    body_storage_->finish(body_wire_size_);
+    if (!body_storage_->ok()) return false;
+    body_storage_->unlink_file();
+    body_reader_ =
+        chunked ? body::reader::chunked(std::move(*body_storage_),
+                                        extension_limit, trailer_limit)
+                : body::reader::raw(std::move(*body_storage_), content_length);
+    body_storage_.reset();
+    return true;
+  }
+
  private:
   // +=========================================================================+
   // | [>] find_cookie_header                                      ( private ) |
@@ -353,27 +472,96 @@ class request {
           std::optional<std::string_view> target_authority_port,
           std::optional<helpers::host_type> target_authority_type,
           bool wants_connection_close,
-          std::optional<body::reader> body_reader) {
-    method_ = method;
-    abs_path_ = abs_path;
+          std::optional<body::reader> body_reader, bool borrow_bytes) {
+    std::size_t size = 0;
+    auto count = [&](std::string_view text) {
+      if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
+        throw std::length_error("request fields are too large");
+      }
+      size += text.size();
+    };
+    borrowed_ = borrow_bytes;
+    if (!borrow_bytes) {
+      count(method);
+      count(abs_path);
+      for (const auto& field : headers) {
+        count(field.first);
+        count(field.second);
+      }
+      for (const auto& field : query_parameters) {
+        count(field.first);
+        count(field.second);
+      }
+      for (const auto field : {host, port, target_authority_host,
+                              target_authority_port}) {
+        if (field) count(*field);
+      }
+      head_bytes_.resize(size);
+    }
+    std::size_t offset = 0;
+    auto copy = [&](std::string_view text) {
+      if (text.empty()) return std::string_view{};
+      if (borrow_bytes) return text;
+      char* destination = head_bytes_.data() + offset;
+      std::memcpy(destination, text.data(), text.size());
+      offset += text.size();
+      return std::string_view(destination, text.size());
+    };
+    method_ = copy(method);
+    abs_path_ = copy(abs_path);
+    if (borrow_bytes && abs_path_.find('%') != std::string_view::npos) {
+      head_bytes_.assign(abs_path_.begin(), abs_path_.end());
+      abs_path_ = {head_bytes_.data(), head_bytes_.size()};
+    }
     helpers::percent_decode_in_place(abs_path_);
+    for (auto& field : headers) {
+      field.first = copy(field.first);
+      field.second = copy(field.second);
+    }
+    for (auto& field : query_parameters) {
+      field.first = copy(field.first);
+      field.second = copy(field.second);
+    }
     target_ = target_form;
     headers_ = std::move(headers);
     query_parameters_ = std::move(query_parameters);
-    if (host) host_ = *host;
-    if (port) host_port_ = *port;
+    if (host) host_ = copy(*host);
+    if (port) host_port_ = copy(*port);
     if (type) host_type_ = *type;
-    if (target_authority_host) ta_host_ = *target_authority_host;
-    if (target_authority_port) ta_port_ = *target_authority_port;
+    if (target_authority_host) ta_host_ = copy(*target_authority_host);
+    if (target_authority_port) ta_port_ = copy(*target_authority_port);
     if (target_authority_type) ta_type_ = *target_authority_type;
     wants_connection_close_ = wants_connection_close;
-    body_reader_ = std::move(body_reader);
+    if (body_reader) {
+      if (!begin_body(policies::kDefaultRequestBodyMemoryThreshold, 0)) {
+        throw std::runtime_error("unable to create request body");
+      }
+      std::byte bytes[8192];
+      for (;;) {
+        const auto state = body_reader->read(bytes);
+        if (state.has_error || (!state.produced && !state.complete) ||
+            !append_body(std::string_view(
+                reinterpret_cast<const char*>(bytes), state.produced))) {
+          throw std::runtime_error("unable to copy request body");
+        }
+        if (state.complete) break;
+      }
+      if (!finish_body(false, body_wire_size_, 0, 0)) {
+        throw std::runtime_error("unable to finish request body");
+      }
+    }
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
   std::string_view abs_path_;         // absolute path from the request-target
+  std::vector<char> head_bytes_;
+  std::optional<common::byte_storage> body_storage_;
+  std::size_t body_wire_size_{0};
+  std::size_t body_threshold_{0};
+  std::string_view body_bytes_;
+  bool borrowed_{false};
   target target_ = target::kUnknown;  // request-target form
   std::string_view host_;             // host from the Host header
   std::string_view host_port_;        // port from the Host header

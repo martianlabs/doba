@@ -1,292 +1,84 @@
-<a name="server"></a>
-<h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h1-server-dark.svg">
-    <img src="../../resources/docs/reference/h1-server.svg" alt="Server">
-  </picture>
-</h1>
+<a id="server"></a>
+<a href="../../resources/docs/reference/server/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/server/title.svg" alt="server">
+</a>
+<a href="../../resources/docs/reference/server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/server/title-dark.svg" alt="server">
+</a>
 
-*server* joins a protocol engine to a concrete server transport. It has no
-HTTP types. The declaration is in [server.h](../../include/server.h), in the
-*martianlabs::doba* namespace:
+**Header:** [include/server.h](../../include/server.h)
 
-```cpp
-#include "server.h"
-```
+Server class that manages the lifecycle of a transport server and its associated protocol engine.
 
-The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
-shows a complete engine and its
-[source](../../examples/protocol/custom_protocol/main.cpp) runs it over TCP.
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
-<a name="type-and-defaults"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h2-type-and-defaults-dark.svg">
-    <img src="../../resources/docs/reference/h2-type-and-defaults.svg" alt="Type and defaults">
-  </picture>
-</h2>
+[server](#type-server)
+
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> server
+
+[start](#method-start) ·
+[stop](#method-stop)
+
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
+</a>
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
+</a>
+
+<a id="type-server"></a>
+
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> server
+
+**TYPE** · *doba*
+
+**Declaration synopsis:**
 
 ```cpp
 template <protocol::contracts::engine ENty, typename TRty>
-class server;
+class server { ... };
 ```
 
-- **ENty.** The engine type for one connection. It must satisfy the
-  [engine contract](../../include/protocol/contracts.h).
-- **TRty.** A concrete transport type, already instantiated with *ENty* and
-  its factory type. Its constructor must satisfy the
-  [transport contract](../../include/transport/server/contracts.h).
+Server class that manages the lifecycle of a transport server and its associated protocol engine.
 
-The engine factory creates each connection's engine. For TCP, its type is the
-second template argument of *transport::server::tcp*. An engine that leaves
-work pending after its connection closes implements the optional
-[*completion_engine* contract](../../include/protocol/contracts.h): *stop*
-returns *true* when that work is complete, or returns *false* and calls the
-completion callback once when it finishes. Other engines can be retired as
-soon as their connection closes.
+**Template parameters:**
 
-<a name="construction"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h2-construction-dark.svg">
-    <img src="../../resources/docs/reference/h2-construction.svg" alt="Construction">
-  </picture>
-</h2>
+- **ENty:** `protocol::contracts::engine ENty`.
+- **TRty:** `typename TRty`.
 
-```cpp
-template <protocol::contracts::engine_factory<ENty> EFy>
-  requires transport::server::contracts::transport<TRty, ENty, EFy>
-explicit server(typename TRty::policies_type configuration,
-                EFy factory);
-```
+**Source:** [include/server.h:53](../../include/server.h#L53)
 
-**Parameters and template arguments:**
+<a id="method-start"></a>
 
-- **EFy.** The deduced type of the engine factory. It must be move
-  constructible, callable without arguments when const, and return *ENty*.
-- **configuration.** Policies for the chosen transport.
-- **factory.** Factory retained until the first *start*, then moved into
-  the transport. It must remain able to create engines while the server
-  accepts connections.
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
 
-**Returns:** No value; construction creates the server object.
-
-**Errors:** Storing the configuration and factory may throw. Transport
-construction and configuration errors arise on the first *start*.
-
-Construction does not create the transport or start accepting connections.
-
-The example creates a transport type from its engine and factory, then gives
-both to *server*:
-
-```cpp
-auto create_engine = []() { return custom_protocol{}; };
-using transport_type = martianlabs::doba::transport::server::tcp<
-    custom_protocol, decltype(create_engine)>;
-martianlabs::doba::server<custom_protocol, transport_type> server(
-    {.ip = "0.0.0.0", .port = "8080"}, create_engine);
-```
-
-<a name="lifecycle"></a>
-<h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h2-lifecycle-dark.svg">
-    <img src="../../resources/docs/reference/h2-lifecycle.svg" alt="Lifecycle">
-  </picture>
-</h2>
-
-<a name="start"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-start-dark.svg">
-    <img src="../../resources/docs/reference/h3-start.svg" alt="Start">
-  </picture>
-</h3>
+**METHOD** · *server*
 
 ```cpp
 void start();
 ```
 
-**Parameters:** None.
+Starts the transport and begins accepting connections. A second call while running has no effect.
 
-**Returns:** Nothing (*void*). A repeated call while running has no effect.
+**Returns:** No value (`void`).
 
-**Errors:** Transport construction, startup, and *started* callback exceptions
-reach the caller.
+**Errors:** Throws `std::runtime_error` if transport construction failed on an earlier attempt. Construction, callbacks, and transport startup can propagate errors.
 
-After a transport startup failure, the server permits another *start* call,
-but does not clean up the failed transport. A custom transport must restore
-its stopped state for a successful retry. If transport construction throws,
-this server instance cannot retry it.
+**Source:** [include/server.h:81](../../include/server.h#L81)
 
-A derived server subscribes during construction. *starting* fires before the
-transport is constructed or started. *start_failed* fires if that callback,
-transport construction, or transport startup throws. *started* fires after
-transport startup succeeds and the server is marked running. The transport is
-constructed only on the first *start* and retained across *stop* and restart.
-Repeated *start* calls while running emit no events.
+<a id="method-stop"></a>
 
-<a name="stop"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-stop-dark.svg">
-    <img src="../../resources/docs/reference/h3-stop.svg" alt="Stop">
-  </picture>
-</h3>
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
+
+**METHOD** · *server*
 
 ```cpp
 void stop();
 ```
 
-**Parameters:** None.
+Stops accepting connections and closes active connections. A call while stopped has no effect.
 
-**Returns:** Nothing (*void*). A repeated call while stopped has no effect.
+**Returns:** No value (`void`).
 
-**Errors:** Transport and lifecycle callback exceptions reach the caller.
-
-The server quiesces transports that support it before stopping them. TCP and
-TLS keep closed connections with pending engine work until completion, then
-retire them before their workers stop. Call *stop* from a control thread:
-TCP and TLS reject quiescing from a worker.
-*stopping* fires after quiescing, or after *stop* when the transport cannot
-quiesce. *stopped* fires after the transport stops. Lifecycle callbacks run
-under the server's mutex and must not call *start* or *stop* again.
-
-Derived classes register lifecycle callbacks through these protected
-methods. Register them during construction, before *start*. Each method
-stores one callback; another call replaces it, and an empty callback clears
-it. The setters are not synchronized with lifecycle calls. If a callback
-captures derived state, stop the server before that state is destroyed.
-
-<a name="set-on-starting"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-starting-dark.svg">
-    <img src="../../resources/docs/reference/h3-set-on-starting.svg" alt="Set on starting">
-  </picture>
-</h3>
-
-```cpp
-void set_on_starting(std::function<void()> callback);
-```
-
-**Parameters:** **callback.** The function called when this event occurs.
-
-**Returns:** Nothing (*void*).
-
-**Errors:** Callback exceptions propagate from *start*.
-
-Registers the callback invoked before transport construction. If it throws,
-*start* invokes *start_failed* and propagates the exception.
-
-<a name="set-on-started"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-started-dark.svg">
-    <img src="../../resources/docs/reference/h3-set-on-started.svg" alt="Set on started">
-  </picture>
-</h3>
-
-```cpp
-void set_on_started(std::function<void()> callback);
-```
-
-**Parameters:** **callback.** The function called when this event occurs.
-
-**Returns:** Nothing (*void*).
-
-**Errors:** Callback exceptions propagate from *start*; the server stays
-running.
-
-Registers the callback invoked after transport startup succeeds and the
-server is marked running. If it throws, *start_failed* does not fire.
-
-<a name="set-on-start-failed"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-start-failed-dark.svg">
-    <img src="../../resources/docs/reference/h3-set-on-start-failed.svg" alt="Set on start failed">
-  </picture>
-</h3>
-
-```cpp
-void set_on_start_failed(std::function<void()> callback);
-```
-
-**Parameters:** **callback.** The function called when this event occurs.
-
-**Returns:** Nothing (*void*).
-
-**Errors:** Callback exceptions propagate from *start* and replace the original
-startup exception.
-
-Registers the callback invoked when *starting*, transport construction, or
-transport startup throws. The server remains stopped. It can be started again
-after a failure in *starting* or transport startup.
-
-<a name="set-on-stopping"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-stopping-dark.svg">
-    <img src="../../resources/docs/reference/h3-set-on-stopping.svg" alt="Set on stopping">
-  </picture>
-</h3>
-
-```cpp
-void set_on_stopping(std::function<void()> callback);
-```
-
-**Parameters:** **callback.** The function called when this event occurs.
-
-**Returns:** Nothing (*void*).
-
-**Errors:** Callback exceptions propagate from *stop* and may prevent shutdown
-from completing.
-
-Registers the callback invoked after transport quiescing, before the
-transport stops. If the transport has no *quiesce* method, it runs after
-the transport stops.
-
-<a name="set-on-stopped"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-set-on-stopped-dark.svg">
-    <img src="../../resources/docs/reference/h3-set-on-stopped.svg" alt="Set on stopped">
-  </picture>
-</h3>
-
-```cpp
-void set_on_stopped(std::function<void()> callback);
-```
-
-**Parameters:** **callback.** The function called when this event occurs.
-
-**Returns:** Nothing (*void*).
-
-**Errors:** Callback exceptions propagate from *stop*.
-
-Registers the callback invoked after the transport stops and the
-server is marked stopped.
-
-<a name="destructor"></a>
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/reference/h3-destructor-dark.svg">
-    <img src="../../resources/docs/reference/h3-destructor.svg" alt="Destructor">
-  </picture>
-</h3>
-
-```cpp
-~server();
-```
-
-**Parameters:** None.
-
-**Returns:** No value; destructors have no return type.
-
-The destructor calls *stop*. The server owns its transport and cannot be
-copied or moved. Keep any storage captured by the engine factory alive until
-the server stops.
-
-Back to the [reference index](README.md), or see the
-[HTTP server](http/server.md) for routing and HTTPS.
+**Source:** [include/server.h:109](../../include/server.h#L109)

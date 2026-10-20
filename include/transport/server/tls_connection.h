@@ -26,6 +26,7 @@
 #define martianlabs_doba_transport_server_tls_connection_h
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -37,7 +38,7 @@
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tls_session.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls_connection                                             ( struct ) |
@@ -62,31 +63,41 @@ struct tls_connection {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+  tls_connection(std::size_t receive_buffer_capacity,
+                 std::size_t send_buffer_size,
                  const FAty& create_engine, shared_state context)
-      : tls_connection(recv_buffer_size, send_buffer_size, create_engine,
+      : tls_connection(receive_buffer_capacity, send_buffer_size, create_engine,
                        std::move(context),
-                       tls_policies::kEncryptedReceiveBufferSize,
-                       tls_policies::kBioBufferSize) {}
+                       tls_policies::kDefaultEncryptedReceiveBufferCapacity,
+                       tls_policies::kDefaultNetworkBioBufferCapacity) {}
   template <protocol::contracts::engine_factory<ENty> FAty>
-  tls_connection(std::size_t recv_buffer_size, std::size_t send_buffer_size,
+  tls_connection(std::size_t receive_buffer_capacity,
+                 std::size_t send_buffer_size,
                  const FAty& create_engine, shared_state context,
-                 std::size_t encrypted_receive_buffer_size,
-                 std::size_t network_bio_buffer_size)
+                 std::size_t encrypted_receive_buffer_capacity,
+                 std::size_t network_bio_buffer_capacity)
       : engine{create_engine()},
-        buffer{std::make_unique<char[]>(encrypted_receive_buffer_size)},
-        capacity{encrypted_receive_buffer_size},
-        session_{std::move(context), send_buffer_size, network_bio_buffer_size},
-        plaintext_{std::make_unique<char[]>(recv_buffer_size)},
-        plaintext_capacity_{recv_buffer_size} {}
+        buffer{std::make_unique<char[]>(encrypted_receive_buffer_capacity)},
+        capacity{encrypted_receive_buffer_capacity},
+        session_{std::move(context), send_buffer_size,
+                 network_bio_buffer_capacity},
+        plaintext_{std::make_unique<char[]>(receive_buffer_capacity)},
+        plaintext_capacity_{receive_buffer_capacity} {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   // | Reads data from the encrypted buffer and passes it to the engine.       |
-  // | It returns the number of bytes processed. If the TLS handshake fails or |
+  // | Only TLS retains encrypted leftovers. If the TLS handshake fails or    |
   // | the connection closes, it throws an exception.                          |
   // +-------------------------------------------------------------------------+
-  std::size_t process() {
+  std::span<char> receive_buffer() noexcept {
+    return {buffer.get() + size, capacity - size};
+  }
+  void process(std::size_t count) {
+    if (count > capacity - size) {
+      throw std::out_of_range("TLS receive size exceeds buffer");
+    }
+    size += count;
     std::size_t received = 0;
     while (received < size) {
       const std::size_t next =
@@ -97,23 +108,11 @@ struct tls_connection {
       }
       if (!next) break;
     }
-    return received;
-  }
-  // +=========================================================================+
-  // | [>] consume                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Removes the given number of bytes from the encrypted buffer.            |
-  // | It returns false if that’s more bytes than the buffer currently holds.  |
-  // | If there are bytes left afterward, it moves them to the start of the    |
-  // | buffer. Otherwise, it returns true.                                     |
-  // +-------------------------------------------------------------------------+
-  bool consume(std::size_t processed) {
-    if (processed > size) return false;
-    size -= processed;
-    if (processed && size) {
-      std::memmove(buffer.get(), buffer.get() + processed, size);
+    size -= received;
+    if (received && size) {
+      std::memmove(buffer.get(), buffer.get() + received, size);
     }
-    return true;
+    if (size == capacity) throw std::runtime_error("TLS receive stalled");
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
@@ -238,10 +237,8 @@ struct tls_connection {
     }
     if (!session_.established()) return true;
     for (;;) {
-      if (plaintext_size_ == plaintext_capacity_) return false;
       const auto result =
-          session_.read(std::span(plaintext_.get() + plaintext_size_,
-                                  plaintext_capacity_ - plaintext_size_));
+          session_.read(std::span(plaintext_.get(), plaintext_capacity_));
       if (result.state == tls_session::status::failed) return false;
       if (result.state == tls_session::status::closed) {
         peer_closed_ = true;
@@ -249,15 +246,8 @@ struct tls_connection {
       }
       if (result.state != tls_session::status::ready) return true;
       if (!result.size) return true;
-      plaintext_size_ += result.size;
-      const std::size_t processed = engine.on_bytes_received(
-          plaintext_.get(), plaintext_size_, plaintext_capacity_);
-      if (processed > plaintext_size_) return false;
-      plaintext_size_ -= processed;
-      if (processed && plaintext_size_) {
-        std::memmove(plaintext_.get(), plaintext_.get() + processed,
-                     plaintext_size_);
-      }
+      engine.on_bytes_received({plaintext_.get(), result.size});
+      if (close_requested_) return true;
     }
   }
   // +=========================================================================+
@@ -266,11 +256,10 @@ struct tls_connection {
   tls_session session_;
   std::unique_ptr<char[]> plaintext_;
   const std::size_t plaintext_capacity_;
-  std::size_t plaintext_size_{0};
-  bool close_requested_{false};
+  std::atomic<bool> close_requested_{false};
   bool shutdown_complete_{false};
   bool peer_closed_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

@@ -71,8 +71,10 @@ class reader {
   // +-------------------------------------------------------------------------+
   static reader chunked(
       std::span<const std::byte> source,
-      std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
-      std::size_t trailer_limit = reader_chunked::kMaxChunkedTrailerSize) {
+      std::size_t extension_limit =
+          reader_chunked::kDefaultMaxChunkExtensionSize,
+      std::size_t trailer_limit =
+          reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
     return reader(common::reader::borrowed(source),
                   reader_chunked(extension_limit, trailer_limit));
@@ -87,8 +89,10 @@ class reader {
   // +-------------------------------------------------------------------------+
   static reader chunked(
       common::filesystem_file&& source,
-      std::size_t extension_limit = reader_chunked::kMaxChunkedExtensionSize,
-      std::size_t trailer_limit = reader_chunked::kMaxChunkedTrailerSize) {
+      std::size_t extension_limit =
+          reader_chunked::kDefaultMaxChunkExtensionSize,
+      std::size_t trailer_limit =
+          reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (!source.is_open()) throw std::invalid_argument("Body file is not open");
     return reader(common::reader(std::move(source)),
                   reader_chunked(extension_limit, trailer_limit));
@@ -139,6 +143,22 @@ class reader {
     if (borrowed_raw_.empty()) return std::nullopt;
     auto* decoder = std::get_if<reader_raw>(&decoder_);
     return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
+  }
+
+  // Takes ownership of wire bytes, including any temporary backing file.
+  static reader raw(common::byte_storage source, std::size_t length) {
+    return reader(common::reader(std::move(source)), reader_raw(length));
+  }
+  static reader chunked(common::byte_storage source,
+                        std::size_t extension_limit,
+                        std::size_t trailer_limit) {
+    return reader(common::reader(std::move(source)),
+                  reader_chunked(extension_limit, trailer_limit));
+  }
+
+  void rebind_borrowed(std::span<const std::byte> source) noexcept {
+    source_.rebind_borrowed(source);
+    if (!borrowed_raw_.empty()) borrowed_raw_ = source;
   }
 
  private:

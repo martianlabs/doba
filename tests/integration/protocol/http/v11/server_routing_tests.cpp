@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include <atomic>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <coroutine>
@@ -37,6 +38,8 @@
 #include <vector>
 
 #include "http_server.h"
+#include "protocol/http/common/auth/basic.h"
+#include "protocol/http/common/auth/bearer.h"
 #include "common/task.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
@@ -654,4 +657,158 @@ DOBA_TEST(
   DOBA_EXPECT(late.has_value());
   if (late.has_value()) DOBA_EXPECT_EQUAL(late->body, "late");
   http_server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
+  namespace doba = martianlabs::doba;
+  namespace auth = doba::protocol::http::auth;
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  std::atomic<int> calls{0};
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::basic, auth::bearer>
+      server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
+             std::tuple{auth::basic{"demo",
+                                    [](auto user, auto password) {
+                                      return user == "alice" &&
+                                             password == "secret";
+                                    }},
+                        auth::bearer{"demo", [](auto token) {
+                                       return token == "demo-token";
+                                     }}});
+  server.add_route<auth::basic>("POST", "/basic",
+      [&](const request&, response& res) {
+        calls++;
+        text_response(res, "basic");
+      });
+  server.add_route<auth::bearer>("GET", "/bearer",
+      [&](const request&, response& res) -> task<void> {
+        calls++;
+        text_response(res, "bearer");
+        co_return;
+      });
+  server.add_route("GET", "/public", [](const request&, response& res) {
+    text_response(res, "public");
+  });
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "POST /basic HTTP/1.1\r\nHost: localhost\r\n"
+      "Content-Length: 4\r\n\r\ndata"
+      "GET /public HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  const auto rejected = receive_http_response(client);
+  const auto public_response = receive_http_response(client);
+  DOBA_EXPECT(rejected.has_value());
+  DOBA_EXPECT(public_response.has_value());
+  if (rejected) {
+    DOBA_EXPECT_EQUAL(rejected->status, "HTTP/1.1 401 Unauthorized");
+    DOBA_EXPECT(rejected->header("WWW-Authenticate") ==
+                "Basic realm=\"demo\"");
+  }
+  if (public_response) DOBA_EXPECT_EQUAL(public_response->body, "public");
+  DOBA_EXPECT_EQUAL(calls.load(), 0);
+  DOBA_EXPECT(client.send_all(
+      "POST /basic HTTP/1.1\r\nHost: localhost\r\n"
+      "Authorization: Basic YWxpY2U6c2VjcmV0\r\n"
+      "Content-Length: 4\r\n\r\ndata"
+      "GET /bearer HTTP/1.1\r\nHost: localhost\r\n"
+      "Authorization: Bearer demo-token\r\n\r\n"
+      "GET /bearer HTTP/1.1\r\nHost: localhost\r\n"
+      "Authorization: Bearer wrong\r\n\r\n"));
+  const auto basic = receive_http_response(client);
+  const auto bearer = receive_http_response(client);
+  const auto invalid = receive_http_response(client);
+  DOBA_EXPECT(basic.has_value());
+  DOBA_EXPECT(bearer.has_value());
+  DOBA_EXPECT(invalid.has_value());
+  if (basic) DOBA_EXPECT_EQUAL(basic->body, "basic");
+  if (bearer) DOBA_EXPECT_EQUAL(bearer->body, "bearer");
+  if (invalid) {
+    DOBA_EXPECT_EQUAL(invalid->status, "HTTP/1.1 401 Unauthorized");
+    DOBA_EXPECT(invalid->header("WWW-Authenticate") ==
+        "Bearer realm=\"demo\", error=\"invalid_token\"");
+  }
+  DOBA_EXPECT_EQUAL(calls.load(), 2);
+  server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 orders auth rejection behind suspended TCP response") {
+  namespace doba = martianlabs::doba;
+  namespace auth = doba::protocol::http::auth;
+  tcpip_client client;
+  const uint16_t port = client.find_available_port();
+  std::promise<std::coroutine_handle<>> pending;
+  auto suspended = pending.get_future();
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::bearer>
+      server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
+             std::tuple{auth::bearer{"demo", [](auto) { return false; }}});
+  server.add_route("GET", "/slow", [&](const request&, response& res)
+                       -> task<void> {
+    co_await pause_awaiter{pending};
+    text_response(res, "slow");
+  });
+  server.add_route<auth::bearer>("GET", "/private",
+      [](const request&, response& res) { text_response(res, "unexpected"); });
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all(
+      "GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
+      "GET /private HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+  if (suspended.wait_for(std::chrono::seconds(2)) !=
+      std::future_status::ready) {
+    throw std::runtime_error("asynchronous route did not suspend");
+  }
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(100)));
+  suspended.get().resume();
+  const auto first = receive_http_response(client);
+  const auto second = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  DOBA_EXPECT(second.has_value());
+  if (first) DOBA_EXPECT_EQUAL(first->body, "slow");
+  if (second) DOBA_EXPECT_EQUAL(second->status, "HTTP/1.1 401 Unauthorized");
+  server.stop();
+}
+
+DOBA_TEST("HTTP/1.1 shares a Bearer provider across concurrent connections") {
+  namespace doba = martianlabs::doba;
+  namespace auth = doba::protocol::http::auth;
+  tcpip_client probe;
+  const uint16_t port = probe.find_available_port();
+  std::atomic<int> checks{0};
+  std::atomic<int> received{0};
+  doba::http_server<request, response,
+                    doba::protocol::http::router<request, response>,
+                    doba::protocol::http::v11::engine<request, response>,
+                    doba::transport::server::tcp, auth::bearer>
+      server(
+          {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
+          {}, std::tuple{auth::bearer{"demo", [&](auto token) {
+                                        checks++;
+                                        return token == "demo-token";
+                                      }}});
+  server.add_route<auth::bearer>("GET", "/",
+      [](const request&, response& res) { text_response(res, "accepted"); });
+  server.start();
+  std::vector<std::jthread> clients;
+  for (int i = 0; i < 16; i++) {
+    clients.emplace_back([&]() {
+      tcpip_client client;
+      if (!client.connect(port)) return;
+      if (!client.send_all(
+          "GET / HTTP/1.1\r\nHost: localhost\r\n"
+          "Authorization: Bearer demo-token\r\n\r\n")) return;
+      const auto result = receive_http_response(client);
+      if (result && result->body == "accepted") received++;
+    });
+  }
+  clients.clear();
+  server.stop();
+  DOBA_EXPECT_EQUAL(checks.load(), 16);
+  DOBA_EXPECT_EQUAL(received.load(), 16);
 }

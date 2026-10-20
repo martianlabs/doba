@@ -1,0 +1,1108 @@
+===== Summary =====
+HttpArena: 3b2450e061c2062af0530272ee91035d34289bf1
+Servers: actix, bun, ntex, fiber, vertx, axum, drogon, micronaut, cutelyst, elysia, doba, carter, hono-bun, userver, go-fasthttp, aspnet-minimal-11, helidon-production, aspnet-minimal, rocket, fastendpoints, ktor
+Profiles: baseline, pipelined, limited-conn, latency-10k, latency-1m, latency-500k-8cpu, async, json-comp, json-tls, 8gbit, static-tls | official RUNS=4
+Results: selected by upstream from its repetitions; NOT averages across runs.
+Session: /home/ubuntu/tests/sessions/20261014T163746Z-0b0a03be
+VALIDATION: profile-scoped official checks on the measured image; not a payload audit under load.
+HOST TUNING: upstream system_tune per profile; effective settings checked before server start. Mixed native/Docker generators; see REFERENCE MODEL.
+HOST RESTORATION: verified | record: host-tuning.json
+REFERENCE MODEL: execution verified | gcannon/wrk native; zrk and servers Docker; upstream profile affinity.
+REFERENCE EVIDENCE: run.json + per-job *.reference.jsonl; source-pinned local tools, not certified public-host binaries.
+REFERENCE DIFFERENCE: CPU/cache/memory/kernel may differ from the published host.
+REFERENCE DIFFERENCE: Local reproducible source selection checked 2026-10-07; NOT proof of the exact binaries on the public benchmark host. gcannon follows the source used by upstream, wrk is upstream HEAD/4.2.0, liburing is upstream's 2.9 dependency. zrk matches the pinned HttpArena Dockerfile release/checksum.
+SUCCESS: 220 | SKIPPED: 11 | FAILED: 0 | PENDING: 0
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9022 (target 500000/s)
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 70, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7634 (target 500000/s)
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 5, timeout 0
+SKIPPED: ntex/pipelined: not subscribed in meta.json
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6630 (target 500000/s)
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 11, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 7, timeout 0
+SKIPPED: ntex/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7298 (target 500000/s)
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7228 (target 500000/s)
+MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING vertx/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING vertx/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING axum/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7701 (target 500000/s)
+MEASUREMENT WARNING axum/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING axum/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING axum/json-comp: Errors: connect 0, read 2, timeout 0
+SKIPPED: axum/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING drogon/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7390 (target 500000/s)
+MEASUREMENT WARNING drogon/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+SKIPPED: drogon/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING micronaut/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6005 (target 500000/s)
+MEASUREMENT WARNING micronaut/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING micronaut/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING micronaut/json-comp: Errors: connect 0, read 2, timeout 0
+SKIPPED: micronaut/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING cutelyst/baseline: #6 24.35 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) does not exist
+MEASUREMENT WARNING cutelyst/baseline: #7 29.68 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) does not exist
+MEASUREMENT WARNING cutelyst/baseline: #10 0.171 hint: to use in all of your new repositories, which will suppress this warning,
+MEASUREMENT WARNING cutelyst/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6096 (target 500000/s)
+MEASUREMENT WARNING cutelyst/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+SKIPPED: cutelyst/json-comp: not subscribed in meta.json
+SKIPPED: cutelyst/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6234 (target 500000/s)
+MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 2, timeout 0
+doba/baseline: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/pipelined: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/limited-conn: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/latency-10k: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/latency-1m: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/latency-500k-8cpu: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+MEASUREMENT WARNING doba/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9570 (target 500000/s)
+MEASUREMENT WARNING doba/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+doba/async: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/json-comp: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 3, timeout 0
+doba/json-tls: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/8gbit: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+doba/static-tls: Doba 2b5ecf14d9556ef5ca9a4bc4469dbe450bd93a9f
+SKIPPED: carter/pipelined: not subscribed in meta.json
+MEASUREMENT WARNING carter/limited-conn: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING carter/limited-conn: Errors: connect 0, read 29, timeout 0
+MEASUREMENT WARNING carter/limited-conn: Errors: connect 0, read 16, timeout 0
+MEASUREMENT WARNING carter/limited-conn: Errors: connect 0, read 21, timeout 0
+MEASUREMENT WARNING carter/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6342 (target 500000/s)
+MEASUREMENT WARNING carter/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 11, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 50, timeout 0
+MEASUREMENT WARNING carter/json-comp: Errors: connect 0, read 23, timeout 0
+SKIPPED: carter/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6716 (target 500000/s)
+MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING userver/baseline: #8 9.056 CMake Warning:
+MEASUREMENT WARNING userver/baseline: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/pipelined: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/limited-conn: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/latency-10k: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/latency-1m: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/latency-1m: [warn] offered rate fell short: rate_ratio=0.2941 (target 1000000/s)
+MEASUREMENT WARNING userver/latency-1m: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING userver/latency-500k-8cpu: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.4421 (target 500000/s)
+MEASUREMENT WARNING userver/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING userver/async: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/json-comp: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING userver/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING userver/json-tls: [33m1 warning found (use docker --debug to expand):
+MEASUREMENT WARNING userver/8gbit: [33m1 warning found (use docker --debug to expand):
+SKIPPED: userver/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING go-fasthttp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7139 (target 500000/s)
+MEASUREMENT WARNING go-fasthttp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING aspnet-minimal-11/pipelined: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/pipelined: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/pipelined: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/pipelined: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/limited-conn: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/limited-conn: Errors: connect 0, read 24, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/limited-conn: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/limited-conn: Errors: connect 0, read 13, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5679 (target 500000/s)
+MEASUREMENT WARNING aspnet-minimal-11/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING aspnet-minimal-11/async: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 13, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 16, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 25, timeout 0
+MEASUREMENT WARNING aspnet-minimal-11/json-comp: Errors: connect 0, read 15, timeout 0
+MEASUREMENT WARNING helidon-production/pipelined: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING helidon-production/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6253 (target 500000/s)
+MEASUREMENT WARNING helidon-production/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 14, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 11, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 44, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 42, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 36, timeout 0
+MEASUREMENT WARNING helidon-production/json-comp: Errors: connect 0, read 54, timeout 0
+MEASUREMENT WARNING aspnet-minimal/pipelined: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING aspnet-minimal/pipelined: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING aspnet-minimal/pipelined: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING aspnet-minimal/limited-conn: Errors: connect 0, read 13, timeout 0
+MEASUREMENT WARNING aspnet-minimal/limited-conn: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING aspnet-minimal/limited-conn: Errors: connect 0, read 19, timeout 0
+MEASUREMENT WARNING aspnet-minimal/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5835 (target 500000/s)
+MEASUREMENT WARNING aspnet-minimal/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING aspnet-minimal/async: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 33, timeout 0
+MEASUREMENT WARNING aspnet-minimal/json-comp: Errors: connect 0, read 40, timeout 0
+MEASUREMENT WARNING rocket/latency-1m: [warn] offered rate fell short: rate_ratio=0.3830 (target 1000000/s)
+MEASUREMENT WARNING rocket/latency-1m: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING rocket/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.4917 (target 500000/s)
+MEASUREMENT WARNING rocket/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 67, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 31, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 43, timeout 0
+MEASUREMENT WARNING rocket/json-comp: Errors: connect 0, read 22, timeout 0
+SKIPPED: rocket/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING fastendpoints/baseline: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fastendpoints/pipelined: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING fastendpoints/pipelined: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fastendpoints/limited-conn: Errors: connect 0, read 18, timeout 0
+MEASUREMENT WARNING fastendpoints/limited-conn: Errors: connect 0, read 19, timeout 0
+MEASUREMENT WARNING fastendpoints/limited-conn: Errors: connect 0, read 30, timeout 0
+MEASUREMENT WARNING fastendpoints/limited-conn: Errors: connect 0, read 20, timeout 0
+MEASUREMENT WARNING fastendpoints/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5521 (target 500000/s)
+MEASUREMENT WARNING fastendpoints/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fastendpoints/async: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 32, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 28, timeout 0
+MEASUREMENT WARNING fastendpoints/json-comp: Errors: connect 0, read 17, timeout 0
+MEASUREMENT WARNING ktor/latency-1m: [warn] offered rate fell short: rate_ratio=0.9360 (target 1000000/s)
+MEASUREMENT WARNING ktor/latency-1m: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING ktor/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.3593 (target 500000/s)
+MEASUREMENT WARNING ktor/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING ktor/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING ktor/json-comp: Errors: connect 0, read 2, timeout 0
+
+HTTP/1.1 TOTAL WITH COMPLETENESS (LOCAL session field)
+League: flagship + emerging; standard shown; default scoring (no memory bonus/rescale).
+Uses this session's gen_leaderboard_data.py and latency_score.py, not a local scoring formula.
+Not the public leaderboard: normalization uses ONLY the measured participants.
+A local 1000-point leader can still miss a fixed-rate target; inspect measurement status below.
+Missing, skipped, failed or unrequested profiles add no points; no reweighting.
+COMPLETENESS ENABLED: upstream factor applied to the total using session metadata.
+INCOMPLETE cutelyst: missing full scored coverage for json-comp
++------+--------------------+---------+------------+---------------+
+| Rank | Server             | Total   | Cmp factor | Full profiles |
++------+--------------------+---------+------------+---------------+
+| 1    | doba               | 7591.43 | 0.975      | 8/8           |
+| 2    | actix              | 6528.93 | 1.000      | 8/8           |
+| 3    | bun                | 6107.85 | 0.975      | 8/8           |
+| 4    | elysia             | 5684.78 | 1.000      | 8/8           |
+| 5    | ntex               | 5530.55 | 1.000      | 8/8           |
+| 6    | fiber              | 5400.44 | 1.000      | 8/8           |
+| 7    | hono-bun           | 5215.52 | 1.000      | 8/8           |
+| 8    | vertx              | 5069.03 | 1.000      | 8/8           |
+| 9    | micronaut          | 4726.19 | 1.000      | 8/8           |
+| 10   | drogon             | 4351.90 | 1.000      | 8/8           |
+| 11   | cutelyst           | 4104.72 | 1.000      | 7/8           |
+| 12   | axum               | 4067.69 | 1.000      | 8/8           |
+| 13   | carter             | 3466.33 | 1.000      | 8/8           |
+| 14   | go-fasthttp        | 3336.78 | 0.950      | 8/8           |
+| 15   | aspnet-minimal-11  | 3223.72 | 1.000      | 8/8           |
+| 16   | fastendpoints      | 3026.95 | 1.000      | 8/8           |
+| 17   | helidon-production | 3020.77 | 1.000      | 8/8           |
+| 18   | aspnet-minimal     | 2998.20 | 1.000      | 8/8           |
+| 19   | userver            | 2657.67 | 1.000      | 8/8           |
+| 20   | rocket             | 2544.13 | 1.000      | 8/8           |
+| 21   | ktor               | 2449.42 | 1.000      | 8/8           |
++------+--------------------+---------+------------+---------------+
+
+PROFILE SCORE: baseline (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+-----------+
+| Rank | Server             | Points /1000 | Mean RPS  |
++------+--------------------+--------------+-----------+
+| 1    | doba               | 1000.00      | 3,801,211 |
+| 2    | actix              | 841.41       | 3,198,376 |
+| 3    | fiber              | 714.30       | 2,715,224 |
+| 4    | drogon             | 645.36       | 2,453,134 |
+| 5    | bun                | 636.72       | 2,420,305 |
+| 6    | vertx              | 625.83       | 2,378,916 |
+| 7    | ntex               | 615.43       | 2,339,373 |
+| 8    | cutelyst           | 597.41       | 2,270,867 |
+| 9    | hono-bun           | 585.50       | 2,225,626 |
+| 10   | elysia             | 563.92       | 2,143,581 |
+| 11   | micronaut          | 536.16       | 2,038,057 |
+| 12   | helidon-production | 459.57       | 1,746,904 |
+| 13   | carter             | 394.95       | 1,501,285 |
+| 14   | aspnet-minimal     | 362.83       | 1,379,207 |
+| 15   | fastendpoints      | 348.30       | 1,323,963 |
+| 16   | aspnet-minimal-11  | 347.71       | 1,321,725 |
+| 17   | go-fasthttp        | 310.61       | 1,180,677 |
+| 18   | axum               | 265.72       | 1,010,061 |
+| 19   | ktor               | 214.14       | 813,992   |
+| 20   | rocket             | 97.87        | 372,038   |
+| 21   | userver            | 78.82        | 299,600   |
++------+--------------------+--------------+-----------+
+
+REFERENCE ONLY: pipelined does not contribute to the framework HTTP/1.1 composite.
+
+PROFILE SCORE: limited-conn (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+-----------+
+| Rank | Server             | Points /1000 | Mean RPS  |
++------+--------------------+--------------+-----------+
+| 1    | doba               | 1000.00      | 3,005,697 |
+| 2    | fiber              | 715.89       | 2,151,740 |
+| 3    | bun                | 687.32       | 2,065,861 |
+| 4    | drogon             | 674.45       | 2,027,186 |
+| 5    | hono-bun           | 632.61       | 1,901,425 |
+| 6    | elysia             | 608.57       | 1,829,185 |
+| 7    | cutelyst           | 605.51       | 1,819,990 |
+| 8    | ntex               | 417.14       | 1,253,802 |
+| 9    | actix              | 392.78       | 1,180,586 |
+| 10   | go-fasthttp        | 232.24       | 698,032   |
+| 11   | axum               | 222.27       | 668,066   |
+| 12   | micronaut          | 207.18       | 622,708   |
+| 13   | vertx              | 201.27       | 604,961   |
+| 14   | ktor               | 197.13       | 592,509   |
+| 15   | helidon-production | 177.21       | 532,626   |
+| 16   | carter             | 149.59       | 449,610   |
+| 17   | aspnet-minimal-11  | 142.73       | 429,012   |
+| 18   | fastendpoints      | 139.54       | 419,423   |
+| 19   | aspnet-minimal     | 131.41       | 394,980   |
+| 20   | rocket             | 107.94       | 324,428   |
+| 21   | userver            | 88.11        | 264,832   |
++------+--------------------+--------------+-----------+
+
+PROFILE SCORE: async (scored connections: 32000)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+-----------+
+| Rank | Server             | Points /1000 | Mean RPS  |
++------+--------------------+--------------+-----------+
+| 1    | actix              | 1000.00      | 2,459,806 |
+| 2    | doba               | 951.98       | 2,341,679 |
+| 3    | bun                | 868.71       | 2,136,862 |
+| 4    | vertx              | 763.74       | 1,878,658 |
+| 5    | elysia             | 728.50       | 1,791,959 |
+| 6    | hono-bun           | 695.54       | 1,710,901 |
+| 7    | fiber              | 649.70       | 1,598,124 |
+| 8    | carter             | 558.81       | 1,374,561 |
+| 9    | aspnet-minimal     | 491.72       | 1,209,531 |
+| 10   | micronaut          | 482.31       | 1,186,377 |
+| 11   | fastendpoints      | 463.13       | 1,139,199 |
+| 12   | ntex               | 396.39       | 975,034   |
+| 13   | go-fasthttp        | 392.02       | 964,292   |
+| 14   | aspnet-minimal-11  | 366.13       | 900,613   |
+| 15   | cutelyst           | 340.50       | 837,560   |
+| 16   | rocket             | 153.38       | 377,286   |
+| 17   | helidon-production | 138.95       | 341,790   |
+| 18   | userver            | 118.30       | 290,986   |
+| 19   | axum               | 103.99       | 255,793   |
+| 20   | ktor               | 103.67       | 255,011   |
+| 21   | drogon             | 65.27        | 160,540   |
++------+--------------------+--------------+-----------+
+
+PROFILE SCORE: latency-10k (scored connections: 1024)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+----------+------------+
+| Rank | Server             | Points /1000 | Mean RPS | Score /100 |
++------+--------------------+--------------+----------+------------+
+| 1    | axum               | 1000.00      | 9,983    | 100.00     |
+| 2    | doba               | 945.60       | 9,983    | 94.56      |
+| 3    | rocket             | 879.99       | 9,868    | 88.00      |
+| 4    | go-fasthttp        | 853.51       | 9,983    | 85.35      |
+| 5    | drogon             | 833.75       | 9,984    | 83.37      |
+| 6    | actix              | 772.64       | 9,987    | 77.26      |
+| 7    | ntex               | 765.52       | 9,983    | 76.55      |
+| 8    | fiber              | 746.94       | 9,983    | 74.69      |
+| 9    | vertx              | 738.70       | 9,983    | 73.87      |
+| 10   | bun                | 702.28       | 9,983    | 70.23      |
+| 11   | cutelyst           | 695.61       | 9,984    | 69.56      |
+| 12   | micronaut          | 695.00       | 9,982    | 69.50      |
+| 13   | helidon-production | 668.63       | 9,983    | 66.86      |
+| 14   | hono-bun           | 655.19       | 9,983    | 65.52      |
+| 15   | aspnet-minimal-11  | 648.46       | 9,982    | 64.85      |
+| 16   | elysia             | 634.47       | 9,982    | 63.45      |
+| 17   | userver            | 611.64       | 9,983    | 61.16      |
+| 18   | carter             | 555.96       | 9,982    | 55.60      |
+| 19   | ktor               | 545.96       | 9,983    | 54.60      |
+| 20   | aspnet-minimal     | 542.91       | 9,983    | 54.29      |
+| 21   | fastendpoints      | 538.62       | 9,973    | 53.86      |
++------+--------------------+--------------+----------+------------+
+
+PROFILE SCORE: latency-1m (scored connections: 1024)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+----------+------------+
+| Rank | Server             | Points /1000 | Mean RPS | Score /100 |
++------+--------------------+--------------+----------+------------+
+| 1    | doba               | 1000.00      | 998,531  | 100.00     |
+| 2    | actix              | 945.56       | 998,260  | 94.56      |
+| 3    | drogon             | 839.26       | 998,298  | 83.93      |
+| 4    | vertx              | 828.77       | 998,155  | 82.88      |
+| 5    | ntex               | 809.61       | 998,131  | 80.96      |
+| 6    | cutelyst           | 770.50       | 998,223  | 77.05      |
+| 7    | hono-bun           | 743.95       | 997,960  | 74.39      |
+| 8    | fiber              | 735.21       | 998,425  | 73.52      |
+| 9    | micronaut          | 707.07       | 997,382  | 70.71      |
+| 10   | bun                | 705.82       | 998,587  | 70.58      |
+| 11   | elysia             | 698.77       | 998,383  | 69.88      |
+| 12   | go-fasthttp        | 531.12       | 998,446  | 53.11      |
+| 13   | helidon-production | 512.34       | 998,024  | 51.23      |
+| 14   | aspnet-minimal-11  | 475.01       | 998,443  | 47.50      |
+| 15   | axum               | 460.69       | 998,138  | 46.07      |
+| 16   | carter             | 446.87       | 998,201  | 44.69      |
+| 17   | fastendpoints      | 357.91       | 997,839  | 35.79      |
+| 18   | aspnet-minimal     | 262.52       | 997,754  | 26.25      |
+| 19   | ktor               | 155.94       | 935,958  | 15.59      |
+| 20   | rocket             | 23.30        | 382,951  | 2.33       |
+| 21   | userver            | 16.20        | 294,128  | 1.62       |
++------+--------------------+--------------+----------+------------+
+
+REFERENCE ONLY: latency-500k-8cpu does not contribute to the framework HTTP/1.1 composite.
+
+PROFILE SCORE: json-comp (scored connections: 4096, 16384)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+----------+----------------+--------------+
+| Rank | Server             | Points /1000 | Mean RPS | Bytes/response | Adjusted RPS |
++------+--------------------+--------------+----------+----------------+--------------+
+| 1    | bun                | 1000.00      | 550,324  | 1337.00        | 509,646.67   |
+| 2    | doba               | 895.58       | 477,850  | 1316.49        | 456,430.18   |
+| 3    | elysia             | 767.90       | 434,767  | 1356.13        | 391,355.68   |
+| 4    | ntex               | 673.61       | 595,924  | 1695.17        | 343,304.17   |
+| 5    | micronaut          | 662.19       | 356,366  | 1322.15        | 337,481.83   |
+| 6    | userver            | 644.83       | 366,237  | 1358.26        | 328,634.68   |
+| 7    | actix              | 630.02       | 581,492  | 1731.48        | 321,087.94   |
+| 8    | vertx              | 629.60       | 320,874  | 1286.64        | 320,873.50   |
+| 9    | axum               | 532.87       | 295,037  | 1341.07        | 271,575.79   |
+| 10   | rocket             | 459.35       | 421,194  | 1725.81        | 234,106.82   |
+| 11   | carter             | 426.58       | 461,607  | 1874.82        | 217,405.31   |
+| 12   | hono-bun           | 413.33       | 242,704  | 1381.07        | 210,650.69   |
+| 13   | ktor               | 397.89       | 215,685  | 1326.94        | 202,785.76   |
+| 14   | fiber              | 383.55       | 208,879  | 1330.03        | 195,474.37   |
+| 15   | aspnet-minimal     | 345.70       | 395,099  | 1926.76        | 176,184.88   |
+| 16   | aspnet-minimal-11  | 343.06       | 393,243  | 1929.60        | 174,841.79   |
+| 17   | fastendpoints      | 336.45       | 384,100  | 1925.70        | 171,468.97   |
+| 18   | helidon-production | 321.55       | 185,974  | 1370.65        | 163,875.25   |
+| 19   | drogon             | 244.75       | 146,008  | 1392.04        | 124,735.53   |
+| 20   | go-fasthttp        | 84.70        | 46,370   | 1333.51        | 43,167.75    |
++------+--------------------+--------------+----------+----------------+--------------+
+
+PROFILE SCORE: json-tls (scored connections: 4096)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+-----------+
+| Rank | Server             | Points /1000 | Mean RPS  |
++------+--------------------+--------------+-----------+
+| 1    | ntex               | 1000.00      | 1,435,510 |
+| 2    | doba               | 992.92       | 1,425,341 |
+| 3    | actix              | 988.21       | 1,418,580 |
+| 4    | elysia             | 984.26       | 1,412,916 |
+| 5    | bun                | 919.96       | 1,320,617 |
+| 6    | hono-bun           | 756.54       | 1,086,023 |
+| 7    | fiber              | 684.09       | 982,022   |
+| 8    | micronaut          | 672.40       | 965,232   |
+| 9    | axum               | 619.70       | 889,590   |
+| 10   | vertx              | 561.49       | 806,030   |
+| 11   | userver            | 491.05       | 704,907   |
+| 12   | carter             | 482.07       | 692,015   |
+| 13   | aspnet-minimal     | 437.25       | 627,675   |
+| 14   | aspnet-minimal-11  | 432.84       | 621,346   |
+| 15   | fastendpoints      | 429.02       | 615,864   |
+| 16   | go-fasthttp        | 359.93       | 516,687   |
+| 17   | cutelyst           | 307.31       | 441,150   |
+| 18   | ktor               | 304.17       | 436,641   |
+| 19   | drogon             | 211.42       | 303,490   |
+| 20   | rocket             | 208.11       | 298,744   |
+| 21   | helidon-production | 112.77       | 161,886   |
++------+--------------------+--------------+-----------+
+
+PROFILE SCORE: 8gbit (scored connections: 512)
+Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
++------+--------------------+--------------+----------+------------+
+| Rank | Server             | Points /1000 | Mean RPS | Score /100 |
++------+--------------------+--------------+----------+------------+
+| 1    | doba               | 1000.00      | 49,393   | 100.00     |
+| 2    | actix              | 958.32       | 49,411   | 95.83      |
+| 3    | axum               | 862.45       | 49,192   | 86.24      |
+| 4    | ntex               | 852.85       | 49,394   | 85.28      |
+| 5    | drogon             | 837.66       | 49,383   | 83.77      |
+| 6    | cutelyst           | 787.88       | 49,269   | 78.79      |
+| 7    | fiber              | 770.77       | 49,354   | 77.08      |
+| 8    | micronaut          | 763.89       | 49,309   | 76.39      |
+| 9    | go-fasthttp        | 748.27       | 49,348   | 74.83      |
+| 10   | bun                | 743.65       | 49,367   | 74.37      |
+| 11   | hono-bun           | 732.87       | 49,408   | 73.29      |
+| 12   | vertx              | 719.62       | 49,262   | 71.96      |
+| 13   | elysia             | 698.40       | 49,361   | 69.84      |
+| 14   | helidon-production | 629.76       | 49,312   | 62.98      |
+| 15   | rocket             | 614.19       | 49,002   | 61.42      |
+| 16   | userver            | 608.73       | 49,269   | 60.87      |
+| 17   | ktor               | 530.51       | 49,322   | 53.05      |
+| 18   | aspnet-minimal-11  | 467.77       | 49,372   | 46.78      |
+| 19   | carter             | 451.51       | 49,406   | 45.15      |
+| 20   | aspnet-minimal     | 423.86       | 49,330   | 42.39      |
+| 21   | fastendpoints      | 413.97       | 49,362   | 41.40      |
++------+--------------------+--------------+----------+------------+
+
+REFERENCE ONLY: static-tls does not contribute to the framework HTTP/1.1 composite.
+
+MEASUREMENT DETAILS (per connection count; not composite standings)
+
+THROUGHPUT DETAIL: baseline (4096 connections)
++-----------+--------------------+--------------+---------+---------+--------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory |
++-----------+--------------------+--------------+---------+---------+--------+
+| 1         | doba               | 3,801,211    | 100.0%  | 6538.1% | 199MiB |
+| 2         | actix              | 3,198,376    | 84.1%   | 6624.4% | 178MiB |
+| 3         | fiber              | 2,715,224    | 71.4%   | 6659.9% | 342MiB |
+| 4         | drogon             | 2,453,134    | 64.5%   | 6299.1% | 135MiB |
+| 5         | bun                | 2,420,305    | 63.7%   | 6574.2% | 1.1GiB |
+| 6         | vertx              | 2,378,916    | 62.6%   | 6606.5% | 3.5GiB |
+| 7         | ntex               | 2,339,373    | 61.5%   | 6244.7% | 156MiB |
+| 8         | cutelyst           | 2,270,867    | 59.7%   | 6667.9% | 221MiB |
+| 9         | hono-bun           | 2,225,626    | 58.6%   | 6227.3% | 1.2GiB |
+| 10        | elysia             | 2,143,581    | 56.4%   | 6244.1% | 1.5GiB |
+| 11        | micronaut          | 2,038,057    | 53.6%   | 6587.0% | 3.8GiB |
+| 12        | helidon-production | 1,746,904    | 46.0%   | 6507.5% | 6.6GiB |
+| 13        | carter             | 1,501,285    | 39.5%   | 5879.0% | 349MiB |
+| 14        | aspnet-minimal     | 1,379,207    | 36.3%   | 5693.0% | 336MiB |
+| 15        | fastendpoints      | 1,323,963    | 34.8%   | 5233.8% | 392MiB |
+| 16        | aspnet-minimal-11  | 1,321,725    | 34.8%   | 5594.6% | 358MiB |
+| 17        | go-fasthttp        | 1,180,677    | 31.1%   | 3965.3% | 153MiB |
+| 18        | axum               | 1,010,061    | 26.6%   | 2999.7% | 248MiB |
+| 19        | ktor               | 813,992      | 21.4%   | 5961.6% | 4.9GiB |
+| 20        | rocket             | 372,038      | 9.8%    | 5796.8% | 115MiB |
+| 21        | userver            | 299,600      | 7.9%    | 5280.6% | 421MiB |
++-----------+--------------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+---------+
+| Server             | Avg     | p99     |
++--------------------+---------+---------+
+| doba               | 1.08ms  | 6.57ms  |
+| actix              | 1.16ms  | 2.19ms  |
+| fiber              | 1.51ms  | 3.44ms  |
+| drogon             | 1.67ms  | 7.00ms  |
+| bun                | 1.69ms  | 3.36ms  |
+| vertx              | 1.72ms  | 3.51ms  |
+| ntex               | 1.75ms  | 2.14ms  |
+| cutelyst           | 1.80ms  | 2.40ms  |
+| hono-bun           | 1.84ms  | 3.48ms  |
+| elysia             | 1.91ms  | 3.89ms  |
+| micronaut          | 2.01ms  | 4.15ms  |
+| helidon-production | 1.98ms  | 5.20ms  |
+| carter             | 2.34ms  | 7.56ms  |
+| aspnet-minimal     | 2.58ms  | 8.04ms  |
+| fastendpoints      | 2.05ms  | 7.01ms  |
+| aspnet-minimal-11  | 2.68ms  | 10.40ms |
+| go-fasthttp        | 3.47ms  | 4.11ms  |
+| axum               | 4.06ms  | 5.76ms  |
+| ktor               | 5.05ms  | 8.85ms  |
+| rocket             | 4.08ms  | 12.00ms |
+| userver            | 13.68ms | 14.90ms |
++--------------------+---------+---------+
+
+THROUGHPUT DETAIL: pipelined (4096 connections)
++-----------+--------------------+--------------+---------+---------+---------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory  |
++-----------+--------------------+--------------+---------+---------+---------+
+| 1         | doba               | 31,159,094   | 100.0%  | 6278.6% | 249MiB  |
+| 2         | actix              | 20,179,648   | 64.8%   | 6624.6% | 221MiB  |
+| 3         | fiber              | 19,885,788   | 63.8%   | 6236.4% | 356MiB  |
+| 4         | go-fasthttp        | 17,000,819   | 54.6%   | 6466.3% | 162MiB  |
+| 5         | vertx              | 13,334,345   | 42.8%   | 6450.9% | 6.2GiB  |
+| 6         | cutelyst           | 11,985,494   | 38.5%   | 6201.7% | 256MiB  |
+| 7         | helidon-production | 8,632,937    | 27.7%   | 6149.3% | 9.0GiB  |
+| 8         | micronaut          | 8,414,643    | 27.0%   | 6365.3% | 6.0GiB  |
+| 9         | aspnet-minimal     | 7,971,112    | 25.6%   | 5630.9% | 470MiB  |
+| 10        | fastendpoints      | 7,075,232    | 22.7%   | 5153.0% | 429MiB  |
+| 11        | aspnet-minimal-11  | 6,980,256    | 22.4%   | 5782.6% | 469MiB  |
+| 12        | axum               | 6,954,679    | 22.3%   | 6460.7% | 244MiB  |
+| 13        | drogon             | 6,862,115    | 22.0%   | 5884.2% | 210MiB  |
+| 14        | bun                | 5,388,754    | 17.3%   | 6579.9% | 370MiB  |
+| 15        | hono-bun           | 3,097,526    | 9.9%    | 6275.7% | 1.2GiB  |
+| 16        | elysia             | 2,966,631    | 9.5%    | 6649.0% | 1.6GiB  |
+| 17        | userver            | 1,744,316    | 5.6%    | 6690.1% | 893MiB  |
+| 18        | ktor               | 901,180      | 2.9%    | 4659.6% | 18.6GiB |
+| 19        | rocket             | 730,691      | 2.3%    | 6438.7% | 204MiB  |
++-----------+--------------------+--------------+---------+---------+---------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+----------+
+| Server             | Avg     | p99      |
++--------------------+---------+----------+
+| doba               | 2.10ms  | 7.14ms   |
+| actix              | 3.05ms  | 3.35ms   |
+| fiber              | 3.29ms  | 7.08ms   |
+| go-fasthttp        | 3.85ms  | 4.71ms   |
+| vertx              | 4.93ms  | 7.99ms   |
+| cutelyst           | 5.47ms  | 6.64ms   |
+| helidon-production | 3.31ms  | 173us    |
+| micronaut          | 7.80ms  | 14.20ms  |
+| aspnet-minimal     | 7.04ms  | 16.90ms  |
+| fastendpoints      | 7.37ms  | 20.80ms  |
+| aspnet-minimal-11  | 7.96ms  | 35.50ms  |
+| axum               | 9.43ms  | 29.10ms  |
+| drogon             | 9.56ms  | 28.20ms  |
+| bun                | 12.16ms | 16.10ms  |
+| hono-bun           | 21.15ms | 28.90ms  |
+| elysia             | 22.08ms | 30.40ms  |
+| userver            | 37.50ms | 49.90ms  |
+| ktor               | 71.79ms | 269.60ms |
+| rocket             | 29.92ms | 114.70ms |
++--------------------+---------+----------+
+
+THROUGHPUT DETAIL: limited-conn (4096 connections)
++-----------+--------------------+--------------+---------+---------+--------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory |
++-----------+--------------------+--------------+---------+---------+--------+
+| 1         | doba               | 3,005,697    | 100.0%  | 6338.1% | 284MiB |
+| 2         | fiber              | 2,151,740    | 71.6%   | 6077.1% | 754MiB |
+| 3         | bun                | 2,065,861    | 68.7%   | 6463.9% | 1.2GiB |
+| 4         | drogon             | 2,027,186    | 67.4%   | 6532.1% | 4.1GiB |
+| 5         | hono-bun           | 1,901,425    | 63.3%   | 6485.3% | 1.3GiB |
+| 6         | elysia             | 1,829,185    | 60.9%   | 6072.8% | 1.6GiB |
+| 7         | cutelyst           | 1,819,990    | 60.6%   | 6522.8% | 738MiB |
+| 8         | ntex               | 1,253,802    | 41.7%   | 5096.3% | 93MiB  |
+| 9         | actix              | 1,180,586    | 39.3%   | 3514.0% | 90MiB  |
+| 10        | go-fasthttp        | 698,032      | 23.2%   | 5157.3% | 351MiB |
+| 11        | axum               | 668,066      | 22.2%   | 6404.8% | 288MiB |
+| 12        | micronaut          | 622,708      | 20.7%   | 2541.9% | 1.2GiB |
+| 13        | vertx              | 604,961      | 20.1%   | 2050.5% | 2.4GiB |
+| 14        | ktor               | 592,509      | 19.7%   | 5385.6% | 4.6GiB |
+| 15        | helidon-production | 532,626      | 17.7%   | 4138.5% | 2.9GiB |
+| 16        | carter             | 449,610      | 15.0%   | 3153.8% | 175MiB |
+| 17        | aspnet-minimal-11  | 429,012      | 14.3%   | 2158.2% | 224MiB |
+| 18        | fastendpoints      | 419,423      | 14.0%   | 3191.2% | 212MiB |
+| 19        | aspnet-minimal     | 394,980      | 13.1%   | 2847.3% | 222MiB |
+| 20        | rocket             | 324,428      | 10.8%   | 6339.7% | 114MiB |
+| 21        | userver            | 264,832      | 8.8%    | 5373.6% | 501MiB |
++-----------+--------------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+---------+
+| Server             | Avg     | p99     |
++--------------------+---------+---------+
+| doba               | 1.32ms  | 13.10ms |
+| fiber              | 1.89ms  | 6.68ms  |
+| bun                | 1.97ms  | 7.19ms  |
+| drogon             | 2.01ms  | 33.30ms |
+| hono-bun           | 2.14ms  | 7.47ms  |
+| elysia             | 2.23ms  | 7.93ms  |
+| cutelyst           | 2.24ms  | 6.44ms  |
+| ntex               | 3.25ms  | 32.90ms |
+| actix              | 1.12ms  | 8.85ms  |
+| go-fasthttp        | 5.88ms  | 13.10ms |
+| axum               | 6.14ms  | 28.40ms |
+| micronaut          | 6.54ms  | 66.50ms |
+| vertx              | 6.74ms  | 69.60ms |
+| ktor               | 6.88ms  | 69.10ms |
+| helidon-production | 2.34ms  | 20.00ms |
+| carter             | 1.49ms  | 11.80ms |
+| aspnet-minimal-11  | 1.54ms  | 12.20ms |
+| fastendpoints      | 1.73ms  | 14.50ms |
+| aspnet-minimal     | 1.61ms  | 14.40ms |
+| rocket             | 4.64ms  | 14.70ms |
+| userver            | 15.44ms | 27.30ms |
++--------------------+---------+---------+
+
+FIXED RATE: latency-10k (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
++------+--------------------+--------+------------+-------+-------+--------+
+| Rank | Server             | Score  | CPU us/req | RPS   | Rate  | Status |
++------+--------------------+--------+------------+-------+-------+--------+
+| 1    | axum               | 100.00 | 25.727     | 9,983 | 99.8% | OK     |
+| 2    | doba               | 94.56  | 28.278     | 9,983 | 99.8% | OK     |
+| 3    | rocket             | 88.00  | 32.611     | 9,868 | 98.7% | OK     |
+| 4    | go-fasthttp        | 85.35  | 36.203     | 9,983 | 99.8% | OK     |
+| 5    | drogon             | 83.37  | 36.408     | 9,984 | 99.8% | OK     |
+| 6    | actix              | 77.26  | 42.815     | 9,987 | 99.9% | OK     |
+| 7    | ntex               | 76.55  | 43.026     | 9,983 | 99.8% | OK     |
+| 8    | fiber              | 74.69  | 49.187     | 9,983 | 99.8% | OK     |
+| 9    | vertx              | 73.87  | 46.556     | 9,983 | 99.8% | OK     |
+| 10   | bun                | 70.23  | 56.817     | 9,983 | 99.8% | OK     |
+| 11   | cutelyst           | 69.56  | 53.660     | 9,984 | 99.8% | OK     |
+| 12   | micronaut          | 69.50  | 53.941     | 9,982 | 99.8% | OK     |
+| 13   | helidon-production | 66.86  | 67.674     | 9,983 | 99.8% | OK     |
+| 14   | hono-bun           | 65.52  | 66.367     | 9,983 | 99.8% | OK     |
+| 15   | aspnet-minimal-11  | 64.85  | 66.270     | 9,982 | 99.8% | OK     |
+| 16   | elysia             | 63.45  | 72.225     | 9,982 | 99.8% | OK     |
+| 17   | userver            | 61.16  | 84.585     | 9,983 | 99.8% | OK     |
+| 18   | carter             | 55.60  | 165.149    | 9,982 | 99.8% | OK     |
+| 19   | ktor               | 54.60  | 98.933     | 9,983 | 99.8% | OK     |
+| 20   | aspnet-minimal     | 54.29  | 160.739    | 9,983 | 99.8% | OK     |
+| 21   | fastendpoints      | 53.86  | 161.724    | 9,973 | 99.7% | OK     |
++------+--------------------+--------+------------+-------+-------+--------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+---------+-----------+
+| Server             | Avg     | p99     | p99.9     |
++--------------------+---------+---------+-----------+
+| axum               | 75.6us  | 113.0us | 681.0us   |
+| doba               | 78.6us  | 130.0us | 767.0us   |
+| rocket             | 84.2us  | 122.0us | 683.0us   |
+| go-fasthttp        | 76.2us  | 116.0us | 681.0us   |
+| drogon             | 83.7us  | 143.0us | 195.0us   |
+| actix              | 90.3us  | 143.0us | 552.0us   |
+| ntex               | 92.2us  | 157.0us | 872.0us   |
+| fiber              | 80.9us  | 138.0us | 447.0us   |
+| vertx              | 97.7us  | 148.0us | 848.0us   |
+| bun                | 86.1us  | 149.0us | 662.0us   |
+| cutelyst           | 101.5us | 158.0us | 764.0us   |
+| micronaut          | 100.9us | 158.0us | 1652.0us  |
+| helidon-production | 88.6us  | 127.0us | 1108.0us  |
+| hono-bun           | 96.1us  | 160.0us | 683.0us   |
+| aspnet-minimal-11  | 109.3us | 132.0us | 12188.0us |
+| elysia             | 99.4us  | 166.0us | 574.0us   |
+| userver            | 101.2us | 144.0us | 357.0us   |
+| carter             | 89.7us  | 124.0us | 3781.0us  |
+| ktor               | 133.8us | 208.0us | 3423.0us  |
+| aspnet-minimal     | 101.3us | 131.0us | 9372.0us  |
+| fastendpoints      | 103.1us | 138.0us | 8852.0us  |
++--------------------+---------+---------+-----------+
+
+FIXED RATE: latency-1m (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
+WARNING: inspect rate penalties, missing CPU and topology fallback before interpreting scores.
++------+--------------------+--------+------------+---------+-------+--------------+
+| Rank | Server             | Score  | CPU us/req | RPS     | Rate  | Status       |
++------+--------------------+--------+------------+---------+-------+--------------+
+| 1    | doba               | 100.00 | 18.714     | 998,531 | 99.9% | OK           |
+| 2    | actix              | 94.56  | 20.298     | 998,260 | 99.8% | OK           |
+| 3    | drogon             | 83.93  | 25.500     | 998,298 | 99.8% | OK           |
+| 4    | vertx              | 82.88  | 24.773     | 998,155 | 99.8% | OK           |
+| 5    | ntex               | 80.96  | 26.189     | 998,131 | 99.8% | OK           |
+| 6    | cutelyst           | 77.05  | 28.332     | 998,223 | 99.8% | OK           |
+| 7    | hono-bun           | 74.39  | 28.167     | 997,960 | 99.8% | OK           |
+| 8    | fiber              | 73.52  | 32.027     | 998,425 | 99.8% | OK           |
+| 9    | micronaut          | 70.71  | 29.013     | 997,382 | 99.7% | OK           |
+| 10   | bun                | 70.58  | 32.997     | 998,587 | 99.9% | OK           |
+| 11   | elysia             | 69.88  | 30.281     | 998,383 | 99.8% | OK           |
+| 12   | go-fasthttp        | 53.11  | 33.976     | 998,446 | 99.8% | OK           |
+| 13   | helidon-production | 51.23  | 52.001     | 998,024 | 99.8% | OK           |
+| 14   | aspnet-minimal-11  | 47.50  | 37.720     | 998,443 | 99.8% | OK           |
+| 15   | axum               | 46.07  | 24.311     | 998,138 | 99.8% | OK           |
+| 16   | carter             | 44.69  | 46.243     | 998,201 | 99.8% | OK           |
+| 17   | fastendpoints      | 35.79  | 45.990     | 997,839 | 99.8% | OK           |
+| 18   | aspnet-minimal     | 26.25  | 44.502     | 997,754 | 99.8% | OK           |
+| 19   | ktor               | 15.59  | 59.117     | 935,958 | 93.6% | RATE PENALTY |
+| 20   | rocket             | 2.33   | 161.920    | 382,951 | 38.3% | RATE PENALTY |
+| 21   | userver            | 1.62   | 178.824    | 294,128 | 29.4% | RATE PENALTY |
++------+--------------------+--------+------------+---------+-------+--------------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+-------------+--------------+--------------+
+| Server             | Avg         | p99          | p99.9        |
++--------------------+-------------+--------------+--------------+
+| doba               | 62.5us      | 90.0us       | 143.0us      |
+| actix              | 69.1us      | 102.0us      | 257.0us      |
+| drogon             | 75.9us      | 108.0us      | 1307.0us     |
+| vertx              | 87.0us      | 129.0us      | 4406.0us     |
+| ntex               | 84.5us      | 136.0us      | 448.0us      |
+| cutelyst           | 93.1us      | 142.0us      | 5798.0us     |
+| hono-bun           | 91.1us      | 333.0us      | 1727.0us     |
+| fiber              | 85.6us      | 169.0us      | 4330.0us     |
+| micronaut          | 103.6us     | 480.0us      | 2903.0us     |
+| bun                | 89.7us      | 261.0us      | 4486.0us     |
+| elysia             | 96.9us      | 508.0us      | 2329.0us     |
+| go-fasthttp        | 270.3us     | 950.0us      | 10220.0us    |
+| helidon-production | 145.1us     | 738.0us      | 2649.0us     |
+| aspnet-minimal-11  | 259.9us     | 2367.0us     | 10372.0us    |
+| axum               | 1092.9us    | 11084.0us    | 40176.0us    |
+| carter             | 217.6us     | 2481.0us     | 11772.0us    |
+| fastendpoints      | 414.7us     | 4318.0us     | 11132.0us    |
+| aspnet-minimal     | 713.2us     | 21240.0us    | 44592.0us    |
+| ktor               | 624496.7us  | 1621504.0us  | 1884672.0us  |
+| rocket             | 5560019.1us | 11587584.0us | 11776000.0us |
+| userver            | 6964731.4us | 13938688.0us | 14077952.0us |
++--------------------+-------------+--------------+--------------+
+
+FIXED RATE: latency-500k-8cpu (1024 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
+WARNING: inspect rate penalties, missing CPU and topology fallback before interpreting scores.
++------+--------------------+-------+------------+---------+-------+--------------+
+| Rank | Server             | Score | CPU us/req | RPS     | Rate  | Status       |
++------+--------------------+-------+------------+---------+-------+--------------+
+| 1    | doba               | 96.67 | 16.688     | 478,503 | 95.7% | OK           |
+| 2    | actix              | 81.41 | 17.667     | 451,077 | 90.2% | RATE PENALTY |
+| 3    | axum               | 53.88 | 20.719     | 385,069 | 77.0% | RATE PENALTY |
+| 4    | bun                | 52.31 | 20.883     | 381,716 | 76.3% | RATE PENALTY |
+| 5    | drogon             | 49.27 | 21.611     | 369,498 | 73.9% | RATE PENALTY |
+| 6    | fiber              | 47.28 | 21.841     | 364,909 | 73.0% | RATE PENALTY |
+| 7    | vertx              | 46.61 | 22.083     | 361,423 | 72.3% | RATE PENALTY |
+| 8    | go-fasthttp        | 45.36 | 22.358     | 356,950 | 71.4% | RATE PENALTY |
+| 9    | hono-bun           | 39.30 | 23.669     | 335,797 | 67.2% | RATE PENALTY |
+| 10   | ntex               | 38.63 | 24.036     | 331,511 | 66.3% | RATE PENALTY |
+| 11   | helidon-production | 36.98 | 25.442     | 312,649 | 62.5% | RATE PENALTY |
+| 12   | carter             | 36.66 | 24.085     | 317,114 | 63.4% | RATE PENALTY |
+| 13   | elysia             | 34.28 | 25.564     | 311,681 | 62.3% | RATE PENALTY |
+| 14   | cutelyst           | 33.08 | 26.113     | 304,789 | 61.0% | RATE PENALTY |
+| 15   | micronaut          | 32.51 | 26.485     | 300,235 | 60.1% | RATE PENALTY |
+| 16   | aspnet-minimal     | 32.03 | 25.782     | 291,771 | 58.4% | RATE PENALTY |
+| 17   | aspnet-minimal-11  | 30.26 | 26.924     | 283,926 | 56.8% | RATE PENALTY |
+| 18   | fastendpoints      | 29.12 | 27.270     | 276,067 | 55.2% | RATE PENALTY |
+| 19   | rocket             | 23.21 | 32.410     | 245,855 | 49.2% | RATE PENALTY |
+| 20   | userver            | 19.50 | 35.982     | 221,050 | 44.2% | RATE PENALTY |
+| 21   | ktor               | 14.86 | 39.561     | 179,639 | 35.9% | RATE PENALTY |
++------+--------------------+-------+------------+---------+-------+--------------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+-------------+--------------+--------------+
+| Server             | Avg         | p99          | p99.9        |
++--------------------+-------------+--------------+--------------+
+| doba               | 339923.7us  | 4855808.0us  | 7088128.0us  |
+| actix              | 980830.0us  | 1936896.0us  | 2015744.0us  |
+| axum               | 2293557.4us | 4540416.0us  | 4655104.0us  |
+| bun                | 2227240.5us | 6629376.0us  | 7161856.0us  |
+| drogon             | 2031163.6us | 9801728.0us  | 11816960.0us |
+| fiber              | 2654813.3us | 6436864.0us  | 7862272.0us  |
+| vertx              | 2769831.1us | 5453824.0us  | 5531648.0us  |
+| go-fasthttp        | 2852561.1us | 5634048.0us  | 5728256.0us  |
+| hono-bun           | 3237696.9us | 8120320.0us  | 8761344.0us  |
+| ntex               | 3364949.0us | 6658048.0us  | 6772736.0us  |
+| helidon-production | 2781513.8us | 5531648.0us  | 5666816.0us  |
+| carter             | 3592314.8us | 7174144.0us  | 7272448.0us  |
+| elysia             | 3692087.7us | 8605696.0us  | 9310208.0us  |
+| cutelyst           | 3843713.6us | 8622080.0us  | 9318400.0us  |
+| micronaut          | 3992134.9us | 7849984.0us  | 10432512.0us |
+| aspnet-minimal     | 4151152.4us | 8210432.0us  | 8304640.0us  |
+| aspnet-minimal-11  | 4308646.8us | 8540160.0us  | 8687616.0us  |
+| fastendpoints      | 4475306.3us | 8826880.0us  | 8933376.0us  |
+| rocket             | 4850200.2us | 9875456.0us  | 10039296.0us |
+| userver            | 5560721.5us | 11022336.0us | 11251712.0us |
+| ktor               | 6434293.9us | 12644352.0us | 12873728.0us |
++--------------------+-------------+--------------+--------------+
+
+THROUGHPUT DETAIL: async (32000 connections)
++-----------+--------------------+--------------+---------+---------+---------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory  |
++-----------+--------------------+--------------+---------+---------+---------+
+| 1         | actix              | 2,459,806    | 100.0%  | 4754.9% | 988MiB  |
+| 2         | doba               | 2,341,679    | 95.2%   | 5780.1% | 2.1GiB  |
+| 3         | bun                | 2,136,862    | 86.9%   | 6120.8% | 1.5GiB  |
+| 4         | vertx              | 1,878,658    | 76.4%   | 6203.2% | 16.1GiB |
+| 5         | elysia             | 1,791,959    | 72.8%   | 6212.7% | 2.0GiB  |
+| 6         | hono-bun           | 1,710,901    | 69.6%   | 6148.4% | 1.9GiB  |
+| 7         | fiber              | 1,598,124    | 65.0%   | 4222.9% | 1.0GiB  |
+| 8         | carter             | 1,374,561    | 55.9%   | 4752.2% | 1.5GiB  |
+| 9         | aspnet-minimal     | 1,209,531    | 49.2%   | 5428.8% | 1.8GiB  |
+| 10        | micronaut          | 1,186,377    | 48.2%   | 4453.4% | 6.5GiB  |
+| 11        | fastendpoints      | 1,139,199    | 46.3%   | 4874.0% | 1.1GiB  |
+| 12        | ntex               | 975,034      | 39.6%   | 2868.1% | 786MiB  |
+| 13        | go-fasthttp        | 964,292      | 39.2%   | 3806.4% | 800MiB  |
+| 14        | aspnet-minimal-11  | 900,613      | 36.6%   | 4431.1% | 2.2GiB  |
+| 15        | cutelyst           | 837,560      | 34.0%   | 6291.7% | 1.6GiB  |
+| 16        | rocket             | 377,286      | 15.3%   | 5835.4% | 2.0GiB  |
+| 17        | helidon-production | 341,790      | 13.9%   | 5503.3% | 3.4GiB  |
+| 18        | userver            | 290,986      | 11.8%   | 4938.0% | 2.5GiB  |
+| 19        | axum               | 255,793      | 10.4%   | 1387.9% | 1.4GiB  |
+| 20        | ktor               | 255,011      | 10.4%   | 2239.6% | 15.7GiB |
+| 21        | drogon             | 160,540      | 6.5%    | 668.9%  | 584MiB  |
++-----------+--------------------+--------------+---------+---------+---------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+----------+----------+
+| Server             | Avg      | p99      |
++--------------------+----------+----------+
+| actix              | 13.33ms  | 14.30ms  |
+| doba               | 13.61ms  | 19.30ms  |
+| bun                | 14.98ms  | 24.20ms  |
+| vertx              | 17.13ms  | 31.60ms  |
+| elysia             | 18.03ms  | 27.60ms  |
+| hono-bun           | 18.76ms  | 27.90ms  |
+| fiber              | 20.44ms  | 30.00ms  |
+| carter             | 21.91ms  | 42.60ms  |
+| aspnet-minimal     | 25.98ms  | 52.40ms  |
+| micronaut          | 27.28ms  | 46.10ms  |
+| fastendpoints      | 23.84ms  | 47.20ms  |
+| ntex               | 30.53ms  | 34.70ms  |
+| go-fasthttp        | 33.75ms  | 36.50ms  |
+| aspnet-minimal-11  | 30.78ms  | 67.30ms  |
+| cutelyst           | 37.25ms  | 47.50ms  |
+| rocket             | 82.74ms  | 128.10ms |
+| helidon-production | 95.70ms  | 149.10ms |
+| userver            | 99.84ms  | 385.60ms |
+| axum               | 124.87ms | 174.80ms |
+| ktor               | 124.57ms | 221.00ms |
+| drogon             | 198.50ms | 207.90ms |
++--------------------+----------+----------+
+
+THROUGHPUT DETAIL: json-comp (4096 connections)
+Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
++-----------+--------------------+--------------+---------+---------+--------+-------------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory | Bandwidth   |
++-----------+--------------------+--------------+---------+---------+--------+-------------+
+| 1         | ntex               | 603,644      | 100.0%  | 6555.4% | 190MiB | 1.01GB/s    |
+| 2         | actix              | 579,784      | 96.0%   | 6097.7% | 226MiB | 1004.17MB/s |
+| 3         | bun                | 547,952      | 90.8%   | 6258.7% | 1.1GiB | 732.61MB/s  |
+| 4         | doba               | 488,383      | 80.9%   | 6523.6% | 421MiB | 643.01MB/s  |
+| 5         | carter             | 465,128      | 77.1%   | 5850.3% | 536MiB | 872.00MB/s  |
+| 6         | elysia             | 431,664      | 71.5%   | 6401.7% | 1.8GiB | 585.39MB/s  |
+| 7         | rocket             | 405,762      | 67.2%   | 6335.9% | 110MiB | 700.35MB/s  |
+| 8         | aspnet-minimal     | 399,122      | 66.1%   | 5887.0% | 578MiB | 769.02MB/s  |
+| 9         | aspnet-minimal-11  | 393,491      | 65.2%   | 5946.9% | 640MiB | 759.29MB/s  |
+| 10        | fastendpoints      | 389,807      | 64.6%   | 5913.9% | 567MiB | 750.72MB/s  |
+| 11        | userver            | 369,654      | 61.2%   | 6475.8% | 609MiB | 502.09MB/s  |
+| 12        | micronaut          | 355,964      | 59.0%   | 6063.2% | 3.0GiB | 470.64MB/s  |
+| 13        | vertx              | 319,388      | 52.9%   | 6304.4% | 5.6GiB | 410.95MB/s  |
+| 14        | axum               | 307,672      | 51.0%   | 6085.9% | 296MiB | 412.60MB/s  |
+| 15        | hono-bun           | 242,288      | 40.1%   | 6445.4% | 1.4GiB | 334.61MB/s  |
+| 16        | ktor               | 212,725      | 35.2%   | 6060.4% | 6.2GiB | 281.43MB/s  |
+| 17        | fiber              | 208,296      | 34.5%   | 6368.2% | 765MiB | 277.04MB/s  |
+| 18        | drogon             | 144,918      | 24.0%   | 6434.2% | 330MiB | 201.80MB/s  |
+| 19        | helidon-production | 117,572      | 19.5%   | 2270.6% | 2.9GiB | 160.94MB/s  |
+| 20        | go-fasthttp        | 52,833       | 8.8%    | 3499.1% | 4.3GiB | 70.51MB/s   |
++-----------+--------------------+--------------+---------+---------+--------+-------------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+----------+
+| Server             | Avg     | p99      |
++--------------------+---------+----------+
+| ntex               | 6.77ms  | 32.00ms  |
+| actix              | 6.01ms  | 42.20ms  |
+| bun                | 7.47ms  | 19.60ms  |
+| doba               | 8.30ms  | 163.70ms |
+| carter             | 4.08ms  | 20.50ms  |
+| elysia             | 9.47ms  | 21.40ms  |
+| rocket             | 2.81ms  | 7.79ms   |
+| aspnet-minimal     | 6.48ms  | 26.30ms  |
+| aspnet-minimal-11  | 5.80ms  | 36.80ms  |
+| fastendpoints      | 6.45ms  | 26.20ms  |
+| userver            | 11.07ms | 22.80ms  |
+| micronaut          | 11.53ms | 26.20ms  |
+| vertx              | 12.82ms | 30.80ms  |
+| axum               | 13.35ms | 40.00ms  |
+| hono-bun           | 16.87ms | 37.00ms  |
+| ktor               | 19.21ms | 89.40ms  |
+| fiber              | 19.63ms | 55.00ms  |
+| drogon             | 27.56ms | 395.40ms |
+| helidon-production | 31.64ms | 45.10ms  |
+| go-fasthttp        | 68.48ms | 1.25s    |
++--------------------+---------+----------+
+
+THROUGHPUT DETAIL: json-comp (16384 connections)
+Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
++-----------+--------------------+--------------+---------+---------+---------+-------------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory  | Bandwidth   |
++-----------+--------------------+--------------+---------+---------+---------+-------------+
+| 1         | ntex               | 588,204      | 100.0%  | 6552.4% | 388MiB  | 1010.39MB/s |
+| 2         | actix              | 583,201      | 99.1%   | 6077.2% | 382MiB  | 1009.52MB/s |
+| 3         | bun                | 552,695      | 94.0%   | 5822.1% | 1.1GiB  | 738.96MB/s  |
+| 4         | doba               | 467,318      | 79.4%   | 6113.9% | 759MiB  | 615.16MB/s  |
+| 5         | carter             | 458,086      | 77.9%   | 5853.9% | 565MiB  | 858.86MB/s  |
+| 6         | elysia             | 437,870      | 74.4%   | 6520.1% | 1.8GiB  | 593.81MB/s  |
+| 7         | rocket             | 436,626      | 74.2%   | 6309.3% | 136MiB  | 753.45MB/s  |
+| 8         | aspnet-minimal-11  | 392,995      | 66.8%   | 5938.0% | 590MiB  | 758.31MB/s  |
+| 9         | aspnet-minimal     | 391,076      | 66.5%   | 5568.8% | 574MiB  | 753.50MB/s  |
+| 10        | fastendpoints      | 378,393      | 64.3%   | 5737.2% | 526MiB  | 728.60MB/s  |
+| 11        | userver            | 362,820      | 61.7%   | 6500.3% | 1.5GiB  | 492.80MB/s  |
+| 12        | micronaut          | 356,768      | 60.7%   | 6480.2% | 4.3GiB  | 471.70MB/s  |
+| 13        | vertx              | 322,359      | 54.8%   | 5975.8% | 12.2GiB | 414.75MB/s  |
+| 14        | axum               | 282,402      | 48.0%   | 6453.6% | 890MiB  | 378.73MB/s  |
+| 15        | helidon-production | 254,375      | 43.2%   | 4932.6% | 7.7GiB  | 348.87MB/s  |
+| 16        | hono-bun           | 243,119      | 41.3%   | 6514.0% | 1.4GiB  | 335.77MB/s  |
+| 17        | ktor               | 218,645      | 37.2%   | 6055.2% | 19.1GiB | 290.97MB/s  |
+| 18        | fiber              | 209,462      | 35.6%   | 6356.7% | 1.4GiB  | 278.59MB/s  |
+| 19        | drogon             | 147,099      | 25.0%   | 5946.3% | 216MiB  | 204.70MB/s  |
+| 20        | go-fasthttp        | 39,907       | 6.8%    | 4400.2% | 7.7GiB  | 53.16MB/s   |
++-----------+--------------------+--------------+---------+---------+---------+-------------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+----------+----------+
+| Server             | Avg      | p99      |
++--------------------+----------+----------+
+| ntex               | 24.50ms  | 62.20ms  |
+| actix              | 14.55ms  | 44.80ms  |
+| bun                | 29.58ms  | 53.20ms  |
+| doba               | 32.90ms  | 792.60ms |
+| carter             | 6.41ms   | 28.40ms  |
+| elysia             | 37.43ms  | 64.00ms  |
+| rocket             | 4.43ms   | 14.30ms  |
+| aspnet-minimal-11  | 8.08ms   | 49.30ms  |
+| aspnet-minimal     | 8.10ms   | 28.90ms  |
+| fastendpoints      | 8.03ms   | 30.10ms  |
+| userver            | 44.87ms  | 172.60ms |
+| micronaut          | 45.84ms  | 78.30ms  |
+| vertx              | 50.73ms  | 104.30ms |
+| axum               | 57.85ms  | 136.20ms |
+| helidon-production | 47.98ms  | 496.00ms |
+| hono-bun           | 66.95ms  | 112.10ms |
+| ktor               | 74.21ms  | 219.30ms |
+| fiber              | 77.66ms  | 132.60ms |
+| drogon             | 89.33ms  | 2.33s    |
+| go-fasthttp        | 186.13ms | 3.82s    |
++--------------------+----------+----------+
+
+THROUGHPUT DETAIL: json-tls (4096 connections)
++-----------+--------------------+--------------+---------+---------+--------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory |
++-----------+--------------------+--------------+---------+---------+--------+
+| 1         | ntex               | 1,435,510    | 100.0%  | 6141.3% | 163MiB |
+| 2         | doba               | 1,425,341    | 99.3%   | 6494.7% | 747MiB |
+| 3         | actix              | 1,418,580    | 98.8%   | 6520.2% | 251MiB |
+| 4         | elysia             | 1,412,916    | 98.4%   | 6478.3% | 1.3GiB |
+| 5         | bun                | 1,320,617    | 92.0%   | 5839.4% | 1.0GiB |
+| 6         | hono-bun           | 1,086,023    | 75.7%   | 6228.4% | 1.3GiB |
+| 7         | fiber              | 982,022      | 68.4%   | 6233.3% | 690MiB |
+| 8         | micronaut          | 965,232      | 67.2%   | 6434.0% | 4.7GiB |
+| 9         | axum               | 889,590      | 62.0%   | 4472.3% | 246MiB |
+| 10        | vertx              | 806,030      | 56.1%   | 6406.2% | 7.1GiB |
+| 11        | userver            | 704,907      | 49.1%   | 6469.8% | 760MiB |
+| 12        | carter             | 692,015      | 48.2%   | 5761.2% | 854MiB |
+| 13        | aspnet-minimal     | 627,675      | 43.7%   | 6181.5% | 984MiB |
+| 14        | aspnet-minimal-11  | 621,346      | 43.3%   | 5754.8% | 961MiB |
+| 15        | fastendpoints      | 615,864      | 42.9%   | 6141.2% | 923MiB |
+| 16        | go-fasthttp        | 516,687      | 36.0%   | 5087.6% | 376MiB |
+| 17        | cutelyst           | 441,150      | 30.7%   | 6240.4% | 912MiB |
+| 18        | ktor               | 436,641      | 30.4%   | 4515.7% | 5.8GiB |
+| 19        | drogon             | 303,490      | 21.1%   | 6487.0% | 537MiB |
+| 20        | rocket             | 298,744      | 20.8%   | 6065.0% | 293MiB |
+| 21        | helidon-production | 161,886      | 11.3%   | 2851.8% | 3.3GiB |
++-----------+--------------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
+Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
++--------------------+---------+-----------+
+| Server             | Avg     | Max (wrk) |
++--------------------+---------+-----------+
+| ntex               | 2.82ms  | 54.52ms   |
+| doba               | 3.35ms  | 166.78ms  |
+| actix              | 2.90ms  | 67.28ms   |
+| elysia             | 2.88ms  | 75.56ms   |
+| bun                | 3.21ms  | 85.62ms   |
+| hono-bun           | 3.74ms  | 117.04ms  |
+| fiber              | 4.38ms  | 94.95ms   |
+| micronaut          | 4.61ms  | 157.34ms  |
+| axum               | 3.87ms  | 54.28ms   |
+| vertx              | 5.43ms  | 134.62ms  |
+| userver            | 6.28ms  | 153.40ms  |
+| carter             | 6.17ms  | 130.72ms  |
+| aspnet-minimal     | 6.87ms  | 171.26ms  |
+| aspnet-minimal-11  | 9.12ms  | 234.52ms  |
+| fastendpoints      | 6.81ms  | 99.57ms   |
+| go-fasthttp        | 21.81ms | 922.11ms  |
+| cutelyst           | 9.32ms  | 110.42ms  |
+| ktor               | 10.54ms | 303.60ms  |
+| drogon             | 13.30ms | 100.88ms  |
+| rocket             | 11.12ms | 67.17ms   |
+| helidon-production | 24.86ms | 229.88ms  |
++--------------------+---------+-----------+
+
+FIXED RATE: 8gbit (512 connections)
+Official score formula, normalized to THIS session only (not the public leaderboard).
+Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
++------+--------------------+--------+------------+--------+-------+--------+
+| Rank | Server             | Score  | CPU us/req | RPS    | Rate  | Status |
++------+--------------------+--------+------------+--------+-------+--------+
+| 1    | doba               | 100.00 | 41.183     | 49,393 | 98.8% | OK     |
+| 2    | actix              | 95.83  | 44.210     | 49,411 | 98.8% | OK     |
+| 3    | axum               | 86.24  | 53.382     | 49,192 | 98.4% | OK     |
+| 4    | ntex               | 85.28  | 55.353     | 49,394 | 98.8% | OK     |
+| 5    | drogon             | 83.77  | 56.155     | 49,383 | 98.8% | OK     |
+| 6    | cutelyst           | 78.79  | 62.167     | 49,269 | 98.5% | OK     |
+| 7    | fiber              | 77.08  | 67.040     | 49,354 | 98.7% | OK     |
+| 8    | micronaut          | 76.39  | 67.337     | 49,309 | 98.6% | OK     |
+| 9    | go-fasthttp        | 74.83  | 67.413     | 49,348 | 98.7% | OK     |
+| 10   | bun                | 74.37  | 75.621     | 49,367 | 98.7% | OK     |
+| 11   | hono-bun           | 73.29  | 75.141     | 49,408 | 98.8% | OK     |
+| 12   | vertx              | 71.96  | 65.830     | 49,262 | 98.5% | OK     |
+| 13   | elysia             | 69.84  | 81.924     | 49,361 | 98.7% | OK     |
+| 14   | helidon-production | 62.98  | 111.475    | 49,312 | 98.6% | OK     |
+| 15   | rocket             | 61.42  | 105.462    | 49,002 | 98.0% | OK     |
+| 16   | userver            | 60.87  | 116.199    | 49,269 | 98.5% | OK     |
+| 17   | ktor               | 53.05  | 127.603    | 49,322 | 98.6% | OK     |
+| 18   | aspnet-minimal-11  | 46.78  | 113.329    | 49,372 | 98.7% | OK     |
+| 19   | carter             | 45.15  | 202.221    | 49,406 | 98.8% | OK     |
+| 20   | aspnet-minimal     | 42.39  | 192.732    | 49,330 | 98.7% | OK     |
+| 21   | fastendpoints      | 41.40  | 219.142    | 49,362 | 98.7% | OK     |
++------+--------------------+--------+------------+--------+-------+--------+
+LATENCY: values saved by upstream for its selected repetition
++--------------------+---------+----------+-----------+
+| Server             | Avg     | p99      | p99.9     |
++--------------------+---------+----------+-----------+
+| doba               | 84.7us  | 98.0us   | 4458.0us  |
+| actix              | 88.1us  | 107.0us  | 4710.0us  |
+| axum               | 93.2us  | 140.0us  | 1403.0us  |
+| ntex               | 95.8us  | 115.0us  | 2963.0us  |
+| drogon             | 102.6us | 123.0us  | 7830.0us  |
+| cutelyst           | 113.2us | 136.0us  | 7258.0us  |
+| fiber              | 104.9us | 141.0us  | 5354.0us  |
+| micronaut          | 109.6us | 144.0us  | 6234.0us  |
+| go-fasthttp        | 121.3us | 162.0us  | 9388.0us  |
+| bun                | 95.9us  | 149.0us  | 1734.0us  |
+| hono-bun           | 102.6us | 172.0us  | 5686.0us  |
+| vertx              | 120.3us | 449.0us  | 9972.0us  |
+| elysia             | 109.3us | 197.0us  | 5654.0us  |
+| helidon-production | 122.2us | 149.0us  | 4118.0us  |
+| rocket             | 141.6us | 197.0us  | 1809.0us  |
+| userver            | 138.1us | 150.0us  | 9540.0us  |
+| ktor               | 175.3us | 411.0us  | 14492.0us |
+| aspnet-minimal-11  | 202.5us | 2647.0us | 13348.0us |
+| carter             | 169.1us | 784.0us  | 7542.0us  |
+| aspnet-minimal     | 186.5us | 1441.0us | 11932.0us |
+| fastendpoints      | 191.0us | 1235.0us | 7726.0us  |
++--------------------+---------+----------+-----------+
+
+THROUGHPUT DETAIL: static-tls (1024 connections)
++-----------+--------------------+--------------+---------+---------+--------+
+| RPS order | Server             | Selected RPS | vs best | CPU     | Memory |
++-----------+--------------------+--------------+---------+---------+--------+
+| 1         | fiber              | 643,828      | 100.0%  | 6282.5% | 531MiB |
+| 2         | bun                | 609,660      | 94.7%   | 6277.3% | 1.1GiB |
+| 3         | elysia             | 596,669      | 92.7%   | 6522.9% | 1.9GiB |
+| 4         | go-fasthttp        | 332,817      | 51.7%   | 4849.3% | 334MiB |
+| 5         | hono-bun           | 323,573      | 50.3%   | 6524.2% | 1.4GiB |
+| 6         | vertx              | 232,380      | 36.1%   | 6479.6% | 1.6GiB |
+| 7         | ktor               | 193,124      | 30.0%   | 6058.9% | 2.7GiB |
+| 8         | doba               | 170,357      | 26.5%   | 6553.4% | 209MiB |
+| 9         | aspnet-minimal     | 102,070      | 15.9%   | 5923.9% | 589MiB |
+| 10        | fastendpoints      | 101,102      | 15.7%   | 5868.6% | 578MiB |
+| 11        | aspnet-minimal-11  | 98,667       | 15.3%   | 6155.1% | 588MiB |
+| 12        | actix              | 76,621       | 11.9%   | 5780.0% | 4.8GiB |
+| 13        | helidon-production | 25,703       | 4.0%    | 6414.7% | 1.7GiB |
++-----------+--------------------+--------------+---------+---------+--------+
+LATENCY: values saved by upstream for its selected repetition
+Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
++--------------------+---------+-----------+
+| Server             | Avg     | Max (wrk) |
++--------------------+---------+-----------+
+| fiber              | 1.63ms  | 30.39ms   |
+| bun                | 1.74ms  | 31.76ms   |
+| elysia             | 1.75ms  | 23.16ms   |
+| go-fasthttp        | 29.24ms | 600.34ms  |
+| hono-bun           | 3.17ms  | 20.13ms   |
+| vertx              | 4.44ms  | 54.40ms   |
+| ktor               | 7.48ms  | 182.43ms  |
+| doba               | 6.85ms  | 146.76ms  |
+| aspnet-minimal     | 10.12ms | 44.56ms   |
+| fastendpoints      | 10.30ms | 54.54ms   |
+| aspnet-minimal-11  | 15.61ms | 228.71ms  |
+| actix              | 16.60ms | 535.20ms  |
+| helidon-production | 39.49ms | 101.33ms  |
++--------------------+---------+-----------+
+
+Official formulas on local data; not published/certified HttpArena results.

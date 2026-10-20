@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_response_h
 #define martianlabs_doba_protocol_http_v11_response_h
 
+#include <algorithm>
+#include <array>
 #include <charconv>
 #include <cstring>
 #include <limits>
@@ -34,6 +36,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "common/date_server.h"
 #include "platform.h"
@@ -64,22 +67,30 @@ class response {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   response(const response&) = delete;
-  explicit response(std::span<char> storage)
-      : response(storage, policies::kMaxResponseHeadSizeInMemory,
-                 policies::kMaxResponseBodySizeInMemory) {}
-  response(std::span<char> storage, std::size_t head_capacity,
-           std::size_t body_capacity) {
-    if (!head_capacity || head_capacity > storage.size() ||
-        body_capacity > storage.size() - head_capacity) {
-      throw std::invalid_argument("response storage is too small!");
+  explicit response(
+      std::size_t max_head_size = policies::kDefaultMaxResponseHeadSize,
+      std::size_t body_memory_threshold =
+          policies::kDefaultResponseBodyMemoryThreshold)
+      : max_head_size_(max_head_size),
+        body_memory_threshold_(body_memory_threshold) {
+    if (!max_head_size_) throw std::invalid_argument("Invalid head limit");
+  }
+  response(std::size_t max_head_size, std::size_t body_memory_threshold,
+           std::string& head, std::string& body)
+      : max_head_size_(max_head_size),
+        body_memory_threshold_(body_memory_threshold),
+        storage_(std::in_place_index<1>,
+                 std::array<std::string*, 2>{&head, &body}) {
+    if (!max_head_size_ || &head == &body) {
+      throw std::invalid_argument("Invalid borrowed response storage");
     }
-    head_ = storage.first(head_capacity);
-    body_ = storage.subspan(head_capacity, body_capacity);
+    head.clear();
+    body.clear();
   }
   response(response&& in) noexcept
-      : head_(in.head_),
-        body_(in.body_),
-        borrowed_body_(in.borrowed_body_),
+      : max_head_size_(std::exchange(in.max_head_size_, 0)),
+        body_memory_threshold_(std::exchange(in.body_memory_threshold_, 0)),
+        storage_(std::move(in.storage_)),
         head_size_(in.head_size_),
         body_size_(in.body_size_),
         sln_len_(in.sln_len_),
@@ -95,9 +106,7 @@ class response {
         bdy_reader_(std::move(in.bdy_reader_)) {
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.head_ = {};
-    in.body_ = {};
-    in.borrowed_body_ = {};
+    in.storage_.emplace<0>();
     in.head_size_ = 0;
     in.body_size_ = 0;
     in.status_code_ = 0;
@@ -110,9 +119,12 @@ class response {
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  static response from(std::span<char> storage, std::size_t head_capacity,
-                       std::size_t body_capacity) {
-    return response(storage, head_capacity, body_capacity);
+  static response from(std::size_t head_limit, std::size_t body_threshold) {
+    return response(head_limit, body_threshold);
+  }
+  static response from(std::size_t head_limit, std::size_t body_threshold,
+                       std::string& head, std::string& body) {
+    return response(head_limit, body_threshold, head, body);
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
@@ -120,9 +132,9 @@ class response {
   response& operator=(const response&) = delete;
   response& operator=(response&& in) noexcept {
     if (this == &in) return *this;
-    head_ = in.head_;
-    body_ = in.body_;
-    borrowed_body_ = in.borrowed_body_;
+    max_head_size_ = std::exchange(in.max_head_size_, 0);
+    body_memory_threshold_ = std::exchange(in.body_memory_threshold_, 0);
+    storage_ = std::move(in.storage_);
     head_size_ = in.head_size_;
     body_size_ = in.body_size_;
     sln_len_ = in.sln_len_;
@@ -138,9 +150,7 @@ class response {
     bdy_reader_ = std::move(in.bdy_reader_);
     in.sln_len_ = 0;
     in.hdr_len_ = 0;
-    in.head_ = {};
-    in.body_ = {};
-    in.borrowed_body_ = {};
+    in.storage_.emplace<0>();
     in.head_size_ = 0;
     in.body_size_ = 0;
     in.status_code_ = 0;
@@ -189,7 +199,6 @@ class response {
     }
     if (must_omit_body) {
       body_size_ = 0;
-      borrowed_body_ = {};
     }
     apply_body_framing();
     if (!has_date_header_) {
@@ -197,7 +206,7 @@ class response {
     }
     std::size_t sln_plus_hdr_len = sln_len_ + hdr_len_;
     std::size_t crlf_bytes = hdr_len_ ? 2 : 4;
-    if (sln_plus_hdr_len + crlf_bytes > head_.size()) {
+    if (sln_plus_hdr_len + crlf_bytes > max_head_size_) {
       throw std::out_of_range("not enough space to serialize response!");
     }
     serialization_result result;
@@ -219,10 +228,8 @@ class response {
       bdy_reader_.reset();
     }
     append_head(hdr_len_ ? "\r\n" : "\r\n\r\n");
-    result.head = std::string_view(head_.data(), head_size_);
-    result.body = borrowed_body_.empty()
-                      ? std::string_view(body_.data(), body_size_)
-                      : borrowed_body_;
+    result.head = std::string_view(head_bytes().data(), head_size_);
+    result.body = std::string_view(body_bytes().data(), body_size_);
     head_size_ = 0;
     return result;
   }
@@ -241,10 +248,11 @@ class response {
     }
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
-    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = max_head_size_ - sln_len_ - hdr_len_;
     // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
     // + 4. Reserve the 2 bytes of the header-terminating CRLF.
-    if (k_size + v_size + 4 + 2 > space_left) {
+    if (k_size > space_left || v_size > space_left - k_size ||
+        space_left - k_size - v_size < 6) {
       throw std::out_of_range("not enough space to add header!");
     }
     append_head(k);
@@ -293,14 +301,14 @@ class response {
     std::size_t new_v_size = v.size();
     if (new_v_size > val_len) {
       std::size_t grow = new_v_size - val_len;
-      std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
-      if (grow + 2 > space_left) {
+      std::size_t space_left = max_head_size_ - sln_len_ - hdr_len_;
+      if (space_left < 2 || grow > space_left - 2) {
         throw std::out_of_range("not enough space to set header!");
       }
     }
     bool had_close_option =
         iequals(k, header_names::kConnection) &&
-        has_close_option(std::string_view(&head_[val_off], val_len));
+        has_close_option(std::string_view(&head_bytes()[val_off], val_len));
     replace_head(val_off, val_len, v);
     if (had_close_option) connection_close_count_--;
     hdr_len_ = hdr_len_ - val_len + new_v_size;
@@ -344,14 +352,14 @@ class response {
   // | Returns the (key, value) pair for the first header whose name           |
   // | case-insensitively matches 'k'. Throws std::runtime_error if the header |
   // | is not present. The returned strings are owned copies: they do NOT      |
-  // | alias head_ and stay valid across later mutations of this response.     |
+  // | alias response storage and stay valid across later mutations.          |
   // +-------------------------------------------------------------------------+
   std::pair<std::string, std::string> get_header(std::string_view k) const {
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) {
       throw std::runtime_error("header not found!");
     }
-    return {std::string(k), std::string(&head_[val_off], val_len)};
+    return {std::string(k), std::string(&head_bytes()[val_off], val_len)};
   }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
@@ -367,16 +375,16 @@ class response {
     while (pos < end) {
       std::size_t name_beg = pos;
       std::size_t colon = pos;
-      while (colon < end && head_[colon] != ':') colon++;
+      while (colon < end && head_bytes()[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
-      while (cr < end && head_[cr] != '\r') cr++;
+      while (cr < end && head_bytes()[cr] != '\r') cr++;
       if (cr >= end) break;
       if (current == index) {
         // Copy into caller-owned std::strings (see rationale above).
-        return {std::string(&head_[name_beg], colon - name_beg),
-                std::string(&head_[val_beg], cr - val_beg)};
+        return {std::string(&head_bytes()[name_beg], colon - name_beg),
+                std::string(&head_bytes()[val_beg], cr - val_beg)};
       }
       current++;
       // Advance past CRLF (\r\n) to the next header line.
@@ -396,10 +404,10 @@ class response {
     std::size_t count = 0;
     while (pos < end) {
       std::size_t colon = pos;
-      while (colon < end && head_[colon] != ':') colon++;
+      while (colon < end && head_bytes()[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t cr = colon + 1;
-      while (cr < end && head_[cr] != '\r') cr++;
+      while (cr < end && head_bytes()[cr] != '\r') cr++;
       if (cr >= end) break;
       count++;
       // Advance past CRLF (\r\n) to the next header line.
@@ -419,7 +427,7 @@ class response {
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) return *this;
     if (iequals(k, header_names::kConnection) &&
-        has_close_option(std::string_view(&head_[val_off], val_len))) {
+        has_close_option(std::string_view(&head_bytes()[val_off], val_len))) {
       connection_close_count_--;
     }
     erase_head(line_off, line_len);
@@ -436,13 +444,13 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Stores small payloads in body_; larger ones use a raw writer.           |
+  // | Stores small payloads in response storage; larger ones use a raw writer.           |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
     reset_body();
-    if (body_size <= body_.size()) {
-      if (body_size) std::memcpy(body_.data(), sv.data(), body_size);
+    if (body_size <= body_memory_threshold_) {
+      body_bytes().assign(sv);
       body_size_ = body_size;
       content_length_ = body_size;
       return *this;
@@ -459,7 +467,7 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Borrows complete raw payloads until the transport copies them.          |
+  // | Copies decoded payloads into response storage.                          |
   // +-------------------------------------------------------------------------+
   response& set_body(body::reader* source) {
     reset_body();
@@ -467,27 +475,29 @@ class response {
       content_length_ = 0;
       return *this;
     }
-    if (const auto borrowed = source->take_borrowed_raw(body_.size())) {
-      borrowed_body_ = std::string_view(
-          reinterpret_cast<const char*>(borrowed->data()), borrowed->size());
-      content_length_ = borrowed->size();
-      return *this;
+    if (const auto bytes = source->take_borrowed_raw(body_memory_threshold_)) {
+      return set_body(std::string_view(
+          reinterpret_cast<const char*>(bytes->data()), bytes->size()));
     }
     std::size_t size = 0;
-    for (;;) {
-      const auto state =
-          source->read(std::as_writable_bytes(body_.subspan(size)));
-      if (state.has_error) throw std::runtime_error("unable to read body!");
+    while (size < body_memory_threshold_) {
+      std::byte bytes[8192];
+      const auto available =
+          (std::min)(sizeof(bytes), body_memory_threshold_ - size);
+      const auto state = source->read(std::span(bytes).first(available));
+      if (state.has_error || (!state.produced && !state.complete)) {
+        throw std::runtime_error("unable to read body!");
+      }
+      body_bytes().resize(size + state.produced);
+      if (state.produced) {
+        std::memcpy(body_bytes().data() + size, bytes, state.produced);
+      }
       size += state.produced;
       if (state.complete) {
         body_size_ = size;
         content_length_ = size;
         return *this;
       }
-      if (!state.produced && size < body_.size()) {
-        throw std::runtime_error("unable to read body!");
-      }
-      if (size == body_.size()) break;
     }
     std::byte next;
     auto state = source->read(std::span(&next, 1));
@@ -499,7 +509,7 @@ class response {
     }
     if (!state.produced) throw std::runtime_error("unable to read body!");
     auto writer = body::body_writer::raw();
-    if (!writer.write(std::string_view(body_.data(), size)) ||
+    if (!writer.write(std::string_view(body_bytes().data(), size)) ||
         !writer.write(std::span(&next, state.produced))) {
       throw std::runtime_error("unable to write body!");
     }
@@ -579,8 +589,8 @@ class response {
   // | Discards body bytes while retaining the advertised framing for HEAD.    |
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
+    body_bytes().clear();
     body_size_ = 0;
-    borrowed_body_ = {};
     bdy_reader_.reset();
     bdy_writer_.reset();
     return *this;
@@ -782,6 +792,22 @@ class response {
   }
 
  private:
+  std::string& head_bytes() noexcept {
+    if (auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[0];
+    return std::get<0>(storage_)[0];
+  }
+  const std::string& head_bytes() const noexcept {
+    if (const auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[0];
+    return std::get<0>(storage_)[0];
+  }
+  std::string& body_bytes() noexcept {
+    if (auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[1];
+    return std::get<0>(storage_)[1];
+  }
+  const std::string& body_bytes() const noexcept {
+    if (const auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[1];
+    return std::get<0>(storage_)[1];
+  }
   // +=========================================================================+
   // | [>] CONSTANTs                                               ( private ) |
   // +-------------------------------------------------------------------------+
@@ -790,33 +816,37 @@ class response {
   static constexpr std::size_t kDateLineLength =
       kDatePrefix.size() + kDateLength + 2;
   void append_head(std::string_view value) {
-    if (!value.empty()) {
-      std::memcpy(head_.data() + head_size_, value.data(), value.size());
-    }
-    head_size_ += value.size();
+    head_bytes().resize(head_size_);
+    head_bytes().append(value);
+    head_size_ = head_bytes().size();
   }
   void replace_head(std::size_t offset, std::size_t length,
                     std::string_view value) {
+    const auto next_size = head_size_ - length + value.size();
+    if (next_size > head_size_) head_bytes().resize(next_size);
     const std::size_t tail = head_size_ - offset - length;
-    std::memmove(head_.data() + offset + value.size(),
-                 head_.data() + offset + length, tail);
+    std::memmove(head_bytes().data() + offset + value.size(),
+                 head_bytes().data() + offset + length, tail);
     if (!value.empty()) {
-      std::memcpy(head_.data() + offset, value.data(), value.size());
+      std::memcpy(head_bytes().data() + offset, value.data(), value.size());
     }
-    head_size_ = head_size_ - length + value.size();
+    head_size_ = next_size;
+    head_bytes().resize(next_size);
   }
   void erase_head(std::size_t offset, std::size_t length) {
-    std::memmove(head_.data() + offset, head_.data() + offset + length,
+    std::memmove(head_bytes().data() + offset, head_bytes().data() + offset + length,
                  head_size_ - offset - length);
     head_size_ -= length;
+    head_bytes().resize(head_size_);
   }
   response& set_status_line(std::string_view line, int code) {
-    if (line.size() > head_.size()) {
+    if (line.size() > max_head_size_) {
       throw std::out_of_range("not enough space to set status line!");
     }
+    head_bytes().clear();
+    body_bytes().clear();
     head_size_ = 0;
     body_size_ = 0;
-    borrowed_body_ = {};
     sln_len_ = line.size();
     hdr_len_ = 0;
     status_code_ = code;
@@ -839,7 +869,7 @@ class response {
   // | [>] add_date_header                                         ( private ) |
   // +-------------------------------------------------------------------------+
   void add_date_header() {
-    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = max_head_size_ - sln_len_ - hdr_len_;
     if (kDateLineLength + 2 > space_left) {
       throw std::out_of_range("not enough space to add header!");
     }
@@ -870,7 +900,7 @@ class response {
       throw std::invalid_argument("conflicting response framing headers!");
     }
     if (has_content_length_header_ || has_transfer_encoding_header_) return;
-    std::size_t space_left = head_.size() - sln_len_ - hdr_len_;
+    std::size_t space_left = max_head_size_ - sln_len_ - hdr_len_;
     if (chunked_) {
       constexpr std::string_view line = "Transfer-Encoding: chunked\r\n";
       if (line.size() + 2 > space_left) {
@@ -941,13 +971,13 @@ class response {
     while (pos < end) {
       std::size_t name_beg = pos;
       std::size_t colon = pos;
-      while (colon < end && head_[colon] != ':') colon++;
+      while (colon < end && head_bytes()[colon] != ':') colon++;
       if (colon >= end) break;
       std::size_t val_beg = colon + 2;
       std::size_t cr = val_beg;
-      while (cr < end && head_[cr] != '\r') cr++;
+      while (cr < end && head_bytes()[cr] != '\r') cr++;
       if (cr >= end) break;
-      std::string_view name(&head_[name_beg], colon - name_beg);
+      std::string_view name(&head_bytes()[name_beg], colon - name_beg);
       if (iequals(name, k)) {
         line_off = name_beg;
         val_off = val_beg;
@@ -963,9 +993,10 @@ class response {
   // +=========================================================================+
   // | [>] ATTRIBUTES                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::span<char> head_;
-  std::span<char> body_;
-  std::string_view borrowed_body_;
+  std::size_t max_head_size_;
+  std::size_t body_memory_threshold_;
+  std::variant<std::array<std::string, 2>,
+               std::array<std::string*, 2>> storage_;
   std::size_t head_size_{0};
   std::size_t body_size_{0};
   std::size_t sln_len_{0};

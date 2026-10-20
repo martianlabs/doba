@@ -29,9 +29,9 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::ascii_to_lower;
-using martianlabs::doba::common::base_equal;
-using martianlabs::doba::common::base_hash;
+using martianlabs::doba::common::detail::ascii_to_lower;
+using martianlabs::doba::common::detail::base_equal;
+using martianlabs::doba::common::detail::base_hash;
 }  // namespace
 
 // +===========================================================================+

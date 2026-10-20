@@ -1,9 +1,11 @@
 <a name="backlog"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h1-backlog-dark.svg">
+  <a href="../resources/docs/backlog/h1-backlog.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h1-backlog.svg" alt="Backlog">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h1-backlog-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h1-backlog-dark.svg" alt="Backlog">
+  </a>
 </h1>
 
 Source of truth for doba's outstanding implementation, verification, and
@@ -16,10 +18,12 @@ a selected value are marked "Not set".
 
 <a name="contents"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-contents-dark.svg">
+  <a href="../resources/docs/backlog/h2-contents.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h2-contents.svg" alt="Contents">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-contents-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h2-contents-dark.svg" alt="Contents">
+  </a>
 </h2>
 
 - [Release target](#release-target)
@@ -34,10 +38,12 @@ a selected value are marked "Not set".
 
 <a name="release-target"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-release-target-dark.svg">
+  <a href="../resources/docs/backlog/h2-release-target.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h2-release-target.svg" alt="Release target">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-release-target-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h2-release-target-dark.svg" alt="Release target">
+  </a>
 </h2>
 
 The frozen target is `0.1.0-beta1`, a beta for controlled
@@ -64,10 +70,12 @@ an explicit scope decision supported by evidence.
 
 <a name="inventory"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-inventory-dark.svg">
+  <a href="../resources/docs/backlog/h2-inventory.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h2-inventory.svg" alt="Inventory">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-inventory-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h2-inventory-dark.svg" alt="Inventory">
+  </a>
 </h2>
 
 24 open items across seven categories: six release gates and
@@ -114,12 +122,18 @@ eighteen future items. Closed identifiers remain in Git history.
 
 <a name="operational-hardening"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-operational-hardening-dark.svg">
-    <img src="../resources/docs/backlog/h2-operational-hardening.svg" alt="Operational hardening">
-  </picture>
+  <a href="../resources/docs/backlog/h2-operational-hardening.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow.svg">
+      <img src="../resources/docs/backlog/h2-operational-hardening.svg" alt="Operational hardening">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-operational-hardening-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-operational-hardening-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-operational-hardening-dark.svg" alt="Operational hardening">
+    </picture>
+  </a>
 </h2>
 
 C1, C2, C3 and C7 are all required for `0.1.0-beta1`. Request and transport
@@ -128,12 +142,18 @@ need decisions before implementation.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-dark.svg">
-    <img src="../resources/docs/backlog/h3-c1-single-inactivity-timeout.svg" alt="C1: Single inactivity timeout">
-  </picture>
+  <a href="../resources/docs/backlog/h3-c1-single-inactivity-timeout.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow.svg">
+      <img src="../resources/docs/backlog/h3-c1-single-inactivity-timeout.svg" alt="C1: Single inactivity timeout">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-c1-single-inactivity-timeout-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c1-single-inactivity-timeout-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-c1-single-inactivity-timeout-dark.svg" alt="C1: Single inactivity timeout">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Pending; required for `0.1.0-beta1`. Neither TCP backend
@@ -151,21 +171,27 @@ ownership, response order, and one disconnect callback on IOCP and epoll.
 
 <a name="c2-effective-per-request-limits"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-dark.svg">
-    <img src="../resources/docs/backlog/h3-c2-effective-per-request-limits.svg" alt="C2: Effective per-request limits">
-  </picture>
+  <a href="../resources/docs/backlog/h3-c2-effective-per-request-limits.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow.svg">
+      <img src="../resources/docs/backlog/h3-c2-effective-per-request-limits.svg" alt="C2: Effective per-request limits">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-c2-effective-per-request-limits-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c2-effective-per-request-limits-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-c2-effective-per-request-limits-dark.svg" alt="C2: Effective per-request limits">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Partially implemented; required for `0.1.0-beta1`.
 
 **Existing limits.** HTTP policies bound content length (16 MiB by default),
 query pairs, chunk extensions, trailers, request-head bytes, and body storage.
-Response capacities are separate. A complete head over
-`max_request_head_size` returns 431; an incomplete head filling that limit
-currently returns 400.
+Response limits are separate. A complete head over
+`max_request_head_size` returns 431; an incomplete head filling that
+limit currently returns 400.
 
 **Remaining work.** Define separate header-field count, per-field size, and
 request-target limits, including exact accounting and 431/414 rejection
@@ -178,12 +204,18 @@ Performance measurement requires a separate explicit benchmark request.
 
 <a name="c3-global-active-connection-limit"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-dark.svg">
-    <img src="../resources/docs/backlog/h3-c3-global-active-connection-limit.svg" alt="C3: Global active connection limit">
-  </picture>
+  <a href="../resources/docs/backlog/h3-c3-global-active-connection-limit.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow.svg">
+      <img src="../resources/docs/backlog/h3-c3-global-active-connection-limit.svg" alt="C3: Global active connection limit">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-c3-global-active-connection-limit-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c3-global-active-connection-limit-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-c3-global-active-connection-limit-dark.svg" alt="C3: Global active connection limit">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Pending; required for `0.1.0-beta1`. The current connection
@@ -201,17 +233,23 @@ connection after capacity becomes available.
 
 <a name="c7-pending-response-and-work-budget"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-dark.svg">
-    <img src="../resources/docs/backlog/h3-c7-pending-response-and-work-budget.svg" alt="C7: Pending response and work budget">
-  </picture>
+  <a href="../resources/docs/backlog/h3-c7-pending-response-and-work-budget.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow.svg">
+      <img src="../resources/docs/backlog/h3-c7-pending-response-and-work-budget.svg" alt="C7: Pending response and work budget">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-c7-pending-response-and-work-budget-dark.svg" alt="C7: Pending response and work budget">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Partially implemented; required for `0.1.0-beta1`.
 `max_pending_requests` bounds asynchronous response positions. TCP
-`max_send_buffer_size` bounds queued reservations and the active batch but
+`max_buffered_send_bytes` bounds queued reservations and the active batch but
 excludes source-owned storage; neither is a complete retained-work budget.
 
 **Remaining work.** Define accounting, defaults, and admission or resume
@@ -226,22 +264,30 @@ without leaks or duplicate completion.
 
 <a name="bugs"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-bugs-dark.svg">
+  <a href="../resources/docs/backlog/h2-bugs.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h2-bugs.svg" alt="Bugs">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-bugs-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h2-bugs-dark.svg" alt="Bugs">
+  </a>
 </h2>
 
 B13 is the only open bug recorded here. Closed fixes remain in Git history.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-dark.svg">
-    <img src="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter.svg" alt="B13: Signed overflow in the HttpArena adapter">
-  </picture>
+  <a href="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow.svg">
+      <img src="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter.svg" alt="B13: Signed overflow in the HttpArena adapter">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-b13-signed-overflow-in-the-httparena-adapter-dark.svg" alt="B13: Signed overflow in the HttpArena adapter">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Verification pending; benchmark-only future work.
@@ -256,12 +302,18 @@ local to the adapter.
 
 <a name="product-and-convenience"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-product-and-convenience-dark.svg">
-    <img src="../resources/docs/backlog/h2-product-and-convenience.svg" alt="Product and convenience">
-  </picture>
+  <a href="../resources/docs/backlog/h2-product-and-convenience.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow.svg">
+      <img src="../resources/docs/backlog/h2-product-and-convenience.svg" alt="Product and convenience">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-product-and-convenience-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-product-and-convenience-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-product-and-convenience-dark.svg" alt="Product and convenience">
+    </picture>
+  </a>
 </h2>
 
 F2 is required for `0.1.0-beta1`, before operational hardening and
@@ -269,12 +321,18 @@ release engineering. P2-P8 remain future work, outside this beta.
 
 <a name="f2-compression-and-gzip"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg">
-    <img src="../resources/docs/backlog/h3-f2-compression-and-gzip.svg" alt="F2: Compression and GZIP">
-  </picture>
+  <a href="../resources/docs/backlog/h3-f2-compression-and-gzip.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow.svg">
+      <img src="../resources/docs/backlog/h3-f2-compression-and-gzip.svg" alt="F2: Compression and GZIP">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f2-compression-and-gzip-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-f2-compression-and-gzip-dark.svg" alt="F2: Compression and GZIP">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Design and implementation pending; required for
@@ -290,10 +348,12 @@ large bodies.
 
 <a name="p2-access-logging"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p2-access-logging-dark.svg">
+  <a href="../resources/docs/backlog/h3-p2-access-logging.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h3-p2-access-logging.svg" alt="P2: Access logging">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p2-access-logging-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h3-p2-access-logging-dark.svg" alt="P2: Access logging">
+  </a>
 </h3>
 
 **Status.** Future product decision. There is no dedicated request access
@@ -309,12 +369,18 @@ failure records without duplicates, and define lifetime and disabled cost.
 
 <a name="p3-middleware-chain"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg">
-    <img src="../resources/docs/backlog/h3-p3-middleware-chain.svg" alt="P3: Middleware chain">
-  </picture>
+  <a href="../resources/docs/backlog/h3-p3-middleware-chain.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow.svg">
+      <img src="../resources/docs/backlog/h3-p3-middleware-chain.svg" alt="P3: Middleware chain">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg" alt="P3: Middleware chain">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Future product decision; no concrete composition use case has
@@ -330,10 +396,12 @@ middleware.
 
 <a name="p4-form-parsing"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p4-form-parsing-dark.svg">
+  <a href="../resources/docs/backlog/h3-p4-form-parsing.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h3-p4-form-parsing.svg" alt="P4: Form parsing">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p4-form-parsing-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h3-p4-form-parsing-dark.svg" alt="P4: Form parsing">
+  </a>
 </h3>
 
 **Status.** Future product work. Form parsing is absent.
@@ -348,12 +416,18 @@ boundaries. Coordinate budgets with C2.
 
 <a name="p5-automatic-conditionals-and-ranges"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-dark.svg">
-    <img src="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges.svg" alt="P5: Automatic conditionals and ranges">
-  </picture>
+  <a href="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow.svg">
+      <img src="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges.svg" alt="P5: Automatic conditionals and ranges">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-p5-automatic-conditionals-and-ranges-dark.svg" alt="P5: Automatic conditionals and ranges">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future work. The static file server handles
@@ -370,10 +444,12 @@ test added validators and any supported selected or unsatisfied ranges
 
 <a name="p6-output-trailers"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p6-output-trailers-dark.svg">
+  <a href="../resources/docs/backlog/h3-p6-output-trailers.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h3-p6-output-trailers.svg" alt="P6: Output trailers">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p6-output-trailers-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h3-p6-output-trailers-dark.svg" alt="P6: Output trailers">
+  </a>
 </h3>
 
 **Status.** Deferred future work. `response` has no output-trailer API.
@@ -386,12 +462,18 @@ restrictions, and unchanged output without trailers (RFC 9110 S6.5).
 
 <a name="p7-automatic-resource-options"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-dark.svg">
-    <img src="../resources/docs/backlog/h3-p7-automatic-resource-options.svg" alt="P7: Automatic resource OPTIONS">
-  </picture>
+  <a href="../resources/docs/backlog/h3-p7-automatic-resource-options.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow.svg">
+      <img src="../resources/docs/backlog/h3-p7-automatic-resource-options.svg" alt="P7: Automatic resource OPTIONS">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p7-automatic-resource-options-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p7-automatic-resource-options-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-p7-automatic-resource-options-dark.svg" alt="P7: Automatic resource OPTIONS">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future work. `OPTIONS *` is automatic; resource
@@ -405,12 +487,18 @@ explicit handler wins. Test existing and missing resources.
 
 <a name="p8-429-response-construction"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-dark.svg">
-    <img src="../resources/docs/backlog/h3-p8-429-response-construction.svg" alt="P8: 429 response construction">
-  </picture>
+  <a href="../resources/docs/backlog/h3-p8-429-response-construction.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow.svg">
+      <img src="../resources/docs/backlog/h3-p8-429-response-construction.svg" alt="P8: 429 response construction">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-p8-429-response-construction-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p8-429-response-construction-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-p8-429-response-construction-dark.svg" alt="P8: 429 response construction">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Future product work. Named response status methods omit 429,
@@ -424,12 +512,18 @@ Retry-After, framing, and HEAD behavior without changing other factories.
 
 <a name="quality-and-validation"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-quality-and-validation-dark.svg">
-    <img src="../resources/docs/backlog/h2-quality-and-validation.svg" alt="Quality and validation">
-  </picture>
+  <a href="../resources/docs/backlog/h2-quality-and-validation.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow.svg">
+      <img src="../resources/docs/backlog/h2-quality-and-validation.svg" alt="Quality and validation">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-quality-and-validation-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-quality-and-validation-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-quality-and-validation-dark.svg" alt="Quality and validation">
+    </picture>
+  </a>
 </h2>
 
 QA1-QA2 and QA6 are future work. Existing CI gates and focused
@@ -438,12 +532,18 @@ for `0.1.0-beta1`.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-dark.svg">
-    <img src="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite.svg" alt="QA1: Exhaustive compliance suite">
-  </picture>
+  <a href="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow.svg">
+      <img src="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite.svg" alt="QA1: Exhaustive compliance suite">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-qa1-exhaustive-compliance-suite-dark.svg" alt="QA1: Exhaustive compliance suite">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Existing unit and integration coverage is extensive; the
@@ -460,10 +560,12 @@ C2/C7 tests without delaying their release work.
 
 <a name="qa2-fuzzing"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg">
+  <a href="../resources/docs/backlog/h3-qa2-fuzzing.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h3-qa2-fuzzing.svg" alt="QA2: Fuzzing">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg" alt="QA2: Fuzzing">
+  </a>
 </h3>
 
 **Status.** Deferred future QA work. No fuzz targets or corpus are present.
@@ -477,12 +579,18 @@ reproduction; turn confirmed failures into deterministic regressions.
 
 <a name="qa6-external-compliance-automation"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-dark.svg">
-    <img src="../resources/docs/backlog/h3-qa6-external-compliance-automation.svg" alt="QA6: External compliance automation">
-  </picture>
+  <a href="../resources/docs/backlog/h3-qa6-external-compliance-automation.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow.svg">
+      <img src="../resources/docs/backlog/h3-qa6-external-compliance-automation.svg" alt="QA6: External compliance automation">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-qa6-external-compliance-automation-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-qa6-external-compliance-automation-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-qa6-external-compliance-automation-dark.svg" alt="QA6: External compliance automation">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future QA work. h1spec and Http11Probe are currently
@@ -494,22 +602,34 @@ logs and revisions. Coordinate with QA1.
 
 <a name="release-engineering"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-release-engineering-dark.svg">
-    <img src="../resources/docs/backlog/h2-release-engineering.svg" alt="Release engineering">
-  </picture>
+  <a href="../resources/docs/backlog/h2-release-engineering.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow.svg">
+      <img src="../resources/docs/backlog/h2-release-engineering.svg" alt="Release engineering">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-release-engineering-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-release-engineering-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-release-engineering-dark.svg" alt="Release engineering">
+    </picture>
+  </a>
 </h2>
 
 <a name="re1-release-governance-and-traceability"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-dark.svg">
-    <img src="../resources/docs/backlog/h3-re1-release-governance-and-traceability.svg" alt="RE1: Release governance and traceability">
-  </picture>
+  <a href="../resources/docs/backlog/h3-re1-release-governance-and-traceability.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow.svg">
+      <img src="../resources/docs/backlog/h3-re1-release-governance-and-traceability.svg" alt="RE1: Release governance and traceability">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-re1-release-governance-and-traceability-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-re1-release-governance-and-traceability-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-re1-release-governance-and-traceability-dark.svg" alt="RE1: Release governance and traceability">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Release gate for `0.1.0-beta1`. The publishing workflow derives
@@ -527,12 +647,18 @@ content, notes, and `v0.1.0-beta1` tag; publish as a prerelease.
 
 <a name="c-maintainability"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-c-maintainability-dark.svg">
-    <img src="../resources/docs/backlog/h2-c-maintainability.svg" alt="C++ maintainability">
-  </picture>
+  <a href="../resources/docs/backlog/h2-c-maintainability.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow.svg">
+      <img src="../resources/docs/backlog/h2-c-maintainability.svg" alt="C++ maintainability">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-c-maintainability-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-c-maintainability-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-c-maintainability-dark.svg" alt="C++ maintainability">
+    </picture>
+  </a>
 </h2>
 
 DT1-DT3 are future work. RE1 covers the minimum documentation of current
@@ -541,12 +667,18 @@ changes or a broader redesign before that release.
 
 <a name="dt1-platformh-dependencies-and-global-effects"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-dark.svg">
-    <img src="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects.svg" alt="DT1: platform.h dependencies and global effects">
-  </picture>
+  <a href="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow.svg">
+      <img src="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects.svg" alt="DT1: platform.h dependencies and global effects">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-dt1-platformh-dependencies-and-global-effects-dark.svg" alt="DT1: platform.h dependencies and global effects">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Future C++ maintenance work.
@@ -562,12 +694,18 @@ without evidence.
 
 <a name="dt2-indexed-getter-contract"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-dark.svg">
-    <img src="../resources/docs/backlog/h3-dt2-indexed-getter-contract.svg" alt="DT2: Indexed getter contract">
-  </picture>
+  <a href="../resources/docs/backlog/h3-dt2-indexed-getter-contract.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow.svg">
+      <img src="../resources/docs/backlog/h3-dt2-indexed-getter-contract.svg" alt="DT2: Indexed getter contract">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-dt2-indexed-getter-contract-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt2-indexed-getter-contract-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-dt2-indexed-getter-contract-dark.svg" alt="DT2: Indexed getter contract">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Future contract decision.
@@ -582,12 +720,18 @@ the selected contract; inconsistency alone does not require an API change.
 
 <a name="dt3-response-framing-and-capacity-contract"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-dark.svg">
-    <img src="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract.svg" alt="DT3: Response framing and capacity contract">
-  </picture>
+  <a href="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow.svg">
+      <img src="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract.svg" alt="DT3: Response framing and capacity contract">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-dt3-response-framing-and-capacity-contract-dark.svg" alt="DT3: Response framing and capacity contract">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Future contract decision, not a confirmed independent bug.
@@ -603,24 +747,36 @@ capacity distinct from body storage; avoid an unrelated serializer redesign.
 
 <a name="beyond-the-first-release"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-dark.svg">
-    <img src="../resources/docs/backlog/h2-beyond-the-first-release.svg" alt="Beyond the first release">
-  </picture>
+  <a href="../resources/docs/backlog/h2-beyond-the-first-release.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow.svg">
+      <img src="../resources/docs/backlog/h2-beyond-the-first-release.svg" alt="Beyond the first release">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h2-beyond-the-first-release-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h2-beyond-the-first-release-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h2-beyond-the-first-release-dark.svg" alt="Beyond the first release">
+    </picture>
+  </a>
 </h2>
 
 F3-F5 and F7 are future features outside `0.1.0-beta1`.
 
 <a name="f3-progressive-streaming-and-sse"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-dark.svg">
-    <img src="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse.svg" alt="F3: Progressive streaming and SSE">
-  </picture>
+  <a href="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow.svg">
+      <img src="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse.svg" alt="F3: Progressive streaming and SSE">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-f3-progressive-streaming-and-sse-dark.svg" alt="F3: Progressive streaming and SSE">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future feature. Current handlers finish producing
@@ -635,12 +791,18 @@ a separate explicit request.
 
 <a name="f4-ordered-upgrade-barrier"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-dark.svg">
-    <img src="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier.svg" alt="F4: Ordered upgrade barrier">
-  </picture>
+  <a href="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow.svg">
+      <img src="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier.svg" alt="F4: Ordered upgrade barrier">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-f4-ordered-upgrade-barrier-dark.svg" alt="F4: Ordered upgrade barrier">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future feature; prerequisite for F5.
@@ -654,10 +816,12 @@ closure, and errors with a dummy codec.
 
 <a name="f5-websockets"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f5-websockets-dark.svg">
+  <a href="../resources/docs/backlog/h3-f5-websockets.svg#gh-light-mode-only">
     <img src="../resources/docs/backlog/h3-f5-websockets.svg" alt="F5: WebSockets">
-  </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-f5-websockets-dark.svg#gh-dark-mode-only">
+    <img src="../resources/docs/backlog/h3-f5-websockets-dark.svg" alt="F5: WebSockets">
+  </a>
 </h3>
 
 **Status.** Deferred future feature. Upgrade intent and
@@ -671,12 +835,18 @@ messages, simultaneous closure, errors, and slow clients on both platforms.
 
 <a name="f7-shutdown-with-draining"></a>
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark) and (max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow-dark.svg">
-    <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow.svg">
-    <source media="(prefers-color-scheme: dark)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-dark.svg">
-    <img src="../resources/docs/backlog/h3-f7-shutdown-with-draining.svg" alt="F7: Shutdown with draining">
-  </picture>
+  <a href="../resources/docs/backlog/h3-f7-shutdown-with-draining.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow.svg">
+      <img src="../resources/docs/backlog/h3-f7-shutdown-with-draining.svg" alt="F7: Shutdown with draining">
+    </picture>
+  </a>
+  <a href="../resources/docs/backlog/h3-f7-shutdown-with-draining-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-f7-shutdown-with-draining-narrow-dark.svg">
+      <img src="../resources/docs/backlog/h3-f7-shutdown-with-draining-dark.svg" alt="F7: Shutdown with draining">
+    </picture>
+  </a>
 </h3>
 
 **Status.** Deferred future feature. Current `stop()` does not offer a

@@ -49,7 +49,7 @@
 #include "protocol/http/v11/results.h"
 #include "transport/server/contracts.h"
 
-namespace martianlabs::doba::protocol::http::v11 {
+namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_async                                                ( class ) |
@@ -65,11 +65,11 @@ class engine_async {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests,
-                        const std::function<void()>& on_async_started,
-                        const std::function<void()>& on_async_finished)
+                        std::function<void()> on_async_started,
+                        std::function<void()> on_async_finished)
       : max_pending_requests_{max_pending_requests},
-        on_async_started_{on_async_started},
-        on_async_finished_{on_async_finished} {}
+        on_async_started_{std::move(on_async_started)},
+        on_async_finished_{std::move(on_async_finished)} {}
   engine_async(const engine_async&) = delete;
   engine_async(engine_async&&) noexcept = delete;
   ~engine_async() = default;
@@ -102,7 +102,7 @@ class engine_async {
                       std::string_view path,
                       transport::server::execution_capacity execution,
                       const std::shared_ptr<engine_async>& state,
-                      bool& closed) {
+                      bool& closed, std::string& head, std::string& body) {
     const auto position = request_position();
     if (!position) return false;
     bool close = request.wants_connection_close();
@@ -112,7 +112,7 @@ class engine_async {
       if (close) closed = true;
       return true;
     }
-    RSty response = owner.make_response();
+    RSty response = owner.make_response(head, body);
     engine_sync<RQty, RSty, ROty>::execute(router, request, response, close,
                                            &match);
     auto serialized =
@@ -275,17 +275,23 @@ class engine_async {
     std::lock_guard<std::mutex> lock(mutex_);
     if (closing()) return;
     if (final && position == next_send_.load(std::memory_order_relaxed) &&
-        pending_.empty()) {
+        (pending_.empty() || pending_.find(position) == pending_.end())) {
       on_send_(result.head, result.body, std::move(result.source));
       next_send_++;
-      if (close) close_now();
-      return;
+      if (close) {
+        pending_.clear();
+        close_now();
+        return;
+      }
+      if (pending_.empty()) return;
+    } else {
+      auto& slot = pending_[position];
+      slot.outputs.push_back(
+          {std::string(result.head), std::string(result.body),
+           std::move(result.source)});
+      slot.complete = final;
+      slot.close = close;
     }
-    auto& slot = pending_[position];
-    slot.outputs.push_back({std::string(result.head), std::string(result.body),
-                            std::move(result.source)});
-    slot.complete = final;
-    slot.close = close;
     for (;;) {
       auto current = pending_.find(next_send_.load());
       if (current == pending_.end()) break;
@@ -319,6 +325,21 @@ class engine_async {
 
  private:
   // +=========================================================================+
+  // | [>] finish                                                  ( private ) |
+  // +=========================================================================+
+  // | Notifies observers before releasing the active operation, even if the  |
+  // | notification throws.                                                    |
+  // +-------------------------------------------------------------------------+
+  void finish() {
+    try {
+      if (on_async_finished_) on_async_finished_();
+    } catch (...) {
+      end();
+      throw;
+    }
+    end();
+  }
+  // +=========================================================================+
   // | [>] request_position                                        ( private ) |
   // +-------------------------------------------------------------------------+
   std::optional<std::size_t> request_position() {
@@ -334,23 +355,12 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   struct async_request {
-    std::unique_ptr<char[]> request_storage;
     RQty request;
-    std::unique_ptr<char[]> response_storage;
     std::shared_ptr<void> parameters;
     RSty response;
     transport::server::execution_capacity execution;
-    async_request(decoder<RQty, RSty>& owner, std::unique_ptr<char[]> storage,
-                  RQty value)
-        : request_storage(std::move(storage)),
-          request(std::move(value)),
-          response_storage(std::make_unique_for_overwrite<char[]>(
-              owner.configuration().max_response_head_size +
-              owner.configuration().response_body_inline_capacity)),
-          response(owner.make_response(std::span<char>(
-              response_storage.get(),
-              owner.configuration().max_response_head_size +
-                  owner.configuration().response_body_inline_capacity))) {}
+    async_request(decoder<RQty, RSty>& owner, RQty value)
+        : request(std::move(value)), response(owner.make_response()) {}
   };
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
@@ -366,9 +376,18 @@ class engine_async {
                 transport::server::execution_capacity execution,
                 const std::shared_ptr<engine_async>& state) {
     auto entry = std::make_shared<async_request<RQty, RSty>>(
-        owner, owner.take_request_storage(), std::move(request));
+        owner, std::move(request));
     entry->execution = execution;
     try {
+      entry->request.make_owned();
+      path = entry->request.get_absolute_path();
+      if (!engine_sync<RQty, RSty, ROty>::authenticate(
+              match, entry->request, entry->response)) {
+        auto serialized = engine_sync<RQty, RSty, ROty>::serialize(
+            entry->request, entry->response, close);
+        state->submit(position, std::move(serialized), true, close);
+        return;
+      }
       common::task<void> work =
           match.async_handler
               ? (*match.async_handler)(entry->request, entry->response)
@@ -419,23 +438,11 @@ class engine_async {
                 } catch (...) {
                 }
               }
-              try {
-                if (state->on_async_finished_) state->on_async_finished_();
-              } catch (...) {
-                state->end();
-                throw;
-              }
-              state->end();
+              state->finish();
             },
             scheduler);
       } catch (...) {
-        try {
-          if (state->on_async_finished_) state->on_async_finished_();
-        } catch (...) {
-          state->end();
-          throw;
-        }
-        state->end();
+        state->finish();
         throw;
       }
     } catch (...) {
@@ -479,6 +486,6 @@ class engine_async {
   std::mutex completion_mutex_;
   std::map<std::size_t, slot> pending_;
 };
-}  // namespace martianlabs::doba::protocol::http::v11
+}  // namespace martianlabs::doba::protocol::http::v11::detail
 
 #endif

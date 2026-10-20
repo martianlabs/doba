@@ -1,9 +1,11 @@
 <a name="getting-started"></a>
 <h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h1-getting-started-dark.svg">
+  <a href="../../resources/docs/guide/h1-getting-started.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h1-getting-started.svg" alt="Getting started">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h1-getting-started-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-getting-started-dark.svg" alt="Getting started">
+  </a>
 </h1>
 
 Let's get doba to say hello. We'll build the bundled **hello_world** example,
@@ -15,10 +17,12 @@ straight to [main.cpp](../../examples/http/v11/hello_world/main.cpp).
 
 <a name="before-you-start"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-before-you-start-dark.svg">
+  <a href="../../resources/docs/guide/h2-before-you-start.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-before-you-start.svg" alt="Before you start">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-before-you-start-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-before-you-start-dark.svg" alt="Before you start">
+  </a>
 </h2>
 
 You only need:
@@ -31,10 +35,12 @@ No OpenSSL setup this time - this example uses plain TCP.
 
 <a name="build-it"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-build-it-dark.svg">
+  <a href="../../resources/docs/guide/h2-build-it.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-build-it.svg" alt="Build it">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-build-it-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-build-it-dark.svg" alt="Build it">
+  </a>
 </h2>
 
 Two commands:
@@ -50,10 +56,12 @@ The *--config Release* option applies to multi-configuration generators.
 
 <a name="run-it"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-run-it-dark.svg">
+  <a href="../../resources/docs/guide/h2-run-it.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-run-it.svg" alt="Run it">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-run-it-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-it-dark.svg" alt="Run it">
+  </a>
 </h2>
 
 Start the executable from the build tree. With a single-configuration generator
@@ -81,10 +89,12 @@ Stop the server with Ctrl+C when you're done.
 
 <a name="under-the-hood"></a>
 <h2>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../resources/docs/guide/h2-under-the-hood-dark.svg">
+  <a href="../../resources/docs/guide/h2-under-the-hood.svg#gh-light-mode-only">
     <img src="../../resources/docs/guide/h2-under-the-hood.svg" alt="Under the hood">
-  </picture>
+  </a>
+  <a href="../../resources/docs/guide/h2-under-the-hood-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-under-the-hood-dark.svg" alt="Under the hood">
+  </a>
 </h2>
 
 Here is the bit doing the work in

@@ -47,18 +47,24 @@ class custom_response : public response {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   custom_response(const custom_response&) = delete;
-  custom_response(std::span<char> storage, std::size_t head_capacity,
-                  std::size_t body_capacity)
-      : response(storage, head_capacity, body_capacity) {}
   custom_response(custom_response&&) noexcept = default;
   ~custom_response() = default;
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  static custom_response from(std::span<char> storage,
-                              std::size_t head_capacity,
-                              std::size_t body_capacity) {
-    return custom_response(storage, head_capacity, body_capacity);
+  custom_response(std::size_t head_limit, std::size_t body_threshold)
+      : response(head_limit, body_threshold) {}
+  static custom_response from(std::size_t head_limit,
+                              std::size_t body_threshold) {
+    return custom_response(head_limit, body_threshold);
+  }
+  custom_response(std::size_t head_limit, std::size_t body_threshold,
+                  std::string& head, std::string& body)
+      : response(head_limit, body_threshold, head, body) {}
+  static custom_response from(std::size_t head_limit,
+                              std::size_t body_threshold,
+                              std::string& head, std::string& body) {
+    return custom_response(head_limit, body_threshold, head, body);
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |

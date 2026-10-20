@@ -27,10 +27,10 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstring>
 #include <deque>
 #include <memory>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -39,15 +39,15 @@
 #include "common/reader.h"
 #include "protocol/contracts.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
 // | This struct keeps track of a TCP connection used by an engine.            |
 // | It stores the engine and an input buffer, and handles incoming data,      |
-// | consumed bytes, and outgoing data. It also lets you check the connection  |
-// | status and manage the output buffers.                                     |
+// | and outgoing data. It also lets you check the connection status and     |
+// | manage the output buffers.                                               |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   ENty - engine type being used.                                          |
@@ -76,21 +76,14 @@ struct tcp_connection {
   // +-------------------------------------------------------------------------+
   // | Processes the received bytes in the input buffer using the engine.      |
   // +-------------------------------------------------------------------------+
-  std::size_t process() {
-    return engine.on_bytes_received(buffer.get(), size, capacity);
+  std::span<char> receive_buffer() noexcept {
+    return {buffer.get(), capacity};
   }
-  // +=========================================================================+
-  // | [>] consume                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Removes the specified number of processed bytes from the input buffer.  |
-  // +-------------------------------------------------------------------------+
-  bool consume(std::size_t processed) {
-    if (processed > size) return false;
-    size -= processed;
-    if (processed && size) {
-      std::memmove(buffer.get(), buffer.get() + processed, size);
+  void process(std::size_t received) {
+    if (received > capacity) {
+      throw std::out_of_range("TCP receive size exceeds buffer");
     }
-    return true;
+    engine.on_bytes_received({buffer.get(), received});
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
@@ -161,8 +154,7 @@ struct tcp_connection {
   ENty engine;
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;
-  std::size_t size{0};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

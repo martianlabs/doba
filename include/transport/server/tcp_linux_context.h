@@ -44,7 +44,7 @@
 #include "transport/server/contracts.h"
 #include "transport/server/tcp_connection.h"
 
-namespace martianlabs::doba::transport::server {
+namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
@@ -64,13 +64,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
-  context(int in_socket, std::size_t recv_buffer_size,
+  context(int in_socket, std::size_t receive_buffer_capacity,
           std::size_t send_buffer_size, const FAty& create_engine,
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
           typename CNty::shared_state shared_state,
-          std::size_t encrypted_receive_buffer_size = 0,
-          std::size_t network_bio_buffer_size = 0)
+          std::size_t encrypted_receive_buffer_capacity = 0,
+          std::size_t network_bio_buffer_capacity = 0)
       : on_connection_{std::move(on_connection)},
         on_disconnection_{std::move(on_disconnection)},
         socket_{in_socket},
@@ -79,12 +79,13 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
                                                 const FAty&,
                                                 typename CNty::shared_state,
                                                 std::size_t, std::size_t>) {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state, encrypted_receive_buffer_size,
-                        network_bio_buffer_size);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state,
+                        encrypted_receive_buffer_capacity,
+                        network_bio_buffer_capacity);
           } else {
-            return CNty(recv_buffer_size, send_buffer_size, create_engine,
-                        shared_state);
+            return CNty(receive_buffer_capacity, send_buffer_size,
+                        create_engine, shared_state);
           }
         }()},
         output_{send_buffer_size} {}
@@ -109,16 +110,15 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     ssize_t received;
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (closing_ || input_.size == input_.capacity) return 0;
-      received = ::recv(socket_, input_.buffer.get() + input_.size,
-                        input_.capacity - input_.size, MSG_DONTWAIT);
+      if (closing_) return 0;
+      const auto target = input_.receive_buffer();
+      if (target.empty()) return 0;
+      received = ::recv(socket_, target.data(), target.size(), MSG_DONTWAIT);
       if (received <= 0) return received;
-      input_.size += static_cast<std::size_t>(received);
       processing_receive_ = true;
     }
-    std::size_t processed;
     try {
-      processed = input_.process();
+      input_.process(static_cast<std::size_t>(received));
     } catch (...) {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       processing_receive_ = false;
@@ -128,11 +128,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       processing_receive_ = false;
-      if (!input_.consume(processed)) {
-        abort_();
-        return received;
-      }
-      if (input_.size == input_.capacity) abort_();
       if (input_.peer_closed() && !closing_) {
         closing_ = true;
         if (!input_.close_output()) abort_();
@@ -434,6 +429,6 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool notified_{false};
   std::atomic<bool> engine_complete_{false};
 };
-}  // namespace martianlabs::doba::transport::server
+}  // namespace martianlabs::doba::transport::server::detail
 
 #endif

@@ -87,10 +87,9 @@ DOBA_TEST("concurrent serialization preserves HTTP dates") {
   std::vector<std::jthread> threads;
   for (std::size_t thread = 0; thread < operations.size(); ++thread) {
     threads.emplace_back([&, thread] {
-      std::array<char, 20480> storage{};
       start.arrive_and_wait();
       while (std::chrono::steady_clock::now() < end) {
-        response value(storage);
+        response value;
         value.ok_200();
         auto serialized = value.serialize();
         const std::string serialized_prefix(serialized.head);

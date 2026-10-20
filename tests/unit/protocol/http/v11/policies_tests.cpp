@@ -34,16 +34,16 @@ using martianlabs::doba::protocol::http::v11::policies;
 // +---------------------------------------------------------------------------+
 DOBA_TEST("defaults are bounded and allow supported features") {
   const policies value;
-  DOBA_EXPECT_EQUAL(value.max_content_length, 16 * 1024 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_request_body_size, 16 * 1024 * 1024);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 32);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 4);
-  DOBA_EXPECT_EQUAL(policies::kMaxRequestHeadSizeInMemory, 4 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxRequestBodySizeInMemory, 16 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxResponseHeadSizeInMemory, 4 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxResponseBodySizeInMemory, 16 * 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxQueryParameters, 128);
-  DOBA_EXPECT_EQUAL(policies::kMaxChunkedExtensionSize, 1024);
-  DOBA_EXPECT_EQUAL(policies::kMaxChunkedTrailerSize, 4096);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxRequestHeadSize, 4 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultRequestBodyMemoryThreshold, 16 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxResponseHeadSize, 4 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultResponseBodyMemoryThreshold, 16 * 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxQueryParameters, 128);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxChunkExtensionSize, 1024);
+  DOBA_EXPECT_EQUAL(policies::kDefaultMaxTrailerSectionSize, 4096);
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
   DOBA_EXPECT_EQUAL(value.max_pending_requests, 32);
@@ -53,14 +53,14 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(value.max_request_head_size, 4 * 1024);
   DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 16 * 1024);
   DOBA_EXPECT_EQUAL(value.max_response_head_size, 4 * 1024);
-  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 16 * 1024);
+  DOBA_EXPECT_EQUAL(value.response_body_memory_threshold, 16 * 1024);
 }
 
 // +===========================================================================+
 // | [>] fields retain configured boundaries and switches        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("fields retain configured boundaries and switches") {
-  const policies value{.max_content_length = 1,
+  const policies value{.max_request_body_size = 1,
                        .max_forwarding_hops = 2,
                        .max_transfer_codings = 3,
                        .allow_chunked = false,
@@ -72,8 +72,8 @@ DOBA_TEST("fields retain configured boundaries and switches") {
                        .max_request_head_size = 512,
                        .request_body_memory_threshold = 7,
                        .max_response_head_size = 512,
-                       .response_body_inline_capacity = 8};
-  DOBA_EXPECT_EQUAL(value.max_content_length, 1);
+                       .response_body_memory_threshold = 8};
+  DOBA_EXPECT_EQUAL(value.max_request_body_size, 1);
   DOBA_EXPECT_EQUAL(value.max_forwarding_hops, 2);
   DOBA_EXPECT_EQUAL(value.max_transfer_codings, 3);
   DOBA_EXPECT(!value.allow_chunked);
@@ -85,5 +85,5 @@ DOBA_TEST("fields retain configured boundaries and switches") {
   DOBA_EXPECT_EQUAL(value.max_request_head_size, 512);
   DOBA_EXPECT_EQUAL(value.request_body_memory_threshold, 7);
   DOBA_EXPECT_EQUAL(value.max_response_head_size, 512);
-  DOBA_EXPECT_EQUAL(value.response_body_inline_capacity, 8);
+  DOBA_EXPECT_EQUAL(value.response_body_memory_threshold, 8);
 }

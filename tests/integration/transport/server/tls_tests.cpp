@@ -76,13 +76,13 @@ struct byte_engine {
   // +-------------------------------------------------------------------------+
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
+  std::string pending{};
   bool split{false};
   bool close_after{false};
   bool fail_source{false};
   std::atomic<bool>* failed_source_received{nullptr};
   std::string body;
-  std::function<std::size_t(byte_engine&, const char*, std::size_t,
-                            std::size_t)>
+  std::function<void(byte_engine&, const char*, std::size_t)>
       receive;
   std::function<void(const martianlabs::doba::protocol::send_delegate&)>
       capture;
@@ -99,12 +99,13 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t on_bytes_received(const char* bytes, std::size_t size,
-                                std::size_t capacity) {
-    if (receive) return receive(*this, bytes, size, capacity);
+  void on_bytes_received(std::string_view input) {
+    const auto* bytes = input.data();
+    const auto size = input.size();
+    if (receive) { receive(*this, bytes, size); return; }
     if (capture) {
       capture(send);
-      return size;
+      return;
     }
     if (fail_source) {
       if (failed_source_received) failed_source_received->store(true);
@@ -115,24 +116,24 @@ struct byte_engine {
       send("pre", {},
            std::make_unique<martianlabs::doba::common::reader>(
                std::move(source)));
-      return size;
+      return;
     }
     if (!body.empty()) {
       send("x", {},
            std::make_unique<martianlabs::doba::common::reader>(
                martianlabs::doba::common::reader::borrowed(
                    std::as_bytes(std::span(body)))));
-      return size;
+      return;
     }
     if (split) {
       for (std::size_t i = 0; i < size; ++i) {
         send(std::string(1, bytes[i]), {}, nullptr);
       }
-      return size;
+      return;
     }
     send(std::string(bytes, size), {}, nullptr);
     if (close_after) close();
-    return size;
+    return;
   }
 };
 }  // namespace
@@ -215,19 +216,21 @@ DOBA_TEST("tls accepts fragmented handshake and request") {
 }
 
 // +===========================================================================+
-// | [>] tls retains unconsumed plaintext                        ( test-case ) |
+// | [>] tls lets the engine accumulate plaintext fragments                        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tls retains unconsumed plaintext") {
+DOBA_TEST("tls lets the engine accumulate plaintext fragments") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size,
-                        std::size_t) {
-      if (size < 4) return std::size_t{0};
-      value.send(std::string(bytes, 4), {}, nullptr);
-      return std::size_t{4};
+    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size) {
+      value.pending.append(bytes, size);
+      while (value.pending.size() >= 4) {
+        value.send(std::string(value.pending.data(), 4), {}, nullptr);
+        value.pending.erase(0, 4);
+      }
+      return;
     };
     return engine;
   };
@@ -280,24 +283,24 @@ DOBA_TEST("tls receives binary data beyond one encrypted buffer") {
 
 DOBA_TEST("tls uses configured encrypted and BIO capacities") {
   auto configuration = server_policies(8443);
-  configuration.encrypted_receive_buffer_size = 8192;
-  configuration.network_bio_buffer_size = 4096;
+  configuration.encrypted_receive_buffer_capacity = 8192;
+  configuration.network_bio_buffer_capacity = 4096;
   auto factory = []() { return byte_engine{}; };
-  tr::tls_connection<byte_engine> connection(
-      4096, 65536, factory, tr::make_tls_context(configuration),
-      configuration.encrypted_receive_buffer_size,
-      configuration.network_bio_buffer_size);
+  tr::detail::tls_connection<byte_engine> connection(
+      4096, 65536, factory, tr::detail::make_tls_context(configuration),
+      configuration.encrypted_receive_buffer_capacity,
+      configuration.network_bio_buffer_capacity);
   DOBA_EXPECT_EQUAL(connection.capacity, 8192);
   for (const bool encrypted : {false, true}) {
     auto invalid = configuration;
     if (encrypted) {
-      invalid.encrypted_receive_buffer_size = 0;
+      invalid.encrypted_receive_buffer_capacity = 0;
     } else {
-      invalid.network_bio_buffer_size = 0;
+      invalid.network_bio_buffer_capacity = 0;
     }
     bool rejected = false;
     try {
-      tr::make_tls_context(invalid);
+      tr::detail::make_tls_context(invalid);
     } catch (const std::runtime_error&) {
       rejected = true;
     }
@@ -306,21 +309,22 @@ DOBA_TEST("tls uses configured encrypted and BIO capacities") {
 }
 
 // +===========================================================================+
-// | [>] tls closes when unconsumed plaintext fills the buffer   ( test-case ) |
+// | [>] tls lets the engine enforce its plaintext limit   ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
+DOBA_TEST("tls lets the engine enforce its plaintext limit") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine&, const char*, std::size_t, std::size_t) {
-      return std::size_t{0};
+    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size) {
+      value.pending.append(bytes, size);
+      if (value.pending.size() >= 16) value.close();
     };
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.recv_buffer_size = 16;
+  configuration.receive_buffer_capacity = 16;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
@@ -338,6 +342,7 @@ DOBA_TEST("tls closes when unconsumed plaintext fills the buffer") {
   DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(), bytes.size(),
                           &size) == 1);
   DOBA_EXPECT(client.socket.send_all(std::string_view(bytes.data(), size)));
+  DOBA_EXPECT(client.receive_close());
   DOBA_EXPECT(client.socket.wait_for_close(3s));
   client.socket.close();
   server.stop();
@@ -357,10 +362,9 @@ DOBA_TEST("tls isolates invalid engine input") {
     auto factory = [&]() {
       byte_engine engine;
       if (created++ == 0) {
-        engine.receive = [throwing](byte_engine&, const char*, std::size_t size,
-                                    std::size_t) -> std::size_t {
+        engine.receive = [throwing](byte_engine&, const char*, std::size_t) {
           if (throwing) throw std::runtime_error("receive failed");
-          return size + 1;
+          throw 1;
         };
       }
       return engine;
@@ -438,7 +442,7 @@ DOBA_TEST("tls streams a body beyond the send buffer") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.max_send_buffer_size = 4096;
+  configuration.max_buffered_send_bytes = 4096;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
@@ -731,7 +735,7 @@ DOBA_TEST("tls stop drains queued output") {
     return engine;
   };
   auto configuration = server_policies(port);
-  configuration.max_send_buffer_size = 65536;
+  configuration.max_buffered_send_bytes = 65536;
   tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
@@ -784,5 +788,31 @@ DOBA_TEST("tls restarts after a stopped connection") {
   DOBA_EXPECT(response.has_value());
   DOBA_EXPECT_EQUAL(*response, "again");
   second.socket.close();
+  server.stop();
+}
+
+DOBA_TEST("tls stops plaintext delivery after the engine requests closure") {
+  tls_client client;
+  const auto port = client.socket.find_available_port();
+  DOBA_EXPECT(port != 0);
+  auto factory = []() {
+    byte_engine value;
+    value.close_after = true;
+    return value;
+  };
+  auto configuration = server_policies(port);
+  configuration.receive_buffer_capacity = 1;
+  tr::tls<byte_engine, decltype(factory)> server(configuration, factory);
+  server.set_on_connection([]() {});
+  server.set_on_disconnection([]() {});
+  server.start();
+  DOBA_EXPECT(client.socket.connect(port));
+  DOBA_EXPECT(client.negotiate());
+  DOBA_EXPECT(client.send_outgoing("ab"));
+  const auto result = client.receive(1);
+  DOBA_EXPECT(result.has_value());
+  if (result) DOBA_EXPECT_EQUAL(*result, "a");
+  DOBA_EXPECT(client.receive_close());
+  client.socket.close();
   server.stop();
 }

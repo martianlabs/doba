@@ -38,17 +38,19 @@ namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 struct tls_policies : tcp_policies {
   // Encrypted socket input capacity per connection, in bytes.
-  static constexpr std::size_t kEncryptedReceiveBufferSize = 17 * 1024;
+  static constexpr std::size_t kDefaultEncryptedReceiveBufferCapacity =
+      17 * 1024;
   // Maximum TLS BIO buffer capacity, in bytes.
-  static constexpr std::size_t kBioBufferSize = 17 * 1024;
+  static constexpr std::size_t kDefaultNetworkBioBufferCapacity = 17 * 1024;
   // Path to the server certificate chain in PEM format.
   std::string certificate_file;
   // Path to the matching private key in PEM format.
   std::string private_key_file;
   // Encrypted receive capacity per connection (must be positive).
-  std::size_t encrypted_receive_buffer_size = kEncryptedReceiveBufferSize;
+  std::size_t encrypted_receive_buffer_capacity =
+      kDefaultEncryptedReceiveBufferCapacity;
   // Network BIO capacity per connection (must be positive).
-  std::size_t network_bio_buffer_size = kBioBufferSize;
+  std::size_t network_bio_buffer_capacity = kDefaultNetworkBioBufferCapacity;
 };
 }  // namespace martianlabs::doba::transport::server
 

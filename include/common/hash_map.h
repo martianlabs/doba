@@ -38,7 +38,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename KEty, typename VAty>
-using hash_map = std::unordered_map<KEty, VAty, base_hash, base_equal>;
+using hash_map = std::unordered_map<KEty, VAty, detail::base_hash, detail::base_equal>;
 }  // namespace martianlabs::doba::common
 
 #endif
