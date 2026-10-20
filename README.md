@@ -251,17 +251,68 @@ C++20 requirement, and system threading dependency.
 
 *Correct is non-negotiable.*
 
-We like fast code. We also like sleeping at night. HTTP/1.1 parsing and framing
-follow RFC rules; CI checks GCC, Clang, and MSVC builds, strict warnings, and
-ASan, UBSan, and TSan runs.
+We like fast code. We also like sleeping at night. So the test suite asks
+some fairly awkward questions before we trust the numbers.
 
-**We're working toward 0.1.** TLS is available as an optional transport;
-compression and operational hardening are still in progress.
-Here's [what's left to do](docs/BACKLOG.md).
+- **1,000+ unit tests get into the small print.** HTTP parsing, raw and
+  chunked bodies, routing, authentication, storage, and byte ownership.
+  Empty input, malformed headers, exact limits, one byte too many: all get
+  a turn in the [unit suite](tests/unit).
+
+- **160+ integration cases bring real sockets.** TCP and TLS connections,
+  fragmented messages, pipelined requests, disconnects, and shutdowns go
+  through the actual server. Hostile requests get successors attached so
+  the [integration tests](tests/integration) can check they never sneak
+  through to a handler.
+
+- **Concurrency gets stage directions.** We suspend handlers and control
+  their completions to exercise response ordering, receive/completion races,
+  late callbacks, and object lifetimes. CI repeats the
+  [critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
+  **200 times under ThreadSanitizer**.
+
+- **Clients are allowed to be annoying.** The
+  [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
+  mixes multiple clients, small reads, pending handlers, abrupt resets,
+  disk spill, draining, and repeated restarts over TCP and TLS. It checks
+  payloads, ordering, handler cleanup, temporary files, and handle/descriptor
+  counts after draining, and records memory use after warmup.
+
+- **Fuzzers keep feeding the weird stuff.** Separate
+  [HTTP decoder and chunked harnesses](tests/fuzz/README.md) check consumption,
+  message boundaries, fragmentation, buffer ownership, and memory/disk
+  storage behavior under AddressSanitizer and UndefinedBehaviorSanitizer.
+  Each gets **60 seconds per CI run**, with a cached corpus and saved failure
+  inputs for reproduction.
+
+- **We break things on purpose, too.** The
+  [mutation checks](tests/mutation/README.md) disable a body limit, break
+  response ordering, and allow dispatch after rejection in private copies
+  of the headers. Each change has to trip its intended assertion. The
+  original code has to pass. A test that politely ignores its assigned bug
+  doesn't get a gold star.
+
+- **Even the test runners get tested.** Filters, failure reports, exceptions,
+  timeouts, and cleanup paths have their own
+  [unit](tests/unit/helpers/test_helper_tests.cpp) and
+  [integration](tests/integration/helpers/test_helper_tests.cpp) metatests.
+  A stuck test gets a name and a deadline.
+
+The [CI matrix](.github/workflows/ci.yml) builds with **GCC and Clang on Linux**
+and **MSVC on Windows**, with strict warnings. Linux runs **ASan, UBSan, and
+TSan with TLS**; Windows runs **ASan with TLS**. **Tests run in Release,
+optimizations included. Debug is a compile check.** The test tooling itself
+uses C++ and CMake.
+
+We also check **CMake 3.20**, installed-package consumers, and
+**add_subdirectory** consumers. Building inside our own tree is only half
+the story; your application needs to build and run with it, too.
+
+Want another opinion on the wire? The repository includes adapters for
+manual runs of [h1spec](compliance/http/v11/h1spec/README.md) and
+[Http11Probe](compliance/http/v11/http11probe/README.md).
 
 ---
-
-Bring a compiler. Curiosity helps.
 
 [Apache 2.0](LICENSE)
 

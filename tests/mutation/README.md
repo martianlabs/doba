@@ -8,7 +8,7 @@ are never edited.
 From the repository root on Linux or WSL with Clang and its sanitizer runtime:
 
 ```sh
-python3 tests/mutation/run_detection.py --output out/mutations
+cmake -DDOBA_MUTATION_OUTPUT=out/mutations -P tests/mutation/run_detection.cmake
 ```
 
 All executables use Release flags (`-O3 -DNDEBUG`), symbols, strict warnings,
@@ -28,10 +28,15 @@ The detector tests live in
 and also run in the ordinary unit suite. They include accepted-boundary,
 successful-order and terminal-close checks on the original code.
 
-Each timestamped output directory preserves original header/test hashes, the
-Git revision, compiler, compile commands in logs, each mutation diff, original
-and mutant test logs, and `results.json`. The script verifies that original
+Each output directory preserves original header/test hashes, the
+Git revision, compiler, CMake configuration, compile commands, each mutation's
+before/after replacement, original and mutant test logs, and `results.txt`.
+The CMake driver verifies that original
 headers and detector tests still have the same hashes before returning.
 CI retains these diagnostics for 14 days and gates release on all three kills.
 This is a demonstration for three selected regressions, not a mutation score
 for the whole library.
+
+Only repository C++ sources and CMake build and run the checks. No scripting
+runtime is needed. To select a compiler, pass
+`-DDOBA_MUTATION_COMPILER=/usr/bin/clang++` before `-P`.

@@ -5,6 +5,9 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_CONFIGURATION_TYPES)
   message(FATAL_ERROR "DOBA_BUILD_FUZZERS requires a single-config Release build")
 endif()
 
+add_executable(doba_fuzz_seed_corpus seed_corpus.cpp)
+target_compile_features(doba_fuzz_seed_corpus PRIVATE cxx_std_20)
+
 foreach(harness decoder chunked)
   add_executable(fuzz_${harness} ${harness}_fuzz.cpp)
   target_link_libraries(fuzz_${harness} PRIVATE doba_headers)

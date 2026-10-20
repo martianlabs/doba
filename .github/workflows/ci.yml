@@ -506,9 +506,6 @@ jobs:
       - name: Install Clang fuzzing runtime
         run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
 
-      - name: Generate canonical seeds
-        run: python3 tests/fuzz/seed_corpus.py out/fuzz-corpus
-
       - name: Configure Release fuzzers
         run: >-
           cmake -S . -B out/build/fuzz -G Ninja
@@ -518,7 +515,10 @@ jobs:
           -DDOBA_BUILD_EXAMPLES=OFF -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build harness
-        run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }}
+        run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }} doba_fuzz_seed_corpus
+
+      - name: Generate canonical seeds
+        run: out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus out/fuzz-corpus
 
       - name: Record reproduction environment
         shell: bash
@@ -571,8 +571,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev
       - name: Verify original tests and detect three mutants
         run: >-
-          python3 tests/mutation/run_detection.py --compiler /usr/bin/clang++
-          --output out/mutations
+          cmake -DDOBA_MUTATION_COMPILER=/usr/bin/clang++
+          -DDOBA_MUTATION_OUTPUT=out/mutations -P tests/mutation/run_detection.cmake
       - name: Upload mutation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -580,11 +580,13 @@ jobs:
           name: mutation-detection-Release
           retention-days: 14
           path: |
-            out/mutations/**/results.json
+            out/mutations/**/results.txt
             out/mutations/**/revision.txt
             out/mutations/**/compiler.txt
-            out/mutations/**/source-sha256.json
-            out/mutations/**/mutation.diff
+            out/mutations/**/source-sha256.txt
+            out/mutations/**/mutation.txt
+            out/mutations/**/compile_commands.json
+            out/mutations/**/CMakeCache.txt
             out/mutations/**/*.log
 
   release:

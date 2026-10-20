@@ -17,7 +17,7 @@ cmake -S . -B out/build/fuzz -G Ninja \
   -DDOBA_BUILD_EXAMPLES=OFF -DDOBA_ENABLE_STRICT_WARNINGS=ON \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build out/build/fuzz
-python3 tests/fuzz/seed_corpus.py out/fuzz-corpus
+out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus out/fuzz-corpus
 mkdir -p out/fuzz-artifacts/decoder out/fuzz-artifacts/chunked
 export ASAN_OPTIONS=detect_leaks=1:halt_on_error=1
 export UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
@@ -32,7 +32,7 @@ for harness in decoder chunked; do
 done
 ```
 
-Use a native Linux temporary directory for WSL runs. The generator writes
+Use a native Linux temporary directory for WSL runs. The C++ generator writes
 27 decoder and 13 chunked canonical seeds as bytes, independent of Git's line
 ending conversion. It preserves additional corpus entries. Cases mirror the
 existing decoder, chunked framer/reader and integration security tests and

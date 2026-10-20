@@ -46,16 +46,18 @@ a selected value are marked "Not set".
   </a>
 </h2>
 
-The frozen target is `0.1.0-beta1`, a beta for controlled
-deployments. Six open items gate it: C1-C3, C7, F2, and RE1.
+The planned first delivery is `0.1.0-beta1`, a beta for controlled
+deployments. There is currently no release candidate. Five open items gate
+that delivery: C1-C3, C7, and RE1. GZIP is future product work.
 
-**Implementation order.** Finish GZIP compression (F2);
-complete inactivity, per-request, connection, and pending-work limits
-(C1/C2/C3/C7); then finish release engineering (RE1).
+**Implementation order.** Complete inactivity and connection admission,
+settle the remaining per-request and retained-work contracts (C1/C2/C3/C7),
+then finish RE1 when publication is planned. Do not delay resource controls
+for optional product features.
 
 **Exit criteria.**
 
-- Verify F2 and C1/C2/C3/C7 with focused unit and real-socket tests on
+- Verify C1/C2/C3/C7 with focused unit and real-socket tests on
   Windows and Linux where applicable. Include slow clients, ordering,
   resource release, and cancellation where relevant.
 - Pass the compiler/configuration matrix, strict warnings, sanitizers,
@@ -78,20 +80,29 @@ an explicit scope decision supported by evidence.
   </a>
 </h2>
 
-24 open items across seven categories: six release gates and
-eighteen future items. Closed identifiers remain in Git history.
+22 open items across seven categories: five release gates and
+seventeen future items. Closed and archived identifiers remain in Git history.
 "Verification pending" requires a run on the relevant revision.
+
+QA2's initial fuzzing delivery is complete: HTTP and chunked harnesses,
+corpus, sanitizers, CI budgets and reproduction evidence are in
+[tests/fuzz](../tests/fuzz/README.md). Broader targets or longer recurring
+campaigns need separate scope. P3 is archived until a concrete middleware
+composition use case is selected.
+
+Test tooling uses repository C++ and CMake. Corpus generation and mutation
+campaigns must not require Python or another scripting runtime.
 
 | Category | Identifiers | Release | Future work | Total |
 | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
 | Bugs | B13 | 0 | 1 | 1 |
-| Product and convenience | F2, P2-P8 | 1 | 7 | 8 |
-| Quality and validation | QA1-QA2, QA6 | 0 | 3 | 3 |
+| Product and convenience | F2, P2, P4-P8 | 0 | 7 | 7 |
+| Quality and validation | QA1, QA6 | 0 | 2 | 2 |
 | Release engineering | RE1 | 1 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
 | Beyond the first release | F3-F5, F7 | 0 | 4 | 4 |
-| **Total** | | **6** | **18** | **24** |
+| **Total** | | **5** | **17** | **22** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -99,19 +110,17 @@ eighteen future items. Closed identifiers remain in Git history.
 | [C2](#c2-effective-per-request-limits) | Hardening | Partially implemented | Release gate | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Partial; transport budget pending | Release gate | 0.1.0-beta1 |
-| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Verification pending | Medium | Future work |
-| [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Release gate | 0.1.0-beta1 |
+| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Fix and regression pending | Medium | Future work |
+| [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Not set | Future work |
 | [P2](#p2-access-logging) | Product | Decision pending | Not set | Future work |
-| [P3](#p3-middleware-chain) | Product | Decision pending | Not set | Future work |
 | [P4](#p4-form-parsing) | Product | Pending | Not set | Future work |
 | [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | Future work |
 | [P6](#p6-output-trailers) | Product | Deferred | Not set | Future work |
 | [P7](#p7-automatic-resource-options) | Product | Deferred | Not set | Future work |
 | [P8](#p8-429-response-construction) | Product | Pending | Low | Future work |
 | [QA1](#qa1-exhaustive-compliance-suite) | QA | Pending | Not set | Future work |
-| [QA2](#qa2-fuzzing) | QA | Deferred | High | Future work |
 | [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | Future work |
-| [RE1](#re1-release-governance-and-traceability) | Release | Pending | Release gate | 0.1.0-beta1 |
+| [RE1](#re1-release-governance-and-traceability) | Release | Partial; publication work deferred until planned | Release gate | 0.1.0-beta1 |
 | [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | Future work |
 | [DT2](#dt2-indexed-getter-contract) | C++ | Decision pending | Low/Medium | Future work |
 | [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | Future work |
@@ -193,9 +202,15 @@ Response limits are separate. A complete head over
 `max_request_head_size` returns 431; an incomplete head filling that
 limit currently returns 400.
 
-**Remaining work.** Define separate header-field count, per-field size, and
-request-target limits, including exact accounting and 431/414 rejection
-behavior. Keep syntax checking separate from resource policy.
+**Remaining release work.** Settle consistent head-limit rejection behavior
+and verify existing budgets with large receive blocks, including the work
+performed before final head-size rejection. An acceptance limit alone does
+not establish a bound on all transient parser work.
+
+**Future granularity.** Separate header-field count, per-field size and
+request-target knobs are optional improvements, not additional beta gates.
+Define their accounting and 431/414 behavior if selected. Keep syntax
+checking separate from resource policy.
 
 **Close when.** Configured-server tests cover zero, limit-1, limit, and
 limit+1, including cumulative chunked bodies and rejection before reading
@@ -253,9 +268,12 @@ connection after capacity becomes available.
 excludes source-owned storage; neither is a complete retained-work budget.
 
 **Remaining work.** Define accounting, defaults, and admission or resume
-behavior for queued response sources and other retained transport work.
-Preserve response order and transport ownership without an HTTP-specific
-queue.
+behavior for retained transport work. Distinguish queued wire bytes,
+source-owned resident storage and temporary files; a source's logical
+length is not its resident memory. State what remains application-owned.
+Do not promise a universal budget for arbitrary allocations or external
+work inside handlers. Preserve response order and transport ownership
+without an HTTP-specific queue.
 
 **Close when.** A non-reading peer and delayed first handler with pipelined
 successors respect configured limits on both platforms. Verify another
@@ -290,7 +308,7 @@ B13 is the only open bug recorded here. Closed fixes remain in Git history.
   </a>
 </h3>
 
-**Status.** Verification pending; benchmark-only future work.
+**Status.** Unfixed in the current source; benchmark-only future work.
 
 **Problem.** `read_query_sum()` and the POST handler add parsed
 `int64_t` values without checking whether the sums are representable.
@@ -316,8 +334,8 @@ local to the adapter.
   </a>
 </h2>
 
-F2 is required for `0.1.0-beta1`, before operational hardening and
-release engineering. P2-P8 remain future work, outside this beta.
+F2, P2 and P4-P8 are future work, outside the first beta. P3 is archived
+until a concrete composition use case exists.
 
 <a name="f2-compression-and-gzip"></a>
 <h3>
@@ -335,8 +353,9 @@ release engineering. P2-P8 remain future work, outside this beta.
   </a>
 </h3>
 
-**Status.** Design and implementation pending; required for
-`0.1.0-beta1`.
+**Status.** Design and implementation pending; future product work.
+Parsing Accept-Encoding or Content-Encoding does not implement compression.
+This feature does not block resource hardening or the first beta.
 
 **Scope.** Add GZIP response compression with `Accept-Encoding` selection,
 `Content-Encoding`, and consistent `Vary`. Select the implementation and
@@ -366,33 +385,6 @@ semantics in the transport or assume P3 is required.
 
 **Close when selected.** Verify success, rejection, disconnect, and send
 failure records without duplicates, and define lifetime and disabled cost.
-
-<a name="p3-middleware-chain"></a>
-<h3>
-  <a href="../resources/docs/backlog/h3-p3-middleware-chain.svg#gh-light-mode-only">
-    <picture>
-      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow.svg">
-      <img src="../resources/docs/backlog/h3-p3-middleware-chain.svg" alt="P3: Middleware chain">
-    </picture>
-  </a>
-  <a href="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg#gh-dark-mode-only">
-    <picture>
-      <source media="(max-width: 640px)" srcset="../resources/docs/backlog/h3-p3-middleware-chain-narrow-dark.svg">
-      <img src="../resources/docs/backlog/h3-p3-middleware-chain-dark.svg" alt="P3: Middleware chain">
-    </picture>
-  </a>
-</h3>
-
-**Status.** Future product decision; no concrete composition use case has
-been selected.
-
-**Decide.** Identify a real need across synchronous and asynchronous
-handlers before defining middleware. A general extension framework is not
-justified by this entry.
-
-**Close when selected.** Specify ordering, short-circuiting, errors,
-cancellation, and ownership; test those contracts and the path without
-middleware.
 
 <a name="p4-form-parsing"></a>
 <h3>
@@ -526,9 +518,9 @@ Retry-After, framing, and HEAD behavior without changing other factories.
   </a>
 </h2>
 
-QA1-QA2 and QA6 are future work. Existing CI gates and focused
-regressions for response closure, F2, and C1/C2/C3/C7 remain required
-for `0.1.0-beta1`.
+QA1 and QA6 are future work; QA2's initial delivery is complete. Existing
+CI gates and focused regressions for response closure and C1/C2/C3/C7
+remain required for `0.1.0-beta1`.
 
 <a name="qa1-exhaustive-compliance-suite"></a>
 <h3>
@@ -549,6 +541,10 @@ for `0.1.0-beta1`.
 **Status.** Existing unit and integration coverage is extensive; the
 focused evidence gaps below remain future work, not a beta gate.
 
+**Bounded scope.** This entry tracks those concrete gaps, not an open-ended
+promise of exhaustive compliance. Recent concurrency, resilience and
+mutation tests do not automatically close them.
+
 **Open evidence gaps.** Force a collision with an actual spill filename;
 prove one client's send remains pending while another is served and test the
 `send_all` deadline; reproduce the available-port release/bind race; and
@@ -557,25 +553,6 @@ exercise a genuinely pending connect timeout.
 **Close when selected.** Trace each added boundary test to an RFC rule or
 project contract and verify both transports where applicable. Reuse focused
 C2/C7 tests without delaying their release work.
-
-<a name="qa2-fuzzing"></a>
-<h3>
-  <a href="../resources/docs/backlog/h3-qa2-fuzzing.svg#gh-light-mode-only">
-    <img src="../resources/docs/backlog/h3-qa2-fuzzing.svg" alt="QA2: Fuzzing">
-  </a>
-  <a href="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg#gh-dark-mode-only">
-    <img src="../resources/docs/backlog/h3-qa2-fuzzing-dark.svg" alt="QA2: Fuzzing">
-  </a>
-</h3>
-
-**Status.** Deferred future QA work. No fuzz targets or corpus are present.
-
-**Scope to decide.** Select targets across HTTP helpers, decoding, framing,
-request rebasing, serialization, storage, and relevant transport boundaries.
-Choose infrastructure before adding dependencies.
-
-**Close when selected.** Define corpus, budgets, sanitizer use, and failure
-reproduction; turn confirmed failures into deterministic regressions.
 
 <a name="qa6-external-compliance-automation"></a>
 <h3>
@@ -632,17 +609,27 @@ logs and revisions. Coordinate with QA1.
   </a>
 </h3>
 
-**Status.** Release gate for `0.1.0-beta1`. The publishing workflow derives
-only `vMAJOR.MINOR.PATCH` from `include/version.h`.
+**Status.** Partially implemented; release gate when publication of
+`0.1.0-beta1` is planned. There is currently no candidate to qualify.
 
-**Scope.** Complete release notes, an available vulnerability-reporting
-channel, minimum usage and deployment documentation, coherent versioning,
-and prerelease publication. The full contribution guide remains future work.
+**Already implemented.** CI covers compiler/configuration builds, Release
+tests, TLS, sanitizers, minimum CMake, isolated package/source consumers,
+test inventories and retained diagnostics. Fuzzing, resilience and mutation
+detection are also integrated. Usage guides and API reference pages exist.
 
-**Close when.** F2 and C1/C2/C3/C7 pass focused tests; the exact release
+**Remaining scope.** Review concrete usage preconditions and deployment
+limitations in the existing documentation, especially indexed getter
+preconditions and manual response framing. Before publication, complete
+release notes, an available vulnerability-reporting channel and coherent
+versioning/prerelease publication. The workflow still derives only
+vMAJOR.MINOR.PATCH and does not pass --prerelease. The full contribution
+guide remains future work.
+
+**Close when publication is planned.** C1/C2/C3/C7 pass focused tests; the exact release
 revision passes CI and CMake consumer checks. Document indexed-getter and
 view lifetimes, response framing and capacity, transport lifecycle, IPv4-only
-scope, TLS/GZIP configuration, and known limitations. Align the tested
+scope, TLS configuration, and known limitations, including absent built-in
+GZIP compression. Align the tested
 content, notes, and `v0.1.0-beta1` tag; publish as a prerelease.
 
 <a name="c-maintainability"></a>
@@ -714,9 +701,11 @@ without evidence.
 `get_query_parameter(size_t)` use unchecked indexing; callers currently
 need valid indices.
 
-**Close when selected.** Decide between a documented precondition and a
-checked API, then test its boundaries and preserve compatibility. Document
-the selected contract; inconsistency alone does not require an API change.
+**Smallest remaining task.** Document the current precondition
+0 <= i < get_headers_length() or get_query_parameters_length(), as
+appropriate. A checked API is a separate optional change, not required
+to document current behavior. Do not test out-of-range unchecked access
+as though it were a supported operation.
 
 <a name="dt3-response-framing-and-capacity-contract"></a>
 <h3>
@@ -736,14 +725,19 @@ the selected contract; inconsistency alone does not require an API change.
 
 **Status.** Future contract decision, not a confirmed independent bug.
 
+**Already covered.** Response tests exercise conflicting CL/TE rejection,
+deferred framing, Date generation/removal and exact/exceeded head capacity.
+Those cases are not missing implementation work.
+
 **Problem.** Manual Content-Length or Transfer-Encoding can override
 deferred response framing. Define caller preconditions or validation,
 supported combinations, operation order, and failure behavior.
 
-**Close when selected.** Test shorter and longer explicit lengths, manual
-Transfer-Encoding, generated Date and framing at exact and exceeded header
-capacity, and recovery without partial malformed output. Keep header
-capacity distinct from body storage; avoid an unrelated serializer redesign.
+**Close when selected.** Define and test shorter/longer explicit lengths,
+manual Transfer-Encoding and their ordering/ownership preconditions.
+Verify failure recovery for any newly rejected combination. Preserve the
+existing Date and capacity checks; keep head capacity distinct from body
+storage and avoid an unrelated serializer redesign.
 
 <a name="beyond-the-first-release"></a>
 <h2>
@@ -852,6 +846,10 @@ messages, simultaneous closure, errors, and slow clients on both platforms.
 **Status.** Deferred future feature. Current `stop()` does not offer a
 bounded server-wide drain and waits for externally suspended handlers
 without a cancellation deadline.
+
+**Existing behavior.** Quiesce, queued-output drain and waiting for pending
+handlers are implemented and tested. The remaining feature is a bounded
+shutdown deadline and cancellation policy, not the introduction of draining.
 
 **Scope to decide.** Define when acceptance and request admission stop,
 how active work drains, and what happens at a deadline without silently
