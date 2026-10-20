@@ -251,65 +251,66 @@ C++20 requirement, and system threading dependency.
 
 *Correct is non-negotiable.*
 
-We like fast code. We also like sleeping at night. So the test suite asks
-some fairly awkward questions before we trust the numbers.
+A segfault with excellent throughput is still a segfault. So, before doba
+gets anywhere near a victory lap, we poke it where it hurts.
 
-- **1,000+ unit tests get into the small print.** HTTP parsing, raw and
+- **1,000+ unit tests pick fights with the details.** HTTP parsing, raw and
   chunked bodies, routing, authentication, storage, and byte ownership.
-  Empty input, malformed headers, exact limits, one byte too many: all get
-  a turn in the [unit suite](tests/unit).
+  The [unit suite](tests/unit) brings empty input, malformed headers,
+  exact limits, and that one extra byte somebody swore would never arrive.
 
-- **160+ integration cases bring real sockets.** TCP and TLS connections,
-  fragmented messages, pipelined requests, disconnects, and shutdowns go
-  through the actual server. Hostile requests get successors attached so
-  the [integration tests](tests/integration) can check they never sneak
-  through to a handler.
+- **160+ integration cases mess with real connections.** The
+  [integration suite](tests/integration) fragments messages, pipelines requests,
+  disconnects clients, and shuts down actual TCP and TLS servers. Hostile
+  requests arrive with another request tucked behind them. Getting rejected
+  doesn't buy the one behind a free pass to a handler.
 
-- **Concurrency gets stage directions.** We suspend handlers and control
-  their completions to exercise response ordering, receive/completion races,
-  late callbacks, and object lifetimes. CI repeats the
+- **Handlers finish when we say so.** We suspend them, release them out of
+  order, and arrange inconvenient meetings between receives, completions,
+  late callbacks, and shutdown. Responses still need to keep their place;
+  objects still need to stay alive for their users. CI repeats the
   [critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
   **200 times under ThreadSanitizer**.
 
-- **Clients are allowed to be annoying.** The
+- **Our test clients are absolute pests.** Tiny reads. Suspended handlers.
+  Abrupt resets. The
   [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
-  mixes multiple clients, small reads, pending handlers, abrupt resets,
-  disk spill, draining, and repeated restarts over TCP and TLS. It checks
-  payloads, ordering, handler cleanup, temporary files, and handle/descriptor
-  counts after draining, and records memory use after warmup.
+  mixes them across multiple TCP and TLS clients, spills bodies to disk,
+  drains, restarts, and does it again. Then comes the headcount: payloads in
+  order, handlers cleaned up, temporary files gone, handles/descriptors
+  checked after draining. Memory use gets recorded after warmup, too.
 
-- **Fuzzers keep feeding the weird stuff.** Separate
+- **The fuzzers have terrible manners.** Our
   [HTTP decoder and chunked harnesses](tests/fuzz/README.md) check consumption,
   message boundaries, fragmentation, buffer ownership, and memory/disk
-  storage behavior under AddressSanitizer and UndefinedBehaviorSanitizer.
-  Each gets **60 seconds per CI run**, with a cached corpus and saved failure
-  inputs for reproduction.
+  storage while libFuzzer supplies the questionable bytes. Each gets
+  **60 seconds per CI run** under AddressSanitizer and UndefinedBehaviorSanitizer,
+  with a cached corpus. If something breaks, we keep the input. Receipts matter.
 
-- **We break things on purpose, too.** The
+- **Three bugs, planted on purpose.** In private header copies, the
   [mutation checks](tests/mutation/README.md) disable a body limit, break
-  response ordering, and allow dispatch after rejection in private copies
-  of the headers. Each change has to trip its intended assertion. The
-  original code has to pass. A test that politely ignores its assigned bug
-  doesn't get a gold star.
+  response ordering, and allow dispatch after rejection. Each bug must trip
+  its intended assertion; the original code must pass. Green is only useful
+  if red still works.
 
-- **Even the test runners get tested.** Filters, failure reports, exceptions,
+- **Even the test runner gets interrogated.** Filters, failure reports, exceptions,
   timeouts, and cleanup paths have their own
   [unit](tests/unit/helpers/test_helper_tests.cpp) and
   [integration](tests/integration/helpers/test_helper_tests.cpp) metatests.
-  A stuck test gets a name and a deadline.
+  A stuck test has a deadline and leaves its name at the scene.
 
 The [CI matrix](.github/workflows/ci.yml) builds with **GCC and Clang on Linux**
 and **MSVC on Windows**, with strict warnings. Linux runs **ASan, UBSan, and
-TSan with TLS**; Windows runs **ASan with TLS**. **Tests run in Release,
-optimizations included. Debug is a compile check.** The test tooling itself
+TSan with TLS**; Windows runs **ASan with TLS**. **Release gets the workout,
+optimizations and all. Debug gets a compile check.** The test tooling itself
 uses C++ and CMake.
 
-We also check **CMake 3.20**, installed-package consumers, and
-**add_subdirectory** consumers. Building inside our own tree is only half
-the story; your application needs to build and run with it, too.
+We also check **CMake 3.20**, then build and run separate applications using
+the installed package and **add_subdirectory**. A library should survive
+moving out of its parents' build directory.
 
-Want another opinion on the wire? The repository includes adapters for
-manual runs of [h1spec](compliance/http/v11/h1spec/README.md) and
+For more awkward questions from outside the family, there are adapters for
+manual protocol checks with [h1spec](compliance/http/v11/h1spec/README.md) and
 [Http11Probe](compliance/http/v11/http11probe/README.md).
 
 ---
