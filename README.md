@@ -254,50 +254,141 @@ C++20 requirement, and system threading dependency.
 A segfault with excellent throughput is still a segfault. So, before doba
 gets anywhere near a victory lap, we poke it where it hurts.
 
-- **1,000+ unit tests pick fights with the details.** HTTP parsing, raw and
-  chunked bodies, routing, authentication, storage, and byte ownership.
-  The [unit suite](tests/unit) brings empty input, malformed headers,
-  exact limits, and that one extra byte somebody swore would never arrive.
+<a href="resources/readme/tests/unit.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow.svg">
+    <img src="resources/readme/tests/unit.svg" alt="1,000+ unit tests pick fights with the details." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/unit-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow-dark.svg">
+    <img src="resources/readme/tests/unit-dark.svg" alt="1,000+ unit tests pick fights with the details." width="100%">
+  </picture>
+</a>
 
-- **160+ integration cases mess with real connections.** The
-  [integration suite](tests/integration) fragments messages, pipelines requests,
-  disconnects clients, and shuts down actual TCP and TLS servers. Hostile
-  requests arrive with another request tucked behind them. Getting rejected
-  doesn't buy the one behind a free pass to a handler.
+HTTP parsing, raw and
+chunked bodies, routing, authentication, storage, and byte ownership.
+The [unit suite](tests/unit) brings empty input, malformed headers,
+exact limits, and that one extra byte somebody swore would never arrive.
 
-- **Handlers finish when we say so.** We suspend them, release them out of
-  order, and arrange inconvenient meetings between receives, completions,
-  late callbacks, and shutdown. Responses still need to keep their place;
-  objects still need to stay alive for their users. CI repeats the
-  [critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
-  **200 times under ThreadSanitizer**.
+<a href="resources/readme/tests/integration.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow.svg">
+    <img src="resources/readme/tests/integration.svg" alt="160+ integration cases mess with real connections." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/integration-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow-dark.svg">
+    <img src="resources/readme/tests/integration-dark.svg" alt="160+ integration cases mess with real connections." width="100%">
+  </picture>
+</a>
 
-- **Our test clients are absolute pests.** Tiny reads. Suspended handlers.
-  Abrupt resets. The
-  [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
-  mixes them across multiple TCP and TLS clients, spills bodies to disk,
-  drains, restarts, and does it again. Then comes the headcount: payloads in
-  order, handlers cleaned up, temporary files gone, handles/descriptors
-  checked after draining. Memory use gets recorded after warmup, too.
+The
+[integration suite](tests/integration) fragments messages, pipelines requests,
+disconnects clients, and shuts down actual TCP and TLS servers. Hostile
+requests arrive with another request tucked behind them. Getting rejected
+doesn't buy the one behind a free pass to a handler.
 
-- **The fuzzers have terrible manners.** Our
-  [HTTP decoder and chunked harnesses](tests/fuzz/README.md) check consumption,
-  message boundaries, fragmentation, buffer ownership, and memory/disk
-  storage while libFuzzer supplies the questionable bytes. Each gets
-  **60 seconds per CI run** under AddressSanitizer and UndefinedBehaviorSanitizer,
-  with a cached corpus. If something breaks, we keep the input. Receipts matter.
+<a href="resources/readme/tests/concurrency.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow.svg">
+    <img src="resources/readme/tests/concurrency.svg" alt="Handlers finish when we say so." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/concurrency-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow-dark.svg">
+    <img src="resources/readme/tests/concurrency-dark.svg" alt="Handlers finish when we say so." width="100%">
+  </picture>
+</a>
 
-- **Three bugs, planted on purpose.** In private header copies, the
-  [mutation checks](tests/mutation/README.md) disable a body limit, break
-  response ordering, and allow dispatch after rejection. Each bug must trip
-  its intended assertion; the original code must pass. Green is only useful
-  if red still works.
+We suspend them, release them out of
+order, and arrange inconvenient meetings between receives, completions,
+late callbacks, and shutdown. Responses still need to keep their place;
+objects still need to stay alive for their users. CI repeats the
+[critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
+**200 times under ThreadSanitizer**.
 
-- **Even the test runner gets interrogated.** Filters, failure reports, exceptions,
-  timeouts, and cleanup paths have their own
-  [unit](tests/unit/helpers/test_helper_tests.cpp) and
-  [integration](tests/integration/helpers/test_helper_tests.cpp) metatests.
-  A stuck test has a deadline and leaves its name at the scene.
+<a href="resources/readme/tests/resilience.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow.svg">
+    <img src="resources/readme/tests/resilience.svg" alt="Our test clients are absolute pests." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/resilience-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow-dark.svg">
+    <img src="resources/readme/tests/resilience-dark.svg" alt="Our test clients are absolute pests." width="100%">
+  </picture>
+</a>
+
+Tiny reads. Suspended handlers.
+Abrupt resets. The
+[resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
+mixes them across multiple TCP and TLS clients, spills bodies to disk,
+drains, restarts, and does it again. Then comes the headcount: payloads in
+order, handlers cleaned up, temporary files gone, handles/descriptors
+checked after draining. Memory use gets recorded after warmup, too.
+
+<a href="resources/readme/tests/fuzzing.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow.svg">
+    <img src="resources/readme/tests/fuzzing.svg" alt="The fuzzers have terrible manners." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/fuzzing-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow-dark.svg">
+    <img src="resources/readme/tests/fuzzing-dark.svg" alt="The fuzzers have terrible manners." width="100%">
+  </picture>
+</a>
+
+Our
+[HTTP decoder and chunked harnesses](tests/fuzz/README.md) check consumption,
+message boundaries, fragmentation, buffer ownership, and memory/disk
+storage while libFuzzer supplies the questionable bytes. Each gets
+**60 seconds per CI run** under AddressSanitizer and UndefinedBehaviorSanitizer,
+with a cached corpus. If something breaks, we keep the input. Receipts matter.
+
+<a href="resources/readme/tests/mutation.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow.svg">
+    <img src="resources/readme/tests/mutation.svg" alt="Three bugs, planted on purpose." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/mutation-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow-dark.svg">
+    <img src="resources/readme/tests/mutation-dark.svg" alt="Three bugs, planted on purpose." width="100%">
+  </picture>
+</a>
+
+In private header copies, the
+[mutation checks](tests/mutation/README.md) disable a body limit, break
+response ordering, and allow dispatch after rejection. Each bug must trip
+its intended assertion; the original code must pass. Green is only useful
+if red still works.
+
+<a href="resources/readme/tests/runners.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow.svg">
+    <img src="resources/readme/tests/runners.svg" alt="Even the test runner gets interrogated." width="100%">
+  </picture>
+</a>
+<a href="resources/readme/tests/runners-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow-dark.svg">
+    <img src="resources/readme/tests/runners-dark.svg" alt="Even the test runner gets interrogated." width="100%">
+  </picture>
+</a>
+
+Filters, failure reports, exceptions,
+timeouts, and cleanup paths have their own
+[unit](tests/unit/helpers/test_helper_tests.cpp) and
+[integration](tests/integration/helpers/test_helper_tests.cpp) metatests.
+A stuck test has a deadline and leaves its name at the scene.
 
 The [CI matrix](.github/workflows/ci.yml) builds with **GCC and Clang on Linux**
 and **MSVC on Windows**, with strict warnings. Linux runs **ASan, UBSan, and
