@@ -1,11 +1,27 @@
-# HTTP fuzzing
+<a name="http-fuzzing"></a>
+<h1>
+  <a href="../../resources/tests/fuzz/h1-http-fuzzing.svg#gh-light-mode-only">
+    <img src="../../resources/tests/fuzz/h1-http-fuzzing.svg" alt="HTTP fuzzing">
+  </a>
+  <a href="../../resources/tests/fuzz/h1-http-fuzzing-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/fuzz/h1-http-fuzzing-dark.svg" alt="HTTP fuzzing">
+  </a>
+</h1>
 
 These Linux Clang harnesses run in optimized Release builds with libFuzzer,
 ASan, UBSan and symbols. Instrumentation stays private to the fuzz targets.
 `DOBA_BUILD_FUZZERS` defaults to `OFF`; Debug and unsupported compilers are
 rejected when it is enabled.
 
-## Build and run
+<a name="build-and-run"></a>
+<h2>
+  <a href="../../resources/tests/fuzz/h2-build-and-run.svg#gh-light-mode-only">
+    <img src="../../resources/tests/fuzz/h2-build-and-run.svg" alt="Build and run">
+  </a>
+  <a href="../../resources/tests/fuzz/h2-build-and-run-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/fuzz/h2-build-and-run-dark.svg" alt="Build and run">
+  </a>
+</h2>
 
 From the repository root on Linux or WSL:
 
@@ -39,7 +55,15 @@ existing decoder, chunked framer/reader and integration security tests and
 include valid pipelines, incomplete messages, conflicting framing, overflow,
 extensions, trailers, query limits and body/head limits.
 
-## Properties
+<a name="properties"></a>
+<h2>
+  <a href="../../resources/tests/fuzz/h2-properties.svg#gh-light-mode-only">
+    <img src="../../resources/tests/fuzz/h2-properties.svg" alt="Properties">
+  </a>
+  <a href="../../resources/tests/fuzz/h2-properties-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/fuzz/h2-properties-dark.svg" alt="Properties">
+  </a>
+</h2>
 
 `fuzz_decoder` checks input consumption, progress, accepted message boundaries,
 fields, headers, query parameters and payload equivalence across whole and
@@ -65,7 +89,21 @@ known payloads at 512 bytes. Head, extension and trailer budgets vary with input
 size; each equivalence comparison keeps the same policy. These bounds define
 the short campaigns' scope rather than covering every production configuration.
 
-## CI and failure reproduction
+<a name="ci-and-failure-reproduction"></a>
+<h2>
+  <a href="../../resources/tests/fuzz/h2-ci-and-failure-reproduction.svg#gh-light-mode-only">
+    <picture>
+      <source media="(max-width: 600px)" srcset="../../resources/tests/fuzz/h2-ci-and-failure-reproduction-narrow.svg">
+      <img src="../../resources/tests/fuzz/h2-ci-and-failure-reproduction.svg" alt="CI and failure reproduction">
+    </picture>
+  </a>
+  <a href="../../resources/tests/fuzz/h2-ci-and-failure-reproduction-dark.svg#gh-dark-mode-only">
+    <picture>
+      <source media="(max-width: 600px)" srcset="../../resources/tests/fuzz/h2-ci-and-failure-reproduction-narrow-dark.svg">
+      <img src="../../resources/tests/fuzz/h2-ci-and-failure-reproduction-dark.svg" alt="CI and failure reproduction">
+    </picture>
+  </a>
+</h2>
 
 Each CI harness replays its restored corpus and then runs for 60 seconds, with
 a five-second per-input timeout and a 2 GiB RSS limit. Corpus discoveries are
