@@ -76,10 +76,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
           typename CNty::shared_state shared_state,
           std::size_t encrypted_receive_buffer_capacity = 0,
           std::size_t network_bio_buffer_capacity = 0)
-      : socket_{in_socket},
-        on_connection_{on_connection},
+      : on_connection_{on_connection},
         on_disconnection_{on_disconnection},
         on_retirement_{on_retirement},
+        socket_{in_socket},
         input_{[&]() -> CNty {
           if constexpr (std::is_constructible_v<CNty, std::size_t, std::size_t,
                                                 const FAty&,
@@ -617,7 +617,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool retired_{false};
   bool engine_stop_requested_{false};
   bool engine_complete_{false};
-  WSABUF ovr_wsa_{0};
+  WSABUF ovr_wsa_{};
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

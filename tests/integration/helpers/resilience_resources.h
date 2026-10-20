@@ -1,64 +1,78 @@
-#pragma once
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
 
-#include "platform.h"
-#ifdef _WIN32
-#include <psapi.h>
-#endif
+#ifndef martianlabs_doba_tests_integration_helpers_resilience_resources_h
+#define martianlabs_doba_tests_integration_helpers_resilience_resources_h
 
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <stdexcept>
 #include <string>
 
+#include "../../helpers/platform.h"
+
 namespace martianlabs::doba::tests::integration {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] resilience_resources                                       ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct resilience_resources {
   std::size_t handles = 0;
   std::size_t memory_bytes = 0;
 };
 
-inline resilience_resources measure_resilience_resources() {
-  resilience_resources result;
-#ifdef _WIN32
-  DWORD handles = 0;
-  PROCESS_MEMORY_COUNTERS_EX memory{};
-  if (!GetProcessHandleCount(GetCurrentProcess(), &handles) ||
-      !K32GetProcessMemoryInfo(GetCurrentProcess(),
-          reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory), sizeof(memory)))
-    throw std::runtime_error("Cannot measure process resources");
-  result.handles = handles;
-  result.memory_bytes = memory.PrivateUsage;
-#else
-  for ([[maybe_unused]] const auto& entry : std::filesystem::directory_iterator("/proc/self/fd"))
-    ++result.handles;
-  std::ifstream statm("/proc/self/statm");
-  std::size_t virtual_pages = 0, resident_pages = 0;
-  if (!(statm >> virtual_pages >> resident_pages))
-    throw std::runtime_error("Cannot measure resident memory");
-  result.memory_bytes = resident_pages * static_cast<std::size_t>(::sysconf(_SC_PAGESIZE));
-#endif
-  return result;
-}
+}  // namespace martianlabs::doba::tests::integration
 
+#include DOBA_TEST_PLATFORM_HEADER(resilience_resources)
+
+namespace martianlabs::doba::tests::integration {
 // Tests execute sequentially in this runner. Change the environment only before
 // starting server/client threads and restore it after their destruction.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] resilience_temp_directory                                   ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class resilience_temp_directory {
  public:
+  // +-------------------------------------------------------------------------+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   resilience_temp_directory() {
     const auto* old = std::getenv(variable());
     present_ = old != nullptr;
     if (old) previous_ = old;
     static std::atomic<unsigned> sequence{0};
-#ifdef _WIN32
-    const auto pid = GetCurrentProcessId();
-#else
-    const auto pid = ::getpid();
-#endif
+    const auto pid = resilience_process_id();
     path = std::filesystem::temp_directory_path() /
-        ("doba_resilience_" + std::to_string(pid) + "_" + std::to_string(sequence++));
+           ("doba_resilience_" + std::to_string(pid) + "_" +
+            std::to_string(sequence++));
     if (!std::filesystem::create_directory(path))
-      throw std::runtime_error("Cannot create isolated resilience temporary directory");
+      throw std::runtime_error(
+          "Cannot create isolated resilience temporary directory");
     set(path.string().c_str());
   }
   ~resilience_temp_directory() {
@@ -68,27 +82,29 @@ class resilience_temp_directory {
     std::filesystem::remove(path, ignored);
   }
   resilience_temp_directory(const resilience_temp_directory&) = delete;
-  resilience_temp_directory& operator=(const resilience_temp_directory&) = delete;
+  resilience_temp_directory& operator=(const resilience_temp_directory&) =
+      delete;
+  // +-------------------------------------------------------------------------+
+  // | [>] empty                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   bool empty() const { return std::filesystem::is_empty(path); }
   std::filesystem::path path;
 
  private:
-  static const char* variable() {
-#ifdef _WIN32
-    return "TMP";
-#else
-    return "TMPDIR";
-#endif
-  }
-  static void set(const char* value) {
-#ifdef _WIN32
-    _putenv_s(variable(), value ? value : "");
-#else
-    if (value) ::setenv(variable(), value, 1);
-    else ::unsetenv(variable());
-#endif
-  }
+  // +-------------------------------------------------------------------------+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] variable                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  static const char* variable() { return resilience_temp_variable(); }
+  // +-------------------------------------------------------------------------+
+  // | [>] set                                                     ( private ) |
+  // +-------------------------------------------------------------------------+
+  static void set(const char* value) { set_resilience_temp_variable(value); }
   bool present_ = false;
   std::string previous_;
 };
 }  // namespace martianlabs::doba::tests::integration
+
+#endif

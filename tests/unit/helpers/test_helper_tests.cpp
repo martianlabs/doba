@@ -172,7 +172,8 @@ DOBA_TEST("watchdog exits blocked cleanup with test identity") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 124);
   DOBA_EXPECT(result.output.find("probe blocked cleanup") != std::string::npos);
-  DOBA_EXPECT(result.output.find("Test timeout after 50 ms:") != std::string::npos);
+  DOBA_EXPECT(result.output.find("Test timeout after 50 ms:") !=
+              std::string::npos);
   DOBA_EXPECT(result.output.find(" - probe blocks") != std::string::npos);
 }
 
@@ -182,7 +183,8 @@ DOBA_TEST("watchdog rejects invalid timeout arguments") {
         {"--name", "probe passes", "--timeout-ms", timeout});
     DOBA_EXPECT(!result.timed_out);
     DOBA_EXPECT_EQUAL(result.exit_code, 2);
-    DOBA_EXPECT(result.output.find("Invalid test timeout") != std::string::npos);
+    DOBA_EXPECT(result.output.find("Invalid test timeout") !=
+                std::string::npos);
   }
 }
 

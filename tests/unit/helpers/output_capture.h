@@ -25,10 +25,7 @@
 #ifndef martianlabs_doba_tests_unit_output_capture_h
 #define martianlabs_doba_tests_unit_output_capture_h
 
-#ifdef _WIN32
-#include "output_capture_windows.h"
-#elif __linux__
-#include "output_capture_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(output_capture)
 
 #endif

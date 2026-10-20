@@ -25,10 +25,7 @@
 #ifndef martianlabs_doba_tests_unit_directory_link_h
 #define martianlabs_doba_tests_unit_directory_link_h
 
-#ifdef _WIN32
-#include "directory_link_windows.h"
-#elif __linux__
-#include "directory_link_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(directory_link)
 
 #endif

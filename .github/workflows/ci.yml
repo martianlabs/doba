@@ -362,11 +362,26 @@ jobs:
           retention-days: 14
 
   windows-asan:
-    name: Windows (MSVC ASan Release TLS)
+    name: Windows (${{ matrix.name }} Release TLS)
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: MSVC ASan
+            compiler: cl
+            runtime: MultiThreadedDLL
+            flags: /O2 /Ob2 /DNDEBUG /fsanitize=address /Zi
+            linker_flags: /INCREMENTAL:NO /DEBUG
+          - name: Clang UBSan
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+            runtime: MultiThreaded
+            flags: -O3 -DNDEBUG -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g
+            linker_flags: -fsanitize=undefined -fno-sanitize-recover=undefined -Xlinker /INCREMENTAL:NO
 
     env:
       ASAN_OPTIONS: halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
 
     steps:
       - uses: actions/checkout@v6
@@ -396,12 +411,14 @@ jobs:
         run: >-
           cmake -S . -B out/build/msvc-asan -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          -DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
           -DDOBA_ENABLE_TLS=ON
-          "-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /fsanitize=address /Zi"
-          "-DCMAKE_EXE_LINKER_FLAGS=/INCREMENTAL:NO /DEBUG"
+          "-DCMAKE_CXX_FLAGS_RELEASE=${{ matrix.flags }}"
+          "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker_flags }}"
 
       - name: Build
         run: cmake --build out/build/msvc-asan
@@ -416,11 +433,17 @@ jobs:
           ctest --test-dir out/build/msvc-asan
           --output-on-failure --no-tests=error
 
+      - name: Repeat critical concurrency cases
+        run: >-
+          ctest --test-dir out/build/msvc-asan
+          -R '^doba_engine_concurrency_tests$'
+          --repeat until-fail:200 --output-on-failure --no-tests=error
+
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-ASan-Release-TLS
+          name: windows-${{ matrix.name }}-Release-TLS
           path: |
             out/build/msvc-asan/CMakeCache.txt
             out/build/msvc-asan/CMakeFiles/CMakeConfigureLog.yaml
@@ -432,8 +455,16 @@ jobs:
           retention-days: 14
 
   cmake-minimum:
-    name: Ubuntu (CMake 3.20.6)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} (CMake 3.20.6)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+          - os: windows-latest
+            compiler: cl
 
     steps:
       - uses: actions/checkout@v6
@@ -444,11 +475,16 @@ jobs:
         with:
           cmake-version: "3.20.6"
 
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
       - name: Configure
         run: >-
           cmake -S . -B out/build/cmake-3.20 -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=g++
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DDOBA_ENABLE_STRICT_WARNINGS=ON
 
@@ -469,7 +505,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-cmake-minimum-Release
+          name: ${{ runner.os }}-cmake-minimum-Release
           path: |
             out/build/cmake-3.20/CMakeCache.txt
             out/build/cmake-3.20/CMakeFiles/CMakeOutput.log
@@ -481,15 +517,28 @@ jobs:
           retention-days: 14
 
   fuzz:
-    name: Ubuntu (fuzz ${{ matrix.harness }} Release ASan UBSan)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} (fuzz ${{ matrix.harness }} Release ASan UBSan)
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
         harness: [decoder, chunked]
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            compiler: /usr/bin/clang++
+            suffix: ''
+            detect_leaks: 1
+          - os: windows-latest
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+            suffix: .exe
+            detect_leaks: 0
     env:
-      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      ASAN_OPTIONS: detect_leaks=${{ matrix.detect_leaks }}:halt_on_error=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v6
@@ -504,12 +553,18 @@ jobs:
           restore-keys: fuzz-${{ runner.os }}-${{ matrix.harness }}-
 
       - name: Install Clang fuzzing runtime
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
 
       - name: Configure Release fuzzers
         run: >-
           cmake -S . -B out/build/fuzz -G Ninja
-          -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+          -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DDOBA_BUILD_FUZZERS=ON -DDOBA_BUILD_TESTS=OFF
           -DDOBA_BUILD_EXAMPLES=OFF -DDOBA_ENABLE_STRICT_WARNINGS=ON
@@ -518,20 +573,20 @@ jobs:
         run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }} doba_fuzz_seed_corpus
 
       - name: Generate canonical seeds
-        run: out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus out/fuzz-corpus
+        run: out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus${{ matrix.suffix }} out/fuzz-corpus
 
       - name: Record reproduction environment
         shell: bash
         run: |
           mkdir -p out/fuzz-artifacts/${{ matrix.harness }}
           git rev-parse HEAD > out/fuzz-artifacts/revision.txt
-          /usr/bin/clang++ --version > out/fuzz-artifacts/compiler.txt
+          "${{ matrix.compiler }}" --version > out/fuzz-artifacts/compiler.txt
           uname -a > out/fuzz-artifacts/platform.txt
 
       - name: Replay corpus
         shell: bash
         run: |
-          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }} \
+          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }} \
             -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
             -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
             out/fuzz-corpus/${{ matrix.harness }} 2>&1 | tee out/fuzz-artifacts/replay.log
@@ -539,7 +594,7 @@ jobs:
       - name: Fuzz for 60 seconds
         shell: bash
         run: |
-          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }} \
+          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }} \
             -max_total_time=60 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
             -dict=tests/fuzz/http.dict -print_final_stats=1 \
             -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
@@ -549,35 +604,50 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fuzz-${{ matrix.harness }}-Release
+          name: fuzz-${{ runner.os }}-${{ matrix.harness }}-Release
           retention-days: 14
           path: |
             out/fuzz-corpus/${{ matrix.harness }}/
             out/fuzz-artifacts/
-            out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}
+            out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }}
+            out/build/fuzz/tests/fuzz/*.pdb
+            out/build/fuzz/tests/fuzz/*.dll
             out/build/fuzz/CMakeCache.txt
             out/build/fuzz/compile_commands.json
             out/build/fuzz/CMakeFiles/*/CMakeCXXCompiler.cmake
 
   mutation:
-    name: Ubuntu (mutation detection Release ASan UBSan)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} (mutation detection Release ASan UBSan)
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: /usr/bin/clang++
+          - os: windows-latest
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Install Clang runtime
-        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
       - name: Verify original tests and detect three mutants
         run: >-
-          cmake -DDOBA_MUTATION_COMPILER=/usr/bin/clang++
+          cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
           -DDOBA_MUTATION_OUTPUT=out/mutations -P tests/mutation/run_detection.cmake
       - name: Upload mutation evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mutation-detection-Release
+          name: mutation-detection-${{ runner.os }}-Release
           retention-days: 14
           path: |
             out/mutations/**/results.txt

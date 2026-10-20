@@ -40,10 +40,7 @@ struct test_helper_result {
 };
 }  // namespace martianlabs::doba::tests
 
-#ifdef _WIN32
-#include "test_helper_process_windows.h"
-#elif __linux__
-#include "test_helper_process_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(test_helper_process)
 
 #endif

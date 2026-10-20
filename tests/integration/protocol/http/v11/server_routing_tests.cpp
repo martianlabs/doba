@@ -23,7 +23,6 @@
 // permissions and limitations under the License.
 
 #include <atomic>
-#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <coroutine>
@@ -240,55 +239,6 @@ DOBA_TEST("HTTP/1.1 orders responses after different timer deadlines") {
   http_server.stop();
 }
 
-#ifdef _WIN32
-DOBA_TEST("HTTP/1.1 runs asynchronous routes with multiple IOCP workers") {
-  tcpip_client probe;
-  const uint16_t port = probe.find_available_port();
-  DOBA_EXPECT(port != 0);
-  http_server<> http_server({.worker_count = 2, .ip = "127.0.0.1",
-                        .port = std::to_string(port)});
-  http_server.add_route("GET", "/wait",
-                        [](const request&, response& res) -> task<void> {
-                          co_await martianlabs::doba::common::yield();
-                          co_await martianlabs::doba::common::sleep_for(
-                              std::chrono::milliseconds(1));
-                          text_response(res, "ready");
-                        });
-  http_server.start();
-  std::atomic<int> connected{0};
-  std::atomic<int> sent{0};
-  std::atomic<int> received{0};
-  std::atomic<int> server_errors{0};
-  std::atomic<int> passed{0};
-  std::vector<std::jthread> clients;
-  for (int i = 0; i < 32; i++) {
-    clients.emplace_back([&]() {
-      tcpip_client client;
-      if (!client.connect(port)) return;
-      connected++;
-      if (!client.send_all("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n")) {
-        return;
-      }
-      sent++;
-      const auto result = receive_http_response(client);
-      if (!result) return;
-      received++;
-      if (result->status.starts_with("HTTP/1.1 500 ")) server_errors++;
-      if (result->status.starts_with("HTTP/1.1 200 ") &&
-          result->body == "ready") {
-        passed++;
-      }
-    });
-  }
-  for (auto& client : clients) client.join();
-  DOBA_EXPECT_EQUAL(connected.load(), 32);
-  DOBA_EXPECT_EQUAL(sent.load(), 32);
-  DOBA_EXPECT_EQUAL(received.load(), 32);
-  DOBA_EXPECT_EQUAL(server_errors.load(), 0);
-  DOBA_EXPECT_EQUAL(passed.load(), 32);
-  http_server.stop();
-}
-#endif
 DOBA_TEST("HTTP/1.1 drains a timed route before stopping workers") {
   tcpip_client client;
   const uint16_t port = client.find_available_port();

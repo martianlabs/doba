@@ -351,7 +351,8 @@ DOBA_TEST("making a request owned preserves partial body reader progress") {
     auto result = value.deserialize(input);
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
     std::array<std::byte, 1> first{};
-    DOBA_EXPECT_EQUAL(result.request->get_body_reader()->read(first).produced, 1U);
+    DOBA_EXPECT_EQUAL(result.request->get_body_reader()->read(first).produced,
+                      1U);
     DOBA_EXPECT_EQUAL(first[0], std::byte{'a'});
     result.request->make_owned();
     wire.assign(wire.size(), '!');

@@ -23,12 +23,18 @@ execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
   OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND "${DOBA_MUTATION_COMPILER}" --version
   OUTPUT_FILE "${run}/compiler.txt" COMMAND_ERROR_IS_FATAL ANY)
-set(ENV{ASAN_OPTIONS} "halt_on_error=1:detect_leaks=1")
+if(WIN32)
+  set(executable_suffix ".exe")
+  set(ENV{ASAN_OPTIONS} "halt_on_error=1:detect_leaks=0")
+else()
+  set(executable_suffix "")
+  set(ENV{ASAN_OPTIONS} "halt_on_error=1:detect_leaks=1")
+endif()
 set(ENV{UBSAN_OPTIONS} "halt_on_error=1:print_stacktrace=1")
 
 function(build_copy id)
   set(directory "${run}/${id}")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B "${directory}/build"
+  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B "${directory}/build" -G Ninja
     -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=${DOBA_MUTATION_COMPILER}"
     "-DDOBA_MUTATION_ROOT=${root}" "-DDOBA_MUTATION_HEADERS=${directory}/include"
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -46,7 +52,7 @@ function(build_copy id)
 endfunction()
 
 function(run_case id name assertion expected)
-  execute_process(COMMAND "${run}/${id}/build/detection_tests" --name "${name}"
+  execute_process(COMMAND "${run}/${id}/build/detection_tests${executable_suffix}" --name "${name}"
     OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result TIMEOUT 15)
   set(log "${output}${errors}")
   file(WRITE "${run}/${id}/${expected}-${name}.log" "Exit: ${result}\n${log}")

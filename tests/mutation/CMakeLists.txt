@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(doba_mutation_detection LANGUAGES CXX)
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  message(FATAL_ERROR "Mutation detection requires Linux Clang")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Linux|Windows)$" OR
+   NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  message(FATAL_ERROR "Mutation detection requires Linux or Windows clang++")
 endif()
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_CONFIGURATION_TYPES)
   message(FATAL_ERROR "Mutation detection requires single-config Release")
@@ -20,3 +22,5 @@ target_link_libraries(detection_tests PRIVATE Threads::Threads)
 target_compile_options(detection_tests PRIVATE -g -Wall -Wextra -Wpedantic -Werror
   -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer)
 target_link_options(detection_tests PRIVATE -fsanitize=address,undefined -fno-sanitize-recover=undefined)
+include("${DOBA_MUTATION_ROOT}/cmake/clang_windows_test_runtime.cmake")
+doba_clang_windows_test_runtime(detection_tests)

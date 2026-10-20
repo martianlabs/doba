@@ -350,7 +350,8 @@ DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
 }
 
 // +===========================================================================+
-// | [>] plaintext chunk size is independent of HTTP head size    ( test-case ) |
+// | [>] plaintext chunk size is independent of HTTP head        ( test-case ) |
+// |     size                                                                  |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls receives HTTP heads across one byte plaintext blocks") {
   tls_client client;

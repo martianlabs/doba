@@ -4,6 +4,12 @@ file(
   CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_LIST_DIR}/*_tests.cpp"
 )
+# Native implementation tests are separate translation units.
+if(WIN32)
+  list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_linux_tests\\.cpp$")
+else()
+  list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_windows_tests\\.cpp$")
+endif()
 if(NOT DOBA_ENABLE_TLS)
   list(REMOVE_ITEM UNIT_TEST_SOURCES
        "${CMAKE_CURRENT_LIST_DIR}/transport/server/tls_session_tests.cpp")

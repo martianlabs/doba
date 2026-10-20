@@ -257,21 +257,21 @@ DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
       value;
   value.start();
   const auto bytes =
-      memory_transport<
-          http::engine<http::request, http::response>,
-          http::detail::engine_factory<http::engine<http::request, http::response>,
-                               router<http::request, http::response>>>::instance
+      memory_transport<http::engine<http::request, http::response>,
+                       http::detail::engine_factory<
+                           http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance
           ->receive(
               "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
               "Content-Length: invalid\r\n\r\n");
   DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
   DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
-  DOBA_EXPECT((
-      memory_transport<
-          http::engine<http::request, http::response>,
-          http::detail::engine_factory<http::engine<http::request, http::response>,
-                               router<http::request, http::response>>>::instance
-          ->closed));
+  DOBA_EXPECT(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance
+           ->closed));
 }
 
 // +===========================================================================+
@@ -320,12 +320,12 @@ DOBA_TEST("server accepts new connections after handler failure") {
   });
   value.start();
   DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
-  DOBA_EXPECT((
-      memory_transport<
-          http::engine<http::request, http::response>,
-          http::detail::engine_factory<http::engine<http::request, http::response>,
-                               router<http::request, http::response>>>::instance
-          ->closed));
+  DOBA_EXPECT(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance
+           ->closed));
   DOBA_EXPECT(send_request().empty());
   memory_transport<
       http::engine<http::request, http::response>,

@@ -266,8 +266,10 @@ int test_helper::run(int argc, char** argv) {
   const auto configured_timeout = !timeout_given
       ? std::string_view(environment_timeout ? environment_timeout : "30000")
       : timeout_argument;
-  if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout, timeout)) {
-    std::fputs("Invalid test timeout: expected 1..3600000 milliseconds\n", stderr);
+  if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout,
+                                                      timeout)) {
+    std::fputs("Invalid test timeout: expected 1..3600000 milliseconds\n",
+               stderr);
     return 2;
   }
   ::martianlabs::doba::tests::test_watchdog watchdog(timeout);

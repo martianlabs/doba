@@ -1,3 +1,27 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
 #include <atomic>
 #include <barrier>
 #include <memory>
@@ -14,16 +38,24 @@
 #include "test_helper.h"
 
 namespace {
+// +---------------------------------------------------------------------------+
+// | [>] general                                                    ( usings ) |
+// +---------------------------------------------------------------------------+
 using namespace martianlabs::doba;
 using namespace martianlabs::doba::protocol::http::v11;
-using tests::manual_event;
-using tests::scope_exit;
 using protocol::http::router;
 using protocol::http::v11::detail::engine_async;
+using tests::manual_event;
+using tests::scope_exit;
 
 constexpr std::string_view slow = "GET /slow HTTP/1.1\r\nHost: a\r\n\r\n";
 constexpr std::string_view fast = "GET /fast HTTP/1.1\r\nHost: a\r\n\r\n";
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] output_state                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct output_state {
   std::mutex mutex;
   std::string wire;
@@ -31,13 +63,20 @@ struct output_state {
   std::atomic<int> closes{0};
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] fixture                                                    ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct fixture {
   std::shared_ptr<output_state> output = std::make_shared<output_state>();
   engine<request, response> value;
-  explicit fixture(const router<request, response>& routes, policies config = {})
+  explicit fixture(const router<request, response>& routes,
+                   policies config = {})
       : value(config, routes) {
     value.set_on_send([state = output](std::string_view head,
-        std::string_view body, std::unique_ptr<common::reader>) {
+                                       std::string_view body,
+                                       std::unique_ptr<common::reader>) {
       std::lock_guard lock(state->mutex);
       state->wire.append(head).append(body);
       ++state->sends;
@@ -47,11 +86,17 @@ struct fixture {
   void receive(std::string_view wire) { value.on_bytes_received(wire); }
 };
 
+// +---------------------------------------------------------------------------+
+// | [>] respond                                                  ( function ) |
+// +---------------------------------------------------------------------------+
 void respond(response& res, std::string_view text) {
   res.ok_200().set_header("Date", "fixed").set_body(text);
 }
 }  // namespace
 
+// +===========================================================================+
+// | [>] completion contract covers both controlled stop orders  ( test-case ) |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("completion contract covers both controlled stop orders") {
   for (bool finish_first : {false, true}) {
     engine_async state(32, {}, {});
@@ -68,7 +113,12 @@ DOBA_TEST("completion contract covers both controlled stop orders") {
   }
 }
 
-DOBA_TEST("last completion races stop without losing or duplicating callbacks") {
+// +===========================================================================+
+// | [>] last completion races stop without losing or            ( test-case ) |
+// |     duplicating callbacks                                                 |
+// +---------------------------------------------------------------------------+
+DOBA_TEST(
+    "last completion races stop without losing or duplicating callbacks") {
   for (int iteration = 0; iteration < 8; ++iteration) {
     engine_async state(32, {}, {});
     std::barrier start(3);
@@ -90,15 +140,19 @@ DOBA_TEST("last completion races stop without losing or duplicating callbacks") 
   }
 }
 
+// +===========================================================================+
+// | [>] completion sends while a successor is inside receive    ( test-case ) |
+// |     dispatch                                                              |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("completion sends while a successor is inside receive dispatch") {
   router<request, response> routes;
   manual_event pending, entered, release;
   std::atomic<bool> parsing{false};
-  routes.add("GET", "/slow", [&](const request&, response& res)
-      -> common::task<void> {
-    co_await pending;
-    respond(res, "slow");
-  });
+  routes.add("GET", "/slow",
+             [&](const request&, response& res) -> common::task<void> {
+               co_await pending;
+               respond(res, "slow");
+             });
   routes.add("GET", "/fast", [&](const request&, response& res) {
     parsing = true;
     entered.open();
@@ -126,15 +180,19 @@ DOBA_TEST("completion sends while a successor is inside receive dispatch") {
   DOBA_EXPECT_EQUAL(current.output->closes.load(), 0);
 }
 
+// +===========================================================================+
+// | [>] async error closes during receive and suppresses later  ( test-case ) |
+// |     dispatch                                                              |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("async error closes during receive and suppresses later dispatch") {
   router<request, response> routes;
   manual_event pending, entered, release;
   std::atomic<int> later{0};
-  routes.add("GET", "/slow", [&](const request&, response&)
-      -> common::task<void> {
-    co_await pending;
-    throw std::runtime_error("after suspension");
-  });
+  routes.add("GET", "/slow",
+             [&](const request&, response&) -> common::task<void> {
+               co_await pending;
+               throw std::runtime_error("after suspension");
+             });
   routes.add("GET", "/fast", [&](const request&, response& res) {
     entered.open();
     release.wait();
@@ -164,20 +222,23 @@ DOBA_TEST("async error closes during receive and suppresses later dispatch") {
   DOBA_EXPECT_EQUAL(current.output->closes.load(), 1);
 }
 
+// +===========================================================================+
+// | [>] pending limit retains frames until late completion then ( test-case ) |
+// |     releases                                                              |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("pending limit retains frames until late completion then releases") {
   router<request, response> routes;
   manual_event pending;
   std::weak_ptr<int> frame;
-  routes.add("GET", "/slow", [&](const request&, response& res)
-      -> common::task<void> {
-    auto lifetime = std::make_shared<int>(1);
-    frame = lifetime;
-    co_await pending;
-    respond(res, "late");
-  });
-  routes.add("GET", "/fast", [](const request&, response& res) {
-    respond(res, "fast");
-  });
+  routes.add("GET", "/slow",
+             [&](const request&, response& res) -> common::task<void> {
+               auto lifetime = std::make_shared<int>(1);
+               frame = lifetime;
+               co_await pending;
+               respond(res, "late");
+             });
+  routes.add("GET", "/fast",
+             [](const request&, response& res) { respond(res, "fast"); });
   policies config;
   config.max_pending_requests = 2;
   fixture current(routes, config);
@@ -196,17 +257,20 @@ DOBA_TEST("pending limit retains frames until late completion then releases") {
   DOBA_EXPECT_EQUAL(current.output->sends.load(), 0);
 }
 
+// +===========================================================================+
+// | [>] owned callbacks and frames survive facade destruction   ( test-case ) |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("owned callbacks and frames survive facade destruction") {
   router<request, response> routes;
   manual_event pending;
   std::weak_ptr<int> frame;
-  routes.add("GET", "/slow", [&](const request&, response& res)
-      -> common::task<void> {
-    auto lifetime = std::make_shared<int>(1);
-    frame = lifetime;
-    co_await pending;
-    respond(res, "owned");
-  });
+  routes.add("GET", "/slow",
+             [&](const request&, response& res) -> common::task<void> {
+               auto lifetime = std::make_shared<int>(1);
+               frame = lifetime;
+               co_await pending;
+               respond(res, "owned");
+             });
   auto current = std::make_unique<fixture>(routes);
   auto output = current->output;
   scope_exit resume([&] { pending.open(); });
@@ -220,26 +284,34 @@ DOBA_TEST("owned callbacks and frames survive facade destruction") {
   DOBA_EXPECT(output->wire.ends_with("\r\n\r\nowned"));
 }
 
-DOBA_TEST("reverse completion keeps queued responses and releases both frames") {
+// +===========================================================================+
+// | [>] reverse completion keeps queued responses and releases  ( test-case ) |
+// |     both frames                                                           |
+// +---------------------------------------------------------------------------+
+DOBA_TEST(
+    "reverse completion keeps queued responses and releases both frames") {
   router<request, response> routes;
   manual_event first, second;
   std::weak_ptr<int> first_frame, second_frame;
-  routes.add("GET", "/slow", [&](const request&, response& res)
-      -> common::task<void> {
-    auto lifetime = std::make_shared<int>(1);
-    first_frame = lifetime;
-    co_await first;
-    respond(res, "first");
-  });
-  routes.add("GET", "/fast", [&](const request&, response& res)
-      -> common::task<void> {
-    auto lifetime = std::make_shared<int>(2);
-    second_frame = lifetime;
-    co_await second;
-    respond(res, "second");
-  });
+  routes.add("GET", "/slow",
+             [&](const request&, response& res) -> common::task<void> {
+               auto lifetime = std::make_shared<int>(1);
+               first_frame = lifetime;
+               co_await first;
+               respond(res, "first");
+             });
+  routes.add("GET", "/fast",
+             [&](const request&, response& res) -> common::task<void> {
+               auto lifetime = std::make_shared<int>(2);
+               second_frame = lifetime;
+               co_await second;
+               respond(res, "second");
+             });
   fixture current(routes);
-  scope_exit resume([&] { second.open(); first.open(); });
+  scope_exit resume([&] {
+    second.open();
+    first.open();
+  });
   current.receive(std::string(slow) + std::string(fast));
   DOBA_EXPECT(first.wait_for_waiters(1));
   DOBA_EXPECT(second.wait_for_waiters(1));
@@ -251,41 +323,44 @@ DOBA_TEST("reverse completion keeps queued responses and releases both frames") 
   DOBA_EXPECT_EQUAL(current.output->sends.load(), 2);
   const auto one = current.output->wire.find("\r\n\r\nfirst");
   const auto two = current.output->wire.find("\r\n\r\nsecond");
-  DOBA_EXPECT(one != std::string::npos && two != std::string::npos && one < two);
+  DOBA_EXPECT(one != std::string::npos && two != std::string::npos &&
+              one < two);
 }
 
+// +===========================================================================+
+// | [>] engine serializes concurrent asynchronous sends         ( test-case ) |
+// +---------------------------------------------------------------------------+
 DOBA_TEST("engine serializes concurrent asynchronous sends") {
   router<request, response> routes;
   using martianlabs::doba::tests::manual_event;
   manual_event first, second, entered, release, second_ready;
-  routes.add("GET", "/first", [&first](const request&, response& res)
-                 -> common::task<void> {
-    co_await first;
-    respond(res, "first");
-  });
-  routes.add("GET", "/second", [&](const request&, response& res)
-                 -> common::task<void> {
-    co_await second;
-    respond(res, "second");
-    second_ready.open();
-  });
+  routes.add("GET", "/first",
+             [&first](const request&, response& res) -> common::task<void> {
+               co_await first;
+               respond(res, "first");
+             });
+  routes.add("GET", "/second",
+             [&](const request&, response& res) -> common::task<void> {
+               co_await second;
+               respond(res, "second");
+               second_ready.open();
+             });
   fixture current(routes);
   std::atomic<int> sending{0};
   std::atomic<bool> overlap{false};
-  current.value.set_on_send(
-      [&](std::string_view head, std::string_view body,
-          std::unique_ptr<common::reader>) {
-        if (sending.fetch_add(1) != 0) overlap = true;
-        if (body == "first") {
-          entered.open();
-          release.wait();
-        }
-        {
-          std::lock_guard lock(current.output->mutex);
-          current.output->wire.append(head).append(body);
-        }
-        sending--;
-      });
+  current.value.set_on_send([&](std::string_view head, std::string_view body,
+                                std::unique_ptr<common::reader>) {
+    if (sending.fetch_add(1) != 0) overlap = true;
+    if (body == "first") {
+      entered.open();
+      release.wait();
+    }
+    {
+      std::lock_guard lock(current.output->mutex);
+      current.output->wire.append(head).append(body);
+    }
+    sending--;
+  });
   current.receive(
       "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");

@@ -1,3 +1,27 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
 #ifndef martianlabs_doba_tests_test_watchdog_h
 #define martianlabs_doba_tests_test_watchdog_h
 
@@ -12,20 +36,32 @@
 #include <thread>
 
 namespace martianlabs::doba::tests {
+// +---------------------------------------------------------------------------+
+// | [>] parse_test_timeout                                       ( function ) |
+// +---------------------------------------------------------------------------+
 inline bool parse_test_timeout(std::string_view text,
                                std::chrono::milliseconds& timeout) {
   long long value = 0;
-  const auto parsed = std::from_chars(text.data(), text.data() + text.size(),
-                                     value);
+  const auto parsed =
+      std::from_chars(text.data(), text.data() + text.size(), value);
   if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() ||
-      value <= 0 || value > 3600000) return false;
+      value <= 0 || value > 3600000)
+    return false;
   timeout = std::chrono::milliseconds(value);
   return true;
 }
 
 // One watchdog per runner, including the cleanup performed inside each test.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] test_watchdog                                               ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class test_watchdog {
  public:
+  // +-------------------------------------------------------------------------+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit test_watchdog(std::chrono::milliseconds timeout)
       : timeout_(timeout), worker_([this] { watch(); }) {}
   test_watchdog(const test_watchdog&) = delete;
@@ -39,6 +75,9 @@ class test_watchdog {
     worker_.join();
   }
 
+  // +-------------------------------------------------------------------------+
+  // | [>] arm                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void arm(std::string_view file, int line, std::string_view name) {
     std::lock_guard lock(mutex_);
     file_ = file;
@@ -49,6 +88,9 @@ class test_watchdog {
     active_ = true;
     changed_.notify_one();
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] disarm                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   void disarm() {
     std::lock_guard lock(mutex_);
     active_ = false;
@@ -56,6 +98,12 @@ class test_watchdog {
   }
 
  private:
+  // +-------------------------------------------------------------------------+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] watch                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
   void watch() {
     std::unique_lock lock(mutex_);
     while (!stopping_) {
@@ -65,7 +113,8 @@ class test_watchdog {
       const auto deadline = deadline_;
       if (changed_.wait_until(lock, deadline, [this, generation] {
             return stopping_ || !active_ || generation_ != generation;
-          })) continue;
+          }))
+        continue;
       std::fprintf(stderr, "Test timeout after %lld ms: %.*s:%d - %.*s\n",
                    static_cast<long long>(timeout_.count()),
                    static_cast<int>(file_.size()), file_.data(), line_,

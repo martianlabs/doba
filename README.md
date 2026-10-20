@@ -365,8 +365,8 @@ of thing, and considerably less taste.
 Our [HTTP decoder and chunked harnesses](tests/fuzz/README.md) feed its bytes
 through checks for consumption, message boundaries, fragmentation, buffer
 ownership, and memory/disk storage. Each harness gets **60 seconds per CI
-run** under AddressSanitizer and UndefinedBehaviorSanitizer, using a cached
-corpus so it doesn't start from scratch every time.
+run on Linux and Windows** under AddressSanitizer and UndefinedBehaviorSanitizer,
+using a cached corpus so it doesn't start from scratch every time.
 
 When an input breaks something, we keep it. That particular nonsense now
 has a permanent seat in the test suite.
@@ -418,7 +418,9 @@ than "well, CI hung."
 
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
 **GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
-Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan with TLS**.
+Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan and UBSan
+with TLS**, including a Clang build alongside MSVC. Both platforms repeat
+the critical concurrency cases **200 times**; TSan checks for races on Linux.
 And yes, **the tests run in Release, optimizations and all**. That's the code
 we care about running. Debug gets a compile check. The test tooling uses
 C++ and CMake; building doba is quite enough setup for testing doba.
