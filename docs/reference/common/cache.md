@@ -23,7 +23,7 @@ Reservation precedes loading. Evicted values pinned by consumers remain charged.
 
 ### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cache
 
-[cache_policies](#policies) · [cache_statistics](#stats) · [cache](#cache) · [value_type](#value-type) · [find](#find) · [get_or_load](#load) · [erase](#erase) · [clear](#clear) · [statistics](#statistics)
+[cache_policies](cache_policies.md) · [cache_statistics](cache_statistics.md) · [cache](#cache) · [value_type](#value-type) · [find](#find) · [get_or_load](#load) · [erase](#erase) · [clear](#clear) · [statistics](#statistics)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -37,57 +37,32 @@ Reservation precedes loading. Evicted values pinned by consumers remain charged.
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cache_policies
 
-```cpp
-struct cache_policies { ... };
-```
-
-Configuration copied at construction; negative TTL throws **std::invalid_argument**.
-
-| Field | Type / default | Meaning |
-| --- | --- | --- |
-| max_entries | std::size_t / 1024 | Resident entry limit; zero disables admission. |
-| max_cost | std::size_t / 67108864 | Live declared cost limit, including reservations and pinned evicted values; zero disables admission. |
-| max_loads | std::size_t / 16 | Concurrent loaders, including invalidated loaders still running; zero disables admission. |
-| ttl | std::chrono::milliseconds / 1000 | Starts after successful loading; zero disables automatic expiration. Removal is lazy. |
+Declared in [cache_policies.h](cache_policies.md). See that page for limits, defaults and expiration settings.
 
 <a id="stats"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cache_statistics
 
-```cpp
-struct cache_statistics { ... };
-```
-
-All fields are **std::size_t**, initially zero.
-
-| Field | Meaning |
-| --- | --- |
-| entries | Resident entries, including unvisited expired entries. |
-| resident_cost | Cost held by residents. |
-| live_cost | Cost of reservations and values retained through managed handles. |
-| loads | Loader calls still running, including invalidated calls. |
-| waiters | Callers waiting for a same-key load. |
-
-These are resource counters, not hit-rate or process-memory measurements.
+Declared in [cache_statistics.h](cache_statistics.md). See that page for the resource counters returned by statistics().
 
 <a id="cache"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cache
 
 ```cpp
-template <typename Key, typename Value, typename Clock = std::chrono::steady_clock,
-          typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
+template <typename KEty, typename VAty, typename CKty = std::chrono::steady_clock,
+          typename HAty = std::hash<KEty>, typename EQty = std::equal_to<KEty>>
 class cache;
 ```
 
-**Key** identifies immutable **Value** payloads. **Hash**/**Equal** provide stable key lookup. **Clock** supplies a monotonic now(), time_point and duration compatible with chrono. Construction accepts cache_policies. The cache is noncopyable. Structural operations use a mutex; loaders execute outside it.
+**KEty** identifies immutable **VAty** payloads. **HAty**/**EQty** provide stable key lookup. **CKty** supplies a monotonic now(), time_point and duration compatible with chrono. Construction accepts cache_policies. The cache is noncopyable. Structural operations use a mutex; loaders execute outside it.
 
 <a id="value-type"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> value_type
 
 ```cpp
-using value_type = std::shared_ptr<const Value>;
+using value_type = std::shared_ptr<const VAty>;
 ```
 
 An owning immutable handle that retains its declared cost until the last cache-managed owner releases it.
@@ -97,7 +72,7 @@ An owning immutable handle that retains its declared cost until the last cache-m
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> find
 
 ```cpp
-value_type find(const Key& key);
+value_type find(const KEty& key);
 ```
 
 **Parameters:** key identifies the value.
@@ -109,11 +84,11 @@ value_type find(const Key& key);
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> get_or_load
 
 ```cpp
-template <typename Loader>
-value_type get_or_load(const Key& key, std::size_t cost, Loader&& loader);
+template <typename LDty>
+value_type get_or_load(const KEty& key, std::size_t cost, LDty&& loader);
 ```
 
-**Parameters:** key identifies the value; cost upper-bounds its resources; loader is invoked without arguments and returns a pointer convertible to shared_ptr<const Value>. Null means no value.
+**Parameters:** key identifies the value; cost upper-bounds its resources; loader is invoked without arguments and returns a pointer convertible to shared_ptr<const VAty>. Null means no value.
 
 **Returns:** A hit or loaded value; null if the loader returns null, admission fails,
 or the flight is invalidated. Rejected admission never calls the loader. Hits ignore
@@ -135,7 +110,7 @@ itself is not cancelled. A later call can start a new generation.
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> erase
 
 ```cpp
-void erase(const Key& key);
+void erase(const KEty& key);
 ```
 
 **Parameters:** key identifies the resident entry or load.

@@ -17,3 +17,7 @@ rejection returns a null pointer without running the loader. Loaders run outside
 the cache lock; concurrent callers for the same key share their result or error.
 Do not recursively load the cache from a loader. Stop/join callers before
 destroying it; returned values may outlive it.
+
+Admission settings are declared in [cache_policies.h](../../../include/common/cache_policies.h);
+resource counters are declared in [cache_statistics.h](../../../include/common/cache_statistics.h).
+Both headers are self-contained and are also included by cache.h.
