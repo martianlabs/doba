@@ -61,11 +61,11 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
-          -DDOBA_ENABLE_TLS=${{ matrix.tls }}
+          "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=${{ matrix.tls }}"
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
@@ -73,8 +73,8 @@ jobs:
       - name: Verify test inventory
         if: matrix.build_type == 'Release'
         run: >-
-          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
-          -DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}"
           -P cmake/ci_test_inventory.cmake
 
       - name: Run Release tests
@@ -93,10 +93,10 @@ jobs:
         if: matrix.name == 'GCC Release'
         run: >-
           cmake -S tests/package -B out/build/package-consumer-debug -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_CXX_COMPILER=g++
-          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
-          -DDOBA_PACKAGE_USE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Debug"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release"
+          "-DDOBA_PACKAGE_USE_TLS=ON"
 
       - name: Build package consumer (Debug)
         if: matrix.name == 'GCC Release'
@@ -106,10 +106,10 @@ jobs:
         if: matrix.name == 'GCC Release'
         run: >-
           cmake -S tests/package -B out/build/package-consumer-release -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=g++
-          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release
-          -DDOBA_PACKAGE_USE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release"
+          "-DDOBA_PACKAGE_USE_TLS=ON"
 
       - name: Build package consumer (Release)
         if: matrix.name == 'GCC Release'
@@ -123,12 +123,12 @@ jobs:
         if: matrix.name == 'GCC Release'
         run: >-
           cmake -S tests/package -B out/build/add-subdirectory-consumer -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=g++
-          -DDOBA_PACKAGE_USE_SOURCE=ON
-          -DDOBA_SOURCE_DIR=${{ github.workspace }}
-          -DDOBA_ENABLE_TLS=ON
-          -DDOBA_PACKAGE_USE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DDOBA_PACKAGE_USE_SOURCE=ON"
+          "-DDOBA_SOURCE_DIR=${{ github.workspace }}"
+          "-DDOBA_ENABLE_TLS=ON"
+          "-DDOBA_PACKAGE_USE_TLS=ON"
 
       - name: Build add_subdirectory consumer
         if: matrix.name == 'GCC Release'
@@ -203,15 +203,15 @@ jobs:
         if: matrix.tls == 'OFF'
         run: >-
           cmake --preset ${{ matrix.configure_preset }}
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Configure TLS
         if: matrix.tls == 'ON'
         run: >-
           cmake --preset ${{ matrix.configure_preset }}
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
-          -DDOBA_ENABLE_TLS=ON
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=ON"
+          "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
         run: cmake --build --preset ${{ matrix.build_preset }}
@@ -219,8 +219,8 @@ jobs:
       - name: Verify test inventory
         if: matrix.build_type == 'Release'
         run: >-
-          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
-          -DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}"
           -P cmake/ci_test_inventory.cmake
 
       - name: Run Release tests
@@ -239,10 +239,10 @@ jobs:
         if: matrix.tls == 'ON'
         run: >-
           cmake -S tests/package -B out/build/package-consumer-tls -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/out/install/msvc-release"
-          -DDOBA_PACKAGE_USE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/msvc-release"
+          "-DDOBA_PACKAGE_USE_TLS=ON"
 
       - name: Build package TLS consumer
         if: matrix.tls == 'ON'
@@ -256,12 +256,12 @@ jobs:
         if: matrix.tls == 'ON'
         run: >-
           cmake -S tests/package -B out/build/add-subdirectory-tls -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-          -DDOBA_PACKAGE_USE_SOURCE=ON
-          -DDOBA_SOURCE_DIR="${{ github.workspace }}"
-          -DDOBA_ENABLE_TLS=ON
-          -DDOBA_PACKAGE_USE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          "-DDOBA_PACKAGE_USE_SOURCE=ON"
+          "-DDOBA_SOURCE_DIR=${{ github.workspace }}"
+          "-DDOBA_ENABLE_TLS=ON"
+          "-DDOBA_PACKAGE_USE_TLS=ON"
 
       - name: Build add_subdirectory TLS consumer
         if: matrix.tls == 'ON'
@@ -320,11 +320,11 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B ${{ matrix.build_dir }} -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
-          -DDOBA_ENABLE_TLS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=clang++"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=ON"
           "-DCMAKE_CXX_FLAGS=-g -fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
 
       - name: Build
@@ -332,8 +332,8 @@ jobs:
 
       - name: Verify test inventory
         run: >-
-          cmake -DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}
-          -DDOBA_CI_REQUIRE_TLS=ON -P cmake/ci_test_inventory.cmake
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=ON" -P cmake/ci_test_inventory.cmake
 
       - name: Test
         run: >-
@@ -410,13 +410,13 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B out/build/msvc-asan -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
+          "-DCMAKE_BUILD_TYPE=Release"
           "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
-          -DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
-          -DDOBA_ENABLE_TLS=ON
+          "-DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=ON"
           "-DCMAKE_CXX_FLAGS_RELEASE=${{ matrix.flags }}"
           "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker_flags }}"
 
@@ -425,8 +425,8 @@ jobs:
 
       - name: Verify test inventory
         run: >-
-          cmake -DDOBA_CI_BUILD_DIR=out/build/msvc-asan
-          -DDOBA_CI_REQUIRE_TLS=ON -P cmake/ci_test_inventory.cmake
+          cmake "-DDOBA_CI_BUILD_DIR=out/build/msvc-asan"
+          "-DDOBA_CI_REQUIRE_TLS=ON" -P cmake/ci_test_inventory.cmake
 
       - name: Test
         run: >-
@@ -483,18 +483,18 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B out/build/cmake-3.20 -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build
         run: cmake --build out/build/cmake-3.20
 
       - name: Verify test inventory
         run: >-
-          cmake -DDOBA_CI_BUILD_DIR=out/build/cmake-3.20
-          -DDOBA_CI_REQUIRE_TLS=OFF -P cmake/ci_test_inventory.cmake
+          cmake "-DDOBA_CI_BUILD_DIR=out/build/cmake-3.20"
+          "-DDOBA_CI_REQUIRE_TLS=OFF" -P cmake/ci_test_inventory.cmake
 
       - name: Test
         run: >-
@@ -564,10 +564,10 @@ jobs:
       - name: Configure Release fuzzers
         run: >-
           cmake -S . -B out/build/fuzz -G Ninja
-          -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DDOBA_BUILD_FUZZERS=ON -DDOBA_BUILD_TESTS=OFF
-          -DDOBA_BUILD_EXAMPLES=OFF -DDOBA_ENABLE_STRICT_WARNINGS=ON
+          "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_BUILD_FUZZERS=ON" "-DDOBA_BUILD_TESTS=OFF"
+          "-DDOBA_BUILD_EXAMPLES=OFF" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build harness
         run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }} doba_fuzz_seed_corpus
@@ -642,7 +642,7 @@ jobs:
       - name: Verify original tests and detect three mutants
         run: >-
           cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
-          -DDOBA_MUTATION_OUTPUT=out/mutations -P tests/mutation/run_detection.cmake
+          "-DDOBA_MUTATION_OUTPUT=out/mutations" -P tests/mutation/run_detection.cmake
       - name: Upload mutation evidence
         if: always()
         uses: actions/upload-artifact@v4
