@@ -109,6 +109,12 @@ int main(int argc, char** argv) {
         {"nul",
          std::string("GET / HTTP/1.1\r\nHost: x\r\nX: a") + '\0' + "b\r\n\r\n"},
         {"missing-host", "GET / HTTP/1.1\r\n\r\n"},
+        {"connect-missing-port", "CONNECT missing-port HTTP/1.1\r\n\r\n"},
+        {"connect-fragmentation-regression",
+         "CONNECT T- / HT\x94P" + std::string(10, '\xff') +
+             "GETGET HPOS-EnT TTP/1.1\r\n\r\n\r\n"
+             "0000tn\xfe\xff\xff\xfe: c1T- " +
+             std::string(5, '\0') + '\x02'},
         {"bare-lf", "GET / HTTP/1.1\nHost: x\n\n"},
         {"incomplete",
          "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 9\r\n\r\nabc"},
