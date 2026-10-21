@@ -56,7 +56,7 @@ using static_file_cache = common::cache<std::string, static_file_representation>
 struct static_file_policies {
   // Null preserves direct reads. Share a cache to coordinate a byte budget.
   std::shared_ptr<static_file_cache> cache{};
-  std::size_t max_cached_file_size = 256 * 1024;
+  std::size_t max_cached_file_size = 1024 * 1024;
   std::string cache_control = "no-cache";
   bool deny_hidden = true;
   bool ranges = true;

@@ -46,7 +46,7 @@ struct cache_policies {
   // Maximum live declared cost, including reservations and retained values.
   // Values pinned by consumers remain charged after eviction; 0 disables
   // admission.
-  std::size_t max_cost = 64 * 1024 * 1024;
+  std::size_t max_cost = 512 * 1024 * 1024;
   // Maximum concurrent loaders, including invalidated loads still running.
   // A value of 0 disables admission.
   std::size_t max_loads = 16;

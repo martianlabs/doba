@@ -38,8 +38,8 @@ The example enables precompressed asset negotiation. Publish **hello.txt.br** or
 Variants have their own validators and include Vary: Accept-Encoding. doba does
 not create compressed files or verify their decoded contents.
 
-The default cache admits up to 1024 entries, 64 MiB of declared live cost and 16
-concurrent loads. Files above 256 KiB, or rejected by the budget, use direct
+The default cache admits up to 1024 entries, 512 MiB of declared live cost and 16
+concurrent loads. Files above 1 MiB, or rejected by the budget, use direct
 streaming. Expiration reloads on the next request. To invalidate immediately,
 retain the supplied shared cache and call clear(); controller invalidate(relative)
 also removes a filename and its compressed siblings. Invalidating does not revoke

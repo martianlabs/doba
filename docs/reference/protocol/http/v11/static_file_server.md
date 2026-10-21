@@ -72,7 +72,7 @@ struct static_file_policies { ... };
 | Field | Default | Behavior |
 | --- | --- | --- |
 | cache | null shared_ptr<static_file_cache> | Direct reads; supply a shared cache to enable snapshots. |
-| max_cached_file_size | std::size_t / 262144 bytes | Per-file admission threshold; larger files stream. |
+| max_cached_file_size | std::size_t / 1048576 bytes (1 MiB) | Per-file admission threshold; larger files stream. |
 | cache_control | std::string / no-cache | HTTP policy independent of internal TTL; empty omits it. |
 | deny_hidden | bool / true | Deny any component starting with a dot. |
 | ranges | bool / true | Simple GET byte ranges; HEAD describes the full representation. |
