@@ -202,7 +202,11 @@ class decoder {
     }
     if (result.code == deserialization_status::kMoreBytesNeeded &&
         !body_framer_ &&
-        reminder_.size() >= context_.policies.max_request_head_size) {
+        (reminder_.size() >= context_.policies.max_request_head_size ||
+         std::string_view(reminder_.data(), reminder_.size())
+                 .find("\r\n\r\n") != std::string_view::npos)) {
+      // A complete head cannot need more syntax bytes. In particular, a
+      // malformed CONNECT target must not wait for a colon in later data.
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {

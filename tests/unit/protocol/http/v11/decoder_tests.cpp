@@ -3760,6 +3760,44 @@ DOBA_TEST(
   }
 }
 
+DOBA_TEST("decoder rejects complete malformed CONNECT heads at every split") {
+  for (const std::string_view head : {
+           "CONNECT T- / HTTP/1.1\r\n\r\n",
+           "CONNECT missing-port HTTP/1.1\r\n\r\n",
+           "CONNECT [::1 HTTP/1.1\r\n\r\n"}) {
+    for (const std::string_view tail : {"", "X: later bytes"}) {
+      const std::string wire = std::string(head) + std::string(tail);
+      for (std::size_t split = 0; split <= wire.size(); ++split) {
+        decoder<request, response> value({});
+        std::string_view input(wire.data(), split);
+        auto result = value.deserialize(input);
+        if (result.code == deserialization_status::kMoreBytesNeeded) {
+          input = std::string_view(wire).substr(split);
+          result = value.deserialize(input);
+        }
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kInvalidSource);
+        DOBA_EXPECT(!result.request.has_value());
+        DOBA_EXPECT(result.response.has_value());
+        DOBA_EXPECT(result.response->serialize().head.starts_with(
+            "HTTP/1.1 400 Bad Request\r\n"));
+        DOBA_EXPECT(input.empty());
+      }
+      decoder<request, response> value({});
+      std::size_t consumed = 0;
+      for (const char& byte : wire) {
+        std::string_view input(&byte, 1);
+        const auto result = value.deserialize(input);
+        ++consumed;
+        if (result.code == deserialization_status::kInvalidSource) break;
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kMoreBytesNeeded);
+      }
+      DOBA_EXPECT_EQUAL(consumed, head.size());
+    }
+  }
+}
+
 DOBA_TEST("decoder replies own their bytes across reuse and destruction") {
   for (const bool interim : {false, true}) {
     std::optional<response> held;
