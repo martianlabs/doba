@@ -126,7 +126,9 @@ class filesystem_file {
         static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
         static_cast<std::uint64_t>(info.st_dev),
         static_cast<std::uint64_t>(info.st_ino), info.st_ctim.tv_sec,
-        static_cast<std::uint32_t>(info.st_ctim.tv_nsec)};
+        static_cast<std::uint32_t>(info.st_ctim.tv_nsec),
+        static_cast<std::uint32_t>(info.st_mode),
+        static_cast<std::uint64_t>(info.st_nlink)};
   }
   // Selects a bounded slice before moving the file into a reader.
   bool select(std::size_t offset, std::size_t length, std::error_code& error) {

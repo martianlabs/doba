@@ -226,7 +226,10 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   DOBA_EXPECT_EQUAL(head->header("Content-Encoding").value(), "gzip");
   DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "10");
   DOBA_EXPECT(head->body.empty());
+  const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
   directory.write("file.txt", "abcdefghij");
+  fs::last_write_time(directory.path() / "file.txt",
+                      timestamp + std::chrono::seconds(2));
   DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto changed = receive_http_response(client);
   DOBA_EXPECT(changed.has_value());

@@ -43,6 +43,10 @@ struct filesystem_metadata {
   std::uint64_t identity = 0;
   std::int64_t changed_seconds = 0;
   std::uint32_t changed_nanoseconds = 0;
+  // Native file flags on Windows; file type and permission bits on Linux.
+  std::uint32_t attributes = 0;
+  // Number of hard links to the opened file.
+  std::uint64_t links = 0;
   bool operator==(const filesystem_metadata&) const = default;
 };
 // /////////////////////////////////////////////////////////////////////////////

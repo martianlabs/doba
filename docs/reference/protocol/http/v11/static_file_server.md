@@ -21,20 +21,22 @@ replacement. Before/after metadata checks detect many writes during loading but
 cannot establish a snapshot against an arbitrary concurrent writer.
 
 Every request reopens the selected file through the confined path resolver and
-compares handle-derived identity, size and modification/change timestamps before
-using cached bytes or evaluating HTTP conditions. If metadata matches, it also
-compares all file bytes against the immutable snapshot and rewinds the handle. A completed replacement
-or overwrite is visible to the next request, including changes preserving size
-and mtime.
+compares handle-derived identity, size, modification/change timestamps, native
+file flags and link count before using cached bytes or evaluating HTTP conditions.
+Any difference in these
+attributes invalidates the entry and reloads the file, even when content is
+identical. Cache hits do not read contents or recompute the content hash.
+Replacements change file identity and are visible to the next request without
+waiting for TTL expiry; overwrites are observed when any compared attribute changes.
 Deletion and rejected links do not keep serving a cached resident. Already-started
 responses may retain the previous immutable snapshot. TTL limits retention; it
 is not the file-change detection interval.
 
-Byte comparison covers same-size writes even when filesystem timestamp precision
-or restored dates leave metadata unchanged. This strict freshness check reads the
-cached file on every hit: caching saves repeated allocation and content hashing,
-not file validation I/O. A writer modifying a file during validation/delivery can
-still race a response; publish by atomic replacement for stable versions.
+Attribute validation depends on the filesystem's timestamp precision and update
+semantics. An in-place write that leaves every observed attribute unchanged cannot
+be distinguished from an unchanged file. Publish by atomic replacement for reliable
+version changes, or explicitly invalidate the entry after an in-place publication.
+A writer modifying a file during validation/delivery can still race a response.
 Configuration is immutable after construction; register routes before serving.
 
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_server

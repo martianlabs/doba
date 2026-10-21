@@ -26,7 +26,6 @@
 #define martianlabs_doba_protocol_http_v11_static_file_server_h
 
 #include <filesystem>
-#include <cstring>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -268,33 +267,6 @@ class static_file_server {
     return wildcard >= 0 ? wildcard : 0;
   }
 
-  // +=========================================================================+
-  // | [>] matches_file                                            ( private ) |
-  // +-------------------------------------------------------------------------+
-  // Compare actual bytes as well as metadata: filesystem timestamp precision
-  // may hide completed same-size writes. Rewind for a loader or direct reader.
-  static bool matches_file(common::filesystem_file& file,
-                           const static_file_representation& value,
-                           std::error_code& error) {
-    error.clear();
-    if (file.size() != value.bytes.size()) return false;
-    std::array<std::byte, 8192> buffer{};
-    std::size_t position = 0;
-    bool matches = true;
-    while (position < value.bytes.size()) {
-      const auto count = file.read(std::span(buffer).first(
-          std::min(buffer.size(), value.bytes.size() - position)));
-      if (!count || std::memcmp(buffer.data(), value.bytes.data() + position,
-                                 count) != 0) {
-        matches = false;
-        break;
-      }
-      position += count;
-    }
-    if (!file.select(0, file.size(), error)) return false;
-    return matches;
-  }
-
   void serve_file(const request& req, response& result, std::string relative,
                   std::string_view url_path) const {
     struct variant { std::string_view suffix, coding; int q; };
@@ -318,6 +290,8 @@ class static_file_server {
       const auto key = key_prefix_ + selected;
       // Reopen through the confined path resolver before any cache lookup.
       // TTL controls retention, not whether a replacement is visible.
+      // Any attribute change invalidates the snapshot, even for equal bytes.
+      // An attribute match reuses it without reading file contents.
       if (file.open(root_, selected, error)) {
         opened = file.metadata(error);
         if (!opened) {
@@ -326,8 +300,7 @@ class static_file_server {
         }
         if (policies_.cache) {
           cached = policies_.cache->find(key);
-          if (cached && (cached->metadata != *opened ||
-                         !matches_file(file, *cached, error))) {
+          if (cached && cached->metadata != *opened) {
             policies_.cache->erase(key, cached);
             cached.reset();
           }
@@ -373,8 +346,7 @@ class static_file_server {
         if (!opened) { file_error(result, error); return; }
         if (policies_.cache) {
           cached = policies_.cache->find(key_prefix_ + selected);
-          if (cached && (cached->metadata != *opened ||
-                         !matches_file(file, *cached, error))) {
+          if (cached && cached->metadata != *opened) {
             policies_.cache->erase(key_prefix_ + selected, cached);
             cached.reset();
           }
@@ -409,8 +381,7 @@ class static_file_server {
         });
         // Another generation may have populated this key since we opened it.
         // A response must never adopt bytes from a different observed file.
-        if (cached && (cached->metadata != *opened ||
-                       (!loaded && !matches_file(file, *cached, error)))) {
+        if (cached && cached->metadata != *opened) {
           cached.reset();
         }
         if (error) { file_error(result, error); return; }

@@ -64,6 +64,8 @@ Handle-derived metadata. Every field starts at zero.
 | identity | std::uint64_t | Inode or file index within that device. |
 | changed_seconds | std::int64_t | Metadata change time in Unix seconds. |
 | changed_nanoseconds | std::uint32_t | Subsecond metadata change time. |
+| attributes | std::uint32_t | Native Windows file flags, or Linux file type and permission bits. |
+| links | std::uint64_t | Number of hard links to the opened file. |
 
 Equality compares all fields. This is a change detector, not an immutable snapshot
 or a content hash. Precision and identity depend on the filesystem. Windows

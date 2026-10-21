@@ -335,7 +335,8 @@ DOBA_TEST("static file cache revalidates every request and retains old snapshots
   const auto tag = std::string(first.get_header("ETag").second);
   const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
   directory.write("file.txt", "new");
-  fs::last_write_time(directory.path() / "file.txt", timestamp);
+  fs::last_write_time(directory.path() / "file.txt",
+                      timestamp + std::chrono::seconds(2));
   auto fresh = file_request(routes, "GET", "/file.txt");
   DOBA_EXPECT(tag != fresh.get_header("ETag").second);
   DOBA_EXPECT_EQUAL(file_body(first), "old");
@@ -401,8 +402,14 @@ DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
   auto encoded = file_request(routes, "GET", "/app.js",
                                "Accept-Encoding: br\r\n");
   auto fallback = file_request(routes, "GET", "/missing");
+  const auto encoded_time = fs::last_write_time(directory.path() / "app.js.br");
+  const auto fallback_time = fs::last_write_time(directory.path() / "fallback.html");
   directory.write("app.js.br", "new");
   directory.write("fallback.html", "other");
+  fs::last_write_time(directory.path() / "app.js.br",
+                      encoded_time + std::chrono::seconds(2));
+  fs::last_write_time(directory.path() / "fallback.html",
+                      fallback_time + std::chrono::seconds(2));
   auto next = file_request(routes, "GET", "/app.js",
                             "Accept-Encoding: br\r\n");
   auto next_fallback = file_request(routes, "GET", "/missing");
@@ -436,9 +443,9 @@ DOBA_TEST("static file cache observes in-place size changes immediately") {
 }
 
 // +===========================================================================+
-// | [>] cached bytes beyond the first validation block          ( test-case ) |
+// | [>] cached file with unchanged size and modification time    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("static file cache checks all bytes when size and mtime are unchanged") {
+DOBA_TEST("static file cache observes replacement with unchanged size and mtime") {
   file_directory directory;
   std::string body(16385, 'x');
   directory.write("file", body);
@@ -450,6 +457,7 @@ DOBA_TEST("static file cache checks all bytes when size and mtime are unchanged"
   auto first = file_request(routes, "GET", "/file");
   const auto tag = first.get_header("ETag").second;
   body.back() = 'z';
+  fs::rename(directory.path() / "file", directory.path() / "previous");
   directory.write("file", body);
   fs::last_write_time(directory.path() / "file", timestamp);
   auto next = file_request(routes, "GET", "/file",
@@ -460,6 +468,50 @@ DOBA_TEST("static file cache checks all bytes when size and mtime are unchanged"
   DOBA_EXPECT_EQUAL(file_body(range), "z");
   body.back() = 'x';
   DOBA_EXPECT_EQUAL(file_body(first), body);
+}
+
+// +===========================================================================+
+// | [>] cached file attribute changes                           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache reloads changed attributes even for identical bytes") {
+  file_directory directory;
+  directory.write("file", "same");
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  auto first = file_request(routes, "GET", "/file");
+  const auto tag = first.get_header("ETag").second;
+  const auto root_key = fs::canonical(directory.path()).generic_u8string();
+  std::string key(root_key.begin(), root_key.end());
+  key += '\0';
+  key += "file";
+  const auto original = cache->find(key);
+  DOBA_EXPECT(original != nullptr);
+  auto unchanged = file_request(routes, "GET", "/file");
+  DOBA_EXPECT(cache->find(key) == original);
+  const auto path = directory.path() / "file";
+  const auto timestamp = fs::last_write_time(path);
+  fs::last_write_time(path, timestamp + std::chrono::seconds(2));
+  auto modified = file_request(routes, "GET", "/file");
+  const auto reloaded = cache->find(key);
+  DOBA_EXPECT(reloaded != nullptr);
+  DOBA_EXPECT(reloaded != original);
+  DOBA_EXPECT_EQUAL(modified.get_header("ETag").second, tag);
+  const auto original_permissions = fs::status(path).permissions();
+  fs::permissions(path, fs::perms::owner_write | fs::perms::group_write |
+                            fs::perms::others_write, fs::perm_options::remove);
+  auto permissions = file_request(routes, "GET", "/file");
+  // Restore write permissions before assertions so cleanup also works on Windows.
+  fs::permissions(path, original_permissions);
+  DOBA_EXPECT(cache->find(key) != reloaded);
+  DOBA_EXPECT_EQUAL(permissions.get_header("ETag").second, tag);
+  DOBA_EXPECT_EQUAL(file_body(first), "same");
+  DOBA_EXPECT_EQUAL(file_body(unchanged), "same");
+  DOBA_EXPECT_EQUAL(file_body(modified), "same");
+  DOBA_EXPECT_EQUAL(file_body(permissions), "same");
 }
 
 // +===========================================================================+

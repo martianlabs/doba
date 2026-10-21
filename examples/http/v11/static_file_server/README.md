@@ -32,8 +32,10 @@ GET and HEAD share file length and validators. Cached snapshots have strong
 SHA-256 ETags; direct streams have weak metadata ETags. Both emit Last-Modified
 and, by default, Cache-Control: no-cache. That HTTP policy allows revalidation;
 it is independent of the internal cache's one-second retention TTL. Each request
-checks the opened file's metadata and, on a candidate hit, its actual bytes;
-replacements and completed overwrites do not wait for TTL expiry.
+checks the opened file's identity, size, modification/change timestamps, native
+file flags and link count. Any attribute difference invalidates the entry and reloads it, even for identical
+contents. Hits do not read contents or recompute hashes; detection does not wait
+for TTL expiry.
 
 The example enables precompressed asset negotiation. Publish **hello.txt.br** or
 **hello.txt.gz** alongside the original and request the corresponding encoding.
@@ -53,12 +55,14 @@ RSS limit.
 
 Publish complete files by atomic replacement. Cached readers have stable bytes,
 and each request reopens/revalidates the selected file before using cached bytes.
-Completed replacements and overwrites are visible on the next request, even with
-unchanged size/mtime: candidate hits also compare the actual bytes. Deleted files
-and rejected links stop being served from cache. This strict validation reads the
-file on each hit, saving allocation/hash work rather than validation I/O. Use atomic
-replacement for stable versions when publication overlaps active requests. Direct streams own a handle, not a snapshot: concurrent in-place
-writes can alter bytes, growth is ignored, and premature EOF closes the connection.
+Replacements change file identity and are visible on the next request, including
+when size/mtime are preserved. In-place overwrites are detected through size and
+modification/change timestamps. If filesystem precision or delayed timestamp
+updates leave all attributes unchanged, call invalidate() after publication or
+publish by atomic replacement. Deleted files and rejected links stop being served
+from cache. Hits query attributes without rereading contents. Direct streams own
+a handle, not a snapshot: concurrent in-place writes can alter bytes, growth is
+ignored, and premature EOF closes the connection.
 Reads and cold loads remain synchronous. The existing transport buffers and send
 algorithm are unchanged.
 

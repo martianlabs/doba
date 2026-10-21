@@ -142,7 +142,8 @@ class filesystem_file {
         modified / 10000000, static_cast<std::uint32_t>((modified % 10000000) * 100),
         info.dwVolumeSerialNumber,
         (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) | info.nFileIndexLow,
-        changed / 10000000, static_cast<std::uint32_t>((changed % 10000000) * 100)};
+        changed / 10000000, static_cast<std::uint32_t>((changed % 10000000) * 100),
+        info.dwFileAttributes, info.nNumberOfLinks};
   }
   bool select(std::size_t offset, std::size_t length, std::error_code& error) {
     error.clear();

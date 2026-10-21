@@ -12,7 +12,9 @@ Use the corresponding executable path on Linux. Results include first-request
 application-cold latency, warm throughput, p50/p95/p99, server CPU time, RSS/peak RSS
 and handles/file descriptors after the run. Each case starts a fresh server. The
 OS page cache is never flushed. The cached configuration reloads after its default
-one-second retention TTL; requests revalidate open-file metadata and candidate-hit bytes on every access.
+one-second retention TTL; requests revalidate open-file identity, size,
+modification/change timestamps, native file flags and link count on every access,
+without reading contents on cache hits.
 Same-key requests bypass active loaders instead of waiting. Files above 1 MiB
 use direct streaming in both modes. Its default
 budget is 512 MiB with at most 1024 entries and 16 simultaneous loads.
