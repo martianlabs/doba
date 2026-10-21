@@ -408,3 +408,27 @@ DOBA_TEST("filesystem rejects native special paths") {
     DOBA_EXPECT(error == std::errc::permission_denied);
   }
 }
+
+DOBA_TEST("filesystem metadata describes handles and selected slices stay bounded") {
+  file_directory directory;
+  directory.write("data", "0123456789");
+  filesystem_file file;
+  std::error_code error;
+  DOBA_EXPECT(file.open(directory.path(), "data", error));
+  const auto before = file.metadata(error);
+  DOBA_EXPECT(before.has_value());
+  DOBA_EXPECT_EQUAL(before->size, 10);
+  DOBA_EXPECT(before->modified_seconds > 0);
+  DOBA_EXPECT(file.select(3, 4, error));
+  DOBA_EXPECT_EQUAL(file.size(), 4);
+  std::array<std::byte, 20> bytes{};
+  DOBA_EXPECT_EQUAL(file.read(bytes), 4);
+  DOBA_EXPECT(file.eof());
+  DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<const char*>(bytes.data()), 4), "3456");
+  DOBA_EXPECT_EQUAL(file.metadata(error), before);
+  DOBA_EXPECT(!file.select(5, 1, error));
+  DOBA_EXPECT(error == std::errc::invalid_argument);
+  file.close();
+  DOBA_EXPECT(!file.metadata(error).has_value());
+  DOBA_EXPECT(static_cast<bool>(error));
+}

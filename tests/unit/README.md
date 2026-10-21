@@ -44,7 +44,9 @@ response bytes that come out the other end.
   </a>
 </h2>
 
-The [common tests](common) check readers, writers, filesystem operations,
+The [cache tests](common/cache_tests.cpp) exercise bounded cost, expiration,
+shared loading and invalidation races independently of HTTP. The
+[common tests](common) check readers, writers, filesystem operations,
 containers, and coroutine helpers. Storage cases exercise memory buffers,
 disk spill, moves, cleanup, and failed operations.
 

@@ -18,6 +18,8 @@ Linux filesystem file implementation.
 
 [open](#method-open) ·
 [read](#method-read) ·
+[select](#method-select) ·
+[metadata](#method-metadata) ·
 [size](#method-size) ·
 [is_open](#method-is-open) ·
 [eof](#method-eof) ·
@@ -107,7 +109,7 @@ Returns the current size.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_linux.h:115](../../../include/common/filesystem_linux.h#L115)
+**Source:** [include/common/filesystem_linux.h:98](../../../include/common/filesystem_linux.h#L98)
 
 <a id="method-is-open"></a>
 
@@ -125,7 +127,7 @@ Reports whether open applies.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_linux.h:119](../../../include/common/filesystem_linux.h#L119)
+**Source:** [include/common/filesystem_linux.h:150](../../../include/common/filesystem_linux.h#L150)
 
 <a id="method-eof"></a>
 
@@ -143,7 +145,7 @@ Reports whether the eof condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_linux.h:123](../../../include/common/filesystem_linux.h#L123)
+**Source:** [include/common/filesystem_linux.h:154](../../../include/common/filesystem_linux.h#L154)
 
 <a id="method-failed"></a>
 
@@ -161,7 +163,7 @@ Reports whether the failed condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_linux.h:127](../../../include/common/filesystem_linux.h#L127)
+**Source:** [include/common/filesystem_linux.h:158](../../../include/common/filesystem_linux.h#L158)
 
 <a id="method-close"></a>
 
@@ -179,4 +181,36 @@ Closes the requested value.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_linux.h:131](../../../include/common/filesystem_linux.h#L131)
+**Source:** [include/common/filesystem_linux.h:58](../../../include/common/filesystem_linux.h#L58)
+
+<a id="method-metadata"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> metadata
+
+```cpp
+[[nodiscard]] std::optional<filesystem_metadata> metadata(
+    std::error_code& error) const;
+```
+
+**Parameters:** error is cleared on success and reports a native error on failure.
+
+**Returns:** Metadata from the open handle, or null on failure (including a closed
+handle). Does not resolve the path again or change the cursor. See
+[filesystem_metadata](filesystem.md#type-filesystem-metadata).
+
+<a id="method-select"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> select
+
+```cpp
+bool select(std::size_t offset, std::size_t length, std::error_code& error);
+```
+
+**Parameters:** offset/length select a bounded slice before moving an open file into
+a reader. Bounds must fit the currently declared length. error reports invalid
+bounds or a native seek failure. Offset is absolute within the file.
+
+**Returns:** true on success, false on failure. Resets the cursor to that offset,
+size() to length, and failed state. Reads stop at the selected end. No transport
+change is involved. Instances remain single-consumer objects; independent files
+have independent cursors.

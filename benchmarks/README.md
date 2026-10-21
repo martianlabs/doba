@@ -40,3 +40,7 @@ do than saying hello very quickly.
 A small adapter for the Web Frameworks benchmark: a root route, a route that
 returns a user identifier, and a user POST route. Simple handlers, plenty
 of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
+
+For the static-file controller specifically, use the
+[local cache comparison](http/v11/static-files/README.md). It measures direct and
+cached delivery through the same transport and validates response bytes.

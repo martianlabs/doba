@@ -31,6 +31,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include "common/filesystem.h"
 #include "common/reader.h"
@@ -374,11 +375,13 @@ DOBA_TEST("static files implement validators dates and precondition precedence")
   const check cases[] = {
       {"If-None-Match: W/" + tag + "\r\n", "304"},
       {"If-None-Match: \"a,b\", " + tag + "\r\n", "304"},
+      {"If-None-Match: , , " + tag + "\r\n", "304"},
       {"If-Match: " + tag + "\r\n", "200"},
       {"If-Match: W/" + tag + "\r\n", "412"},
       {"If-Match: \"missing\"\r\nIf-None-Match: " + tag + "\r\n", "412"},
       {"If-Modified-Since: " + date + "\r\n", "304"},
       {"If-None-Match: \"missing\"\r\nIf-Modified-Since: " + date + "\r\n", "200"},
+      {"If-None-Match: \r\nIf-Modified-Since: " + date + "\r\n", "200"},
       {"If-Unmodified-Since: Sun, 06 Nov 1994 08:49:37 GMT\r\n", "412"},
       {"If-Match: " + tag + "\r\nIf-Unmodified-Since: Sun, 06 Nov 1994 08:49:37 GMT\r\n", "200"},
       {"If-Modified-Since: Sun, 31 Feb 2027 08:49:37 GMT\r\n", "200"},
@@ -414,6 +417,7 @@ DOBA_TEST("static file ranges work for cached and streamed representations") {
     const range_case cases[] = {
         {"bytes=2-4", "206", "234"}, {"bytes=8-", "206", "89"},
         {"bytes=-3", "206", "789"}, {"bytes=0-999", "206", "0123456789"},
+        {"BYTES=2-3", "206", "23"},
         {"bytes=10-", "416", ""}, {"bytes=-0", "416", ""},
         {"bytes=4-2", "200", "0123456789"}, {"other=0-1", "200", "0123456789"},
         {"bytes=0-1,4-5", "200", "0123456789"},
@@ -461,6 +465,12 @@ DOBA_TEST("static files negotiate compressed variants and enforce exclusions") {
   }
   auto unacceptable = file_request(routes, "GET", "/app.js", "Accept-Encoding: *;q=0\r\n");
   DOBA_EXPECT(file_status(unacceptable).starts_with("HTTP/1.1 406"));
+  directory.write("plain.txt", "plain");
+  auto unavailable = file_request(routes, "GET", "/plain.txt", "Accept-Encoding: br, identity;q=0\r\n");
+  DOBA_EXPECT(file_status(unavailable).starts_with("HTTP/1.1 406"));
+  directory.write("only.txt.gz", "only gzip");
+  auto only_variant = file_request(routes, "GET", "/only.txt", "Accept-Encoding: gzip;q=0.5\r\n");
+  DOBA_EXPECT_EQUAL(file_body(only_variant), "only gzip");
   for (auto path : {"/.env", "/private/key", "/%2eenv", "/../app.js"}) {
     auto forbidden = file_request(routes, "GET", path);
     DOBA_EXPECT(file_status(forbidden).starts_with("HTTP/1.1 403"));
@@ -487,4 +497,26 @@ DOBA_TEST("static files offer optional index redirects SPA and MIME overrides") 
   DOBA_EXPECT_EQUAL(file_body(spa), "spa");
   auto mime = file_request(routes, "GET", "/files/data.custom");
   DOBA_EXPECT_EQUAL(mime.get_header("Content-Type").second, "application/x-custom");
+}
+
+DOBA_TEST("static file cache expires and large files preserve direct reading") {
+  file_directory directory;
+  directory.write("small", "old"); directory.write("large", "long");
+  auto cached = std::make_shared<static_file_cache>(martianlabs::doba::common::cache_policies{
+      .ttl = std::chrono::milliseconds(5)});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{
+      .cache = cached, .max_cached_file_size = 3});
+  auto old = file_request(routes, "GET", "/small");
+  const auto tag = old.get_header("ETag").second;
+  directory.write("small", "new");
+  std::this_thread::sleep_for(std::chrono::milliseconds(15));
+  auto fresh = file_request(routes, "GET", "/small");
+  DOBA_EXPECT(fresh.get_header("ETag").second != tag);
+  DOBA_EXPECT_EQUAL(file_body(old), "old");
+  DOBA_EXPECT_EQUAL(file_body(fresh), "new");
+  auto large = file_request(routes, "GET", "/large");
+  directory.write("large", "edit");
+  DOBA_EXPECT(large.get_header("ETag").second.starts_with("W/"));
+  DOBA_EXPECT_EQUAL(file_body(large), "edit");
 }

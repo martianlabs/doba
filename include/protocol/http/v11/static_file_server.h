@@ -288,8 +288,8 @@ class static_file_server {
       const auto key = key_prefix_ + selected;
       if (policies_.cache) cached = policies_.cache->find(key);
       if (cached || file.open(root_, selected, error)) { coding = variant.coding; break; }
-      if (variant.suffix.empty()) break;
       if (error != std::errc::no_such_file_or_directory && error != std::errc::not_a_directory) {
+        if (variant.suffix.empty() && error == std::errc::is_a_directory) break;
         file_error(result, error); return;
       }
     }

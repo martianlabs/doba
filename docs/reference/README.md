@@ -29,6 +29,7 @@ old names; the processing behavior is unchanged.
 </h2>
 
 - [common/byte_storage.h](common/byte_storage.md)
+- [common/cache.h](common/cache.md)
 - [common/console_line_linux.h](common/console_line_linux.md)
 - [common/console_line_windows.h](common/console_line_windows.md)
 - [common/console_logger.h](common/console_logger.md)
