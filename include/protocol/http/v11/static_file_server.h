@@ -26,8 +26,10 @@
 #define martianlabs_doba_protocol_http_v11_static_file_server_h
 
 #include <filesystem>
+#include <cstring>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <stdexcept>
 #include <string>
@@ -266,6 +268,33 @@ class static_file_server {
     return wildcard >= 0 ? wildcard : 0;
   }
 
+  // +=========================================================================+
+  // | [>] matches_file                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Compare actual bytes as well as metadata: filesystem timestamp precision
+  // may hide completed same-size writes. Rewind for a loader or direct reader.
+  static bool matches_file(common::filesystem_file& file,
+                           const static_file_representation& value,
+                           std::error_code& error) {
+    error.clear();
+    if (file.size() != value.bytes.size()) return false;
+    std::array<std::byte, 8192> buffer{};
+    std::size_t position = 0;
+    bool matches = true;
+    while (position < value.bytes.size()) {
+      const auto count = file.read(std::span(buffer).first(
+          std::min(buffer.size(), value.bytes.size() - position)));
+      if (!count || std::memcmp(buffer.data(), value.bytes.data() + position,
+                                 count) != 0) {
+        matches = false;
+        break;
+      }
+      position += count;
+    }
+    if (!file.select(0, file.size(), error)) return false;
+    return matches;
+  }
+
   void serve_file(const request& req, response& result, std::string relative,
                   std::string_view url_path) const {
     struct variant { std::string_view suffix, coding; int q; };
@@ -278,6 +307,7 @@ class static_file_server {
     common::filesystem_file file;
     std::error_code error;
     std::shared_ptr<const static_file_representation> cached;
+    std::optional<common::filesystem_metadata> opened;
     std::string selected;
     std::string_view coding;
     bool acceptable = false;
@@ -286,8 +316,31 @@ class static_file_server {
       acceptable = true;
       selected = relative + std::string(variant.suffix);
       const auto key = key_prefix_ + selected;
-      if (policies_.cache) cached = policies_.cache->find(key);
-      if (cached || file.open(root_, selected, error)) { coding = variant.coding; break; }
+      // Reopen through the confined path resolver before any cache lookup.
+      // TTL controls retention, not whether a replacement is visible.
+      if (file.open(root_, selected, error)) {
+        opened = file.metadata(error);
+        if (!opened) {
+          file_error(result, error);
+          return;
+        }
+        if (policies_.cache) {
+          cached = policies_.cache->find(key);
+          if (cached && (cached->metadata != *opened ||
+                         !matches_file(file, *cached, error))) {
+            policies_.cache->erase(key, cached);
+            cached.reset();
+          }
+          if (error) { file_error(result, error); return; }
+        }
+        coding = variant.coding;
+        break;
+      }
+      // Retire stale residents after a removal or an access failure as well.
+      if (policies_.cache) {
+        if (auto stale = policies_.cache->find(key))
+          policies_.cache->erase(key, stale);
+      }
       if (error != std::errc::no_such_file_or_directory && error != std::errc::not_a_directory) {
         if (variant.suffix.empty() && error == std::errc::is_a_directory) break;
         file_error(result, error); return;
@@ -316,18 +369,28 @@ class static_file_server {
         relative = policies_.spa_fallback;
         selected = relative;
         if (!file.open(root_, selected, error)) { file_error(result, error); return; }
+        opened = file.metadata(error);
+        if (!opened) { file_error(result, error); return; }
+        if (policies_.cache) {
+          cached = policies_.cache->find(key_prefix_ + selected);
+          if (cached && (cached->metadata != *opened ||
+                         !matches_file(file, *cached, error))) {
+            policies_.cache->erase(key_prefix_ + selected, cached);
+            cached.reset();
+          }
+          if (error) { file_error(result, error); return; }
+        }
         coding = "identity";
       } else { file_error(result, error); return; }
     }
     common::filesystem_metadata metadata;
     if (!cached) {
-      auto before = file.metadata(error);
-      if (!before) { file_error(result, error); return; }
-      metadata = *before;
-      if (policies_.cache && file.size() <= policies_.max_cached_file_size &&
+      metadata = *opened;
+      if (policies_.cache && metadata.size == file.size() &&
+          file.size() <= policies_.max_cached_file_size &&
           file.size() <= std::numeric_limits<std::size_t>::max() - sizeof(static_file_representation) - 66) {
         bool loaded = false;
-        cached = policies_.cache->get_or_load(key_prefix_ + selected,
+        cached = policies_.cache->try_get_or_load(key_prefix_ + selected,
             file.size() + sizeof(static_file_representation) + 66, [&]() -> std::shared_ptr<const static_file_representation> {
           loaded = true;
           auto value = std::make_shared<static_file_representation>();
@@ -339,11 +402,18 @@ class static_file_server {
             position += count;
           }
           auto after = file.metadata(error);
-          if (!after || *before != *after) return {};
+          if (!after || *opened != *after) return {};
           value->metadata = *after;
           value->etag = detail::static_file_etag(value->bytes);
           return value;
         });
+        // Another generation may have populated this key since we opened it.
+        // A response must never adopt bytes from a different observed file.
+        if (cached && (cached->metadata != *opened ||
+                       (!loaded && !matches_file(file, *cached, error)))) {
+          cached.reset();
+        }
+        if (error) { file_error(result, error); return; }
         if (!cached && loaded) {
           // Invalidated/changed while loading: reopen securely for direct mode.
           if (!file.open(root_, selected, error)) { file_error(result, error); return; }

@@ -21,3 +21,8 @@ destroying it; returned values may outlive it.
 Admission settings are declared in [cache_policies.h](../../../include/common/cache_policies.h);
 resource counters are declared in [cache_statistics.h](../../../include/common/cache_statistics.h).
 Both headers are self-contained and are also included by cache.h.
+
+Call try_get_or_load() when a protocol worker should fall back rather than wait
+for another caller's active load. Admitted loads remain synchronous. The
+conditional erase(key, expected) overload removes an observed value only while
+it is still resident, preserving newer generations published by other callers.

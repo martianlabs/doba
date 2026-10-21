@@ -23,7 +23,7 @@ Reservation precedes loading. Evicted values pinned by consumers remain charged.
 
 ### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cache
 
-[cache_policies](cache_policies.md) · [cache_statistics](cache_statistics.md) · [cache](#cache) · [value_type](#value-type) · [find](#find) · [get_or_load](#load) · [erase](#erase) · [clear](#clear) · [statistics](#statistics)
+[cache_policies](cache_policies.md) · [cache_statistics](cache_statistics.md) · [cache](#cache) · [value_type](#value-type) · [find](#find) · [get_or_load](#load) · [try_get_or_load](#try-load) · [erase(key)](#erase) · [erase(key, expected)](#erase-expected) · [clear](#clear) · [statistics](#statistics)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -105,6 +105,26 @@ cache has no residents. Invalidating a flight immediately releases its waiters
 with null and prevents publication or return of its obsolete value. Loader code
 itself is not cancelled. A later call can start a new generation.
 
+<a id="try-load"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_get_or_load
+
+```cpp
+template <typename LDty>
+value_type try_get_or_load(const KEty& key, std::size_t cost, LDty&& loader);
+```
+
+**Parameters:** Same key, cost and loader contract as get_or_load().
+
+**Returns:** A hit or admitted loaded value. Returns null immediately when another
+caller is already loading this key; it does not wait, invoke this caller's loader,
+or increment waiters. Capacity rejection and invalidation also return null.
+An admitted loader still runs synchronously, outside the cache mutex. This is a
+nonwaiting admission operation, not asynchronous I/O or a lock-free operation.
+
+**Errors:** Exceptions from this caller's admitted loader propagate to this caller.
+Existing blocking callers of get_or_load() can still share its result or exception.
+
 <a id="erase"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> erase
@@ -116,6 +136,21 @@ void erase(const KEty& key);
 **Parameters:** key identifies the resident entry or load.
 
 **Returns:** void. Removes the entry and invalidates a running load. Existing handles remain valid.
+
+<a id="erase-expected"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> erase(key, expected)
+
+```cpp
+bool erase(const KEty& key, const value_type& expected);
+```
+
+**Parameters:** key identifies the entry; expected is the observed owning handle.
+
+**Returns:** true if the resident still points to the observed value and was
+removed; false if it is absent or now holds another value. Does not invalidate
+in-progress loads. Existing handles remain valid. Use this overload to retire an
+observed stale entry without erasing a replacement installed by another caller.
 
 <a id="clear"></a>
 

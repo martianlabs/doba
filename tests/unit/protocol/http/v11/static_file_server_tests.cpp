@@ -35,6 +35,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "directory_link.h"
 #include "file_directory.h"
 #include "test_helper.h"
 
@@ -319,10 +320,15 @@ DOBA_TEST("static file server evaluates representation conditions") {
   DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
 }
 
-DOBA_TEST("static file cache retains response snapshots and revalidates on invalidation") {
+// +===========================================================================+
+// | [>] static file cache freshness                             ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache revalidates every request and retains old snapshots") {
   file_directory directory;
   directory.write("file.txt", "old");
-  auto cached = std::make_shared<static_file_cache>();
+  auto cached = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
   router<request, response> routes;
   routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{.cache = cached});
   auto first = file_request(routes, "GET", "/file.txt");
@@ -330,17 +336,154 @@ DOBA_TEST("static file cache retains response snapshots and revalidates on inval
   const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
   directory.write("file.txt", "new");
   fs::last_write_time(directory.path() / "file.txt", timestamp);
-  auto stale = file_request(routes, "GET", "/file.txt");
-  cached->clear();
   auto fresh = file_request(routes, "GET", "/file.txt");
   DOBA_EXPECT(tag != fresh.get_header("ETag").second);
   DOBA_EXPECT_EQUAL(file_body(first), "old");
-  DOBA_EXPECT_EQUAL(file_body(stale), "old");
   DOBA_EXPECT_EQUAL(file_body(fresh), "new");
   fs::remove(directory.path() / "file.txt");
-  cached->clear();
   auto missing = file_request(routes, "GET", "/file.txt");
   DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
+}
+
+// +===========================================================================+
+// | [>] static file replacement and conditional requests        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache observes replacements before conditional evaluation") {
+  file_directory directory;
+  directory.write("file.txt", "old");
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  auto first = file_request(routes, "GET", "/file.txt");
+  const auto tag = first.get_header("ETag").second;
+  const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
+  fs::rename(directory.path() / "file.txt", directory.path() / "previous");
+  directory.write("file.txt", "new");
+  fs::last_write_time(directory.path() / "file.txt", timestamp);
+  auto next = file_request(routes, "GET", "/file.txt",
+                           "If-None-Match: " + tag + "\r\n");
+  DOBA_EXPECT(next.get_header("ETag").second != tag);
+  auto wire = next.serialize();
+  DOBA_EXPECT(wire.head.starts_with("HTTP/1.1 200"));
+  std::string bytes;
+  if (wire.source) wire.source->read_all(bytes);
+  DOBA_EXPECT_EQUAL(bytes, "new");
+  DOBA_EXPECT_EQUAL(file_body(first), "old");
+  auto head = file_request(routes, "HEAD", "/file.txt");
+  DOBA_EXPECT(head.get_header("ETag").second != tag);
+  auto old_match = file_request(routes, "GET", "/file.txt",
+                                "If-Match: " + tag + "\r\n");
+  DOBA_EXPECT(file_status(old_match).starts_with("HTTP/1.1 412"));
+  auto old_range = file_request(routes, "GET", "/file.txt",
+                                "Range: bytes=0-0\r\nIf-Range: " + tag + "\r\n");
+  DOBA_EXPECT_EQUAL(file_body(old_range), "new");
+}
+
+// +===========================================================================+
+// | [>] compressed file replacement                             ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
+  file_directory directory;
+  directory.write("app.js", "identity");
+  directory.write("app.js.br", "old");
+  directory.write("fallback.html", "first");
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{
+          .cache = cache, .precompressed = true,
+          .spa_fallback = "fallback.html"});
+  auto encoded = file_request(routes, "GET", "/app.js",
+                               "Accept-Encoding: br\r\n");
+  auto fallback = file_request(routes, "GET", "/missing");
+  directory.write("app.js.br", "new");
+  directory.write("fallback.html", "other");
+  auto next = file_request(routes, "GET", "/app.js",
+                            "Accept-Encoding: br\r\n");
+  auto next_fallback = file_request(routes, "GET", "/missing");
+  DOBA_EXPECT_EQUAL(file_body(next), "new");
+  DOBA_EXPECT_EQUAL(file_body(next_fallback), "other");
+  DOBA_EXPECT_EQUAL(file_body(encoded), "old");
+  DOBA_EXPECT_EQUAL(file_body(fallback), "first");
+  fs::remove(directory.path() / "app.js.br");
+  auto identity = file_request(routes, "GET", "/app.js",
+                                "Accept-Encoding: br\r\n");
+  DOBA_EXPECT_EQUAL(file_body(identity), "identity");
+}
+
+// +===========================================================================+
+// | [>] cached file resize                                     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache observes in-place size changes immediately") {
+  file_directory directory;
+  directory.write("file", "old");
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  auto first = file_request(routes, "GET", "/file");
+  directory.write("file", "longer");
+  auto next = file_request(routes, "GET", "/file");
+  DOBA_EXPECT_EQUAL(file_body(first), "old");
+  DOBA_EXPECT_EQUAL(file_body(next), "longer");
+}
+
+// +===========================================================================+
+// | [>] cached bytes beyond the first validation block          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache checks all bytes when size and mtime are unchanged") {
+  file_directory directory;
+  std::string body(16385, 'x');
+  directory.write("file", body);
+  const auto timestamp = fs::last_write_time(directory.path() / "file");
+  auto cache = std::make_shared<static_file_cache>();
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  auto first = file_request(routes, "GET", "/file");
+  const auto tag = first.get_header("ETag").second;
+  body.back() = 'z';
+  directory.write("file", body);
+  fs::last_write_time(directory.path() / "file", timestamp);
+  auto next = file_request(routes, "GET", "/file",
+                            "If-None-Match: " + tag + "\r\n");
+  DOBA_EXPECT(next.get_header("ETag").second != tag);
+  DOBA_EXPECT_EQUAL(file_body(next), body);
+  auto range = file_request(routes, "GET", "/file", "Range: bytes=-1\r\n");
+  DOBA_EXPECT_EQUAL(file_body(range), "z");
+  body.back() = 'x';
+  DOBA_EXPECT_EQUAL(file_body(first), body);
+}
+
+// +===========================================================================+
+// | [>] cached directory replaced by a link                     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache rejects a directory link after warming") {
+  file_directory directory;
+  file_directory outside;
+  fs::create_directory(directory.path() / "sub");
+  directory.write("sub/file", "inside");
+  outside.write("file", "outside");
+  auto cache = std::make_shared<static_file_cache>();
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  auto warm = file_request(routes, "GET", "/sub/file");
+  fs::rename(directory.path() / "sub", directory.path() / "previous");
+  const auto link = directory.path() / "sub";
+  martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
+  auto denied = file_request(routes, "GET", "/sub/file");
+  DOBA_EXPECT(file_status(denied).starts_with("HTTP/1.1 403"));
+  DOBA_EXPECT_EQUAL(file_body(warm), "inside");
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 0);
+  fs::remove(link);
 }
 
 DOBA_TEST("static file cache isolates roots and bypasses exhausted budgets") {

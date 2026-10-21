@@ -31,7 +31,9 @@ curl --path-as-is -i http://localhost:8080/assets/../hello.txt
 GET and HEAD share file length and validators. Cached snapshots have strong
 SHA-256 ETags; direct streams have weak metadata ETags. Both emit Last-Modified
 and, by default, Cache-Control: no-cache. That HTTP policy allows revalidation;
-it is independent of the internal cache's one-second TTL.
+it is independent of the internal cache's one-second retention TTL. Each request
+checks the opened file's metadata and, on a candidate hit, its actual bytes;
+replacements and completed overwrites do not wait for TTL expiry.
 
 The example enables precompressed asset negotiation. Publish **hello.txt.br** or
 **hello.txt.gz** alongside the original and request the corresponding encoding.
@@ -40,7 +42,8 @@ not create compressed files or verify their decoded contents.
 
 The default cache admits up to 1024 entries, 512 MiB of declared live cost and 16
 concurrent loads. Files above 1 MiB, or rejected by the budget, use direct
-streaming. Expiration reloads on the next request. To invalidate immediately,
+streaming. A request coinciding with an active load also streams directly, without
+waiting for that loader. Expiration reloads on the next request. To invalidate immediately,
 retain the supplied shared cache and call clear(); controller invalidate(relative)
 also removes a filename and its compressed siblings. Invalidating does not revoke
 bytes already retained by a response. Evicted snapshots and reservations remain
@@ -49,8 +52,12 @@ allocator/control-block overhead and excess string capacity; it is not a process
 RSS limit.
 
 Publish complete files by atomic replacement. Cached readers have stable bytes,
-but a cache hit may retain deleted files or old permissions until expiration or
-invalidation. Direct streams own a handle, not a snapshot: concurrent in-place
+and each request reopens/revalidates the selected file before using cached bytes.
+Completed replacements and overwrites are visible on the next request, even with
+unchanged size/mtime: candidate hits also compare the actual bytes. Deleted files
+and rejected links stop being served from cache. This strict validation reads the
+file on each hit, saving allocation/hash work rather than validation I/O. Use atomic
+replacement for stable versions when publication overlaps active requests. Direct streams own a handle, not a snapshot: concurrent in-place
 writes can alter bytes, growth is ignored, and premature EOF closes the connection.
 Reads and cold loads remain synchronous. The existing transport buffers and send
 algorithm are unchanged.

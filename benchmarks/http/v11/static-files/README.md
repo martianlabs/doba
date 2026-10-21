@@ -12,7 +12,9 @@ Use the corresponding executable path on Linux. Results include first-request
 application-cold latency, warm throughput, p50/p95/p99, server CPU time, RSS/peak RSS
 and handles/file descriptors after the run. Each case starts a fresh server. The
 OS page cache is never flushed. The cached configuration reloads after its default
-one-second TTL; files above 1 MiB use direct streaming in both modes. Its default
+one-second retention TTL; requests revalidate open-file metadata and candidate-hit bytes on every access.
+Same-key requests bypass active loaders instead of waiting. Files above 1 MiB
+use direct streaming in both modes. Its default
 budget is 512 MiB with at most 1024 entries and 16 simultaneous loads.
 
 The defaults cover one hot file, 32 files, 1/8 clients, and 64 B through 2 MiB.
@@ -27,3 +29,6 @@ and [delayed reads](results/windows-slow-smoke-2026-10-21.json). These are short
 correctness/performance smoke runs on a shared workstation, not saturation results.
 Those archived samples used the earlier 64 MiB budget and 256 KiB file threshold;
 their 2 MiB cases therefore streamed in both modes. New runs use the current defaults.
+
+Archived results predate per-request metadata validation and nonwaiting load
+admission. Re-run the harness for comparable current performance numbers.

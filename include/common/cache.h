@@ -89,96 +89,19 @@ class cache {
   // +=========================================================================+
   // | [>] get_or_load                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // Loader returns shared_ptr<const VAty> (null means not found).
-  // cost must upper-bound the resources retained by the returned value.
-  // Null is also returned on capacity rejection or concurrent invalidation.
-  // Exceptions reach all callers waiting on that load. No failures are cached.
-  // Do not recursively load this cache from a loader (same-key recursion throws).
+  // Shares an in-progress load, waiting for its result or exception.
   template <typename LDty>
   value_type get_or_load(const KEty& key, std::size_t cost, LDty&& loader) {
-    std::shared_ptr<flight> job;
-    std::shared_ptr<charge> reservation;
-    {
-      std::unique_lock lock(mutex_);
-      if (auto hit = find_locked(key)) return hit;
-      if (auto found = flights_.find(key); found != flights_.end()) {
-        job = found->second;
-        if (job->owner == std::this_thread::get_id())
-          throw std::logic_error("Recursive cache load");
-        ++waiters_;
-        job->changed.wait(lock, [&] {
-          return job->done;
-        });
-        --waiters_;
-        if (job->error) std::rethrow_exception(job->error);
-        return job->value;
-      }
-      if (!policies_.max_entries || !policies_.max_cost ||
-          !policies_.max_loads || loads_ >= policies_.max_loads ||
-          cost > policies_.max_cost)
-        return {};
-      // Expiration and eviction release only the cache's ownership. Pins held
-      // by callers stay charged and may prevent admission of a new value.
-      while (!lru_.empty() && (entries_.size() >= policies_.max_entries ||
-                               cost > policies_.max_cost - live_->load())) {
-        remove_locked(entries_.find(lru_.back()));
-      }
-      if (cost > policies_.max_cost - live_->load()) return {};
-      reservation = std::make_shared<charge>(live_, cost);
-      job = std::make_shared<flight>();
-      flights_.emplace(key, job);
-      ++loads_;
-    }
-
-    value_type result;
-    std::exception_ptr error;
-    try {
-      if (auto value = std::invoke(std::forward<LDty>(loader))) {
-        auto owned = std::make_shared<retained>(std::move(value), reservation);
-        result = value_type(owned, owned->value.get());
-      }
-    } catch (...) {
-      error = std::current_exception();
-    }
-    reservation.reset();
-    {
-      std::lock_guard lock(mutex_);
-      --loads_;
-      auto current = flights_.find(key);
-      const bool publish = current != flights_.end() && current->second == job;
-      if (publish) {
-        if (result && !error) {
-          try {
-            while (entries_.size() >= policies_.max_entries)
-              remove_locked(entries_.find(lru_.back()));
-            lru_.push_front(key);
-            try {
-              entries_.emplace(key,
-                               entry{result, cost, expiry(), lru_.begin()});
-            } catch (...) {
-              lru_.pop_front();
-              throw;
-            }
-            resident_cost_ += cost;
-          } catch (...) {
-            error = std::current_exception();
-            result.reset();
-          }
-        }
-        flights_.erase(current);
-        job->value = result;
-        job->error = error;
-        job->done = true;
-        job->changed.notify_all();
-      } else {
-        // erase/clear already released waiters. An obsolete load cannot
-        // republish, return its old value, or erase a newer flight.
-        result.reset();
-        error = {};
-      }
-    }
-    if (error) std::rethrow_exception(error);
-    return result;
+    return load(key, cost, std::forward<LDty>(loader), true);
+  }
+  // +=========================================================================+
+  // | [>] try_get_or_load                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Returns null instead of waiting when this key is already being loaded.
+  // An admitted loader still executes synchronously outside the cache lock.
+  template <typename LDty>
+  value_type try_get_or_load(const KEty& key, std::size_t cost, LDty&& loader) {
+    return load(key, cost, std::forward<LDty>(loader), false);
   }
 
   // +=========================================================================+
@@ -192,6 +115,18 @@ class cache {
       i->second->changed.notify_all();
       flights_.erase(i);
     }
+  }
+
+  // +=========================================================================+
+  // | [>] erase                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Removes only the observed value; leaves newer entries and loads untouched.
+  bool erase(const KEty& key, const value_type& expected) {
+    std::lock_guard lock(mutex_);
+    auto found = entries_.find(key);
+    if (found == entries_.end() || found->second.value != expected) return false;
+    remove_locked(found);
+    return true;
   }
 
   // +=========================================================================+
@@ -277,6 +212,104 @@ class cache {
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
   using entries_type = std::unordered_map<KEty, entry, HAty, EQty>;
+
+  // +=========================================================================+
+  // | [>] load                                                    ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Loader returns shared_ptr<const VAty> (null means not found).
+  // cost must upper-bound the resources retained by the returned value.
+  // Null is also returned on capacity rejection or concurrent invalidation.
+  // Exceptions reach all callers waiting on that load. No failures are cached.
+  // Do not recursively load this cache from a loader (same-key recursion throws).
+  template <typename LDty>
+  value_type load(const KEty& key, std::size_t cost, LDty&& loader,
+                  bool wait_for_load) {
+    std::shared_ptr<flight> job;
+    std::shared_ptr<charge> reservation;
+    {
+      std::unique_lock lock(mutex_);
+      if (auto hit = find_locked(key)) return hit;
+      if (auto found = flights_.find(key); found != flights_.end()) {
+        if (!wait_for_load) return {};
+        job = found->second;
+        if (job->owner == std::this_thread::get_id())
+          throw std::logic_error("Recursive cache load");
+        ++waiters_;
+        job->changed.wait(lock, [&] {
+          return job->done;
+        });
+        --waiters_;
+        if (job->error) std::rethrow_exception(job->error);
+        return job->value;
+      }
+      if (!policies_.max_entries || !policies_.max_cost ||
+          !policies_.max_loads || loads_ >= policies_.max_loads ||
+          cost > policies_.max_cost)
+        return {};
+      // Expiration and eviction release only the cache's ownership. Pins held
+      // by callers stay charged and may prevent admission of a new value.
+      while (!lru_.empty() && (entries_.size() >= policies_.max_entries ||
+                               cost > policies_.max_cost - live_->load())) {
+        remove_locked(entries_.find(lru_.back()));
+      }
+      if (cost > policies_.max_cost - live_->load()) return {};
+      reservation = std::make_shared<charge>(live_, cost);
+      job = std::make_shared<flight>();
+      flights_.emplace(key, job);
+      ++loads_;
+    }
+
+    value_type result;
+    std::exception_ptr error;
+    try {
+      if (auto value = std::invoke(std::forward<LDty>(loader))) {
+        auto owned = std::make_shared<retained>(std::move(value), reservation);
+        result = value_type(owned, owned->value.get());
+      }
+    } catch (...) {
+      error = std::current_exception();
+    }
+    reservation.reset();
+    {
+      std::lock_guard lock(mutex_);
+      --loads_;
+      auto current = flights_.find(key);
+      const bool publish = current != flights_.end() && current->second == job;
+      if (publish) {
+        if (result && !error) {
+          try {
+            while (entries_.size() >= policies_.max_entries)
+              remove_locked(entries_.find(lru_.back()));
+            lru_.push_front(key);
+            try {
+              entries_.emplace(key,
+                               entry{result, cost, expiry(), lru_.begin()});
+            } catch (...) {
+              lru_.pop_front();
+              throw;
+            }
+            resident_cost_ += cost;
+          } catch (...) {
+            error = std::current_exception();
+            result.reset();
+          }
+        }
+        flights_.erase(current);
+        job->value = result;
+        job->error = error;
+        job->done = true;
+        job->changed.notify_all();
+      } else {
+        // erase/clear already released waiters. An obsolete load cannot
+        // republish, return its old value, or erase a newer flight.
+        result.reset();
+        error = {};
+      }
+    }
+    if (error) std::rethrow_exception(error);
+    return result;
+  }
+
 
   // +=========================================================================+
   // | [>] expiry                                                  ( private ) |

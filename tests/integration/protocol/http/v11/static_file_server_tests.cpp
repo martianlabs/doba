@@ -33,6 +33,7 @@
 
 #include "common/filesystem.h"
 #include "common/reader.h"
+#include "../../../../helpers/concurrency.h"
 #include "http_server.h"
 #include "protocol/http/v11/static_file_server.h"
 #include "http_test_helper.h"
@@ -193,7 +194,9 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   file_directory directory;
   directory.write("file.txt", "0123456789");
   directory.write("file.txt.gz", "compressed");
-  auto cache = std::make_shared<static_file_cache>();
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .ttl = std::chrono::hours(24)});
   tcpip_client client;
   const auto port = client.find_available_port();
   http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
@@ -224,12 +227,24 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "10");
   DOBA_EXPECT(head->body.empty());
   directory.write("file.txt", "abcdefghij");
-  cache->clear();
   DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
   auto changed = receive_http_response(client);
   DOBA_EXPECT(changed.has_value());
   DOBA_EXPECT_EQUAL(changed->body, "abcdefghij");
   DOBA_EXPECT(changed->header("ETag").value() != tag);
+  fs::rename(directory.path() / "file.txt", directory.path() / "previous");
+  directory.write("file.txt", "klmnopqrst");
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " +
+                              std::string(changed->header("ETag").value()) + "\r\n\r\n"));
+  auto replaced = receive_http_response(client);
+  DOBA_EXPECT(replaced.has_value());
+  DOBA_EXPECT_EQUAL(replaced->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(replaced->body, "klmnopqrst");
+  fs::remove(directory.path() / "file.txt");
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto removed = receive_http_response(client);
+  DOBA_EXPECT(removed.has_value());
+  DOBA_EXPECT_EQUAL(removed->status, "HTTP/1.1 404 Not Found");
   DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(20)));
   server.stop();
 }
@@ -260,5 +275,94 @@ DOBA_TEST("HTTP cached downloads survive invalidation disconnect and shutdown") 
   cache->clear();
   DOBA_EXPECT_EQUAL(complete.load(), 7);
   DOBA_EXPECT_EQUAL(cache->statistics().loads, 0);
+  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
+}
+
+// +===========================================================================+
+// | [>] HTTP cached load bypass                                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
+  using martianlabs::doba::tests::manual_event;
+  using martianlabs::doba::tests::scope_exit;
+  file_directory directory;
+  directory.write("file", "first");
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  http_server<> server({.worker_count = 1, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  const auto root = fs::canonical(directory.path()).generic_u8string();
+  std::string key(root.begin(), root.end());
+  key += '\0';
+  key += "file";
+  manual_event entered, release;
+  std::jthread loader([&] {
+    cache->get_or_load(key, 128, [&] {
+      entered.open();
+      release.wait();
+      return std::shared_ptr<const static_file_representation>{};
+    });
+  });
+  scope_exit cleanup([&] {
+    release.open();
+  });
+  DOBA_EXPECT(entered.wait_for());
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  for (std::string_view body : {"first", "other"}) {
+    directory.write("file", body);
+    DOBA_EXPECT(client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n"));
+    auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->body, body);
+    DOBA_EXPECT_EQUAL(cache->statistics().waiters, 0);
+    DOBA_EXPECT_EQUAL(cache->statistics().loads, 1);
+  }
+  server.stop();
+  release.open();
+  loader.join();
+  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
+}
+
+// +===========================================================================+
+// | [>] HTTP cached reload contention                          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
+  file_directory directory;
+  const std::string body(32768, 'c');
+  directory.write("file", body);
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{
+          .max_loads = 1, .ttl = std::chrono::milliseconds(1)});
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  http_server<> server({.worker_count = 2, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  server.start();
+  for (unsigned repeat = 0; repeat < 3; ++repeat) {
+    std::atomic<unsigned> completed{0};
+    {
+      std::vector<std::jthread> clients;
+      for (unsigned i = 0; i < 8; ++i) clients.emplace_back([&] {
+        tcpip_client client;
+        if (!client.connect(port)) return;
+        for (unsigned request_index = 0; request_index < 20; ++request_index) {
+          if (!client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n")) return;
+          auto result = receive_http_response(client);
+          if (!result || result->body != body) return;
+          ++completed;
+          std::this_thread::yield();
+        }
+      });
+    }
+    DOBA_EXPECT_EQUAL(completed.load(), 160);
+    DOBA_EXPECT_EQUAL(cache->statistics().waiters, 0);
+  }
+  server.stop();
+  cache->clear();
   DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
 }

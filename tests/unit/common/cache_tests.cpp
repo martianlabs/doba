@@ -416,3 +416,59 @@ DOBA_TEST("cache disabled admission and extreme TTL preserve contracts") {
       std::chrono::milliseconds::max() - std::chrono::milliseconds(1);
   DOBA_EXPECT_EQUAL(value.find("a"), pinned);
 }
+
+// +===========================================================================+
+// | [>] cache nonwaiting load                                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache try loading bypasses an active loader without waiting") {
+  cache<int, std::string> value;
+  manual_event entered, release;
+  std::shared_ptr<const std::string> first;
+  std::jthread worker([&] {
+    first = value.get_or_load(1, 5, [&] {
+      entered.open();
+      release.wait();
+      return text("first");
+    });
+  });
+  scope_exit cleanup([&] {
+    release.open();
+  });
+  DOBA_EXPECT(entered.wait_for());
+  bool called = false;
+  auto skipped = value.try_get_or_load(1, 5, [&] {
+    called = true;
+    return text("wrong");
+  });
+  DOBA_EXPECT(!skipped);
+  DOBA_EXPECT(!called);
+  DOBA_EXPECT_EQUAL(value.statistics().waiters, 0);
+  auto other = value.try_get_or_load(2, 5, [] {
+    return text("other");
+  });
+  DOBA_EXPECT(other != nullptr);
+  release.open();
+  worker.join();
+  DOBA_EXPECT_EQUAL(value.try_get_or_load(1, 99, [] {
+    return text("wrong");
+  }), first);
+}
+
+// +===========================================================================+
+// | [>] cache conditional invalidation                          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache conditional erase preserves a newer generation") {
+  cache<int, std::string> value;
+  auto first = value.get_or_load(1, 3, [] {
+    return text("old");
+  });
+  DOBA_EXPECT(value.erase(1, first));
+  auto second = value.get_or_load(1, 3, [] {
+    return text("new");
+  });
+  DOBA_EXPECT(!value.erase(1, first));
+  DOBA_EXPECT_EQUAL(value.find(1), second);
+  DOBA_EXPECT_EQUAL(*first, "old");
+  DOBA_EXPECT(value.erase(1, second));
+  DOBA_EXPECT(!value.find(1));
+}
