@@ -4,6 +4,12 @@ if(NOT DEFINED DOBA_CI_BUILD_DIR)
   message(FATAL_ERROR "DOBA_CI_BUILD_DIR is required")
 endif()
 get_filename_component(DOBA_CI_BUILD_DIR "${DOBA_CI_BUILD_DIR}" ABSOLUTE)
+if(NOT DEFINED DOBA_CI_INVENTORY_TIMEOUT)
+  set(DOBA_CI_INVENTORY_TIMEOUT 30)
+endif()
+if(NOT DOBA_CI_INVENTORY_TIMEOUT MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR "DOBA_CI_INVENTORY_TIMEOUT must be positive seconds")
+endif()
 set(evidence "${DOBA_CI_BUILD_DIR}/ci-evidence")
 file(MAKE_DIRECTORY "${evidence}")
 
@@ -35,18 +41,33 @@ foreach(suite IN ITEMS unit integration resilience)
     set(directory "${suite}")
   endif()
   set(binary "${DOBA_CI_BUILD_DIR}/tests/${directory}/doba_${suite}_tests${suffix}")
+  set(inventory_file "${evidence}/${suite}-tests.txt")
+  set(errors_file "${evidence}/${suite}-inventory-errors.txt")
+  message(STATUS
+    "Listing ${suite} tests (timeout: ${DOBA_CI_INVENTORY_TIMEOUT}s)")
+  string(TIMESTAMP started "%s" UTC)
+  # Write directly to disk so a terminated process leaves its partial output.
   execute_process(
     COMMAND "${binary}" --list
     RESULT_VARIABLE result
-    OUTPUT_VARIABLE inventory
-    ERROR_VARIABLE errors
-    TIMEOUT 30
+    OUTPUT_FILE "${inventory_file}"
+    ERROR_FILE "${errors_file}"
+    TIMEOUT "${DOBA_CI_INVENTORY_TIMEOUT}"
   )
-  file(WRITE "${evidence}/${suite}-tests.txt" "${inventory}")
-  file(WRITE "${evidence}/${suite}-inventory-errors.txt" "${errors}")
+  string(TIMESTAMP finished "%s" UTC)
+  math(EXPR elapsed "${finished} - ${started}")
+  file(READ "${inventory_file}" inventory)
+  file(READ "${errors_file}" errors)
+  file(WRITE "${evidence}/${suite}-inventory-status.txt"
+    "Command: ${binary} --list\nResult: ${result}\nElapsed: ${elapsed}s\nTimeout: ${DOBA_CI_INVENTORY_TIMEOUT}s\n")
   if(NOT result STREQUAL "0" OR inventory STREQUAL "")
-    message(FATAL_ERROR "Cannot list ${suite} tests: ${result}\n${errors}")
+    message(FATAL_ERROR
+      "Cannot list ${suite} tests: ${result}\n"
+      "Elapsed: ${elapsed}s; timeout: ${DOBA_CI_INVENTORY_TIMEOUT}s\n"
+      "Command: ${binary} --list\n"
+      "Evidence: ${evidence}\n${errors}")
   endif()
+  message(STATUS "Listed ${suite} tests in ${elapsed}s")
   string(REPLACE "\\" "/" inventory "${inventory}")
   if(suite STREQUAL "resilience")
     if(NOT inventory MATCHES " - resilience TCP drains mixed clients")
