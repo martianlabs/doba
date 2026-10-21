@@ -301,7 +301,7 @@ DOBA_TEST("static file server evaluates representation conditions") {
       {"If-None-Match: *\r\n", "HTTP/1.1 304"},
       {"If-None-Match: \"unknown\"\r\n", "HTTP/1.1 200"},
       {"If-Match: \"unknown\"\r\nIf-None-Match: *\r\n", "HTTP/1.1 412"},
-      {"Range: bytes=0-1\r\n", "HTTP/1.1 200"},
+      {"Range: bytes=0-1\r\n", "HTTP/1.1 206"},
   };
   for (const auto& test : cases) {
     auto result = file_request(routes, "GET", "/file", test.fields);
@@ -316,4 +316,175 @@ DOBA_TEST("static file server evaluates representation conditions") {
   }
   auto missing = file_request(routes, "GET", "/missing", "If-Match: *\r\n");
   DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
+}
+
+DOBA_TEST("static file cache retains response snapshots and revalidates on invalidation") {
+  file_directory directory;
+  directory.write("file.txt", "old");
+  auto cached = std::make_shared<static_file_cache>();
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{.cache = cached});
+  auto first = file_request(routes, "GET", "/file.txt");
+  const auto tag = std::string(first.get_header("ETag").second);
+  const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
+  directory.write("file.txt", "new");
+  fs::last_write_time(directory.path() / "file.txt", timestamp);
+  auto stale = file_request(routes, "GET", "/file.txt");
+  cached->clear();
+  auto fresh = file_request(routes, "GET", "/file.txt");
+  DOBA_EXPECT(tag != fresh.get_header("ETag").second);
+  DOBA_EXPECT_EQUAL(file_body(first), "old");
+  DOBA_EXPECT_EQUAL(file_body(stale), "old");
+  DOBA_EXPECT_EQUAL(file_body(fresh), "new");
+  fs::remove(directory.path() / "file.txt");
+  cached->clear();
+  auto missing = file_request(routes, "GET", "/file.txt");
+  DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
+}
+
+DOBA_TEST("static file cache isolates roots and bypasses exhausted budgets") {
+  file_directory a, b;
+  a.write("file", "first"); b.write("file", "other");
+  auto cached = std::make_shared<static_file_cache>(martianlabs::doba::common::cache_policies{
+      .max_cost = sizeof(static_file_representation) + 66 + 5});
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/a", a.path(), static_file_policies{.cache = cached});
+  routes.add_controller<static_file_server>("/b", b.path(), static_file_policies{.cache = cached});
+  auto first = file_request(routes, "GET", "/a/file");
+  auto second = file_request(routes, "GET", "/b/file");
+  DOBA_EXPECT(!first.get_header("ETag").second.starts_with("W/"));
+  DOBA_EXPECT(second.get_header("ETag").second.starts_with("W/"));
+  DOBA_EXPECT_EQUAL(file_body(first), "first");
+  DOBA_EXPECT_EQUAL(file_body(second), "other");
+  cached->clear();
+  DOBA_EXPECT_EQUAL(cached->statistics().live_cost, 0);
+}
+
+DOBA_TEST("static files implement validators dates and precondition precedence") {
+  file_directory directory;
+  directory.write("file", "abc");
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{
+      .cache = std::make_shared<static_file_cache>(), .cache_control = "public, max-age=60"});
+  auto original = file_request(routes, "GET", "/file");
+  const auto tag = std::string(original.get_header("ETag").second);
+  DOBA_EXPECT_EQUAL(tag, "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\"");
+  const auto date = std::string(original.get_header("Last-Modified").second);
+  struct check { std::string headers; std::string_view status; };
+  const check cases[] = {
+      {"If-None-Match: W/" + tag + "\r\n", "304"},
+      {"If-None-Match: \"a,b\", " + tag + "\r\n", "304"},
+      {"If-Match: " + tag + "\r\n", "200"},
+      {"If-Match: W/" + tag + "\r\n", "412"},
+      {"If-Match: \"missing\"\r\nIf-None-Match: " + tag + "\r\n", "412"},
+      {"If-Modified-Since: " + date + "\r\n", "304"},
+      {"If-None-Match: \"missing\"\r\nIf-Modified-Since: " + date + "\r\n", "200"},
+      {"If-Unmodified-Since: Sun, 06 Nov 1994 08:49:37 GMT\r\n", "412"},
+      {"If-Match: " + tag + "\r\nIf-Unmodified-Since: Sun, 06 Nov 1994 08:49:37 GMT\r\n", "200"},
+      {"If-Modified-Since: Sun, 31 Feb 2027 08:49:37 GMT\r\n", "200"},
+  };
+  for (const auto& test : cases) {
+    auto result = file_request(routes, "GET", "/file", test.headers);
+    DOBA_EXPECT(file_status(result).starts_with("HTTP/1.1 " + std::string(test.status)));
+    DOBA_EXPECT_EQUAL(result.get_header("ETag").second, tag);
+    DOBA_EXPECT_EQUAL(result.get_header("Cache-Control").second, "public, max-age=60");
+  }
+}
+
+DOBA_TEST("static file helpers support HTTP dates and content hash boundaries") {
+  using namespace martianlabs::doba::protocol::http::v11::detail;
+  DOBA_EXPECT_EQUAL(static_file_time("Sun, 06 Nov 1994 08:49:37 GMT"),
+                    static_file_time("Sunday, 06-Nov-94 08:49:37 GMT"));
+  DOBA_EXPECT_EQUAL(static_file_time("Sun, 06 Nov 1994 08:49:37 GMT"),
+                    static_file_time("Sun Nov  6 08:49:37 1994"));
+  DOBA_EXPECT_EQUAL(static_file_date(784111777), "Sun, 06 Nov 1994 08:49:37 GMT");
+  DOBA_EXPECT_EQUAL(static_file_etag(""), "\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"");
+  DOBA_EXPECT_EQUAL(static_file_etag(std::string(64, 'a')),
+      "\"ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb\"");
+}
+
+DOBA_TEST("static file ranges work for cached and streamed representations") {
+  for (bool cache_enabled : {false, true}) {
+    file_directory directory;
+    directory.write("file", "0123456789"); directory.write("empty", "");
+    router<request, response> routes;
+    routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{
+        .cache = cache_enabled ? std::make_shared<static_file_cache>() : nullptr});
+    struct range_case { std::string_view range, status, body; };
+    const range_case cases[] = {
+        {"bytes=2-4", "206", "234"}, {"bytes=8-", "206", "89"},
+        {"bytes=-3", "206", "789"}, {"bytes=0-999", "206", "0123456789"},
+        {"bytes=10-", "416", ""}, {"bytes=-0", "416", ""},
+        {"bytes=4-2", "200", "0123456789"}, {"other=0-1", "200", "0123456789"},
+        {"bytes=0-1,4-5", "200", "0123456789"},
+        {"bytes=999999999999999999999999-", "200", "0123456789"},
+    };
+    for (const auto& test : cases) {
+      auto result = file_request(routes, "GET", "/file", "Range: " + std::string(test.range) + "\r\n");
+      auto wire = result.serialize();
+      DOBA_EXPECT(wire.head.starts_with("HTTP/1.1 " + std::string(test.status)));
+      std::string body;
+      if (wire.source) wire.source->read_all(body);
+      DOBA_EXPECT_EQUAL(body, test.body);
+    }
+    auto head = file_request(routes, "HEAD", "/file", "Range: bytes=2-4\r\n");
+    DOBA_EXPECT_EQUAL(head.get_header("Content-Length").second, "10");
+    auto empty = file_request(routes, "GET", "/empty", "Range: bytes=0-\r\n");
+    DOBA_EXPECT(file_status(empty).starts_with("HTTP/1.1 416"));
+    auto original = file_request(routes, "GET", "/file");
+    const auto tag = std::string(original.get_header("ETag").second);
+    auto conditional = file_request(routes, "GET", "/file", "Range: bytes=1-2\r\nIf-Range: " + tag + "\r\n");
+    DOBA_EXPECT_EQUAL(file_body(conditional), cache_enabled ? "12" : "0123456789");
+  }
+}
+
+DOBA_TEST("static files negotiate compressed variants and enforce exclusions") {
+  file_directory directory;
+  directory.write("app.js", "identity"); directory.write("app.js.br", "brotli");
+  directory.write("app.js.gz", "gzip"); directory.write(".env", "secret");
+  fs::create_directory(directory.path() / "private"); directory.write("private/key", "secret");
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{
+      .cache = std::make_shared<static_file_cache>(), .precompressed = true, .excluded = {"private"}});
+  struct variant_case { std::string_view accept, body, coding; };
+  const variant_case cases[] = {
+      {"br, gzip", "brotli", "br"}, {"gzip", "gzip", "gzip"},
+      {"br;q=0, gzip;q=0.5", "identity", ""},
+      {"br;q=0.5, identity;q=0", "brotli", "br"},
+      {"*;q=0, gzip;q=1", "gzip", "gzip"}, {"", "identity", ""}};
+  for (const auto& test : cases) {
+    auto result = file_request(routes, "GET", "/app.js", "Accept-Encoding: " + std::string(test.accept) + "\r\n");
+    DOBA_EXPECT_EQUAL(result.get_header("Content-Type").second, "text/javascript");
+    if (!test.coding.empty()) DOBA_EXPECT_EQUAL(result.get_header("Content-Encoding").second, test.coding);
+    DOBA_EXPECT_EQUAL(result.get_header("Vary").second, "Accept-Encoding");
+    DOBA_EXPECT_EQUAL(file_body(result), test.body);
+  }
+  auto unacceptable = file_request(routes, "GET", "/app.js", "Accept-Encoding: *;q=0\r\n");
+  DOBA_EXPECT(file_status(unacceptable).starts_with("HTTP/1.1 406"));
+  for (auto path : {"/.env", "/private/key", "/%2eenv", "/../app.js"}) {
+    auto forbidden = file_request(routes, "GET", path);
+    DOBA_EXPECT(file_status(forbidden).starts_with("HTTP/1.1 403"));
+  }
+}
+
+DOBA_TEST("static files offer optional index redirects SPA and MIME overrides") {
+  file_directory directory;
+  fs::create_directory(directory.path() / "sub");
+  directory.write("sub/index.html", "index"); directory.write("fallback.html", "spa");
+  directory.write("data.custom", "custom");
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/files", directory.path(), static_file_policies{
+      .redirect_directories = true, .index_file = "index.html", .spa_fallback = "fallback.html",
+      .mime_types = {{".custom", "application/x-custom"}}});
+  auto redirect = file_request(routes, "GET", "/files/sub?x=hello%20world");
+  DOBA_EXPECT(file_status(redirect).starts_with("HTTP/1.1 301"));
+  DOBA_EXPECT_EQUAL(redirect.get_header("Location").second, "/files/sub/?x=hello%20world");
+  auto mount = file_request(routes, "GET", "/files");
+  DOBA_EXPECT_EQUAL(mount.get_header("Location").second, "/files/");
+  auto index = file_request(routes, "GET", "/files/sub/");
+  DOBA_EXPECT_EQUAL(file_body(index), "index");
+  auto spa = file_request(routes, "GET", "/files/missing");
+  DOBA_EXPECT_EQUAL(file_body(spa), "spa");
+  auto mime = file_request(routes, "GET", "/files/data.custom");
+  DOBA_EXPECT_EQUAL(mime.get_header("Content-Type").second, "application/x-custom");
 }

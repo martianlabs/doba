@@ -305,6 +305,9 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/filesystem
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/cache
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
   )
   add_subdirectory(

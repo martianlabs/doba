@@ -113,6 +113,37 @@ class filesystem_file {
   // | [>] size                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  [[nodiscard]] std::optional<filesystem_metadata> metadata(
+      std::error_code& error) const {
+    error.clear();
+    struct stat info{};
+    if (::fstat(file_, &info) != 0) {
+      error = std::error_code(errno, std::generic_category());
+      return {};
+    }
+    return filesystem_metadata{
+        static_cast<std::uintmax_t>(info.st_size), info.st_mtim.tv_sec,
+        static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
+        static_cast<std::uint64_t>(info.st_dev),
+        static_cast<std::uint64_t>(info.st_ino), info.st_ctim.tv_sec,
+        static_cast<std::uint32_t>(info.st_ctim.tv_nsec)};
+  }
+  // Selects a bounded slice before moving the file into a reader.
+  bool select(std::size_t offset, std::size_t length, std::error_code& error) {
+    error.clear();
+    if (offset > size_ || length > size_ - offset) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return false;
+    }
+    if (::lseek(file_, static_cast<off_t>(offset), SEEK_SET) == -1) {
+      error = std::error_code(errno, std::generic_category());
+      return false;
+    }
+    size_ = length;
+    position_ = 0;
+    failed_ = false;
+    return true;
+  }
   // +=========================================================================+
   // | [>] is_open                                                  ( public ) |
   // +-------------------------------------------------------------------------+

@@ -26,12 +26,25 @@
 #define martianlabs_doba_common_filesystem_h
 
 #include <filesystem>
+#include <cstdint>
+#include <optional>
 #include <string_view>
 #include <system_error>
 
 #include "platform.h"
 
 namespace martianlabs::doba::common {
+// Metadata read from the open handle, not by resolving its path again.
+struct filesystem_metadata {
+  std::uintmax_t size = 0;
+  std::int64_t modified_seconds = 0;
+  std::uint32_t modified_nanoseconds = 0;
+  std::uint64_t device = 0;
+  std::uint64_t identity = 0;
+  std::int64_t changed_seconds = 0;
+  std::uint32_t changed_nanoseconds = 0;
+  bool operator==(const filesystem_metadata&) const = default;
+};
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_root                                          ( function ) |

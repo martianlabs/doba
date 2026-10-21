@@ -11,6 +11,7 @@ each directory.
 | `writer` | Incremental writing and ownership transfer. |
 | `reader` | Borrowed byte reading and end-of-input handling. |
 | `filesystem` | Confined file opening and direct reading with owned handles. |
+| [cache](cache/README.md) | Generic concurrent caching, invalidation and retained ownership. |
 | `console_logger` | Structured console log levels and formatting options. |
 | `date_server` | Cached HTTP-date production and lifecycle. |
 

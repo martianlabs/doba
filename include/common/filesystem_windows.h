@@ -124,6 +124,43 @@ class filesystem_file {
   // | [>] size                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  [[nodiscard]] std::optional<filesystem_metadata> metadata(
+      std::error_code& error) const {
+    error.clear();
+    BY_HANDLE_FILE_INFORMATION info{};
+    FILE_BASIC_INFO basic{};
+    if (!GetFileInformationByHandle(file_, &info) ||
+        !GetFileInformationByHandleEx(file_, FileBasicInfo, &basic, sizeof(basic))) {
+      error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+      return {};
+    }
+    constexpr std::int64_t epoch = 116444736000000000LL;
+    const auto modified = basic.LastWriteTime.QuadPart - epoch;
+    const auto changed = basic.ChangeTime.QuadPart - epoch;
+    return filesystem_metadata{
+        (static_cast<std::uintmax_t>(info.nFileSizeHigh) << 32) | info.nFileSizeLow,
+        modified / 10000000, static_cast<std::uint32_t>((modified % 10000000) * 100),
+        info.dwVolumeSerialNumber,
+        (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) | info.nFileIndexLow,
+        changed / 10000000, static_cast<std::uint32_t>((changed % 10000000) * 100)};
+  }
+  bool select(std::size_t offset, std::size_t length, std::error_code& error) {
+    error.clear();
+    if (offset > size_ || length > size_ - offset) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return false;
+    }
+    LARGE_INTEGER position{};
+    position.QuadPart = static_cast<LONGLONG>(offset);
+    if (!SetFilePointerEx(file_, position, nullptr, FILE_BEGIN)) {
+      error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+      return false;
+    }
+    size_ = length;
+    position_ = 0;
+    failed_ = false;
+    return true;
+  }
   // +=========================================================================+
   // | [>] is_open                                                  ( public ) |
   // +-------------------------------------------------------------------------+

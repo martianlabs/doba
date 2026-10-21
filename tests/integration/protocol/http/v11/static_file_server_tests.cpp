@@ -188,3 +188,77 @@ DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
   fs::remove(directory.path() / "large");
   DOBA_EXPECT(!fs::exists(directory.path() / "large"));
 }
+
+DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
+  file_directory directory;
+  directory.write("file.txt", "0123456789");
+  directory.write("file.txt.gz", "compressed");
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  server.add_controller<static_file_server>("/", directory.path(), static_file_policies{
+      .cache = cache, .precompressed = true});
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto first = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  const auto tag = std::string(first->header("ETag").value());
+  DOBA_EXPECT(!tag.starts_with("W/"));
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " + tag + "\r\n\r\n"));
+  auto unchanged = receive_http_response(client);
+  DOBA_EXPECT(unchanged.has_value());
+  DOBA_EXPECT_EQUAL(unchanged->status, "HTTP/1.1 304 Not Modified");
+  DOBA_EXPECT(unchanged->body.empty());
+  DOBA_EXPECT_EQUAL(unchanged->header("ETag").value(), tag);
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nRange: bytes=3-6\r\nIf-Range: " + tag + "\r\n\r\n"));
+  auto part = receive_http_response(client);
+  DOBA_EXPECT(part.has_value());
+  DOBA_EXPECT_EQUAL(part->body, "3456");
+  DOBA_EXPECT_EQUAL(part->header("Content-Range").value(), "bytes 3-6/10");
+  DOBA_EXPECT(client.send_all("HEAD /file.txt HTTP/1.1\r\nHost: a\r\nAccept-Encoding: gzip\r\n\r\n"));
+  auto head = receive_http_response(client, true);
+  DOBA_EXPECT(head.has_value());
+  DOBA_EXPECT_EQUAL(head->header("Content-Encoding").value(), "gzip");
+  DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "10");
+  DOBA_EXPECT(head->body.empty());
+  directory.write("file.txt", "abcdefghij");
+  cache->clear();
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto changed = receive_http_response(client);
+  DOBA_EXPECT(changed.has_value());
+  DOBA_EXPECT_EQUAL(changed->body, "abcdefghij");
+  DOBA_EXPECT(changed->header("ETag").value() != tag);
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(20)));
+  server.stop();
+}
+
+DOBA_TEST("HTTP cached downloads survive invalidation disconnect and shutdown") {
+  file_directory directory;
+  const std::string body(128 * 1024, 'q');
+  directory.write("file", body);
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  server.add_controller<static_file_server>("/", directory.path(), static_file_policies{.cache = cache});
+  server.start();
+  std::atomic<unsigned> complete{0};
+  {
+    std::vector<std::jthread> clients;
+    for (unsigned i = 0; i < 8; ++i) clients.emplace_back([&, i] {
+      tcpip_client client;
+      if (!client.connect(port) || !client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n")) return;
+      if (i == 0) { client.close(); return; }
+      auto result = receive_http_response(client);
+      if (result && result->body == body) ++complete;
+    });
+    for (int i = 0; i < 30; ++i) { cache->clear(); std::this_thread::yield(); }
+  }
+  server.stop();
+  cache->clear();
+  DOBA_EXPECT_EQUAL(complete.load(), 7);
+  DOBA_EXPECT_EQUAL(cache->statistics().loads, 0);
+  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
+}
