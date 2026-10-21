@@ -35,7 +35,8 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::detail::make_router_handler_parametrized;
+using martianlabs::doba::protocol::http::detail::
+    make_router_handler_parametrized;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_input_case;
 using martianlabs::doba::tests::unit::router_value_response;

@@ -509,9 +509,8 @@ DOBA_TEST("engine factories preserve policies and independence") {
   });
   http::policies configuration;
   configuration.max_request_body_size = 1;
-  auto factory =
-      http::detail::make_engine_factory<http::engine<http::request, http::response>>(
-          configuration, routes);
+  auto factory = http::detail::make_engine_factory<
+      http::engine<http::request, http::response>>(configuration, routes);
   configuration.max_request_body_size = 100;
   auto first = factory();
   auto second = factory();

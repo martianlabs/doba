@@ -216,7 +216,7 @@ DOBA_TEST("tls accepts fragmented handshake and request") {
 }
 
 // +===========================================================================+
-// | [>] tls lets the engine accumulate plaintext fragments                        ( test-case ) |
+// | [>] tls lets the engine accumulate plaintext fragments      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls lets the engine accumulate plaintext fragments") {
   tls_client client;
@@ -224,7 +224,8 @@ DOBA_TEST("tls lets the engine accumulate plaintext fragments") {
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size) {
+    engine.receive = [](byte_engine& value, const char* bytes,
+                        std::size_t size) {
       value.pending.append(bytes, size);
       while (value.pending.size() >= 4) {
         value.send(std::string(value.pending.data(), 4), {}, nullptr);
@@ -317,7 +318,8 @@ DOBA_TEST("tls lets the engine enforce its plaintext limit") {
   DOBA_EXPECT(port != 0);
   auto factory = []() {
     byte_engine engine;
-    engine.receive = [](byte_engine& value, const char* bytes, std::size_t size) {
+    engine.receive = [](byte_engine& value, const char* bytes,
+                        std::size_t size) {
       value.pending.append(bytes, size);
       if (value.pending.size() >= 16) value.close();
     };

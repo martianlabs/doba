@@ -40,8 +40,10 @@
 #include "common/byte_storage.h"
 #include "common/reader.h"
 #include "http_server.h"
+#include "tcp_drain_engine.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
+#include "../../../helpers/concurrency.h"
 #include "wait_count.h"
 #include "transport/server/tcp.h"
 
@@ -51,69 +53,8 @@ using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::tests::integration::tcpip_client;
 using namespace std::chrono_literals;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] drain_state                                                ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct drain_state {
-  std::atomic<int> entered{0};
-  std::atomic<int> queued{0};
-  std::atomic<int> destroyed{0};
-  std::atomic<bool> release{true};
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] drain_engine                                               ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct drain_engine {
-  // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  using policies_type = int;
-  // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-  // +-------------------------------------------------------------------------+
-  explicit drain_engine(std::shared_ptr<drain_state> state)
-      : state_(std::move(state)) {}
-  drain_engine(const drain_engine&) = delete;
-  drain_engine(drain_engine&&) = delete;
-  ~drain_engine() { state_->destroyed++; }
-  // +=========================================================================+
-  // | [>] set_on_send                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  void set_on_send(send_delegate output) { output_ = std::move(output); }
-  // +=========================================================================+
-  // | [>] set_on_close                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  void set_on_close(std::function<void()>) {}
-  // +=========================================================================+
-  // | [>] on_bytes_received                                        ( public ) |
-  // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
-    const auto* bytes = input.data();
-    state_->entered++;
-    const auto deadline = std::chrono::steady_clock::now() + 5s;
-    while (!state_->release.load()) {
-      if (std::chrono::steady_clock::now() >= deadline) {
-        throw std::runtime_error("Test callback was not released");
-      }
-      std::this_thread::yield();
-    }
-    for (int i = 0; i < 8; i++) {
-      output_(std::string(1024 * 1024, bytes[0]), {}, nullptr);
-    }
-    state_->queued++;
-    return;
-  }
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::shared_ptr<drain_state> state_;
-  send_delegate output_;
-};
+using martianlabs::doba::tests::integration::drain_engine;
+using martianlabs::doba::tests::integration::drain_state;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -715,21 +656,26 @@ DOBA_TEST("quiesce waits for an accepting callback") {
   configuration.worker_count = 2;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::promise<void> entered;
-  std::promise<void> release;
+  martianlabs::doba::tests::manual_event release;
   auto active = entered.get_future();
-  auto ready = release.get_future().share();
   transport.set_on_connection([&]() {
     entered.set_value();
-    ready.wait();
+    release.wait();
   });
   transport.set_on_disconnection([]() {});
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    release.open();
+    transport.stop();
+  });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
   auto quiescing =
       std::async(std::launch::async, [&]() { transport.quiesce(); });
+  martianlabs::doba::tests::scope_exit release_before_join(
+      [&] { release.open(); });
   const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
-  release.set_value();
+  release.open();
   quiescing.get();
   client.close();
   transport.stop();
@@ -751,81 +697,32 @@ DOBA_TEST("stop preserves accepting callback order") {
   configuration.worker_count = 2;
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::promise<void> entered;
-  std::promise<void> release;
+  martianlabs::doba::tests::manual_event release;
   auto active = entered.get_future();
-  auto ready = release.get_future().share();
   std::atomic<int> disconnected{0};
   transport.set_on_connection([&]() {
     entered.set_value();
-    ready.wait();
+    release.wait();
   });
   transport.set_on_disconnection([&]() { disconnected++; });
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    release.open();
+    transport.stop();
+  });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
   auto stopping = std::async(std::launch::async, [&]() { transport.stop(); });
+  martianlabs::doba::tests::scope_exit release_before_join(
+      [&] { release.open(); });
   const bool pending = stopping.wait_for(200ms) == std::future_status::timeout;
   const bool ordered = disconnected.load() == 0;
-  release.set_value();
+  release.open();
   stopping.get();
   client.close();
   DOBA_EXPECT(pending);
   DOBA_EXPECT(ordered);
   DOBA_EXPECT_EQUAL(disconnected.load(), 1);
-}
-
-#ifdef __linux__
-// +===========================================================================+
-// | [>] quiesce waits for linux startup                       ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("quiesce waits for linux startup") {
-  struct copy_gate {
-    std::promise<void> entered;
-    std::shared_future<void> release;
-    std::atomic<bool> enabled{false};
-    std::atomic<bool> once{false};
-  };
-  struct gated_callback {
-    std::shared_ptr<copy_gate> gate;
-
-    explicit gated_callback(std::shared_ptr<copy_gate> value)
-        : gate(std::move(value)) {}
-    gated_callback(const gated_callback& other) : gate(other.gate) {
-      if (gate->enabled && !gate->once.exchange(true)) {
-        gate->entered.set_value();
-        gate->release.wait();
-      }
-    }
-    void operator()() const {}
-  };
-
-  auto state = std::make_shared<drain_state>();
-  auto gate = std::make_shared<copy_gate>();
-  auto copying = gate->entered.get_future();
-  std::promise<void> release;
-  gate->release = release.get_future().share();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
-  transport.set_on_connection(gated_callback{gate});
-  transport.set_on_disconnection([]() {});
-  gate->enabled = true;
-  auto starting = std::async(std::launch::async, [&]() { transport.start(); });
-  DOBA_EXPECT(copying.wait_for(5s) == std::future_status::ready);
-  auto quiescing =
-      std::async(std::launch::async, [&]() { transport.quiesce(); });
-  const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
-  release.set_value();
-  starting.get();
-  quiescing.get();
-  transport.stop();
-  DOBA_EXPECT(waited);
 }
 
 // +===========================================================================+
@@ -844,33 +741,36 @@ DOBA_TEST("quiesce permits callback updates to fail promptly") {
   tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
   std::atomic<int> connected{0};
   std::atomic<bool> prompt{false};
-  std::promise<void> attempt;
-  std::promise<void> done;
-  auto requested = attempt.get_future().share();
-  auto completed = done.get_future().share();
+  martianlabs::doba::tests::manual_event attempt, done;
   transport.set_on_connection([&]() { connected++; });
   transport.set_on_disconnection([&]() {
-    attempt.set_value();
-    prompt = completed.wait_for(1s) == std::future_status::ready;
+    attempt.open();
+    prompt = done.wait_for(1s);
   });
   std::jthread setter([&]() {
-    requested.wait();
+    attempt.wait();
     try {
       transport.set_on_connection([]() {});
     } catch (const std::runtime_error&) {
     }
-    done.set_value();
+    done.open();
+  });
+  martianlabs::doba::tests::scope_exit finish_setter([&] {
+    attempt.open();
+    if (setter.joinable()) setter.join();
+    transport.stop();
   });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(wait_count(connected, 1));
   transport.quiesce();
+  // IOCP completes disconnection during stop; Linux completes it in quiesce.
+  transport.stop();
   setter.join();
   client.close();
   transport.stop();
   DOBA_EXPECT(prompt.load());
 }
-#endif
 
 // +===========================================================================+
 // | [>] concurrent start and quiesce permit restart           ( test-case ) |

@@ -4,6 +4,12 @@ file(
   CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_LIST_DIR}/*_tests.cpp"
 )
+# Native implementation tests are separate translation units.
+if(WIN32)
+  list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_linux_tests\\.cpp$")
+else()
+  list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_windows_tests\\.cpp$")
+endif()
 if(NOT DOBA_ENABLE_TLS)
   list(REMOVE_ITEM UNIT_TEST_SOURCES
        "${CMAKE_CURRENT_LIST_DIR}/transport/server/tls_session_tests.cpp")
@@ -31,6 +37,11 @@ target_link_libraries(
 add_test(
   NAME doba_unit_tests
   COMMAND doba_unit_tests
+)
+add_test(
+  NAME doba_engine_concurrency_tests
+  COMMAND doba_unit_tests
+          --file protocol/http/v11/engine_concurrency_tests.cpp
 )
 
 add_executable(
@@ -68,6 +79,7 @@ add_test(
 )
 set_tests_properties(
   doba_unit_tests
+  doba_engine_concurrency_tests
   doba_unit_test_helper
   PROPERTIES
   TIMEOUT 120

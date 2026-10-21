@@ -394,7 +394,7 @@ struct worker {
       CloseHandle(ioh);
       throw std::runtime_error("Socket could not be created!");
     }
-    sockaddr_in addr = {0};
+    sockaddr_in addr{};
     addr.sin_addr = ip;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port_num);

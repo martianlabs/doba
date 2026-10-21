@@ -626,52 +626,6 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
   DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nlater"));
 }
 
-DOBA_TEST("engine serializes concurrent asynchronous sends") {
-  router<request, response> routes;
-  std::coroutine_handle<> first;
-  std::coroutine_handle<> second;
-  routes.add("GET", "/first", [&first](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{first};
-    make_response(res, "first");
-  });
-  routes.add("GET", "/second", [&second](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{second};
-    make_response(res, "second");
-  });
-  connection current(routes);
-  std::atomic<bool> entered{false};
-  std::atomic<bool> release{false};
-  std::atomic<int> sending{0};
-  std::atomic<bool> overlap{false};
-  current.value.set_on_send(
-      [&](std::string_view head, std::string_view body,
-          std::unique_ptr<reader>) {
-        if (sending.fetch_add(1) != 0) overlap = true;
-        if (body == "first") {
-          entered = true;
-          while (!release.load()) std::this_thread::yield();
-        }
-        current.wire.append(head).append(body);
-        sending--;
-      });
-  current.receive(
-      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
-      "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  std::jthread first_thread([&]() { first.resume(); });
-  while (!entered.load()) std::this_thread::yield();
-  std::jthread second_thread([&]() { second.resume(); });
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  release = true;
-  first_thread.join();
-  second_thread.join();
-  DOBA_EXPECT(!overlap.load());
-  const auto next = current.wire.find("HTTP/1.1", 1);
-  DOBA_EXPECT(next != std::string::npos);
-  DOBA_EXPECT(current.wire.substr(0, next).ends_with("\r\n\r\nfirst"));
-  DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nsecond"));
-}
 
 DOBA_TEST("engine closes after an asynchronous handler error") {
   router<request, response> routes;
@@ -1646,31 +1600,36 @@ DOBA_TEST("engine completes stopping when the finish observer throws") {
   DOBA_EXPECT(value.stop([]() {}));
 }
 
-DOBA_TEST("async handlers retain saved field and body views across decoder reuse") {
+DOBA_TEST(
+    "async handlers retain saved field and body views across decoder reuse") {
   for (const bool pipeline : {false, true}) {
     router<request, response> routes;
     std::coroutine_handle<> pending;
     const char* original = nullptr;
     bool valid = true;
-    routes.add("POST", "/wait", [&](const request& req, response& res) -> task<void> {
-      const auto host = req.get_host();
-      const auto data = req.get_body_reader()->take_borrowed_raw(3);
-      valid = data.has_value();
-      original = host.data();
-      co_await suspend_once{pending};
-      valid = valid && host == "original";
-      valid = valid && req.get_host().data() == original;
-      if (data) {
-        valid = valid && std::string_view(reinterpret_cast<const char*>(data->data()), data->size()) == "abc";
-      }
-      make_response(res, host);
-    });
+    routes.add(
+        "POST", "/wait", [&](const request& req, response& res) -> task<void> {
+          const auto host = req.get_host();
+          const auto data = req.get_body_reader()->take_borrowed_raw(3);
+          valid = data.has_value();
+          original = host.data();
+          co_await suspend_once{pending};
+          valid = valid && host == "original";
+          valid = valid && req.get_host().data() == original;
+          if (data) {
+            valid = valid && std::string_view(
+                                 reinterpret_cast<const char*>(data->data()),
+                                 data->size()) == "abc";
+          }
+          make_response(res, host);
+        });
     routes.add("GET", "/next", [](const request&, response& res) {
       make_response(res, "next");
     });
     connection current(routes);
     const std::string next = "GET /next HTTP/1.1\r\nHost: replacement\r\n\r\n";
-    current.receive(std::string("POST /wait HTTP/1.1\r\nHost: original\r\nContent-Length: 3\r\n\r\nabc") +
+    current.receive(std::string("POST /wait HTTP/1.1\r\nHost: "
+                                "original\r\nContent-Length: 3\r\n\r\nabc") +
                     (pipeline ? next : ""));
     DOBA_EXPECT(static_cast<bool>(pending));
     if (!pipeline) current.receive(next);
@@ -1688,11 +1647,13 @@ DOBA_TEST("async handlers own bytes before their first invocation") {
   router<request, response> routes;
   const std::string input = "GET /now HTTP/1.1\r\nHost: a\r\n\r\n";
   bool owned = true;
-  routes.add("GET", "/now", [&](const request& req, response& res) -> task<void> {
-    owned = owned && !req.borrows_bytes() && req.get_method().data() != input.data();
-    make_response(res, "now");
-    co_return;
-  });
+  routes.add("GET", "/now",
+             [&](const request& req, response& res) -> task<void> {
+               owned = owned && !req.borrows_bytes() &&
+                       req.get_method().data() != input.data();
+               make_response(res, "now");
+               co_return;
+             });
   connection current(routes);
   for (int i = 0; i < 3; ++i) current.receive(input);
   DOBA_EXPECT(owned);
@@ -1700,7 +1661,9 @@ DOBA_TEST("async handlers own bytes before their first invocation") {
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
 
-DOBA_TEST("synchronous responses reuse engine storage and engines remain independent") {
+DOBA_TEST(
+    "synchronous responses reuse engine storage and engines remain "
+    "independent") {
   router<request, response> routes;
   const std::string payload(128, 'x');
   routes.add("GET", "/sync", [&](const request&, response& res) {
@@ -1713,8 +1676,9 @@ DOBA_TEST("synchronous responses reuse engine storage and engines remain indepen
   int sent = 0;
   first.value.set_on_send([&](std::string_view head, std::string_view body,
                               std::unique_ptr<reader>) {
-    if (!sent) { first_head = head.data(); first_body = body.data(); }
-    else stable = stable && first_head == head.data() && first_body == body.data();
+    if (!sent) { first_head = head.data(); first_body = body.data();
+    } else
+      stable = stable && first_head == head.data() && first_body == body.data();
     stable = stable && body == payload;
     ++sent;
   });
@@ -1732,7 +1696,8 @@ DOBA_TEST("synchronous responses reuse engine storage and engines remain indepen
   DOBA_EXPECT_EQUAL(sent, 3);
 }
 
-DOBA_TEST("queued synchronous responses do not overwrite a pending async response") {
+DOBA_TEST(
+    "queued synchronous responses do not overwrite a pending async response") {
   router<request, response> routes;
   std::coroutine_handle<> pending;
   bool intact = false;

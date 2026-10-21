@@ -29,25 +29,14 @@
 #include <string_view>
 
 #include "protocol/contracts.h"
+#include "tcp_policy_engine.h"
 #include "test_helper.h"
 #include "transport/server/tcp.h"
 
 namespace {
 namespace tr = martianlabs::doba::transport::server;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] policy_engine                                              ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct policy_engine {
-  using policies_type = int;
-  void set_on_send(martianlabs::doba::protocol::send_delegate) {}
-  void set_on_close(std::function<void()>) {}
-  void on_bytes_received(std::string_view) {
-    return;
-  }
-};
+using martianlabs::doba::tests::unit::policy_engine;
 static_assert(!tr::contracts::execution_receiver<policy_engine>);
 }  // namespace
 
@@ -77,9 +66,4 @@ DOBA_TEST("tcp transport rejects invalid buffer policies") {
   configuration.max_buffered_send_bytes = 1;
   configuration.listen_backlog = -1;
   DOBA_EXPECT(rejects(configuration));
-#ifdef _WIN32
-  configuration.listen_backlog = 0;
-  configuration.worker_count = std::numeric_limits<std::size_t>::max();
-  DOBA_EXPECT(rejects(configuration));
-#endif
 }

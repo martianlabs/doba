@@ -45,7 +45,7 @@ request credentials(std::vector<
 static_assert(auth::contracts::provider<auth::basic, request>);
 }  // namespace
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic decodes credentials and splits the first colon    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic decodes credentials and splits the first colon") {
@@ -63,7 +63,7 @@ DOBA_TEST("Basic decodes credentials and splits the first colon") {
   DOBA_EXPECT_EQUAL(calls, 1);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic challenges missing wrong and rejected credentials ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic challenges missing wrong and rejected credentials") {
@@ -81,7 +81,7 @@ DOBA_TEST("Basic challenges missing wrong and rejected credentials") {
   }
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic rejects malformed credentials                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic rejects malformed credentials before calling validator") {
@@ -104,7 +104,7 @@ DOBA_TEST("Basic rejects malformed credentials before calling validator") {
   DOBA_EXPECT_EQUAL(calls, 1);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic allows empty user and password                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic allows empty user and password") {
@@ -116,7 +116,7 @@ DOBA_TEST("Basic allows empty user and password") {
               auth::authentication_status::kAccepted);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic rejects duplicate Authorization fields            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic rejects duplicate Authorization fields") {
@@ -127,7 +127,7 @@ DOBA_TEST("Basic rejects duplicate Authorization fields") {
               auth::authentication_status::kInvalidRequest);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic escapes realm and rejects control characters      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic escapes realm and rejects control characters") {
@@ -153,7 +153,7 @@ DOBA_TEST("Basic escapes realm and rejects control characters") {
   DOBA_EXPECT(rejected);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Basic preserves credential octets                       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic preserves credential octets without conversion") {

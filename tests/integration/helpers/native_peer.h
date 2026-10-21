@@ -25,10 +25,7 @@
 #ifndef martianlabs_doba_tests_integration_native_peer_h
 #define martianlabs_doba_tests_integration_native_peer_h
 
-#ifdef _WIN32
-#include "native_peer_windows.h"
-#elif __linux__
-#include "native_peer_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(native_peer)
 
 #endif

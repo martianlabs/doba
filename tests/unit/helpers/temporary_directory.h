@@ -25,9 +25,6 @@
 #ifndef martianlabs_doba_tests_unit_temporary_directory_h
 #define martianlabs_doba_tests_unit_temporary_directory_h
 
-#ifdef _WIN32
-#include "temporary_directory_windows.h"
-#elif __linux__
-#include "temporary_directory_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(temporary_directory)
 #endif

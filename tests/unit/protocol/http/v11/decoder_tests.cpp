@@ -3580,7 +3580,8 @@ DOBA_TEST("large operational limits do not reserve message buffers") {
 // +===========================================================================+
 // | [>] accumulator ownership and pipelining                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("decoder owns incomplete heads after the input buffer is overwritten") {
+DOBA_TEST(
+    "decoder owns incomplete heads after the input buffer is overwritten") {
   decoder<request, response> value;
   std::string_view value_input;
   std::string input = "GET /retained?key=value HTTP/1.1\r\nHost: ex";
@@ -3605,7 +3606,8 @@ DOBA_TEST("decoder drains pipelines and compacts an incomplete next head") {
     decoder<request, response> value;
     std::string_view value_input;
     const std::string first = "GET /first HTTP/1.1\r\nHost: a\r\n\r\n";
-    const std::string input = first + "GET /second HTTP/1.1\r\nHost: a\r\nX-Data: ";
+    const std::string input =
+        first + "GET /second HTTP/1.1\r\nHost: a\r\nX-Data: ";
     value_input = std::string_view(input.data(), input.size());
     auto result = value.deserialize(value_input);
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
@@ -3616,8 +3618,9 @@ DOBA_TEST("decoder drains pipelines and compacts an incomplete next head") {
     const std::string rest = std::string(padding, 'x') + "\r\n\r\n";
     value_input = std::string_view(rest.data(), rest.size());
     result = value.deserialize(value_input);
-    DOBA_EXPECT_EQUAL(result.code, padding ? deserialization_status::kInvalidSource
-                                          : deserialization_status::kSucceeded);
+    DOBA_EXPECT_EQUAL(result.code, padding
+                                       ? deserialization_status::kInvalidSource
+                                       : deserialization_status::kSucceeded);
     if (!padding) {
       DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/second");
     }
@@ -3632,7 +3635,8 @@ DOBA_TEST("decoder accepts a receive block larger than the head limit") {
   configuration.max_request_head_size = 64;
   decoder<request, response> value(configuration);
   std::string_view value_input;
-  const std::string head = "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 8192\r\n\r\n";
+  const std::string head =
+      "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 8192\r\n\r\n";
   const std::string next = "GET /next HTTP/1.1\r\nHost: a\r\n\r\n";
   const std::string input = head + std::string(8192, 'x') + next;
   value_input = std::string_view(input.data(), input.size());
@@ -3651,15 +3655,16 @@ DOBA_TEST("decoder accepts a receive block larger than the head limit") {
                     deserialization_status::kMoreBytesNeeded);
 }
 
-
-DOBA_TEST("decoder borrows immutable input and makes an independent owned request") {
+DOBA_TEST(
+    "decoder borrows immutable input and makes an independent owned request") {
   for (const bool chunked : {false, true}) {
     for (const bool pipeline : {false, true}) {
       std::optional<request> held;
       const std::byte* payload = nullptr;
       {
         decoder<request, response> value;
-        const std::string next = pipeline ? "GET /next HTTP/1.1\r\nHost: a\r\n\r\n" : "";
+        const std::string next =
+            pipeline ? "GET /next HTTP/1.1\r\nHost: a\r\n\r\n" : "";
         const std::string wire =
             std::string("POST /bor%72owed HTTP/1.1\r\nHost: example\r\n") +
             (chunked ? "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
@@ -3670,7 +3675,8 @@ DOBA_TEST("decoder borrows immutable input and makes an independent owned reques
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
         DOBA_EXPECT(result.request->borrows_bytes());
         DOBA_EXPECT_EQUAL(result.request->get_method().data(), wire.data());
-        DOBA_EXPECT_EQUAL(result.request->get_host().data(), wire.data() + wire.find("example"));
+        DOBA_EXPECT_EQUAL(result.request->get_host().data(),
+                          wire.data() + wire.find("example"));
         DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/borrowed");
         DOBA_EXPECT_EQUAL(wire, unchanged);
         const char* field = result.request->get_host().data();
@@ -3678,14 +3684,16 @@ DOBA_TEST("decoder borrows immutable input and makes an independent owned reques
         DOBA_EXPECT(!result.request->borrows_bytes());
         DOBA_EXPECT(result.request->get_host().data() != field);
         if (!chunked) {
-          const auto body = result.request->get_body_reader()->take_borrowed_raw(3);
+          const auto body =
+              result.request->get_body_reader()->take_borrowed_raw(3);
           DOBA_EXPECT(body.has_value());
           if (body) payload = body->data();
         }
         held.emplace(std::move(*result.request));
         auto following = value.deserialize(input);
-        DOBA_EXPECT_EQUAL(following.code, pipeline ? deserialization_status::kSucceeded
-                                                 : deserialization_status::kMoreBytesNeeded);
+        DOBA_EXPECT_EQUAL(following.code,
+                          pipeline ? deserialization_status::kSucceeded
+                                   : deserialization_status::kMoreBytesNeeded);
         if (pipeline) {
           DOBA_EXPECT_EQUAL(following.request->get_absolute_path(), "/next");
           DOBA_EXPECT_EQUAL(following.request->get_method().data(),
@@ -3694,7 +3702,9 @@ DOBA_TEST("decoder borrows immutable input and makes an independent owned reques
       }
       DOBA_EXPECT_EQUAL(held->get_absolute_path(), "/borrowed");
       DOBA_EXPECT_EQUAL(held->get_host(), "example");
-      if (payload) DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<const char*>(payload), 3), "abc");
+      if (payload)
+        DOBA_EXPECT_EQUAL(
+            std::string_view(reinterpret_cast<const char*>(payload), 3), "abc");
       if (chunked) {
         std::array<std::byte, 3> body{};
         DOBA_EXPECT(held->get_body_reader()->read(body).complete);
@@ -3705,10 +3715,12 @@ DOBA_TEST("decoder borrows immutable input and makes an independent owned reques
   }
 }
 
-DOBA_TEST("decoder completes every residual split then returns to direct input") {
+DOBA_TEST(
+    "decoder completes every residual split then returns to direct input") {
   for (const bool chunked : {false, true}) {
     for (const std::size_t threshold : {0U, 4096U}) {
-      const std::string first = std::string("POST /fi%72st HTTP/1.1\r\nHost: original\r\n") +
+      const std::string first =
+          std::string("POST /fi%72st HTTP/1.1\r\nHost: original\r\n") +
           (chunked ? "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
                    : "Content-Length: 3\r\n\r\nabc");
       const std::string next = "GET /next HTTP/1.1\r\nHost: next\r\n\r\n";
@@ -3775,9 +3787,11 @@ DOBA_TEST("decoder replies own their bytes across reuse and destruction") {
       DOBA_EXPECT(following.response.has_value());
     }
     auto wire = held->serialize();
-    DOBA_EXPECT(wire.head.starts_with(interim ? "HTTP/1.1 100 Continue\r\n"
-                                              : "HTTP/1.1 400 Bad Request\r\n"));
-    DOBA_EXPECT_EQUAL(wire.body, interim ? std::string_view{}
-                                       : std::string_view("Invalid request content!"));
+    DOBA_EXPECT(wire.head.starts_with(interim
+                                          ? "HTTP/1.1 100 Continue\r\n"
+                                          : "HTTP/1.1 400 Bad Request\r\n"));
+    DOBA_EXPECT_EQUAL(wire.body,
+                      interim ? std::string_view{}
+                              : std::string_view("Invalid request content!"));
   }
 }

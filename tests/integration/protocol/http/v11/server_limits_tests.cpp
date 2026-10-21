@@ -224,7 +224,7 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
 }
 
 // +===========================================================================+
-// | [>] receive chunk size is independent of HTTP head size      ( test-case ) |
+// | [>] receive chunk size is independent of HTTP head size     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 receives heads across one byte transport blocks") {
   tcpip_client client;

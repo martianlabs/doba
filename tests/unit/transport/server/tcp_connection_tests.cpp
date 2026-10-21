@@ -85,7 +85,7 @@ struct test_engine {
 }  // namespace
 
 // +===========================================================================+
-// | [>] TCP delivers fresh input blocks                          ( test-case ) |
+// | [>] TCP delivers fresh input blocks                         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection delivers fresh blocks and reuses all receive space") {
   auto factory = []() { return test_engine{}; };
@@ -109,7 +109,8 @@ DOBA_TEST("tcp connection rejects receive sizes above the buffer") {
   tcp_connection<test_engine> input(4, factory);
   bool delivered = false;
   input.engine.receive = [&](const char*, std::size_t) { delivered = true; };
-  for (const auto size : {std::size_t{5}, std::numeric_limits<std::size_t>::max()}) {
+  for (const auto size :
+       {std::size_t{5}, std::numeric_limits<std::size_t>::max()}) {
     bool caught = false;
     try {
       input.process(size);

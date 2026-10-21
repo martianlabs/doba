@@ -25,10 +25,7 @@
 #ifndef martianlabs_doba_tests_integration_tcpip_client_h
 #define martianlabs_doba_tests_integration_tcpip_client_h
 
-#ifdef _WIN32
-#include "tcpip_client_windows.h"
-#elif __linux__
-#include "tcpip_client_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(tcpip_client)
 
 #endif

@@ -47,6 +47,7 @@
 #include "tls_client.h"
 #include "tls_server_policies.h"
 #include "test_helper.h"
+#include "../../../helpers/concurrency.h"
 #include "transport/server/tls.h"
 
 namespace {
@@ -103,15 +104,6 @@ std::optional<std::string> receive_response(tls_client& client) {
   return *body;
 }
 
-struct pause_awaiter {
-  std::promise<std::coroutine_handle<>>& pending;
-
-  bool await_ready() const noexcept { return false; }
-  void await_suspend(std::coroutine_handle<> handle) const {
-    pending.set_value(handle);
-  }
-  void await_resume() const noexcept {}
-};
 }  // namespace
 
 // +===========================================================================+
@@ -246,13 +238,15 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  std::promise<std::coroutine_handle<>> pending;
-  auto suspended = pending.get_future();
+  martianlabs::doba::tests::manual_event pending;
   https_server<> http_server(server_policies(port));
+  martianlabs::doba::tests::scope_exit release_pending([&] {
+    pending.open();
+  });
   http_server.add_route("GET", "/slow",
                         [&pending](const request&, response& res)
                             -> task<void> {
-                          co_await pause_awaiter{pending};
+                          co_await pending;
                           res.ok_200().set_body("slow");
                         });
   http_server.add_route("GET", "/fast", [](const request&, response& res) {
@@ -264,11 +258,10 @@ DOBA_TEST("tls orders asynchronous and synchronous HTTP responses") {
   DOBA_EXPECT(client.send_outgoing(
       "GET /slow HTTP/1.1\r\nHost: example.com\r\n\r\n"
       "GET /fast HTTP/1.1\r\nHost: example.com\r\n\r\n"));
-  if (suspended.wait_for(std::chrono::seconds(2)) !=
-      std::future_status::ready) {
+  if (!pending.wait_for_waiters(1, std::chrono::seconds(2))) {
     throw std::runtime_error("asynchronous route did not suspend");
   }
-  suspended.get().resume();
+  pending.open();
   const auto first = receive_response(client);
   const auto second = receive_response(client);
   DOBA_EXPECT(first.has_value());
@@ -285,13 +278,15 @@ DOBA_TEST("tls waits for pending HTTP work after client disconnects") {
   tls_client client;
   const auto port = client.socket.find_available_port();
   DOBA_EXPECT(port != 0);
-  std::promise<std::coroutine_handle<>> pending;
-  auto suspended = pending.get_future();
+  martianlabs::doba::tests::manual_event pending;
   https_server<> http_server(server_policies(port));
+  martianlabs::doba::tests::scope_exit release_pending([&] {
+    pending.open();
+  });
   http_server.add_route("GET", "/slow",
                         [&pending](const request&, response& res)
                             -> task<void> {
-                          co_await pause_awaiter{pending};
+                          co_await pending;
                           res.ok_200();
                           res.set_body("done");
                         });
@@ -300,8 +295,7 @@ DOBA_TEST("tls waits for pending HTTP work after client disconnects") {
   DOBA_EXPECT(client.negotiate());
   DOBA_EXPECT(client.send_outgoing(
       "GET /slow HTTP/1.1\r\nHost: example.com\r\n\r\n"));
-  if (suspended.wait_for(std::chrono::seconds(2)) !=
-      std::future_status::ready) {
+  if (!pending.wait_for_waiters(1, std::chrono::seconds(2))) {
     throw std::runtime_error("asynchronous route did not suspend");
   }
   client.socket.close();
@@ -311,9 +305,12 @@ DOBA_TEST("tls waits for pending HTTP work after client disconnects") {
     http_server.stop();
     stopped.set_value();
   });
+  martianlabs::doba::tests::scope_exit release_before_join([&] {
+    pending.open();
+  });
   DOBA_EXPECT(stop_result.wait_for(std::chrono::milliseconds(100)) ==
               std::future_status::timeout);
-  suspended.get().resume();
+  pending.open();
   DOBA_EXPECT(stop_result.wait_for(std::chrono::seconds(2)) ==
               std::future_status::ready);
 }
@@ -353,7 +350,8 @@ DOBA_TEST("tls resumes timed asynchronous HTTP routes") {
 }
 
 // +===========================================================================+
-// | [>] plaintext chunk size is independent of HTTP head size    ( test-case ) |
+// | [>] plaintext chunk size is independent of HTTP head        ( test-case ) |
+// |     size                                                                  |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls receives HTTP heads across one byte plaintext blocks") {
   tls_client client;

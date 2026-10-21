@@ -1489,7 +1489,8 @@ DOBA_TEST("response copies a reader independently of its source lifetime") {
   DOBA_EXPECT(serialized.head.find("X-Growing") == std::string_view::npos);
 }
 
-DOBA_TEST("borrowed responses serialize directly from reusable external strings") {
+DOBA_TEST(
+    "borrowed responses serialize directly from reusable external strings") {
   std::string head, body;
   std::string saved;
   const auto text = std::string(128, 'b');
@@ -1535,7 +1536,8 @@ DOBA_TEST("moving borrowed responses preserves the external bytes") {
   }
 }
 
-DOBA_TEST("borrowed response storage still enforces limits and offloads bodies") {
+DOBA_TEST(
+    "borrowed response storage still enforces limits and offloads bodies") {
   for (const std::size_t threshold : {0U, 3U, 32U}) {
     std::string head, body;
     auto value = response::from(4096, threshold, head, body);

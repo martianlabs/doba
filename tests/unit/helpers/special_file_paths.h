@@ -25,10 +25,7 @@
 #ifndef martianlabs_doba_tests_unit_special_file_paths_h
 #define martianlabs_doba_tests_unit_special_file_paths_h
 
-#ifdef _WIN32
-#include "special_file_paths_windows.h"
-#elif __linux__
-#include "special_file_paths_linux.h"
-#endif
+#include "../../helpers/platform.h"
+#include DOBA_TEST_PLATFORM_HEADER(special_file_paths)
 
 #endif

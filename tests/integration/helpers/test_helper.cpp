@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include "test_helper.h"
+#include "../../helpers/test_watchdog.h"
 
 #include <cstddef>
 #include <cstdio>
@@ -200,6 +201,8 @@ void test_helper::set_context(std::string_view value) {
 // /////////////////////////////////////////////////////////////////////////////
 int test_helper::run(int argc, char** argv) {
   bool list = false;
+  std::string_view timeout_argument;
+  bool timeout_given = false;
   std::string file;
   std::string_view name;
   std::string_view exclude;
@@ -208,12 +211,16 @@ int test_helper::run(int argc, char** argv) {
     if (argument == "--list") {
       list = true;
     } else if ((argument == "--file" || argument == "--name" ||
-                argument == "--exclude") &&
+                argument == "--exclude" || argument == "--timeout-ms") &&
                i + 1 < argc) {
       const std::string_view value{argv[++i]};
       if (argument == "--file") file = value;
       if (argument == "--name") name = value;
       if (argument == "--exclude") exclude = value;
+      if (argument == "--timeout-ms") {
+        timeout_argument = value;
+        timeout_given = true;
+      }
     } else {
       std::fputs("Invalid test arguments\n", stderr);
       return 2;
@@ -248,6 +255,18 @@ int test_helper::run(int argc, char** argv) {
     }
     return 0;
   }
+  std::chrono::milliseconds timeout{30000};
+  const char* environment_timeout = std::getenv("DOBA_TEST_TIMEOUT_MS");
+  const auto configured_timeout = !timeout_given
+      ? std::string_view(environment_timeout ? environment_timeout : "30000")
+      : timeout_argument;
+  if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout,
+                                                      timeout)) {
+    std::fputs("Invalid test timeout: expected 1..3600000 milliseconds\n",
+               stderr);
+    return 2;
+  }
+  ::martianlabs::doba::tests::test_watchdog watchdog(timeout);
   common::console_logger logger{
       "integration_tests", common::console_logger_options{
                                .show_function = false, .show_line = false}};
@@ -270,6 +289,7 @@ int test_helper::run(int argc, char** argv) {
                 test.file.data(), test.line, static_cast<int>(test.name.size()),
                 test.name.data());
     std::fflush(stdout);
+    watchdog.arm(test.file, test.line, test.name);
     try {
       test.test();
     } catch (const std::exception& error) {
@@ -279,6 +299,7 @@ int test_helper::run(int argc, char** argv) {
       failures()++;
       std::fputs("Unknown exception\n", stderr);
     }
+    watchdog.disarm();
     if (failures() != failures_before) {
       failed_tests++;
       logger.error() << test.file << ':' << test.line << " - " << test.name

@@ -45,7 +45,7 @@ request credentials(std::vector<
 static_assert(auth::contracts::provider<auth::bearer, request>);
 }  // namespace
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer passes token unchanged to validator              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer passes token unchanged to validator") {
@@ -60,7 +60,7 @@ DOBA_TEST("Bearer passes token unchanged to validator") {
   DOBA_EXPECT_EQUAL(calls, 1);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer omits error without credentials                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer omits error when no Bearer credentials were supplied") {
@@ -76,7 +76,7 @@ DOBA_TEST("Bearer omits error when no Bearer credentials were supplied") {
                     "Bearer realm=\"demo\"");
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer reports invalid_token on rejection               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer reports invalid_token when validator rejects token") {
@@ -88,7 +88,7 @@ DOBA_TEST("Bearer reports invalid_token when validator rejects token") {
                     "Bearer realm=\"demo\", error=\"invalid_token\"");
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer rejects malformed token                          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer rejects malformed token without calling validator") {
@@ -105,7 +105,7 @@ DOBA_TEST("Bearer rejects malformed token without calling validator") {
   DOBA_EXPECT_EQUAL(calls, 0);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer rejects duplicate Authorization fields           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer rejects duplicate Authorization fields") {
@@ -116,7 +116,7 @@ DOBA_TEST("Bearer rejects duplicate Authorization fields") {
               auth::authentication_status::kInvalidRequest);
 }
 
-// +---------------------------------------------------------------------------+
+// +===========================================================================+
 // | [>] Bearer validates realm and callable                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer escapes realm and rejects invalid configuration") {
