@@ -170,6 +170,10 @@ C++20 requirement, and system threading dependency.
 
 *Correct is non-negotiable.*
 
+We like a good benchmark as much as the next person. But if a server needs
+well-behaved clients and a bit of luck to stay up, the numbers can wait.
+Here's what we put doba through before letting it brag about being fast.
+
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
@@ -183,11 +187,95 @@ C++20 requirement, and system threading dependency.
   </picture>
 </a>
 
+An empty buffer. A header that's almost legal. A body that fits the limit
+exactly, followed by one that misses it by a single byte. This is where
+"surely nobody would send that" goes to die.
 
-Real sockets, hostile inputs, and tests that must catch deliberately broken
-code. The green tick has to earn its keep.
+The [unit suite](tests/unit) checks HTTP parsing, raw and chunked bodies,
+routing, authentication, storage, and who actually owns those bytes once
+the buffer gets reused. Small details. Expensive bugs.
 
-[Inside the test suites](tests/README.md) / [The CI matrix](.github/workflows/ci.yml)
+That lovely request from the example? It may turn up in pieces, with three
+more requests behind it, from a client that hangs up halfway through.
+The [integration suite](tests/integration) runs actual TCP and TLS servers
+and makes those situations happen, including shutdown while work is still
+in flight.
+
+We also send hostile requests with another request right behind them.
+Rejecting the first is only half the job: the second mustn't sneak through
+to a handler while everyone's busy showing the first one the door.
+
+Request two finishes before request one. Meanwhile, another receive lands,
+shutdown starts, and a callback turns up late. You don't want to discover
+what that combination does on somebody else's server.
+
+So we suspend handlers and choose when to release them. We check response
+order and object lifetimes at those awkward overlaps, then repeat the
+[critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
+**200 times under ThreadSanitizer** in CI. The scheduler doesn't get to
+decide whether we exercised the interesting bit today.
+
+One client reads in tiny mouthfuls. Another resets the connection.
+Handlers are suspended, bodies spill to disk, and several TCP and TLS
+clients are doing this at once. Then we drain the server, restart it,
+and give the [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
+another go.
+
+Surviving isn't the whole check. Did the payloads arrive in order? Are the
+handlers gone? Did we leave temporary files lying around? We check
+handles/descriptors after draining and record memory use after warmup.
+"It didn't crash" is a fairly low bar for a server.
+
+We can dream up plenty of bad HTTP. libFuzzer has more time for this sort
+of thing, and considerably less taste.
+
+Our [HTTP decoder and chunked harnesses](tests/fuzz/README.md) feed its bytes
+through checks for consumption, message boundaries, fragmentation, buffer
+ownership, and memory/disk storage. Each harness gets **60 seconds per CI
+run on Linux and Windows** under AddressSanitizer and UndefinedBehaviorSanitizer,
+using a cached corpus so it doesn't start from scratch every time.
+
+When an input breaks something, we keep it. That particular nonsense now
+has a permanent seat in the test suite.
+
+A green tick looks reassuring. You can also get one from a test that checks
+absolutely nothing useful.
+
+The [mutation checks](tests/mutation/README.md) deliberately sabotage private
+copies of the headers: remove a body limit, break response ordering, let
+requests reach a handler after rejection. Three bugs we very much want
+caught. Each has to trip its intended assertion, while the original code
+passes. If the broken version gets a green tick too, we've got work to do.
+
+Nothing like spending an afternoon debugging the server and finding out
+the test runner was lying to you.
+
+Ours gets its own [unit](tests/unit/helpers/test_helper_tests.cpp) and
+[integration](tests/integration/helpers/test_helper_tests.cpp) metatests:
+filters must select the right cases, failures must get reported, and
+exceptions, timeouts, and cleanup paths must behave. A stuck test gets a
+deadline and a name in the report, so you have somewhere better to start
+than "well, CI hung."
+
+All of this has to get past the [CI matrix](.github/workflows/ci.yml):
+**GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
+Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan and UBSan
+with TLS**, including a Clang build alongside MSVC. Both platforms repeat
+the critical concurrency cases **200 times**; TSan checks for races on Linux.
+And yes, **the tests run in Release, optimizations and all**. That's the code
+we care about running. Debug gets a compile check. The test tooling uses
+C++ and CMake; building doba is quite enough setup for testing doba.
+
+We also check **CMake 3.20** and build and run separate applications using
+both the installed package and **add_subdirectory**. It would be a bit
+embarrassing if the library only worked inside its own build directory.
+
+Fancy a second opinion? There are also adapters for manual protocol checks
+with [h1spec](compliance/http/v11/h1spec/README.md) and
+[Http11Probe](compliance/http/v11/http11probe/README.md). We wrote the server
+and the tests; letting somebody else's tools have a go seems only fair.
+
+[Inside the test suites](tests/README.md)
 
 ---
 
