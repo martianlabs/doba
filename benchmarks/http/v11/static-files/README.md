@@ -55,3 +55,8 @@ headers from 6fbb4290, metadata and monitor modes):
 [Linux/WSL report](results/linux-monitor-2026-10-22.md). The report retains timeouts,
 raw data, the preliminary series and syscall counts; it is not a remote benchmark
 claim. Rerun the same remote workload to evaluate production performance.
+
+A [fallback investigation](results/linux-monitor-fallback-2026-10-22.md) reproduces
+a roughly tenfold throughput loss on a WSL Windows-drive mount. Monitoring enabled
+in policy does not prove native coverage: check the filesystem and observation
+probe in the same container/mount namespace before comparing modes.

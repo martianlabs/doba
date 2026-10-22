@@ -42,3 +42,11 @@ requires stronger guarantees; notification absence alone does not prove freshnes
 
 The [API reference](../../../docs/reference/common/filesystem_monitor.md) explains
 resource limits, error handling and generation scope.
+
+For a benchmark preflight, run this example with an existing asset and a poll count
+of 1 inside the server's container or mount namespace. An initial generation means
+coverage was established; an error explains why the HTTP controller would use
+attribute revalidation instead. Enabling monitor_files alone does not prove active
+native coverage. On Linux, stat -f -c '%T %t' /absolute/asset/root identifies the
+mount type; Windows-drive mounts exposed to WSL as v9fs are not in the supported
+Linux set.

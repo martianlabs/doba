@@ -35,6 +35,26 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
   </a>
 </h2>
 
+Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
+
+Measured on **Scaleway, 2026-10-20**, using the official HttpArena suite:
+native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
+upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
+upstream from its repetitions, not averaged across runs.
+The campaign's reference-model verification is **incomplete**; these are
+local results, not the published HttpArena leaderboard.
+
+Every chart shows the **same top 10 from the overall ranking**, ordered by each
+test's metric. Scores retain normalization across all **15 measured servers**.
+The total includes eight scored profiles and the upstream completeness factor;
+**pipelined**, **latency-500k-8cpu** and **static-tls** are reference-only profiles.
+Failed and skipped measurements are shown explicitly; they are not measured zeroes.
+
+The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
+(**64 cores / 128 threads**), **576 GiB of DDR5 RAM** and
+**2 x 3.84 TB NVMe** storage. It provides a **25 Gbps private network**
+and a **1 Gbps public connection**, upgradable to **25 Gbps**.
+
 <a href="resources/benchmarks/benchmark-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow.svg">
@@ -47,9 +67,6 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
     <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-20. doba ranks 1 of 15 with 7,627.93 overall points, 16.7% more points than tako. Upstream totals include completeness. Top ten shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
-
-Official HttpArena suite, **Scaleway, 20 Oct 2026**, **3 repetitions**.
-Local results; reference-model verification is incomplete.
 
 [See the full ranking, all 11 workloads, and machine specs](docs/benchmarks/README.md).
 
