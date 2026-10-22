@@ -48,3 +48,10 @@ their 2 MiB cases therefore streamed in both modes. New runs use the current def
 
 Archived results predate per-request metadata validation and nonwaiting load
 admission. Re-run the harness for comparable current performance numbers.
+
+
+Current native-monitor development comparison (all 18 final runs, initial TTL
+headers from 6fbb4290, metadata and monitor modes):
+[Linux/WSL report](results/linux-monitor-2026-10-22.md). The report retains timeouts,
+raw data, the preliminary series and syscall counts; it is not a remote benchmark
+claim. Rerun the same remote workload to evaluate production performance.

@@ -132,3 +132,9 @@ next-response guarantee is required. Notify delivery, not a TTL, drives generati
 Native backends are implementation headers; include common/filesystem.h or this
 header. See the [example](../../../examples/common/filesystem_monitor/README.md).
 The generic cache contains no filesystem dependencies.
+
+
+Native semantics: [Linux inotify](https://man7.org/linux/man-pages/man7/inotify.7.html)
+and [Windows directory notifications](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw).
+Root setup errors are permanent for an instance; construct a new monitor after
+correcting an initially inaccessible or missing root.
