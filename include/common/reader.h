@@ -28,8 +28,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <memory>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -60,6 +62,7 @@ class reader {
   reader(reader&& in) noexcept
       : storage_(std::move(in.storage_)),
         file_(std::move(in.file_)),
+        owner_(std::move(in.owner_)),
         borrowed_(in.borrowed_),
         borrowed_pos_(in.borrowed_pos_),
         failed_(in.failed_),
@@ -78,6 +81,7 @@ class reader {
     if (this == &in) return *this;
     storage_ = std::move(in.storage_);
     file_ = std::move(in.file_);
+    owner_ = std::move(in.owner_);
     borrowed_ = in.borrowed_;
     borrowed_pos_ = in.borrowed_pos_;
     failed_ = in.failed_;
@@ -98,8 +102,17 @@ class reader {
   static reader borrowed(std::span<const std::byte> source) noexcept {
     return reader(source, borrowed_tag{});
   }
+  // Retains the owner while reading a stable immutable slice. Each reader has
+  // an independent cursor. The span must refer into the supplied owner.
+  static reader shared(std::shared_ptr<const void> owner,
+                       std::span<const std::byte> source) {
+    if (!owner) throw std::invalid_argument("Shared reader needs an owner");
+    auto result = reader(source, borrowed_tag{});
+    result.owner_ = std::move(owner);
+    return result;
+  }
   void rebind_borrowed(std::span<const std::byte> source) noexcept {
-    if (is_borrowed_) borrowed_ = source;
+    if (is_borrowed_ && !owner_) borrowed_ = source;
   }
 
   // +=========================================================================+
@@ -200,6 +213,7 @@ class reader {
   // +-------------------------------------------------------------------------+
   byte_storage storage_;
   std::optional<filesystem_file> file_;
+  std::shared_ptr<const void> owner_;
   std::span<const std::byte> borrowed_;
   std::size_t borrowed_pos_{0};
   bool failed_{false};

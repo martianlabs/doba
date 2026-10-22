@@ -24,3 +24,16 @@ The file and its cursor are move-only. `size()` records the size at open:
 growth does not extend the read, and truncation before that size sets `failed()`.
 Reads are synchronous. The open handle keeps the file object alive, but does
 not freeze bytes against writes by another process.
+
+
+## Query attributes
+
+```sh
+common_filesystem examples/common/filesystem README.md --metadata
+```
+
+This mode calls `filesystem_file::inspect(root, relative, error)` and prints the
+current identity, size, modification/change times, native attributes and link
+count without reading contents. It applies the same path and regular-file rules.
+On Linux with openat2 support it uses an attribute-only O_PATH descriptor; Windows
+and compatibility fallbacks use the existing confined open/metadata procedure.

@@ -28,6 +28,21 @@ thread exits. Keeping these allocations trades retained per-thread memory
 for avoiding allocation and release on every response. Compression parameters
 remain unchanged.
 
+The TLS `/static/*` GET/HEAD routes are registered by Doba's documented
+`static_file_server` controller. Its built-in cache is enabled with default
+cache policies, and `precompressed = true` selects the on-disk Brotli/gzip
+representations. There is no benchmark-specific file loader, MIME table,
+preloaded directory or response-body cache in the adapter. HTTP and transport
+memory policies remain at their library defaults.
+
+Freshness caveat for `feature/static`: the current built-in cache uses a
+1-second TTL and does not check disk metadata on every cache hit. HttpArena's
+written rule requires the next response after a file replacement to contain
+the new bytes. Its current validator has a 2-second tolerance; passing that
+check alone does not establish strict compliance with the written rule.
+Resolve this in the library's static-file cache before an official submission;
+do not add benchmark-specific invalidation or bypass validation.
+
 The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,
 `GET /json/:count`, `GET /static/*` and `POST /echo`. The delay route suspends

@@ -32,6 +32,10 @@
 #include <utility>
 #include <cerrno>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#if __has_include(<linux/openat2.h>)
+#include <linux/openat2.h>
+#endif
 
 #include "common/filesystem.h"
 
@@ -86,6 +90,62 @@ class filesystem_file {
     return open_target(target, error);
   }
   // +=========================================================================+
+  // | [>] inspect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Query attributes without opening the file for reading. Path resolution
+  // rejects links in every component, including a replaced root directory.
+  [[nodiscard]] static std::optional<filesystem_metadata> inspect(
+      const std::filesystem::path& root, std::string_view path,
+      std::error_code& error) {
+    error.clear();
+    if (!detail::filesystem_relative_path(path, error)) return {};
+    if (!root.is_absolute()) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return {};
+    }
+#if defined(SYS_openat2) && defined(RESOLVE_NO_SYMLINKS)
+    const auto target = root.lexically_normal() / std::filesystem::path(path);
+    struct open_how how{};
+    how.flags = O_PATH | O_CLOEXEC;
+    how.resolve = RESOLVE_NO_SYMLINKS;
+    const auto descriptor = ::syscall(SYS_openat2, AT_FDCWD, target.c_str(),
+                                      &how, sizeof(how));
+    if (descriptor >= 0) {
+      filesystem_file file;
+      file.file_ = static_cast<int>(descriptor);
+      struct stat info{};
+      if (::fstat(file.file_, &info) != 0) {
+        error = std::error_code(errno, std::generic_category());
+        return {};
+      }
+      if (!S_ISREG(info.st_mode)) {
+        error = std::make_error_code(S_ISDIR(info.st_mode)
+                                         ? std::errc::is_a_directory
+                                         : std::errc::permission_denied);
+        return {};
+      }
+      if (info.st_size < 0 || static_cast<std::uintmax_t>(info.st_size) >
+                                  std::numeric_limits<std::size_t>::max()) {
+        error = std::make_error_code(std::errc::value_too_large);
+        return {};
+      }
+      return describe(info);
+    }
+    const auto code = errno;
+    // Older kernels/headers and sandbox profiles can lack openat2. Keep the
+    // component-by-component confined resolver as the compatibility path.
+    if (code != ENOSYS && code != EINVAL && code != E2BIG && code != EPERM) {
+      error = code == ELOOP
+                  ? std::make_error_code(std::errc::permission_denied)
+                  : std::error_code(code, std::generic_category());
+      return {};
+    }
+#endif
+    filesystem_file file;
+    if (!file.open(root, path, error)) return {};
+    return file.metadata(error);
+  }
+  // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t read(std::span<std::byte> output) {
@@ -113,6 +173,32 @@ class filesystem_file {
   // | [>] size                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  [[nodiscard]] std::optional<filesystem_metadata> metadata(
+      std::error_code& error) const {
+    error.clear();
+    struct stat info{};
+    if (::fstat(file_, &info) != 0) {
+      error = std::error_code(errno, std::generic_category());
+      return {};
+    }
+    return describe(info);
+  }
+  // Selects a bounded slice before moving the file into a reader.
+  bool select(std::size_t offset, std::size_t length, std::error_code& error) {
+    error.clear();
+    if (offset > size_ || length > size_ - offset) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return false;
+    }
+    if (::lseek(file_, static_cast<off_t>(offset), SEEK_SET) == -1) {
+      error = std::error_code(errno, std::generic_category());
+      return false;
+    }
+    size_ = length;
+    position_ = 0;
+    failed_ = false;
+    return true;
+  }
   // +=========================================================================+
   // | [>] is_open                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -137,6 +223,19 @@ class filesystem_file {
   }
 
  private:
+  // +=========================================================================+
+  // | [>] describe                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  static filesystem_metadata describe(const struct stat& info) noexcept {
+    return filesystem_metadata{
+        static_cast<std::uintmax_t>(info.st_size), info.st_mtim.tv_sec,
+        static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
+        static_cast<std::uint64_t>(info.st_dev),
+        static_cast<std::uint64_t>(info.st_ino), info.st_ctim.tv_sec,
+        static_cast<std::uint32_t>(info.st_ctim.tv_nsec),
+        static_cast<std::uint32_t>(info.st_mode),
+        static_cast<std::uint64_t>(info.st_nlink)};
+  }
   // +=========================================================================+
   // | [>] open_target                                             ( private ) |
   // +-------------------------------------------------------------------------+

@@ -17,7 +17,10 @@ Windows filesystem file implementation.
 ### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::filesystem_file
 
 [open](#method-open) ·
+[inspect](#method-inspect) ·
 [read](#method-read) ·
+[select](#method-select) ·
+[metadata](#method-metadata) ·
 [size](#method-size) ·
 [is_open](#method-is-open) ·
 [eof](#method-eof) ·
@@ -107,7 +110,7 @@ Returns the current size.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_windows.h:126](../../../include/common/filesystem_windows.h#L126)
+**Source:** [include/common/filesystem_windows.h:110](../../../include/common/filesystem_windows.h#L110)
 
 <a id="method-is-open"></a>
 
@@ -125,7 +128,7 @@ Reports whether open applies.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_windows.h:130](../../../include/common/filesystem_windows.h#L130)
+**Source:** [include/common/filesystem_windows.h:167](../../../include/common/filesystem_windows.h#L167)
 
 <a id="method-eof"></a>
 
@@ -143,7 +146,7 @@ Reports whether the eof condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_windows.h:136](../../../include/common/filesystem_windows.h#L136)
+**Source:** [include/common/filesystem_windows.h:173](../../../include/common/filesystem_windows.h#L173)
 
 <a id="method-failed"></a>
 
@@ -161,7 +164,7 @@ Reports whether the failed condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_windows.h:140](../../../include/common/filesystem_windows.h#L140)
+**Source:** [include/common/filesystem_windows.h:177](../../../include/common/filesystem_windows.h#L177)
 
 <a id="method-close"></a>
 
@@ -179,4 +182,60 @@ Closes the requested value.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/filesystem_windows.h:144](../../../include/common/filesystem_windows.h#L144)
+**Source:** [include/common/filesystem_windows.h:59](../../../include/common/filesystem_windows.h#L59)
+
+<a id="method-metadata"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> metadata
+
+```cpp
+[[nodiscard]] std::optional<filesystem_metadata> metadata(
+    std::error_code& error) const;
+```
+
+**Parameters:** error is cleared on success and reports a native error on failure.
+
+**Returns:** Metadata from the open handle, or null on failure (including a closed
+handle). Does not resolve the path again or change the cursor. See
+[filesystem_metadata](filesystem.md#type-filesystem-metadata).
+
+<a id="method-select"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> select
+
+```cpp
+bool select(std::size_t offset, std::size_t length, std::error_code& error);
+```
+
+**Parameters:** offset/length select a bounded slice before moving an open file into
+a reader. Bounds must fit the currently declared length. error reports invalid
+bounds or a native seek failure. Offset is absolute within the file.
+
+**Returns:** true on success, false on failure. Resets the cursor to that offset,
+size() to length, and failed state. Reads stop at the selected end. No transport
+change is involved. Instances remain single-consumer objects; independent files
+have independent cursors.
+
+
+<a id="method-inspect"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> inspect
+
+**METHOD** · *common::filesystem_file*
+
+```cpp
+[[nodiscard]] static std::optional<filesystem_metadata> inspect(
+    const std::filesystem::path& root, std::string_view path,
+    std::error_code& error);
+```
+
+**Parameters:** root is an absolute directory path, path is a decoded relative
+filename, and error is cleared on success or reports failure.
+
+**Returns:** Current attributes of a regular file, or null on failure. Rejects
+traversal, links/reparse points (including ancestors and a replaced root), missing
+files and nonregular files. Does not read contents or change any reader's cursor.
+See [filesystem_metadata](filesystem.md#type-filesystem-metadata).
+
+Uses the existing confined open()/metadata() procedure and closes the temporary
+handle. The Linux fast path does not change Windows path or reparse-point checks.

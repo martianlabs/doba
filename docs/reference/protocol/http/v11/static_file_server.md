@@ -8,15 +8,51 @@
 
 **Header:** [include/protocol/http/v11/static_file_server.h](../../../../../include/protocol/http/v11/static_file_server.h)
 
-Server implementation.
+Mounts regular files through GET/HEAD. See the
+[static-file example](../../../../../examples/http/v11/static_file_server/README.md).
+The two-argument constructor keeps direct reads. Pass static_file_policies as the
+third argument for caching and optional features. The existing reader/transport
+sending procedure and its buffer sizes are unchanged.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
+Direct readers retain handles, not snapshots: in-place writes can alter a download,
+growth is ignored and premature EOF aborts the connection. Cached readers retain
+immutable bytes with independent cursors. Publish complete files by atomic
+replacement. Before/after metadata checks detect many writes during loading but
+cannot establish a snapshot against an arbitrary concurrent writer.
 
-[static_file_server](#type-static-file-server)
+Cached responses use [filesystem_monitor](../../../common/filesystem_monitor.md)
+by default. Before accepting a hit, the caller consumes pending native events and
+checks the snapshot's root-wide generation. A valid hit does not open/stat/read
+the file or recompute its hash. Relevant events invalidate generations even when
+contents are equal. Directory topology changes and lost events revoke coverage;
+observe() rebuilds it before a new snapshot can use the fast path. No background
+thread, callback or interval timer is involved. Unrelated changes within the
+covered root may conservatively invalidate multiple entries.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::static_file_server
+The monitor is registered before opening/reading a candidate; admission and reuse
+check its generation. A value returned by a concurrent cache load is checked too,
+so an obsolete publication cannot bypass observation validation. Active responses
+retain their immutable snapshots. TTL limits retention, not notification polling.
+Missing requests do not revoke valid observations of existing files.
 
-[register_routes](#method-register-routes)
+With monitor_files=false, unsupported monitoring or resource limits, entries use
+confined attribute validation instead. Identity, device, size, modification/change
+times, native attributes and link count are compared; any difference invalidates,
+even for equal bytes. Supported Linux kernels use inspect() with O_PATH/fstat;
+Windows and older kernels retain the confined open/metadata procedure.
+
+Notifications are not a universal next-response guarantee: native delivery depends
+on filesystem/publication semantics. Windows write/size notices can be delayed;
+Linux mmap/remote/mount changes and external Windows hard-link aliases are outside
+fast coverage. Use explicit invalidate()/coordinated publication or attribute mode
+where stronger coherence is required. Attribute validation itself cannot detect
+writes preserving all observed attributes. Prefer atomic replacement. Monitoring
+resources are bounded separately and are not included in the declared cache cost.
+Configuration is immutable after construction; register routes before serving.
+
+### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_server
+
+[static_file_representation](#representation) · [static_file_cache](#cache) · [static_file_policies](#policies) · [static_file_server](#type-static-file-server) · [register_routes](#method-register-routes) · [invalidate](#invalidate) · [clear_cache](#clear-cache)
 
 <a id="api"></a>
 <a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -26,43 +62,126 @@ Server implementation.
   <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
 </a>
 
+<a id="representation"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_representation
+
+```cpp
+struct static_file_representation {
+  std::string bytes;
+  common::filesystem_metadata metadata;
+  std::string etag;
+  std::shared_ptr<common::filesystem_monitor> monitor;
+  std::uint64_t monitor_generation = 0;
+};
+```
+
+Immutable published value. bytes contains the selected encoded payload; metadata comes from the open handle; etag is its quoted SHA-256. Strings start empty; metadata fields start at zero. Do not mutate a value after publication. monitor starts null and retains native coverage when usable; monitor_generation starts zero and identifies the observation captured before loading.
+
+<a id="cache"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_cache
+
+```cpp
+using static_file_cache = common::cache<std::string, static_file_representation>;
+```
+
+The [generic common cache](../../../common/cache.md) specialized for file representations. Keys contain canonical UTF-8 root, NUL separator and decoded filename including compression suffix. Shared caches coordinate budgets across mounts. Declared cost is payload length + sizeof(static_file_representation) + 66 ETag characters; keys, allocator/control-block overhead and excess string capacity are excluded.
+
+<a id="policies"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_policies
+
+```cpp
+struct static_file_policies { ... };
+```
+
+| Field | Default | Behavior |
+| --- | --- | --- |
+| cache | null shared_ptr<static_file_cache> | Direct reads; supply a shared cache to enable snapshots. |
+| max_cached_file_size | std::size_t / 1048576 bytes (1 MiB) | Per-file admission threshold; larger files stream. |
+| cache_control | std::string / no-cache | HTTP policy independent of internal TTL; empty omits it. |
+| deny_hidden | bool / true | Deny any component starting with a dot. |
+| ranges | bool / true | Simple GET byte ranges; HEAD describes the full representation. |
+| precompressed | bool / false | Negotiate .br/.gz siblings and send Vary: Accept-Encoding. |
+| redirect_directories | bool / false | Slash redirects, including the exact mount root. |
+| index_file | std::string / empty | Optional safe filename for directories (one component). |
+| spa_fallback | std::string / empty | Safe root-relative fallback for missing paths. |
+| excluded | vector<string> / empty | Exact decoded relative paths and descendants to deny. |
+| mime_types | vector<pair<string,string>> / empty | Case-insensitive extension/MIME overrides before built-ins. |
+| monitor_files | bool / true | Validate hits through native generations when supported; false selects per-request attributes. |
+
+Policies are copied. Invalid prefixes, indexes, fallbacks, cache policies or MIME
+mappings throw std::invalid_argument; inaccessible/non-directory roots throw
+std::filesystem::filesystem_error. Admission rejection or an already-running same-key load streams directly without waiting for the loader. A cold
+HEAD may populate the cache to obtain the same strong validator as GET.
+
+Precompressed siblings must be published consistently by the application. doba
+neither compresses them nor validates decoded content. Absent Accept-Encoding
+selects identity; q=0 and wildcard exclusions are respected. Ties prefer br, gzip,
+identity. When identity exists but no acceptable variant is available, return 406.
+Directory listing, multiple-range bodies and dynamic compression are unsupported.
+SPA fallback applies to missing paths without filtering Accept or extension; use
+it on a dedicated application mount. It never bypasses denied paths or I/O errors.
+
 <a id="type-static-file-server"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_server
 
-**TYPE** · *protocol::http::v11*
-
-**Declaration synopsis:**
-
 ```cpp
-class static_file_server { ... };
+class static_file_server;
 ```
 
-Server implementation.
+GET serves 200/206; missing files/directories return 404; traversal, links,
+reparse points, exclusions and access denial return 403; other pre-send I/O errors
+return 500. Only regular files are served. Request paths are decoded once by the
+HTTP decoder. MIME falls back to application/octet-stream.
 
-**Source:** [include/protocol/http/v11/static_file_server.h:48](../../../../../include/protocol/http/v11/static_file_server.h#L48)
+Cached representations use strong SHA-256 ETags; direct streams use weak metadata
+ETags. Last-Modified comes from the open handle, clamped to now. Conditions follow
+HTTP precedence: If-Match, otherwise If-Unmodified-Since, then If-None-Match,
+otherwise If-Modified-Since. Entity-tag lists, weak If-None-Match matching and
+obsolete HTTP dates are supported. 304 has no body.
+
+If-Range accepts an exact strong ETag. Weak tags and dates yield the full 200:
+a filesystem timestamp alone does not establish a strong validator. Unsatisfiable
+simple ranges return 416 and bytes */length. Malformed, multiple and unsupported
+ranges are ignored. Byte ranges refer to the selected encoded payload. Admitted cold loads
+and direct file reads remain synchronous; other requests do not wait for a loader. No transport optimization is introduced.
 
 <a id="method-register-routes"></a>
 
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> register_routes
 
-**METHOD** · *protocol::http::v11::static_file_server*
-
 ```cpp
 template <typename Rty>
-  void register_routes(Rty& routes);
+void register_routes(Rty& routes);
 ```
 
-Registers the static-file routes.
+**Template parameters:** Rty supports controller route registration.
 
-**Template parameters:**
+**Parameters:** routes receives GET/HEAD wildcard routes and optional exact mount redirect routes. Literal/parameterized routes keep their precedence. Other methods use existing 405/Allow handling.
 
-- **Rty:** `typename Rty`.
+**Returns:** void.
 
-**Parameters:**
+<a id="invalidate"></a>
 
-- **routes:** Route collection used for dispatch. Declaration: `Rty& routes`.
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> invalidate
 
-**Returns:** No value (`void`).
+```cpp
+void invalidate(std::string_view relative) const;
+```
 
-**Source:** [include/protocol/http/v11/static_file_server.h:79](../../../../../include/protocol/http/v11/static_file_server.h#L79)
+**Parameters:** relative is a decoded root-relative filename without leading slash.
+
+**Returns:** void. Invalidates the filename and .br/.gz siblings. In-flight loads cannot republish; existing readers stay valid. No-op without a cache.
+
+<a id="clear-cache"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> clear_cache
+
+```cpp
+void clear_cache() const;
+```
+
+**Returns:** void. Clears the entire supplied cache, including other mounts sharing it. No-op without a cache. Applications may keep the supplied cache pointer and call clear() when the router owns the controller.
