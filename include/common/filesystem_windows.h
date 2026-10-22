@@ -98,6 +98,17 @@ class filesystem_file {
     return open_target(directory, target, error);
   }
   // +=========================================================================+
+  // | [>] inspect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Preserve the confined resolver and reparse-point checks on Windows.
+  [[nodiscard]] static std::optional<filesystem_metadata> inspect(
+      const std::filesystem::path& root, std::string_view path,
+      std::error_code& error) {
+    filesystem_file file;
+    if (!file.open(root, path, error)) return {};
+    return file.metadata(error);
+  }
+  // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t read(std::span<std::byte> output) {

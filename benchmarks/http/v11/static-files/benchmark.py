@@ -83,13 +83,13 @@ def metrics(process):
             "handles": len(list((proc / "fd").iterdir()))}
 
 
-def measure(binary, root, size, files, clients, requests, direct, delay):
+def measure(binary, root, size, files, clients, requests, direct, delay, metadata=False):
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     command = (
         [str(binary), str(root)]
-        + (["--no-cache"] if direct else [])
+        + (["--no-cache"] if direct else (["--metadata-cache"] if metadata else []))
         + [str(port)]
     )
     process = subprocess.Popen(
@@ -180,10 +180,12 @@ def main():
     parser.add_argument("--requests", type=int, default=500)
     parser.add_argument("--read-delay-ms", type=float, default=0)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--ttl-binary", type=Path, help="Optional initial TTL example binary")
+    parser.add_argument("--runs", type=int, default=3)
     args = parser.parse_args()
     if (
         min(args.sizes) < 0
-        or min(args.files + args.clients + [args.requests]) < 1
+        or min(args.files + args.clients + [args.requests, args.runs]) < 1
         or args.read_delay_ms < 0
     ):
         parser.error(
@@ -198,13 +200,22 @@ def main():
                 for i in range(files):
                     (root / f"{i}.bin").write_bytes(b"x" * size)
                 for clients in args.clients:
-                    for direct in (True, False):
-                        result = measure(
-                            args.binary.resolve(), root, size, files,
-                            clients, args.requests, direct, args.read_delay_ms,
-                        )
-                        results.append(result)
-                        print(json.dumps(result), flush=True)
+                    modes = [("direct", args.binary), ("metadata", args.binary),
+                             ("monitor", args.binary)]
+                    if args.ttl_binary:
+                        modes.append(("ttl", args.ttl_binary))
+                    for run in range(args.runs):
+                        ordered = modes[run % len(modes):] + modes[:run % len(modes)]
+                        for mode, binary in ordered:
+                            result = measure(
+                                binary.resolve(), root, size, files, clients,
+                                args.requests, mode == "direct", args.read_delay_ms,
+                                metadata=mode == "metadata",
+                            )
+                            result["mode"] = mode
+                            result["run"] = run + 1
+                            results.append(result)
+                            print(json.dumps(result), flush=True)
     if args.output:
         args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
 

@@ -49,14 +49,16 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
   if (argc < 2 || argc > 4) {
-    std::cerr << "Usage: static_file_server <root> [--no-cache] [port]\n";
+    std::cerr << "Usage: static_file_server <root> [--no-cache|--metadata-cache] [port]\n";
     return 1;
   }
   const bool direct = argc >= 3 && std::string_view(argv[2]) == "--no-cache";
-  const std::string port = argc == 4 ? argv[3] : (argc == 3 && !direct ? argv[2] : "8080");
+  const bool metadata = argc >= 3 && std::string_view(argv[2]) == "--metadata-cache";
+  const std::string port = argc == 4 ? argv[3] : (argc == 3 && !direct && !metadata ? argv[2] : "8080");
   static_file_policies assets;
   if (!direct) assets.cache = std::make_shared<static_file_cache>();
   assets.precompressed = true;
+  assets.monitor_files = !metadata;
   http_server<> http_server({.ip = "0.0.0.0", .port = port});
   http_server.add_controller<static_file_server>("/assets", argv[1], assets)
       .add_controller<static_file_server>("/downloads", argv[1]);

@@ -13,3 +13,5 @@ New to doba? Pick a path:
 - [Guide](guide/README.md) - get a server talking, then see how protocols and
   transports fit together.
 - [Reference](reference/README.md) - exact API and behavior details.
+- [Benchmarks](benchmarks/README.md) - the current ranking, every workload,
+  and the machine behind the numbers.

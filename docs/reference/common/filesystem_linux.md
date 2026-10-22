@@ -17,6 +17,7 @@ Linux filesystem file implementation.
 ### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::filesystem_file
 
 [open](#method-open) ·
+[inspect](#method-inspect) ·
 [read](#method-read) ·
 [select](#method-select) ·
 [metadata](#method-metadata) ·
@@ -214,3 +215,32 @@ bounds or a native seek failure. Offset is absolute within the file.
 size() to length, and failed state. Reads stop at the selected end. No transport
 change is involved. Instances remain single-consumer objects; independent files
 have independent cursors.
+
+
+<a id="method-inspect"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> inspect
+
+**METHOD** · *common::filesystem_file*
+
+```cpp
+[[nodiscard]] static std::optional<filesystem_metadata> inspect(
+    const std::filesystem::path& root, std::string_view path,
+    std::error_code& error);
+```
+
+**Parameters:** root is an absolute directory path, path is a decoded relative
+filename, and error is cleared on success or reports failure.
+
+**Returns:** Current attributes of a regular file, or null on failure. Rejects
+traversal, links/reparse points (including ancestors and a replaced root), missing
+files and nonregular files. Does not read contents or change any reader's cursor.
+See [filesystem_metadata](filesystem.md#type-filesystem-metadata).
+
+Uses openat2 with O_PATH and RESOLVE_NO_SYMLINKS followed by one fstat, then closes
+the attribute descriptor. Unlike open(), this path does not acquire a read handle
+or walk directories in userspace. If kernel/header support is absent, or a sandbox
+rejects openat2, falls back to the existing confined open()/metadata() procedure.
+A successful O_PATH query requires search permission on ancestors; cached files
+were admitted through a successful read open and are invalidated on metadata
+changes. Queries depend on the mounted filesystem's metadata latency.

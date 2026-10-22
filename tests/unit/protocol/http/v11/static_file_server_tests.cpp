@@ -528,6 +528,7 @@ DOBA_TEST("static file cache rejects a directory link after warming") {
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});
   auto warm = file_request(routes, "GET", "/sub/file");
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
   fs::rename(directory.path() / "sub", directory.path() / "previous");
   const auto link = directory.path() / "sub";
   martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
@@ -714,4 +715,59 @@ DOBA_TEST("static file cache expires and large files preserve direct reading") {
   directory.write("large", "edit");
   DOBA_EXPECT(large.get_header("ETag").second.starts_with("W/"));
   DOBA_EXPECT_EQUAL(file_body(large), "edit");
+}
+
+// +===========================================================================+
+// | [>] static monitor reset and attribute fallback              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache rejects reset monitor tokens and supports attribute mode") {
+  for (bool monitored : {false, true}) {
+    file_directory directory;
+    directory.write("file", "first");
+    auto cache = std::make_shared<static_file_cache>();
+    router<request, response> routes;
+    routes.add_controller<static_file_server>("/", directory.path(),
+        static_file_policies{.cache = cache, .monitor_files = monitored});
+    auto first = file_request(routes, "GET", "/file");
+    const auto root_key = fs::canonical(directory.path()).generic_u8string();
+    std::string key(root_key.begin(), root_key.end());
+    key += '\0'; key += "file";
+    const auto original = cache->find(key);
+    DOBA_EXPECT(original != nullptr);
+    if (monitored) {
+      DOBA_EXPECT(original->monitor != nullptr);
+      original->monitor->reset();
+      auto reset = file_request(routes, "GET", "/file");
+      DOBA_EXPECT(cache->find(key) != original);
+      DOBA_EXPECT_EQUAL(file_body(reset), "first");
+    } else DOBA_EXPECT(original->monitor == nullptr);
+    const auto timestamp = fs::last_write_time(directory.path() / "file");
+    directory.write("file", "other");
+    fs::last_write_time(directory.path() / "file", timestamp + std::chrono::seconds(2));
+    auto next = file_request(routes, "GET", "/file");
+    DOBA_EXPECT_EQUAL(file_body(first), "first");
+    DOBA_EXPECT_EQUAL(file_body(next), "other");
+  }
+}
+
+// +===========================================================================+
+// | [>] missing files preserve watched cache hits                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file cache keeps covered hits after requests for missing files") {
+  file_directory directory;
+  directory.write("file", "first");
+  auto cache = std::make_shared<static_file_cache>();
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), static_file_policies{.cache = cache});
+  auto first = file_request(routes, "GET", "/file");
+  const auto root_key = fs::canonical(directory.path()).generic_u8string();
+  std::string key(root_key.begin(), root_key.end());
+  key += '\0'; key += "file";
+  const auto original = cache->find(key);
+  auto missing = file_request(routes, "GET", "/missing");
+  DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
+  auto next = file_request(routes, "GET", "/file");
+  DOBA_EXPECT(cache->find(key) == original);
+  DOBA_EXPECT_EQUAL(file_body(first), "first");
+  DOBA_EXPECT_EQUAL(file_body(next), "first");
 }

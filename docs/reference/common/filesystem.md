@@ -70,3 +70,6 @@ Handle-derived metadata. Every field starts at zero.
 Equality compares all fields. This is a change detector, not an immutable snapshot
 or a content hash. Precision and identity depend on the filesystem. Windows
 FILETIME uses 100 ns units; Linux fstat provides nanoseconds.
+
+The [filesystem_monitor](filesystem_monitor.md) capability provides caller-driven
+native change generations without a background callback thread.

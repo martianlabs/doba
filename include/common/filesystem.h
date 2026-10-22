@@ -119,4 +119,6 @@ inline bool filesystem_relative_path(std::string_view path,
 #include "common/filesystem_linux.h"
 #endif
 
+#include "common/filesystem_monitor.h"
+
 #endif

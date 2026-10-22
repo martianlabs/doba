@@ -11,13 +11,27 @@ python benchmarks/http/v11/static-files/benchmark.py out/build/windows-parity/ex
 Use the corresponding executable path on Linux. Results include first-request
 application-cold latency, warm throughput, p50/p95/p99, server CPU time, RSS/peak RSS
 and handles/file descriptors after the run. Each case starts a fresh server. The
-OS page cache is never flushed. The cached configuration reloads after its default
-one-second retention TTL; requests revalidate open-file identity, size,
-modification/change timestamps, native file flags and link count on every access,
-without reading contents on cache hits.
-Same-key requests bypass active loaders instead of waiting. Files above 1 MiB
-use direct streaming in both modes. Its default
-budget is 512 MiB with at most 1024 entries and 16 simultaneous loads.
+OS page cache is never flushed. Modes are direct streaming, attribute-based cache
+(--metadata-cache) and native monitor cache (the example default). --runs defaults
+to 3 and rotates mode order; every repetition is retained. Native hits check queued
+events and a generation without opening/statting/reading the payload. Empty-queue
+queries run concurrently; event consumption and generation changes are exclusive.
+No callback thread or interval timer participates. Unsupported/lost coverage uses
+safe attribute revalidation or a new load. Files above 1 MiB stream in every mode.
+The default budget is 512 MiB, 1024 entries and 16 simultaneous loads; occupied
+same-key loaders are bypassed. Native monitor resources are bounded separately.
+
+To include the initial TTL implementation, provide a separately built example
+binary from revision 6fbb4290:
+
+```console
+python benchmarks/http/v11/static-files/benchmark.py CURRENT_BINARY --ttl-binary INITIAL_TTL_BINARY --runs 3 --output out/static-four-modes.json
+```
+
+Both binaries must expose the same root/optional-port example CLI. Build both with
+matching optimization, TLS configuration and worker settings. This harness checks
+all response bytes but its Python client can limit throughput; use wrk or the
+remote benchmark for saturation measurements, retaining every run and socket error.
 
 The defaults cover one hot file, 32 files, 1/8 clients, and 64 B through 2 MiB.
 Add **--read-delay-ms 1** for delayed reads or reduce **--requests** for a smoke run.
