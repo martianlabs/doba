@@ -67,9 +67,15 @@ full list; the settings you are most likely to touch are:
 - **Buffers.** *receive_buffer_capacity* reserves a fixed receive buffer per
   connection. It controls the I/O block size, independently of HTTP head and
   body limits. Each callback receives only fresh bytes; TCP reuses the full
-  buffer after it returns. *max_buffered_send_bytes* caps queued send
+  buffer before the next allowed receive. *max_buffered_send_bytes* caps queued send
   reservations and the active batch without preallocating that amount.
   Both must be positive.
+- **Admission.** *max_connections* defaults to **65535** across the server's
+  workers. **0** removes the limit; excess sockets close before engine creation.
+- **Progress.** *inactivity_period* defaults to **60 seconds** without positive
+  socket reads or writes. **0** disables expiration; negative periods are invalid.
+- **Readers.** *max_pending_sources* defaults to **32** retained output readers
+  per connection, including the active reader. **0** removes the limit.
 
 You can pass a named policy value when a designated initializer starts to
 feel crowded:
@@ -83,7 +89,9 @@ martianlabs::doba::http_server<> http_server(configuration);
 ```
 
 Keep the default buffer sizes until you have a concrete reason to change
-them; the limits chapter covers resource boundaries in more detail.
+them; the [limits chapter](06-limits-and-operation.md#bound-work-in-flight)
+covers resource boundaries, backpressure and zero values in more detail.
+TLS inherits these same limits.
 
 <a name="switch-on-tls"></a>
 <h2>

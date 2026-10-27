@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_transport_server_tcp_policies_h
 #define martianlabs_doba_transport_server_tcp_policies_h
 
+#include <chrono>
 #include <cstddef>
 #include <string>
 
@@ -51,6 +52,13 @@ struct tcp_policies {
   // Also bounds each accumulated batch; source-owned storage is excluded.
   // Must be positive; exceeding it closes the connection. No preallocation.
   std::size_t max_buffered_send_bytes = 1024 * 1024;
+  // Global live context reservations, including unfinished work after closure.
+  // 0 disables admission limiting. No contexts are preallocated.
+  std::size_t max_connections = 65535;
+  // Positive socket I/O renews this period. 0 disables; negative is invalid.
+  std::chrono::milliseconds inactivity_period = std::chrono::seconds{60};
+  // Retained readers, including the active reader. 0 means unlimited.
+  std::size_t max_pending_sources = 32;
   // IPv4 bind address and port (1-65535); both must be set.
   std::string ip;
   std::string port;

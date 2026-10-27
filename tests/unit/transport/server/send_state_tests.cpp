@@ -104,9 +104,11 @@ DOBA_TEST("send state keeps exact capacity across partial sends") {
   DOBA_EXPECT(!output.consume(std::numeric_limits<std::size_t>::max()));
   DOBA_EXPECT_EQUAL(output.offset, 0);
   DOBA_EXPECT(output.consume(2));
-  DOBA_EXPECT(output.push("ef", {}, nullptr));
+  DOBA_EXPECT(!output.push("ef", {}, nullptr));
   DOBA_EXPECT(!output.push("g", {}, nullptr));
   DOBA_EXPECT(output.consume(2));
+  DOBA_EXPECT(output.fill());
+  DOBA_EXPECT(output.push("ef", {}, nullptr));
   DOBA_EXPECT(output.fill());
   DOBA_EXPECT_EQUAL(output.buffer, "ef");
   DOBA_EXPECT(output.consume(2));

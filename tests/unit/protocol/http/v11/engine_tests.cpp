@@ -480,10 +480,10 @@ DOBA_TEST("engine bounds positions behind a suspended request") {
   });
   connection current(routes);
   current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 128; i++) {
     current.receive("GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
   }
-  DOBA_EXPECT_EQUAL(later_calls, 31);
+  DOBA_EXPECT_EQUAL(later_calls, 127);
   DOBA_EXPECT_EQUAL(current.closes, 1);
   slow.resume();
   DOBA_EXPECT(current.wire.empty());

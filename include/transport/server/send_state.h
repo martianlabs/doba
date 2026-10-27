@@ -37,6 +37,7 @@
 
 #include "common/reader.h"
 #include "protocol/contracts.h"
+#include "transport/server/operating_state.h"
 
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
@@ -63,7 +64,8 @@ struct send_state {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit send_state(std::size_t capacity) : capacity_{capacity} {}
+  explicit send_state(std::size_t capacity, std::size_t max_sources = 32)
+      : capacity_{capacity}, max_sources_{max_sources} {}
   // +=========================================================================+
   // | [>] push                                                     ( public ) |
   // +-------------------------------------------------------------------------+
@@ -76,8 +78,11 @@ struct send_state {
   // +-------------------------------------------------------------------------+
   bool push(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
+    const auto available = capacity_ - inline_bytes_ - source_reservation_;
+    if (head.size() > available || body.size() > available - head.size())
+      return false;
+    if (source && max_sources_ && sources_.size() >= max_sources_) return false;
     const std::size_t size = head.size() + body.size();
-    if (size > capacity_ - inline_bytes_ - source_reservation_) return false;
     if (source) {
       if (sources_.empty() && !active_from_source_) {
         source_reservation_ =
@@ -110,6 +115,7 @@ struct send_state {
   // | fails or there’s no data available, it returns false.                   |
   // +-------------------------------------------------------------------------+
   bool fill() {
+    if (!active_from_source_) inline_bytes_ -= buffer.size();
     buffer.clear();
     offset = 0;
     active_from_source_ = false;
@@ -129,7 +135,12 @@ struct send_state {
         if (sources_.empty()) source_reservation_ = 0;
         continue;
       }
-      const std::size_t available = std::min<std::size_t>(8192, capacity_);
+      const std::size_t available =
+          std::min<std::size_t>(8192, capacity_ - inline_bytes_);
+      if (!available) return false;
+      // Prefix retirement can make a larger source batch possible. Charge its
+      // entire read reservation before allowing concurrent inline submissions.
+      source_reservation_ = available;
       buffer.resize(available);
       const std::size_t count = entry.source->read(std::span<std::byte>(
           reinterpret_cast<std::byte*>(buffer.data()), available));
@@ -148,15 +159,26 @@ struct send_state {
   // +-------------------------------------------------------------------------+
   // | Removes the requested number of bytes from the buffer. If that’s more   |
   // | than the number of bytes left, it returns false. Otherwise, it moves    |
-  // | the offset forward. If the data came from the pending buffer rather     |
-  // | than an external source, it also reduces the inline byte count.         |
+  // | the offset forward. Inline batch credit survives partial sends and     |
+  // | is released only after the final byte of that batch is consumed.        |
   // | Returns true when the bytes have been consumed successfully.            |
   // +-------------------------------------------------------------------------+
   bool consume(std::size_t sent) {
     if (sent > buffer.size() - offset) return false;
     offset += sent;
-    if (!active_from_source_) inline_bytes_ -= sent;
+    if (offset == buffer.size()) {
+      if (!active_from_source_) inline_bytes_ -= buffer.size();
+      buffer.clear();
+      offset = 0;
+    }
     return true;
+  }
+  // An inline batch retains its full credit until its final byte is consumed.
+  bool pressured() {
+    byte_pressure_ = update_pressure(byte_pressure_, inline_bytes_ + source_reservation_, capacity_);
+    source_pressure_ =
+        update_pressure(source_pressure_, sources_.size(), max_sources_);
+    return byte_pressure_ || source_pressure_;
   }
   // +=========================================================================+
   // | [>] queued                                                   ( public ) |
@@ -180,6 +202,7 @@ struct send_state {
     inline_bytes_ = 0;
     source_reservation_ = 0;
     active_from_source_ = false;
+    byte_pressure_ = source_pressure_ = false;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
@@ -194,6 +217,9 @@ struct send_state {
   std::string pending_;
   std::deque<source_entry> sources_;
   std::size_t capacity_;
+  std::size_t max_sources_;
+  bool byte_pressure_{false};
+  bool source_pressure_{false};
   std::size_t inline_bytes_{0};
   std::size_t source_reservation_{0};
   bool active_from_source_{false};

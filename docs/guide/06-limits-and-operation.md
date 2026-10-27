@@ -211,12 +211,67 @@ are worth knowing:
 
 - **Async responses.** Once a connection uses async handling,
   *max_pending_requests* caps response positions awaiting ordered delivery.
-  It defaults to **32**. When full, doba closes the connection rather than
-  reserving another position. **0** removes this limit.
+  It defaults to **128**. The bundled transports pause new request processing
+  under pressure and resume it after credit is released. A hard overflow closes
+  the connection. **0** removes this limit.
 - **Queued output.** The TCP policy *max_buffered_send_bytes* defaults to
   **1 MiB** per connection. It bounds queued send reservations plus the
-  active batch; a connection that exceeds it closes. Storage owned by a body
+  active batch; partial sends retain the whole batch reservation until its
+  last byte is consumed. A connection that exceeds it closes. Storage owned by a body
   source is outside this cap.
+
+The transport also caps retained readers with *max_pending_sources* (**32**,
+including the active reader). HTTP caps serialized heads and inline bodies
+waiting for their turn with *max_pending_response_bytes* (**1 MiB**). Readers
+with empty prefixes still count; source-owned memory and files do not become
+inline bytes just because their contents will eventually reach the wire.
+
+The bundled transports pause input at 75% of a budget and resume at 50%, rounded
+up and down respectively. A received pipeline stops between requests too; its
+remaining bytes wait in one bounded receive block. Handlers already running can
+still complete. If their output exhausts a hard budget, the connection closes.
+Workers never wait synchronously for output credit.
+
+*max_connections* defaults to **65535**, shared by all workers of one server.
+Excess sockets close before allocating their engines and TLS state. A closed
+socket with unfinished async work keeps its reservation until the context can
+retire, so reconnecting cannot bypass the live-work limit. Independent servers
+have independent budgets. The maximum does not preallocate connections.
+
+*inactivity_period* defaults to **60 seconds**. Only positive socket reads or
+writes renew it, including TLS handshake bytes. Expiration aborts the socket;
+queued responses and suspended handlers do not count as progress. Workers check
+at intervals no larger than the smaller of the configured period and one second,
+plus scheduling delay. Expiration also applies during a pause or a graceful
+close. It does not forcibly cancel a handler that external code may still resume.
+A peer sending occasional bytes can keep this period alive: it is not a total
+request deadline or minimum transfer rate.
+
+For example, configure transport and HTTP budgets independently:
+
+```cpp
+martianlabs::doba::transport::server::tcp_policies io;
+io.ip = "0.0.0.0";
+io.port = "8080";
+io.max_connections = 65535;
+io.inactivity_period = std::chrono::seconds{60};
+io.max_pending_sources = 32;
+martianlabs::doba::protocol::http::v11::policies http;
+http.max_pending_requests = 128;
+http.max_pending_response_bytes = 1024 * 1024;
+http_server<> server(io, http);
+```
+
+Zero disables each new limit and the existing pending-request limit. Negative
+inactivity periods are invalid; heads, transport receive/send capacities and TLS
+BIO capacities must remain positive. Transport construction validates its
+policies; the public HTTP/HTTPS server constructs its transport on the first
+*start()*, so invalid transport settings fail there, before listening. Servers
+copy configuration: later changes to the original policy object do not update
+a running server. Byte budgets count logical queued bytes and reservations,
+not allocator capacity or total process memory. These limits cover framework queues, not arbitrary handler allocations,
+external operations or all temporary disk use. Cache and application-owned
+storage need their own budgets.
 
 These limits sit on different sides of the protocol/transport boundary.
 The [async routes chapter](03-http-1-1.md#async-routes) shows why responses

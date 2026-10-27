@@ -23,6 +23,12 @@ HTTP/1.1 protocol engine.
 [stop](#method-stop) ·
 [on_bytes_received](#method-on-bytes-received)
 
+[set_input_flow_control](#method-set-input-flow-control)
+
+[input_paused](#method-input-paused)
+
+[resume_input](#method-resume-input)
+
 <a id="api"></a>
 <a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
   <img src="../../../../../resources/docs/reference/api.svg" alt="API">
@@ -171,4 +177,46 @@ Handles bytes received from the transport.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/protocol/http/v11/engine.h:128](../../../../../include/protocol/http/v11/engine.h#L128)
+**Source:** [include/protocol/http/v11/engine.h:141](../../../../../include/protocol/http/v11/engine.h#L141)
+
+<a id="method-set-input-flow-control"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_input_flow_control
+
+**METHOD** · *protocol::http::v11::engine*
+
+```cpp
+void set_input_flow_control(std::function<bool()> pressure, std::function<void()> ready);
+```
+
+Optional generic transport integration, configured before receiving input. The pressure callback reports transport output pressure. The ready callback schedules an input-service opportunity when ordered-response credit changes; it must not reenter the engine. Bundled transports use weak context ownership. Engines without this optional integration retain hard-limit closure behavior.
+
+**Source:** [include/protocol/http/v11/engine.h:130](../../../../../include/protocol/http/v11/engine.h#L130)
+
+<a id="method-input-paused"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> input_paused
+
+**METHOD** · *protocol::http::v11::engine*
+
+```cpp
+bool input_paused() const noexcept;
+```
+
+Reports whether input processing stopped at a message boundary for output or pending-response credit. The transport must suspend further input delivery, the engine owns a copy of the deferred remainder of one bounded receive block. An in-progress message can finish before pausing so that an interim response does not prevent its body from arriving.
+
+**Source:** [include/protocol/http/v11/engine.h:135](../../../../../include/protocol/http/v11/engine.h#L135)
+
+<a id="method-resume-input"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> resume_input
+
+**METHOD** · *protocol::http::v11::engine*
+
+```cpp
+void resume_input();
+```
+
+Services the deferred remainder of one receive block and reevaluates pressure. Serialize with all receive callbacks and stop; invoke outside transport output locks. The bundled TCP and TLS transports resume input on their workers. The ready callback is a wakeup, not permission to invoke this method concurrently.
+
+**Source:** [include/protocol/http/v11/engine.h:136](../../../../../include/protocol/http/v11/engine.h#L136)

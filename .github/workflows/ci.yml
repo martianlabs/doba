@@ -622,7 +622,7 @@ jobs:
   mutation:
     name: ${{ matrix.os }} (mutation detection Release ASan UBSan)
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -642,7 +642,7 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - name: Verify original tests and detect three mutants
+      - name: Verify original tests and detect ten mutants
         run: >-
           cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
           "-DDOBA_MUTATION_OUTPUT=out/mutations" -P tests/mutation/run_detection.cmake

@@ -46,7 +46,7 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT_EQUAL(policies::kDefaultMaxTrailerSectionSize, 4096);
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
-  DOBA_EXPECT_EQUAL(value.max_pending_requests, 32);
+  DOBA_EXPECT_EQUAL(value.max_pending_requests, 128);
   DOBA_EXPECT_EQUAL(value.max_query_parameters, 128);
   DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 1024);
   DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 4096);

@@ -50,6 +50,15 @@ the first read.
   </a>
 </h2>
 
+The [operating policies](transport/server/operating_policies_tests.cpp),
+[flow closure](transport/server/flow_close_tests.cpp), and
+[policy audit](transport/server/policy_audit_tests.cpp) exercise real TCP/TLS
+listeners: admission and recovery, zero limits and configuration snapshots,
+receive/send progress, paused pipelines, slow readers, held async work,
+wakeups during receive, and TLS close notifications during resumption.
+See the [coverage matrix](../../plans/operational-policies-coverage.md) for
+boundary cases, platform runs and mutation evidence.
+
 The [resilience cases](protocol/http/v11/server_resilience_tests.cpp) mix
 several TCP or TLS clients, tiny reads, abrupt resets, suspended handlers,
 and bodies that spill to disk. The server drains, restarts, and repeats

@@ -85,6 +85,9 @@ int main(int argc, char** argv) {
     for (int i = 1; i < 33; ++i) query += "&x=1";
     query += " HTTP/1.1\r\nHost: x\r\n\r\n";
     corpus requests{
+        {"head-limit-incomplete", "GET / HTTP/1.1\r\nHost: x\r\nX: " + std::string(8192, 'a')},
+        {"head-limit-complete", "GET / HTTP/1.1\r\nHost: x\r\nX: " + std::string(8192, 'a') + "\r\n\r\n" + successor},
+        {"head-boundary-delimiter", "GET / HTTP/1.1\r\nHost: x\r\nX: " + std::string(4064, 'a') + "\r\n\r\n"},
         {"get", successor},
         {"pipeline", successor + successor},
         {"query",

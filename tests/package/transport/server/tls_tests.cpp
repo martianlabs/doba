@@ -60,6 +60,9 @@ int main() {
   const auto fixtures = std::filesystem::path(__FILE__).parent_path() /
                         "fixtures";
   transport::tls_policies configuration;
+  configuration.max_connections = 65535;
+  configuration.inactivity_period = std::chrono::seconds{60};
+  configuration.max_pending_sources = 32;
   configuration.certificate_file = (fixtures / "server.crt").string();
   configuration.private_key_file = (fixtures / "server.key").string();
   martianlabs::doba::https_server<

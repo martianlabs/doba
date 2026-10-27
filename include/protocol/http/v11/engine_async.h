@@ -48,6 +48,7 @@
 #include "protocol/http/v11/engine_sync.h"
 #include "protocol/http/v11/results.h"
 #include "transport/server/contracts.h"
+#include "transport/server/operating_state.h"
 
 namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
@@ -66,8 +67,10 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   explicit engine_async(std::size_t max_pending_requests,
                         std::function<void()> on_async_started,
-                        std::function<void()> on_async_finished)
+                        std::function<void()> on_async_finished,
+                        std::size_t max_pending_bytes = 1024 * 1024)
       : max_pending_requests_{max_pending_requests},
+        max_pending_bytes_{max_pending_bytes},
         on_async_started_{std::move(on_async_started)},
         on_async_finished_{std::move(on_async_finished)} {}
   engine_async(const engine_async&) = delete;
@@ -172,6 +175,10 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   std::optional<std::size_t> reserve() {
     if (!accepting()) return std::nullopt;
+    if (next_request_.load() == static_cast<std::size_t>(-1)) {
+      close_now();
+      return std::nullopt;
+    }
     if (max_pending_requests_ &&
         next_request_ - next_send_.load(std::memory_order_acquire) >=
             max_pending_requests_) {
@@ -256,8 +263,23 @@ class engine_async {
   // | Submits a serialized response to the transport. It ensures that         |
   // | responses are sent in the order of their corresponding requests.        |
   // +-------------------------------------------------------------------------+
+  void set_on_input_ready(std::function<void()> ready) { on_input_ready_ = std::move(ready); }
+  bool pressured() noexcept {
+    const auto sent = next_send_.load();
+    const bool requests = transport::server::detail::update_pressure(
+        request_pressure_, next_request_.load() - sent, max_pending_requests_);
+    request_pressure_ = requests;
+    const bool bytes = transport::server::detail::update_pressure(
+        byte_pressure_, pending_bytes_.load(), max_pending_bytes_);
+    byte_pressure_ = bytes;
+    return requests || bytes;
+  }
   void submit(std::size_t position, serialization_result result, bool final,
               bool close) {
+    struct notify_on_exit {
+      const std::function<void()>& callback;
+      ~notify_on_exit() { if (callback) { try { callback(); } catch (...) {} } }
+    } notify{on_input_ready_};
     if (close) accepting_.store(false, std::memory_order_release);
     if (active_.load(std::memory_order_acquire) == 0 &&
         position == next_send_.load(std::memory_order_acquire) &&
@@ -280,15 +302,27 @@ class engine_async {
       next_send_++;
       if (close) {
         pending_.clear();
+        pending_bytes_ = 0;
         close_now();
         return;
       }
       if (pending_.empty()) return;
     } else {
+      const auto used = pending_bytes_.load();
+      const auto capacity = max_pending_bytes_ ? max_pending_bytes_
+                                               : static_cast<std::size_t>(-1);
+      if (result.head.size() > capacity - used ||
+          result.body.size() > capacity - used - result.head.size()) {
+        pending_.clear();
+        pending_bytes_ = 0;
+        close_now();
+        return;
+      }
       auto& slot = pending_[position];
       slot.outputs.push_back(
           {std::string(result.head), std::string(result.body),
            std::move(result.source)});
+      pending_bytes_.fetch_add(result.head.size() + result.body.size());
       slot.complete = final;
       slot.close = close;
     }
@@ -298,6 +332,7 @@ class engine_async {
       while (!current->second.outputs.empty()) {
         auto output = std::move(current->second.outputs.front());
         current->second.outputs.pop_front();
+        pending_bytes_.fetch_sub(output.head.size() + output.body.size());
         on_send_(output.head, output.body, std::move(output.source));
       }
       if (!current->second.complete) break;
@@ -306,6 +341,7 @@ class engine_async {
       next_send_++;
       if (should_close) {
         pending_.clear();
+        pending_bytes_ = 0;
         close_now();
         break;
       }
@@ -471,6 +507,11 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   protocol::send_delegate on_send_;
   const std::size_t max_pending_requests_;
+  const std::size_t max_pending_bytes_;
+  std::atomic<std::size_t> pending_bytes_{0};
+  bool request_pressure_{false};
+  bool byte_pressure_{false};
+  std::function<void()> on_input_ready_;
   std::atomic<std::size_t> active_{0};
   std::function<void()> on_close_;
   std::function<void()> on_async_started_;
@@ -479,7 +520,7 @@ class engine_async {
   std::atomic<bool> stopping_{false};
   std::atomic<bool> accepting_{true};
   std::atomic<bool> closing_{false};
-  std::size_t next_request_{0};
+  std::atomic<std::size_t> next_request_{0};
   std::atomic<std::size_t> next_send_{0};
   std::optional<std::size_t> interim_position_;
   std::mutex mutex_;

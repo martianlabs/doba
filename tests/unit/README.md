@@ -79,6 +79,13 @@ suspend handlers and control completion, receive, and shutdown overlaps.
 They check response ordering, callback counts, and object
 lifetimes instead of hoping the scheduler produces an interesting race.
 
+The operating-policy tests cover admission leases, clocks, exact boundaries,
+zero values, reader lifetimes, partial batches and combined pressure. The
+[transport budget audit](transport/server/policy_budget_audit_tests.cpp) and
+[HTTP budget audit](protocol/http/v11/policy_budget_audit_tests.cpp) isolate
+hysteresis for each credit source. Seven guards are challenged by the
+[mutation campaign](../mutation/README.md).
+
 The [regression detectors](protocol/http/v11/regression_detection_tests.cpp)
 check body limits, queued responses, and terminal rejection. Those same
 assertions are challenged by the [mutation checks](../mutation/README.md).
