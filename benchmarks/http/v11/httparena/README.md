@@ -64,7 +64,7 @@ docker run --rm --publish 8080:8080 --publish 8081:8081 \
 ```
 
 The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
-published async commit `ae9f736d29a3b6b31c0d1d35f6280cbb40b52783`.
+`main` branch.
 Use another published tag or commit to test a different doba revision:
 
 ```text
