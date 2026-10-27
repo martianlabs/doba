@@ -177,13 +177,13 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,000+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; three deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,000+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; three deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
 
