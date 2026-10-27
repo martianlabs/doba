@@ -12,7 +12,7 @@ Http11Probe suite.
   volume.
 
 The container setup pins and verifies Http11Probe commit
-`c799bdba77e26f85344e181cf6676c0ac1e5ee7a`.
+`d50d818a0e008e9feb3bb9860ad5d9cc40342bc3`.
 
 Build and start the adapter from the doba repository root:
 
