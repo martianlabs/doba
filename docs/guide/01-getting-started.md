@@ -8,12 +8,13 @@
   </a>
 </h1>
 
-Let's get doba to say hello. We'll build the bundled **hello_world** example,
-run it, and send it a request with **curl**. Start from the repository root.
+Let's build your first doba server. You'll create a tiny project, give it one
+route, and make it say hello to **curl**. The whole app is two files.
 
-Want the full example? Open the
-[hello_world README](../../examples/http/v11/hello_world/README.md) or jump
-straight to [main.cpp](../../examples/http/v11/hello_world/main.cpp).
+Want a working example to peek at along the way? The bundled
+[hello_world example](../../examples/http/v11/hello_world/README.md) has its
+own [source](../../examples/http/v11/hello_world/main.cpp). It uses the same
+HTTP server you'll use here.
 
 <a name="before-you-start"></a>
 <h2>
@@ -25,13 +26,22 @@ straight to [main.cpp](../../examples/http/v11/hello_world/main.cpp).
   </a>
 </h2>
 
-You only need:
+You'll need **Git**, **CMake 3.20 or later**, a **C++20 compiler**, and
+**curl**. On Windows, run the commands in a terminal with your C++ compiler
+available; on Linux, use your usual development shell. This first server uses
+plain TCP, so you don't need OpenSSL.
 
-- A C++20 compiler on Windows or Linux.
-- CMake 3.20 or later.
-- **curl** for the test request.
+Make a folder for your app and clone doba inside it. Run these commands from
+wherever you keep your projects:
 
-No OpenSSL setup this time - this example uses plain TCP.
+```sh
+mkdir hello-doba
+cd hello-doba
+git clone https://github.com/martianlabs/doba.git doba
+```
+
+Stay in **hello-doba** for the rest of the chapter. You'll add **main.cpp**
+and **CMakeLists.txt** beside the **doba** folder.
 
 <a name="build-it"></a>
 <h2>
@@ -43,16 +53,58 @@ No OpenSSL setup this time - this example uses plain TCP.
   </a>
 </h2>
 
-Two commands:
+Create **CMakeLists.txt** in **hello-doba**:
 
-```sh
-cmake -S . -B out/build/guide
-cmake --build out/build/guide --config Release --target hello_world
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project(hello_doba LANGUAGES CXX)
+
+add_subdirectory(doba)
+
+add_executable(hello_world main.cpp)
+target_link_libraries(hello_world PRIVATE martianlabs::doba)
 ```
 
-Examples are enabled by default when you build doba from the repository root.
-The **hello_world** target keeps the build focused on this example.
-The *--config Release* option applies to multi-configuration generators.
+Now create **main.cpp** in the same folder:
+
+```cpp
+#include "common/signaler.h"
+#include "http_server.h"
+
+using martianlabs::doba::common::signaler;
+using martianlabs::doba::http_server;
+using martianlabs::doba::protocol::http::v11::request;
+using martianlabs::doba::protocol::http::v11::response;
+
+int main() {
+  http_server<> server({.ip = "127.0.0.1", .port = "8080"});
+
+  server.add_route("GET", "/hello", [](const request&, response& res) {
+    res.ok_200()
+        .add_header("Content-Type", "text/plain; charset=utf-8")
+        .set_body("Hello, world!");
+  });
+
+  server.start();
+  signaler::wait();
+}
+```
+
+On Linux with a single-configuration generator, configure and build your app:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target hello_world
+```
+
+On Windows with Visual Studio, select **Release** when you build:
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release --target hello_world
+```
+
+CMake builds your app; you don't need to build doba's examples or tests.
 
 <a name="run-it"></a>
 <h2>
@@ -64,28 +116,30 @@ The *--config Release* option applies to multi-configuration generators.
   </a>
 </h2>
 
-Start the executable from the build tree. With a single-configuration generator
-on Linux, that looks like this:
+On Linux with a single-configuration generator, start the server with:
 
 ```sh
-./out/build/guide/examples/http/v11/hello_world/hello_world
+./build/hello_world
 ```
 
-With Visual Studio on Windows, the Release executable is normally here:
+On Windows with Visual Studio, use:
 
 ```powershell
-.\out\build\guide\examples\http\v11\hello_world\Release\hello_world.exe
+.\build\Release\hello_world.exe
 ```
 
-Keep it running and open another terminal. Then ask for **/hello**:
+Leave it running. In a second terminal, from either platform, send a request:
 
 ```sh
-curl -i http://localhost:8080/hello
+curl -i http://127.0.0.1:8080/hello
 ```
 
-You should get **200 OK**, the **Server: doba.** and
-**Content-Type: text/plain; charset=utf-8** headers, and the body **ok**.
-Stop the server with Ctrl+C when you're done.
+You should see **200 OK**, a **Content-Type: text/plain; charset=utf-8**
+header, and **Hello, world!** in the response body. Nice: your server is
+talking. Stop it with Ctrl+C.
+
+If port **8080** is already taken, change it in **main.cpp**, rebuild, and use
+the same new port in the **curl** URL.
 
 <a name="under-the-hood"></a>
 <h2>
@@ -97,25 +151,15 @@ Stop the server with Ctrl+C when you're done.
   </a>
 </h2>
 
-Here is the bit doing the work in
-[main.cpp](../../examples/http/v11/hello_world/main.cpp):
+In **CMakeLists.txt**, *add_subdirectory* brings in your local doba checkout.
+Linking *martianlabs::doba* gives the app doba's headers, its C++20 setting,
+and the system threading dependency.
 
-```cpp
-http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-http_server.add_route("GET", "/hello", [](const request&, response& res) {
-  res.ok_200();
-  res.add_header("Server", "doba.")
-      .add_header("Content-Type", "text/plain; charset=utf-8")
-      .set_body("ok");
-});
-http_server.start();
-signaler::wait();
-```
+In **main.cpp**, *http_server<>* pairs HTTP/1.1 with doba's default TCP
+transport. *add_route* handles **GET /hello** and builds the response.
+*start()* opens the listener, while *signaler::wait()* keeps the process alive
+until you stop it.
 
-**http_server<>** pairs doba's HTTP/1.1 engine with its default TCP transport.
-**add_route** matches **GET /hello**; the response sets its status, headers,
-and body. **start()** opens the listener; **signaler::wait()** keeps it alive
-until Ctrl+C.
-
-That's your first doba server. Head back to the [guide index](README.md) when
-you're ready for more.
+That's your first doba app. The [core model](02-core-model.md) shows how the
+protocol and transport fit together; the
+[guide index](README.md) has the rest of the tour.
