@@ -176,7 +176,7 @@ struct send_state {
   // An inline batch retains its full credit until its final byte is consumed.
   bool pressured() {
     byte_pressure_ = update_pressure(byte_pressure_, inline_bytes_ + source_reservation_, capacity_);
-    source_pressure_ =
+    source_pressure_ = max_sources_ && !sources_.empty() &&
         update_pressure(source_pressure_, sources_.size(), max_sources_);
     return byte_pressure_ || source_pressure_;
   }

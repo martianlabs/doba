@@ -496,7 +496,8 @@ struct worker {
           }
           if (configuration_.inactivity_period.count() > 0) {
             tout = std::min(tout, static_cast<DWORD>(std::min<std::int64_t>(
-                1000, configuration_.inactivity_period.count())));
+                connection_progress::maintenance_interval.count(),
+                configuration_.inactivity_period.count())));
           }
           BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
@@ -638,14 +639,20 @@ struct worker {
   // +-------------------------------------------------------------------------+
   void expire_contexts() {
     if (!configuration_.inactivity_period.count()) return;
+    const auto now = std::chrono::steady_clock::now();
+    // The deadline is only a scheduling hint; context state stays protected by
+    // its existing locks. Avoid a shared mutex RMW on every IOCP completion.
+    if (now.time_since_epoch().count() <
+        next_expiry_ticks_.load(std::memory_order_relaxed)) return;
     // Only one worker scans at a time, without holding lifecycle_mutex_ while
     // entering a context (retirement takes these locks in the opposite order).
     std::unique_lock<std::mutex> scan(expiry_mutex_, std::try_to_lock);
     if (!scan.owns_lock()) return;
-    const auto now = std::chrono::steady_clock::now();
     if (now < next_expiry_) return;
     next_expiry_ = now + std::min(configuration_.inactivity_period,
-                                std::chrono::milliseconds{1000});
+                                connection_progress::maintenance_interval);
+    next_expiry_ticks_.store(next_expiry_.time_since_epoch().count(),
+                             std::memory_order_relaxed);
     std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
     {
       std::lock_guard<std::mutex> lock(lifecycle_mutex_);
@@ -921,6 +928,7 @@ struct worker {
       std::make_shared<connection_budget>(configuration_.max_connections)};
   std::mutex expiry_mutex_;
   std::chrono::steady_clock::time_point next_expiry_{};
+  std::atomic<std::chrono::steady_clock::rep> next_expiry_ticks_{0};
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
   network::detail::environment environment_;

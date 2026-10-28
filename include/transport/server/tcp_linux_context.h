@@ -95,7 +95,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
         output_{send_buffer_size, max_pending_sources} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
-  ~context() = default;
+  ~context() { publish_input_pressure_(true); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -114,7 +114,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     ssize_t received;
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (closing_ || output_.pressured() || input_.input_paused()) { errno = EAGAIN; return -1; }
+      if (closing_ || output_pressured_() || input_.input_paused()) { errno = EAGAIN; return -1; }
       const auto target = input_.receive_buffer();
       if (target.empty()) return 0;
       received = ::recv(socket_, target.data(), target.size(), MSG_DONTWAIT);
@@ -135,6 +135,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       processing_receive_ = false;
       if (input_.peer_closed() && !closing_) {
         closing_ = true;
+        publish_input_pressure_(true);
         if (!input_.close_output()) abort_();
       }
     }
@@ -160,12 +161,10 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
     if constexpr (requires { input_.engine.set_input_flow_control(
         std::function<bool()>{}, std::function<void()>{}); }) {
+      flow_pressure_ = std::make_shared<std::atomic<bool>>(false);
       input_.engine.set_input_flow_control(
-          [weak = this->weak_from_this()]() {
-            auto ctx = weak.lock();
-            if (!ctx) return true;
-            std::lock_guard<std::mutex> lock(ctx->sending_mutex_);
-            return ctx->closing_ || ctx->output_.pressured();
+          [pressure = flow_pressure_]() {
+            return pressure->load(std::memory_order_acquire);
           },
           [weak = this->weak_from_this()]() {
             if (auto ctx = weak.lock()) {
@@ -198,6 +197,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     stopping_ = stopping_ || stopping;
     closing_ = true;
+    publish_input_pressure_(true);
     if (!input_.close_output()) abort_();
   }
   // +=========================================================================+
@@ -211,6 +211,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     if (closing_ || socket_ == -1) return;
     closing_ = true;
+    publish_input_pressure_(true);
     if (!input_.close_output()) {
       abort_();
       return;
@@ -288,7 +289,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
-    if (!processing_receive_ && !update_interest_(true)) abort_();
+    if (processing_receive_) {
+      if (flow_pressure_) output_pressured_();
+    } else if (!update_interest_(true)) {
+      abort_();
+    }
   }
   // +=========================================================================+
   // | [>] send_pending                                             ( public ) |
@@ -304,9 +309,12 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | or false if an error occurs.                                            |
   // +-------------------------------------------------------------------------+
   void resume_input() {
+    // The worker serializes protocol input; active input needs no queue lock.
+    if (!input_.input_paused()) return;
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
-      if (closing_ || socket_ == -1 || processing_receive_ || output_.pressured()) return;
+      if (closing_ || socket_ == -1 || processing_receive_ ||
+          !input_.input_paused() || output_pressured_()) return;
       processing_receive_ = true;
     }
     try { input_.resume_input(); }
@@ -320,6 +328,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     processing_receive_ = false;
     if (input_.peer_closed() && !closing_) {
       closing_ = true;
+      publish_input_pressure_(true);
       if (!input_.close_output()) abort_();
     }
     // Resumed protocol work can request closure without producing any bytes.
@@ -386,6 +395,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     const int socket = socket_;
     socket_ = -1;
     closing_ = true;
+    publish_input_pressure_(true);
     output_.clear();
     return socket;
   }
@@ -438,9 +448,23 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] update_interest_                                        ( private ) |
   // +-------------------------------------------------------------------------+
+  // The engine can query this state after the context retires. It owns only
+  // the flag, never the context, and cannot create an ownership cycle.
+  void publish_input_pressure_(bool pressured) {
+    if (flow_pressure_ && published_pressure_ != pressured) {
+      published_pressure_ = pressured;
+      flow_pressure_->store(pressured, std::memory_order_release);
+    }
+  }
+  // Called with sending_mutex_ held at every output mutation/interest update.
+  bool output_pressured_() {
+    const bool pressured = output_.pressured();
+    publish_input_pressure_(closing_ || pressured);
+    return pressured;
+  }
   bool update_interest_(bool enabled) {
     uint32_t events = EPOLLRDHUP;
-    if ((!output_.pressured() && !input_.input_paused()) || socket_shutdown_)
+    if ((!output_pressured_() && !input_.input_paused()) || socket_shutdown_)
       events |= EPOLLIN;
     if (closing_ && !socket_shutdown_) events = 0;
     if (enabled) events |= EPOLLOUT;
@@ -459,6 +483,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +-------------------------------------------------------------------------+
   void abort_() {
     closing_ = true;
+    publish_input_pressure_(true);
     aborted_ = true;
     // Wake the owner even when output is blocked or no data is arriving.
     if (socket_ != -1) ::shutdown(socket_, SHUT_RDWR);
@@ -475,6 +500,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   int epoll_fd_{-1};
   mutable std::mutex sending_mutex_;
   send_state output_;
+  std::shared_ptr<std::atomic<bool>> flow_pressure_;
+  bool published_pressure_{false};
   uint32_t watched_events_{EPOLLIN | EPOLLRDHUP};
   bool processing_receive_{false};
   bool closing_{false};

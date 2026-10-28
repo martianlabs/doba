@@ -26,8 +26,10 @@
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
 #include "test_helper.h"
+#include <coroutine>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace {
 using namespace martianlabs::doba::protocol::http::v11;
@@ -142,4 +144,95 @@ DOBA_TEST(
   auto result = incomplete.deserialize(input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT(result.response->serialize().head.starts_with("HTTP/1.1 431"));
+}
+
+DOBA_TEST("HTTP flow does not poll pressure without input and still retains a pressured block") {
+  router<request, response> routes;
+  int calls = 0, polls = 0;
+  bool pressure = false;
+  routes.add("GET", "/", [&](const request&, response& res) {
+    ++calls;
+    res.ok_200().set_body("ok");
+  });
+  engine<request, response, decltype(routes)> value({}, routes);
+  value.set_on_close([] {});
+  value.set_on_send([](auto, auto, std::unique_ptr<reader>) {});
+  value.set_input_flow_control(
+      [&] {
+        ++polls;
+        return pressure;
+      },
+      [] {});
+  value.on_bytes_received({});
+  value.resume_input();
+  DOBA_EXPECT_EQUAL(polls, 0);
+  const std::string wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(wire);
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT_EQUAL(polls, 1);
+  pressure = true;
+  value.on_bytes_received(wire + wire);
+  DOBA_EXPECT(value.input_paused());
+  DOBA_EXPECT_EQUAL(calls, 1);
+  pressure = false;
+  value.resume_input();
+  DOBA_EXPECT_EQUAL(calls, 3);
+  DOBA_EXPECT(!value.input_paused());
+  const auto before = polls;
+  value.resume_input();
+  value.on_bytes_received({});
+  DOBA_EXPECT_EQUAL(polls, before);
+}
+
+namespace {
+struct demand_gate {
+  std::coroutine_handle<> handle;
+  bool await_ready() const noexcept { return false; }
+  void await_suspend(std::coroutine_handle<> next) noexcept { handle = next; }
+  void await_resume() const noexcept {}
+  void resume() {
+    if (auto next = std::exchange(handle, {})) next.resume();
+  }
+};
+}  // namespace
+
+DOBA_TEST(
+    "HTTP demand pressure subscribes on arriving input and resumes after async "
+    "credit") {
+  router<request, response> routes;
+  demand_gate gate;
+  int calls = 0, replies = 0, wakes = 0, closes = 0;
+  routes.add("GET", "/",
+             [&](const request&,
+                 response& res) -> martianlabs::doba::common::task<void> {
+               ++calls;
+               co_await gate;
+               res.ok_200().set_body("ok");
+             });
+  policies limits;
+  limits.max_pending_requests = 1;
+  engine<request, response, decltype(routes)> value(limits, routes);
+  struct cleanup {
+    demand_gate& gate;
+    ~cleanup() { gate.resume(); }
+  } finish{gate};
+  value.set_on_close([&] { ++closes; });
+  value.set_on_send([&](auto, auto, std::unique_ptr<reader>) { ++replies; });
+  value.set_input_flow_control([] { return false; }, [&] { ++wakes; });
+  const std::string wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+  value.on_bytes_received(wire);
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT(!value.input_paused());
+  value.on_bytes_received(wire);
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT(value.input_paused());
+  gate.resume();
+  DOBA_EXPECT_EQUAL(wakes, 1);
+  value.resume_input();
+  DOBA_EXPECT_EQUAL(calls, 2);
+  DOBA_EXPECT(!value.input_paused());
+  gate.resume();
+  DOBA_EXPECT_EQUAL(replies, 2);
+  DOBA_EXPECT_EQUAL(wakes, 1);
+  DOBA_EXPECT_EQUAL(closes, 0);
 }

@@ -240,9 +240,14 @@ have independent budgets. The maximum does not preallocate connections.
 
 *inactivity_period* defaults to **60 seconds**. Only positive socket reads or
 writes renew it, including TLS handshake bytes. Expiration aborts the socket;
-queued responses and suspended handlers do not count as progress. Workers check
-at intervals no larger than the smaller of the configured period and one second,
-plus scheduling delay. Expiration also applies during a pause or a graceful
+queued responses and suspended handlers do not count as progress. Recording a
+context's activity only sets a flag under its existing lock; this needs no clock
+read or new atomic operation. Workers query the clock for maintenance scheduling
+and sample activity at intervals of the smaller of the
+configured period and **250 ms**. The first sample starts the idle clock, and a
+sample observing activity renews it. A silent connection therefore expires no
+earlier than its configured period and normally within two extra sample intervals
+(at most **500 ms**), plus scheduling and scan delay. Expiration also applies during a pause or a graceful
 close. It does not forcibly cancel a handler that external code may still resume.
 A peer sending occasional bytes can keep this period alive: it is not a total
 request deadline or minimum transfer rate.

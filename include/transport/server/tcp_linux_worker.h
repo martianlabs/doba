@@ -268,7 +268,8 @@ struct worker {
       }
       if (configuration_.inactivity_period.count() > 0) {
         const auto tick = std::min<std::int64_t>(
-            1000, configuration_.inactivity_period.count());
+            connection_progress::maintenance_interval.count(),
+            configuration_.inactivity_period.count());
         if (tout < 0 || tout > tick) tout = static_cast<int>(tick);
       }
       int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), tout);
@@ -315,7 +316,7 @@ struct worker {
               close_context(item.first);
           }
           next_expiry_ = now + std::min(configuration_.inactivity_period,
-                                      std::chrono::milliseconds{1000});
+                                      connection_progress::maintenance_interval);
         }
       }
       retire_contexts();
@@ -433,12 +434,6 @@ struct worker {
       ::close(socket);
       return;
     }
-    int no_delay = 1;
-    if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
-                     sizeof(no_delay)) == -1) {
-      ::close(socket);
-      return;
-    }
     try {
       register_context(socket);
     } catch (...) {
@@ -457,6 +452,10 @@ struct worker {
   void register_context(int socket) {
     auto reservation = connection_reservation::acquire(budget_);
     if (!reservation) { ::close(socket); return; }
+    int no_delay = 1;
+    if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
+                     sizeof(no_delay)) == -1)
+      throw std::runtime_error("Accepted socket could not be configured!");
     std::size_t encrypted_receive_buffer_capacity = 0;
     std::size_t network_bio_buffer_capacity = 0;
     if constexpr (requires(const POty& value) {

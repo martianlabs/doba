@@ -56,8 +56,12 @@ The [operating policies](transport/server/operating_policies_tests.cpp),
 listeners: admission and recovery, zero limits and configuration snapshots,
 receive/send progress, paused pipelines, slow readers, held async work,
 wakeups during receive, and TLS close notifications during resumption.
-See the [coverage matrix](../../plans/operational-policies-coverage.md) for
-boundary cases, platform runs and mutation evidence.
+The [flow pressure tests](transport/server/flow_pressure_tests.cpp) verify immediate
+publication after enqueue, release after drain and safe queries after retirement.
+The [operating policy cases](transport/server/operating_policies_tests.cpp) and
+[policy audit](transport/server/policy_audit_tests.cpp) cover boundaries,
+inactivity, retained work and concurrent flow control. The
+[mutation campaign](../mutation/README.md) checks regression detection separately.
 
 The [resilience cases](protocol/http/v11/server_resilience_tests.cpp) mix
 several TCP or TLS clients, tiny reads, abrupt resets, suspended handlers,

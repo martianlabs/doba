@@ -74,6 +74,8 @@ full list; the settings you are most likely to touch are:
   workers. **0** removes the limit; excess sockets close before engine creation.
 - **Progress.** *inactivity_period* defaults to **60 seconds** without positive
   socket reads or writes. **0** disables expiration; negative periods are invalid.
+  Activity is sampled periodically; recording it does not read the clock. See
+  [limits and operation](06-limits-and-operation.md#bound-work-in-flight) for timing.
 - **Readers.** *max_pending_sources* defaults to **32** retained output readers
   per connection, including the active reader. **0** removes the limit.
 

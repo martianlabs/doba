@@ -14,12 +14,12 @@
   </a>
 </h1>
 
-This bounded campaign checks that ten functional assertions detect
-specific defects. It compiles the original tests first, then builds each mutant
+This bounded campaign checks that functional assertions detect twelve
+specific regressions. It compiles the original tests first, then builds each mutant
 against an independent copy of the production headers. Your working headers
 are never edited.
 
-Each selected original test must pass exactly once. Each mutant must
+Each original invocation must run exactly one selected test and pass. Each mutant must
 compile, exit with the runner's assertion-failure code, and report the
 planned assertion. A compiler error, timeout, crash, or sanitizer diagnostic
 is a failed campaign, never a successful detection.
@@ -41,6 +41,8 @@ is a failed campaign, never a successful detection.
 | rejection-successor | Notify transport closure but omit the engine's terminal-state update | A later receive cannot dispatch a successor |
 | admission | Remove connection admission guard | Reservation above capacity fails |
 | zero-progress | Renew inactivity on zero bytes | Original deadline still expires |
+| activity-renewal | Ignore positive activity between samples | Observed activity postpones expiry |
+| activity-consumption | Never clear sampled activity | Silence still expires |
 | sources | Remove reader admission guard | Reader above capacity is rejected |
 | partial-batch | Release byte credit during a partial batch send | Byte pressure remains active |
 | http-bytes | Remove pending response byte guard | Overflow closes the connection |
@@ -54,9 +56,9 @@ successful-order and terminal-close checks on the original code.
 
 The checks also verify that the original headers and detector tests retain
 their hashes after the campaign. The mutations stay in private copies.
-The seven policy detectors also run in the ordinary unit suite; their sources
+The policy detectors also run in the ordinary unit suite; their sources
 are listed in [CMakeLists.txt](CMakeLists.txt).
 Run both campaigns with `cmake -P tests/mutation/run_detection.cmake` using a
 Clang compiler and Ninja (on Windows, use a developer shell).
-This checks ten selected regressions; it is not a mutation score for the
+This checks twelve selected regressions; it is not a mutation score for the
 whole library.

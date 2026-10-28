@@ -189,7 +189,7 @@ Handles bytes received from the transport.
 void set_input_flow_control(std::function<bool()> pressure, std::function<void()> ready);
 ```
 
-Optional generic transport integration, configured before receiving input. The pressure callback reports transport output pressure. The ready callback schedules an input-service opportunity when ordered-response credit changes; it must not reenter the engine. Bundled transports use weak context ownership. Engines without this optional integration retain hard-limit closure behavior.
+Optional generic transport integration, configured before receiving input. The pressure callback reports transport output pressure. The ready callback schedules an input-service opportunity when ordered-response credit can release paused input; ordinary unpressured completions do not request wakeups. Subscription rechecks credit to avoid a lost concurrent completion. The callback must not reenter the engine. Ready callbacks use weak context ownership; Linux pressure queries read separately owned published state. Engines without this optional integration retain hard-limit closure behavior.
 
 **Source:** [include/protocol/http/v11/engine.h:130](../../../../../include/protocol/http/v11/engine.h#L130)
 
@@ -205,6 +205,8 @@ bool input_paused() const noexcept;
 
 Reports whether input processing stopped at a message boundary for output or pending-response credit. The transport must suspend further input delivery, the engine owns a copy of the deferred remainder of one bounded receive block. An in-progress message can finish before pausing so that an interim response does not prevent its body from arriving.
 
+Pressure is queried only when bytes are available to start a message. With no deferred bytes this can return false even while a budget is pressured; the next block is checked before decoding. Hard budgets are unchanged.
+
 **Source:** [include/protocol/http/v11/engine.h:135](../../../../../include/protocol/http/v11/engine.h#L135)
 
 <a id="method-resume-input"></a>
@@ -217,6 +219,6 @@ Reports whether input processing stopped at a message boundary for output or pen
 void resume_input();
 ```
 
-Services the deferred remainder of one receive block and reevaluates pressure. Serialize with all receive callbacks and stop; invoke outside transport output locks. The bundled TCP and TLS transports resume input on their workers. The ready callback is a wakeup, not permission to invoke this method concurrently.
+Services the deferred remainder of one receive block and reevaluates pressure when bytes remain. An empty resume does not poll pressure. Serialize with all receive callbacks and stop; invoke outside transport output locks. The bundled TCP and TLS transports resume input on their workers. The ready callback is a wakeup, not permission to invoke this method concurrently.
 
 **Source:** [include/protocol/http/v11/engine.h:136](../../../../../include/protocol/http/v11/engine.h#L136)

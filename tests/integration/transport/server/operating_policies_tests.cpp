@@ -265,6 +265,42 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   server.stop();
 }
 
+template <template <class, class> class Transport, class Peer, class Policies>
+void maintenance_during_traffic(Policies p) {
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  p.ip = "127.0.0.1";
+  p.port = std::to_string(port);
+  p.worker_count = 2;
+  p.inactivity_period = 400ms;
+  std::atomic<int> connected{0}, disconnected{0};
+  auto factory = [] { return echo_engine{}; };
+  Transport<echo_engine, decltype(factory)> server(p, factory);
+  server.set_on_connection([&] { ++connected; });
+  server.set_on_disconnection([&] { ++disconnected; });
+  server.start();
+  Peer idle, busy;
+  DOBA_EXPECT(idle.connect(port));
+  DOBA_EXPECT(busy.connect(port));
+  DOBA_EXPECT(wait_count(connected, 2));
+  const auto deadline = std::chrono::steady_clock::now() + 3s;
+  int replies = 0;
+  while (!disconnected.load() && std::chrono::steady_clock::now() < deadline) {
+    DOBA_EXPECT(busy.send("x"));
+    const auto reply = busy.receive(1);
+    DOBA_EXPECT(reply && *reply == "x");
+    ++replies;
+  }
+  DOBA_EXPECT(replies > 0);
+  DOBA_EXPECT_EQUAL(disconnected.load(), 1);
+  DOBA_EXPECT(closed(idle.socket));
+  // The active peer survives the same maintenance sweep that expired idle.
+  DOBA_EXPECT(busy.send("y"));
+  const auto reply = busy.receive(1);
+  DOBA_EXPECT(reply && *reply == "y");
+  server.stop();
+}
+
 template <class Server, class Peer, class Policies>
 void inactivity(Policies p) {
   tcpip_client probe;
@@ -493,6 +529,10 @@ void pending_overflow(Policies p) {
 DOBA_TEST("TCP policies enforce global admission and recover on restart") {
   admission<http_server<>, plain_peer>(transport::server::tcp_policies{});
 }
+DOBA_TEST("TCP periodic maintenance expires silence while other traffic stays busy") {
+  maintenance_during_traffic<transport::server::tcp, plain_peer>(
+      transport::server::tcp_policies{});
+}
 DOBA_TEST("TCP admission releases its sole reservation when engine construction fails") {
   factory_failure<transport::server::tcp, plain_peer>(transport::server::tcp_policies{});
 }
@@ -563,6 +603,9 @@ DOBA_TEST("TLS policies enforce admission before allocating handshake state") {
 }
 DOBA_TEST("TLS inactivity expires handshakes idle peers and partial requests") {
   inactivity<https_server<>, secure_peer>(server_policies(1));
+}
+DOBA_TEST("TLS periodic maintenance expires silence while other traffic stays busy") {
+  maintenance_during_traffic<transport::server::tls, secure_peer>(server_policies(1));
 }
 DOBA_TEST("TLS policies pause a received pipeline and resume ordered replies") {
   pipeline<https_server<>, secure_peer>(server_policies(1));

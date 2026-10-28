@@ -88,17 +88,31 @@ inline bool update_pressure(bool paused, std::size_t used,
 
 struct connection_progress {
   using clock = std::chrono::steady_clock;
-  clock::time_point last{clock::now()};
-  void transferred(std::size_t bytes, clock::time_point now = clock::now()) {
+  static constexpr auto maintenance_interval = std::chrono::milliseconds{250};
+  // Context I/O and maintenance already hold the same context lock. Neither
+  // construction nor positive I/O needs a timestamp or an additional atomic.
+  void transferred(std::size_t bytes) noexcept {
     if (bytes)
-      last = now;
+      active_ = true;
   }
   bool expired(std::chrono::milliseconds period,
-               clock::time_point now = clock::now()) const noexcept {
-    return period.count() > 0 && now >= last &&
+               clock::time_point now = clock::now()) noexcept {
+    if (period.count() <= 0) return false;
+    if (observed_ && now < last) return false;
+    if (!observed_ || active_) {
+      last = now;
+      observed_ = true;
+      active_ = false;
+      return false;
+    }
+    return now >= last &&
            std::chrono::duration_cast<std::chrono::milliseconds>(now - last) >=
                period;
   }
+  clock::time_point last{};
+ private:
+  bool observed_{false};
+  bool active_{false};
 };
 } // namespace martianlabs::doba::transport::server::detail
 #endif

@@ -83,8 +83,14 @@ The operating-policy tests cover admission leases, clocks, exact boundaries,
 zero values, reader lifetimes, partial batches and combined pressure. The
 [transport budget audit](transport/server/policy_budget_audit_tests.cpp) and
 [HTTP budget audit](protocol/http/v11/policy_budget_audit_tests.cpp) isolate
-hysteresis for each credit source. Seven guards are challenged by the
+hysteresis for each credit source. The [flow wakeup tests](protocol/http/v11/flow_wakeup_tests.cpp)
+check selective notifications and race subscription against 2048 position completions and 2048 byte-credit
+releases. Sampled inactivity tests check 50–500 ms maintenance, small periods,
+bounded expiry delay, zero-byte completions and preservation of recent activity.
+Nine policy mutations are challenged by the
 [mutation campaign](../mutation/README.md).
+Demand-driven flow tests also verify that empty input does not poll pressure
+and that incoming bytes subscribe and resume correctly behind an async request.
 
 The [regression detectors](protocol/http/v11/regression_detection_tests.cpp)
 check body limits, queued responses, and terminal rejection. Those same

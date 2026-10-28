@@ -132,7 +132,7 @@ class engine {
     output_pressure_ = std::move(pressure);
     async_->set_on_input_ready(std::move(ready));
   }
-  bool input_paused() const noexcept { return paused_.load(); }
+  bool input_paused() const noexcept { return paused_.load(std::memory_order_relaxed); }
   void resume_input() {
     std::string_view remaining(deferred_);
     process_input_(remaining);
@@ -140,20 +140,22 @@ class engine {
   }
   void on_bytes_received(std::string_view input) {
     process_input_(input);
-    if (!closed_ && !input.empty() && paused_.load()) deferred_.assign(input);
+    if (!closed_ && !input.empty() && paused_.load(std::memory_order_relaxed)) deferred_.assign(input);
   }
 
  private:
   void process_input_(std::string_view& input) {
     if (closed_) { input = {}; return; }
-    paused_ = false;
+    paused_.store(false, std::memory_order_relaxed);
     while (!closed_) {
+      // Check pressure when there is input to admit, not at an empty boundary.
+      // The next block is still checked before starting another request.
+      if (input.empty()) return;
       if (!message_started_ && output_pressure_ &&
-          (output_pressure_() || async_->pressured())) {
-        paused_ = true;
+          (output_pressure_() || (!synchronous_ && async_->pressured()))) {
+        paused_.store(true, std::memory_order_relaxed);
         return;
       }
-      if (input.empty()) return;
       if (!synchronous_) {
         if (!async_->accepting()) return;
         if (async_->idle()) synchronous_ = true;
@@ -234,6 +236,8 @@ class engine {
   protocol::send_delegate on_send_;
   std::function<bool()> output_pressure_;
   std::string deferred_;
+  // This flag gates transport input; it publishes no engine-owned data.
+  // Receive and resume calls remain serialized by the transport.
   std::atomic<bool> paused_{false};
   bool message_started_{false};
   bool closed_{false};

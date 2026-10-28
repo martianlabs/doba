@@ -34,10 +34,11 @@ if(WIN32)
   set(suffix ".exe")
   set(ENV{ASAN_OPTIONS} "halt_on_error=1:detect_leaks=0")
 endif()
-set(ids admission zero-progress sources partial-batch http-bytes requests combined-pressure)
+set(ids admission zero-progress sources partial-batch http-bytes requests combined-pressure activity-renewal activity-consumption)
 set(headers transport/server/operating_state.h transport/server/operating_state.h
   transport/server/send_state.h transport/server/send_state.h
-  protocol/http/v11/engine_async.h protocol/http/v11/engine_async.h transport/server/send_state.h)
+  protocol/http/v11/engine_async.h protocol/http/v11/engine_async.h transport/server/send_state.h
+  transport/server/operating_state.h transport/server/operating_state.h)
 set(before_0 "if (budget->maximum && used >= budget->maximum)")
 set(before_1 "if (bytes)")
 set(before_2 "if (source && max_sources_ && sources_.size() >= max_sources_)")
@@ -45,6 +46,8 @@ set(before_3 "offset += sent;")
 set(before_4 "if (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size())")
 set(before_5 "if (max_pending_requests_ &&")
 set(before_6 "return byte_pressure_ || source_pressure_;")
+set(before_7 "active_ = true;")
+set(before_8 "active_ = false;")
 set(after_0 "if (false && budget->maximum && used >= budget->maximum)")
 set(after_1 "if (bytes || bytes == 0)")
 set(after_2 "if (false && source && max_sources_ && sources_.size() >= max_sources_)")
@@ -52,16 +55,21 @@ set(after_3 "offset += sent;\n    if (!active_from_source_ && offset < buffer.si
 set(after_4 "if (false && (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size()))")
 set(after_5 "if (false && max_pending_requests_ &&")
 set(after_6 "return byte_pressure_ && source_pressure_;")
+set(after_7 "active_ = false;")
+set(after_8 "active_ = true;")
 set(names
   "connection reservations move release and unwind exactly once"
-  "inactivity renews only on positive bytes and expires at the boundary"
+  "sampled inactivity renews only on positive bytes at maintenance"
   "source budget counts active empty readers and releases their owners"
   "byte pressure survives releasing source pressure and partial active sends"
   "pending HTTP bytes enforce exact boundaries before copying"
   "pending request credit uses exact limits and its own hysteresis"
-  "source pressure survives releasing byte pressure until the source low watermark")
+  "source pressure survives releasing byte pressure until the source low watermark"
+  "sampled inactivity renews only on positive bytes at maintenance"
+  "sampled inactivity renews only on positive bytes at maintenance")
 set(assertions "!connection_reservation::acquire(budget)" "progress.expired(60s, start + 60s)"
-  "!output.push({}, {}, source())" "output.pressured()" "(closes) ==" "!pending.reserve().has_value()" "output.pressured()")
+  "!output.push({}, {}, source())" "output.pressured()" "(closes) ==" "!pending.reserve().has_value()" "output.pressured()"
+  "!progress.expired(60s, start + 60s)" "progress.expired(60s, start + 60s)")
 
 function(build_variant id)
   set(directory "${run}/${id}")
@@ -105,7 +113,9 @@ build_variant(original)
 foreach(name IN LISTS names)
   run_case(original "${name}" 0 "")
 endforeach()
-foreach(index RANGE 0 6)
+list(LENGTH ids mutation_count)
+math(EXPR mutation_last "${mutation_count} - 1")
+foreach(index RANGE 0 ${mutation_last})
   foreach(list_name ids headers names assertions)
     list(GET ${list_name} ${index} ${list_name}_value)
   endforeach()
@@ -143,4 +153,4 @@ foreach(index RANGE 0 ${last})
     message(FATAL_ERROR "Policy source changed: ${path}")
   endif()
 endforeach()
-message(STATUS "Seven policy mutations detected; originals unchanged. Evidence: ${run}")
+message(STATUS "${mutation_count} policy mutations detected; originals unchanged. Evidence: ${run}")

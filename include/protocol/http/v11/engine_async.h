@@ -175,7 +175,7 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   std::optional<std::size_t> reserve() {
     if (!accepting()) return std::nullopt;
-    if (next_request_.load() == static_cast<std::size_t>(-1)) {
+    if (next_request_ == static_cast<std::size_t>(-1)) {
       close_now();
       return std::nullopt;
     }
@@ -265,21 +265,31 @@ class engine_async {
   // +-------------------------------------------------------------------------+
   void set_on_input_ready(std::function<void()> ready) { on_input_ready_ = std::move(ready); }
   bool pressured() noexcept {
-    const auto sent = next_send_.load();
-    const bool requests = transport::server::detail::update_pressure(
-        request_pressure_, next_request_.load() - sent, max_pending_requests_);
-    request_pressure_ = requests;
-    const bool bytes = transport::server::detail::update_pressure(
-        byte_pressure_, pending_bytes_.load(), max_pending_bytes_);
-    byte_pressure_ = bytes;
-    return requests || bytes;
+    const auto sample = [this] {
+      const auto sent = next_send_.load();
+      request_pressure_ = transport::server::detail::update_pressure(
+          request_pressure_, next_request_ - sent, max_pending_requests_);
+      return request_pressure_ || byte_pressure_.load();
+    };
+    if (!sample()) {
+      if (input_waiting_.load(std::memory_order_relaxed))
+        input_waiting_.store(false, std::memory_order_release);
+      return false;
+    }
+    // Subscribe only on the cold path. Recheck after subscribing so a
+    // completion between the first sample and subscription cannot lose a wake.
+    input_waiting_.store(true);
+    if (sample()) return true;
+    input_waiting_.store(false, std::memory_order_release);
+    return false;
   }
   void submit(std::size_t position, serialization_result result, bool final,
               bool close) {
     struct notify_on_exit {
       const std::function<void()>& callback;
-      ~notify_on_exit() { if (callback) { try { callback(); } catch (...) {} } }
-    } notify{on_input_ready_};
+      const std::atomic<bool>& waiting;
+      ~notify_on_exit() { if (callback && waiting.load()) { try { callback(); } catch (...) {} } }
+    } notify{on_input_ready_, input_waiting_};
     if (close) accepting_.store(false, std::memory_order_release);
     if (active_.load(std::memory_order_acquire) == 0 &&
         position == next_send_.load(std::memory_order_acquire) &&
@@ -303,18 +313,20 @@ class engine_async {
       if (close) {
         pending_.clear();
         pending_bytes_ = 0;
+        publish_byte_pressure_();
         close_now();
         return;
       }
       if (pending_.empty()) return;
     } else {
-      const auto used = pending_bytes_.load();
+      const auto used = pending_bytes_;
       const auto capacity = max_pending_bytes_ ? max_pending_bytes_
                                                : static_cast<std::size_t>(-1);
       if (result.head.size() > capacity - used ||
           result.body.size() > capacity - used - result.head.size()) {
         pending_.clear();
         pending_bytes_ = 0;
+        publish_byte_pressure_();
         close_now();
         return;
       }
@@ -322,7 +334,8 @@ class engine_async {
       slot.outputs.push_back(
           {std::string(result.head), std::string(result.body),
            std::move(result.source)});
-      pending_bytes_.fetch_add(result.head.size() + result.body.size());
+      pending_bytes_ += result.head.size() + result.body.size();
+      publish_byte_pressure_();
       slot.complete = final;
       slot.close = close;
     }
@@ -332,7 +345,8 @@ class engine_async {
       while (!current->second.outputs.empty()) {
         auto output = std::move(current->second.outputs.front());
         current->second.outputs.pop_front();
-        pending_bytes_.fetch_sub(output.head.size() + output.body.size());
+        pending_bytes_ -= output.head.size() + output.body.size();
+        publish_byte_pressure_();
         on_send_(output.head, output.body, std::move(output.source));
       }
       if (!current->second.complete) break;
@@ -342,6 +356,7 @@ class engine_async {
       if (should_close) {
         pending_.clear();
         pending_bytes_ = 0;
+        publish_byte_pressure_();
         close_now();
         break;
       }
@@ -378,6 +393,14 @@ class engine_async {
   // +=========================================================================+
   // | [>] request_position                                        ( private ) |
   // +-------------------------------------------------------------------------+
+  void publish_byte_pressure_() noexcept {
+    const bool previous = byte_pressure_.load(std::memory_order_relaxed);
+    const bool pressured = transport::server::detail::update_pressure(
+        previous, pending_bytes_, max_pending_bytes_);
+    // Sequential publication only at watermark transitions pairs with the
+    // subscribe/recheck protocol. Ordinary queued output needs no atomic RMW.
+    if (previous != pressured) byte_pressure_.store(pressured);
+  }
   std::optional<std::size_t> request_position() {
     if (interim_position_) {
       const std::size_t position = *interim_position_;
@@ -508,10 +531,12 @@ class engine_async {
   protocol::send_delegate on_send_;
   const std::size_t max_pending_requests_;
   const std::size_t max_pending_bytes_;
-  std::atomic<std::size_t> pending_bytes_{0};
+  // Writers already hold mutex_; readers consume only the published flag.
+  std::size_t pending_bytes_{0};
   bool request_pressure_{false};
-  bool byte_pressure_{false};
+  std::atomic<bool> byte_pressure_{false};
   std::function<void()> on_input_ready_;
+  std::atomic<bool> input_waiting_{false};
   std::atomic<std::size_t> active_{0};
   std::function<void()> on_close_;
   std::function<void()> on_async_started_;
@@ -520,7 +545,9 @@ class engine_async {
   std::atomic<bool> stopping_{false};
   std::atomic<bool> accepting_{true};
   std::atomic<bool> closing_{false};
-  std::atomic<std::size_t> next_request_{0};
+  // Only serialized input/resume calls reserve positions; completion threads
+  // advance next_send_ but never read or write this cursor.
+  std::size_t next_request_{0};
   std::atomic<std::size_t> next_send_{0};
   std::optional<std::size_t> interim_position_;
   std::mutex mutex_;

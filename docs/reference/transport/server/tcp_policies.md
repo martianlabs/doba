@@ -194,7 +194,7 @@ Maximum live context reservations per transport instance, shared by all workers.
 std::chrono::milliseconds inactivity_period = std::chrono::seconds{60};
 ```
 
-Maximum period without positive socket I/O, including TLS negotiation and graceful close. Zero disables expiration; negative periods are rejected during transport construction (the first `start()` for the public HTTP/HTTPS server). Queueing work does not renew the period. Expiration aborts the socket, without forcibly cancelling handlers. Workers check at intervals of at most min(period, 1 second), plus scheduling delay. This is not an absolute request deadline or a minimum transfer rate.
+Sampled period without positive socket I/O, including TLS negotiation and graceful close. Zero disables expiration; negative periods are rejected during transport construction (the first `start()` for the public HTTP/HTTPS server). Queueing work does not renew the period. Recording a context's activity needs no clock read; workers query time for maintenance scheduling and sampling. They sample activity every min(period, 250 ms); the first sample starts the clock and a sample observing activity renews it. Expiration is never earlier than the configured period and normally occurs within two additional sample intervals (at most 500 ms), plus scheduling and scan delay. It aborts the socket without forcibly cancelling handlers. This is not an absolute request deadline or a minimum transfer rate.
 
 **Source:** [include/transport/server/tcp_policies.h:59](../../../../include/transport/server/tcp_policies.h#L59)
 

@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -117,21 +118,72 @@ DOBA_TEST("connection admission never exceeds a concurrent global maximum") {
 }
 
 DOBA_TEST(
-    "inactivity renews only on positive bytes and expires at the boundary") {
+    "sampled inactivity renews only on positive bytes at maintenance") {
   connection_progress progress;
   const auto start = connection_progress::clock::time_point{};
-  progress.last = start;
+  DOBA_EXPECT(!progress.expired(60s, start));
   DOBA_EXPECT(!progress.expired(60s, start + 59999ms));
   DOBA_EXPECT(progress.expired(60s, start + 60s));
   DOBA_EXPECT(progress.expired(60s, start + 60001ms));
-  progress.transferred(0, start + 59s);
+  progress.transferred(0);
   DOBA_EXPECT(progress.expired(60s, start + 60s));
-  progress.transferred(1, start + 59s);
+  progress.transferred(1);
   DOBA_EXPECT(!progress.expired(60s, start + 60s));
-  DOBA_EXPECT(progress.expired(60s, start + 119s));
+  DOBA_EXPECT(!progress.expired(60s, start + 119999ms));
+  DOBA_EXPECT(progress.expired(60s, start + 120s));
   DOBA_EXPECT(!progress.expired(0ms, start + 1000s));
   DOBA_EXPECT(
       !progress.expired(std::chrono::milliseconds::max(), start + 1000s));
+}
+
+DOBA_TEST("sampled inactivity bounds silence and recent activity across ticks") {
+  using clock = connection_progress::clock;
+  const auto start = clock::time_point{};
+  for (const auto interval : {50ms, 100ms, 250ms, 500ms}) {
+    for (const auto period : {1ms, 75ms, 300ms, 60000ms}) {
+      const auto tick = std::min(period, interval);
+      connection_progress silent, active;
+      const auto created = start + 1ns;
+      const auto transferred = start + 3 * tick + 1ns;
+      bool silent_expired = false, active_expired = false;
+      for (auto now = start + tick;
+           now <= transferred + period + 2 * tick; now += tick) {
+        if (now <= start + 4 * tick) active.transferred(1);
+        // Zero-byte completions must not postpone the silent peer's expiry.
+        silent.transferred(0);
+        if (!silent_expired && silent.expired(period, now)) {
+          DOBA_EXPECT(now >= created + period);
+          DOBA_EXPECT(now <= created + period + 2 * tick);
+          silent_expired = true;
+        }
+        if (!active_expired && active.expired(period, now)) {
+          DOBA_EXPECT(now >= transferred + period);
+          DOBA_EXPECT(now <= transferred + period + 2 * tick);
+          active_expired = true;
+        }
+      }
+      DOBA_EXPECT(silent_expired);
+      DOBA_EXPECT(active_expired);
+    }
+  }
+}
+
+DOBA_TEST("sampled inactivity preserves activity through disabled and backward checks") {
+  connection_progress progress;
+  const auto start = connection_progress::clock::time_point{};
+  DOBA_EXPECT(!progress.expired(100ms, start + 1s));
+  progress.transferred(1);
+  DOBA_EXPECT(!progress.expired(0ms, start + 2s));
+  DOBA_EXPECT(!progress.expired(100ms, start));
+  DOBA_EXPECT(!progress.expired(100ms, start + 2s));
+  DOBA_EXPECT(!progress.expired(100ms, start + 2099ms));
+  DOBA_EXPECT(progress.expired(100ms, start + 2100ms));
+  for (int i = 0; i < 20; ++i) {
+    progress.transferred(1);
+    progress.transferred(4);
+    DOBA_EXPECT(!progress.expired(100ms, start + 3s + i * 200ms));
+  }
+  DOBA_EXPECT(progress.expired(100ms, start + 6900ms));
 }
 
 DOBA_TEST("pressure watermarks round safely for tiny and unlimited budgets") {
