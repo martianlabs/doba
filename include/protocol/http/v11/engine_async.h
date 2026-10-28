@@ -203,8 +203,10 @@ class engine_async {
   // | asynchronous operation finishes.                                        |
   // +-------------------------------------------------------------------------+
   void end() {
-    if (active_.fetch_sub(1, std::memory_order_acq_rel) != 1 ||
-        !stopping_.load(std::memory_order_acquire)) {
+    // Together with stop's publication, SC prevents both sides from seeing
+    // the old value of the other atomic and dropping the completion callback.
+    if (active_.fetch_sub(1, std::memory_order_seq_cst) != 1 ||
+        !stopping_.load(std::memory_order_seq_cst)) {
       return;
     }
     std::function<void()> completed;
@@ -224,8 +226,8 @@ class engine_async {
   bool stop(std::function<void()> completed) {
     std::lock_guard<std::mutex> lock(completion_mutex_);
     on_completed_ = std::move(completed);
-    stopping_.store(true, std::memory_order_release);
-    if (active_.load(std::memory_order_acquire) != 0) return false;
+    stopping_.store(true, std::memory_order_seq_cst);
+    if (active_.load(std::memory_order_seq_cst) != 0) return false;
     on_completed_ = {};
     return true;
   }

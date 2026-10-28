@@ -601,6 +601,34 @@ DOBA_TEST("TLS handshake progresses while a small output BIO drains") {
 DOBA_TEST("TLS policies enforce admission before allocating handshake state") {
   admission<https_server<>, secure_peer>(server_policies(1));
 }
+DOBA_TEST("TLS retries a handshake after draining its BIO without paused HTTP input") {
+  for (const int version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+    tls_client peer;
+    DOBA_EXPECT(SSL_set_min_proto_version(peer.ssl.get(), version) == 1);
+    DOBA_EXPECT(SSL_set_max_proto_version(peer.ssl.get(), version) == 1);
+    const auto port = peer.socket.find_available_port();
+    auto p = server_policies(port);
+    // A certificate flight cannot fit, independently of OpenSSL's default
+    // key-exchange groups or the runner's certificate-flight fragmentation.
+    p.network_bio_buffer_capacity = 256;
+    p.max_buffered_send_bytes = 2048;
+    p.inactivity_period = 0ms;
+    https_server<> server(p);
+    server.add_route("GET", "/", [](const request&, response& res) {
+      res.ok_200().set_body("ok");
+    });
+    server.start();
+    DOBA_EXPECT(peer.socket.connect(port));
+    DOBA_EXPECT(peer.negotiate());
+    DOBA_EXPECT(peer.send_outgoing(get));
+    struct adapter {
+      tls_client& client;
+      auto receive(std::size_t size) { return client.receive(size); }
+    } input{peer};
+    DOBA_EXPECT(reply(input, "ok"));
+    server.stop();
+  }
+}
 DOBA_TEST("TLS inactivity expires handshakes idle peers and partial requests") {
   inactivity<https_server<>, secure_peer>(server_policies(1));
 }

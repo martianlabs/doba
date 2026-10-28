@@ -198,7 +198,7 @@ struct tls_connection {
   // | output buffer and offset.                                               |
   // +-------------------------------------------------------------------------+
   bool output_pending(const send_state& output) const {
-    return session_.pending() || output.queued() ||
+    return session_.output_pending() || output.queued() ||
            output.offset != output.buffer.size() ||
            (close_requested_ && !shutdown_complete_);
   }

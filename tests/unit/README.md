@@ -56,7 +56,9 @@ something readable today isn't much of an ownership guarantee.
 
 [Transport tests](transport/server) check connection behavior and invalid
 policies. TLS session cases cover credentials, fragmented negotiation,
-application data, buffer limits, and close notifications.
+application data, buffer limits, and close notifications. TLS 1.2 and 1.3
+cases drain a full 256-byte BIO and verify that handshake output remains
+pending until OpenSSL retries the suspended operation.
 
 <a name="bad-timing-on-purpose"></a>
 <h2>
@@ -78,6 +80,9 @@ The [concurrency tests](protocol/http/v11/engine_concurrency_tests.cpp)
 suspend handlers and control completion, receive, and shutdown overlaps.
 They check response ordering, callback counts, and object
 lifetimes instead of hoping the scheduler produces an interesting race.
+A separate stress case reuses two threads for 2,048 last-completion/stop
+races and checks that each stop either completes immediately or invokes
+its callback exactly once.
 
 The operating-policy tests cover admission leases, clocks, exact boundaries,
 zero values, reader lifetimes, partial batches and combined pressure. The

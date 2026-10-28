@@ -133,12 +133,16 @@ class tls_session {
     std::lock_guard lock(mutex_);
     if (phase_ == phase::failed) return status::failed;
     if (phase_ == phase::active) return status::ready;
+    handshake_write_pending_ = false;
     const int result = SSL_do_handshake(ssl_.get());
     if (result == 1) {
       phase_ = phase::active;
       return status::ready;
     }
-    return classify(result);
+    const auto state = classify(result);
+    handshake_write_pending_ =
+        state == status::need_output && SSL_want_write(ssl_.get());
+    return state;
   }
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
@@ -307,6 +311,18 @@ class tls_session {
     return phase_ == phase::active;
   }
   // +=========================================================================+
+  // | [>] output_pending                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Includes a handshake retry after a full output BIO has been drained.     |
+  // +-------------------------------------------------------------------------+
+  // A full BIO can suspend SSL_do_handshake. Draining its bytes does not
+  // complete that operation: keep output service armed until it is retried.
+  bool output_pending() const {
+    std::lock_guard lock(mutex_);
+    return BIO_ctrl_pending(network_.get()) ||
+           (phase_ == phase::handshaking && handshake_write_pending_);
+  }
+  // +=========================================================================+
   // | [>] failed                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   // | Returns true if the TLS session has failed.                             |
@@ -353,6 +369,7 @@ class tls_session {
   // The caller must retry the same bytes after an OpenSSL retry.
   std::size_t write_retry_size_{0};
   bool shutdown_sent_{false};
+  bool handshake_write_pending_{false};
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

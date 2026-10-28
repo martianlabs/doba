@@ -56,6 +56,9 @@ The [operating policies](transport/server/operating_policies_tests.cpp),
 listeners: admission and recovery, zero limits and configuration snapshots,
 receive/send progress, paused pipelines, slow readers, held async work,
 wakeups during receive, and TLS close notifications during resumption.
+TLS 1.2 and 1.3 handshakes also run with a 256-byte output BIO, forcing
+retries after output drains while HTTP input remains unpaused. Each
+connection must finish negotiation and serve an HTTP response.
 The [flow pressure tests](transport/server/flow_pressure_tests.cpp) verify immediate
 publication after enqueue, release after drain and safe queries after retirement.
 The [operating policy cases](transport/server/operating_policies_tests.cpp) and

@@ -259,6 +259,38 @@ DOBA_TEST("tls session negotiates fragmented input") {
 }
 
 // +===========================================================================+
+// | [>] tls handshake output survives draining a full BIO       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls handshake output work survives draining a full BIO") {
+  for (const int version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+    tls_session server(make_tls_context(server_policies()), 256, 256);
+    test_client client;
+    DOBA_EXPECT(SSL_set_min_proto_version(client.ssl.get(), version) == 1);
+    DOBA_EXPECT(SSL_set_max_proto_version(client.ssl.get(), version) == 1);
+    DOBA_EXPECT(SSL_do_handshake(client.ssl.get()) != 1);
+    std::array<char, 64> bytes;
+    while (BIO_ctrl_pending(client.network.get())) {
+      std::size_t received = 0;
+      DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(), bytes.size(),
+                              &received) == 1);
+      DOBA_EXPECT_EQUAL(server.receive(std::span(bytes.data(), received)), received);
+      DOBA_EXPECT(server.handshake() != tls_session::status::failed);
+    }
+    DOBA_EXPECT(server.pending() > 0);
+    while (server.pending()) {
+      const auto output = server.output_bytes();
+      DOBA_EXPECT(!output.empty());
+      server.output_sent(output.size());
+    }
+    DOBA_EXPECT_EQUAL(server.pending(), 0);
+    DOBA_EXPECT(server.output_pending());
+    // No additional peer input is needed to finish producing this flight.
+    DOBA_EXPECT_EQUAL(server.handshake(), tls_session::status::need_output);
+    DOBA_EXPECT(server.pending() > 0);
+  }
+}
+
+// +===========================================================================+
 // | [>] tls session rejects a zero send capacity                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tls session rejects a zero send capacity") {
