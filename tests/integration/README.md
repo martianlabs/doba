@@ -110,3 +110,10 @@ uses elapsed-time deadlines rather than iteration budgets and respects inbound
 BIO capacity. A response with more than 400 small TLS records exercises this
 boundary. TCP helper reads retry interrupted operations against the original
 deadline; Linux readiness uses `poll` to support high descriptors safely.
+
+The Windows [input resume regression](transport/server/flow_resume_windows_tests.cpp)
+keeps one connection through 32 pressured pipelines with 64 responses each.
+It checks ordered credit, complete responses and handler counts while two IOCP
+workers race output completions against input resumption. Input ownership must
+be released before arming output, so an immediate send completion can resume
+buffered requests instead of losing its `try_lock` attempt.

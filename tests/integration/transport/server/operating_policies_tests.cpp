@@ -388,8 +388,15 @@ void pipeline(Policies p, bool fragmented = false) {
   // No fourth handler is admitted at the high watermark, even in this block.
   DOBA_EXPECT_EQUAL(entered.load(), 3);
   gate.open();
-  for (int i = 0; i < 20; ++i)
-    DOBA_EXPECT(reply(peer, std::string(512, 'x')));
+  for (int i = 0; i < 20; ++i) {
+    const bool received = reply(peer, std::string(512, 'x'));
+    test_helper::set_context(
+        std::string(fragmented ? "fragmented" : "single block") +
+        ", response " + std::to_string(i + 1) + "/20, handlers " +
+        std::to_string(entered.load()) + ", receive error: " +
+        std::string(peer.socket.error()));
+    DOBA_EXPECT(received);
+  }
   DOBA_EXPECT_EQUAL(entered.load(), 20);
 }
 
