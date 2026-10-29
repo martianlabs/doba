@@ -58,12 +58,15 @@ struct static_file_representation {
   std::string bytes;
   common::filesystem_metadata metadata;
   std::string etag;
+  std::array<char, 40> last_modified{};
 };
 ```
 
 Immutable published value. bytes contains the selected encoded payload; metadata
 comes from the open handle; etag is its quoted SHA-256. Do not mutate a value
-after publication.
+after publication. last_modified stores a zero-terminated HTTP date formatted at
+load time. Future file dates are still clamped to the current response time.
+Variant preference uses stable stack ordering without allocation.
 
 <a id="cache"></a>
 

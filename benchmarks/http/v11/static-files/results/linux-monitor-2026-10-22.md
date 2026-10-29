@@ -1,5 +1,9 @@
 # Native monitor versus initial TTL cache
 
+Historical record: the native monitor and its example were removed on 29 October
+2026. Commands and implementation descriptions below refer to the archived build,
+not the current library.
+
 Development comparison, 22 October 2026. These are local HTTP measurements, not
 HttpArena/production numbers. They do not establish that the remote 67239 RPS
 baseline has been recovered or that external timeouts are resolved.

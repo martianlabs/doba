@@ -498,3 +498,22 @@ DOBA_TEST("filesystem inspect rejects missing files directories and invalid path
     DOBA_EXPECT(error == std::errc::permission_denied);
   }
 }
+
+#ifdef _WIN32
+// +===========================================================================+
+// | [>] filesystem inspection needs no content access            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("filesystem inspect succeeds when another handle denies content reads") {
+  file_directory directory;
+  directory.write("file", "contents");
+  const auto handle = CreateFileW((directory.path() / "file").c_str(), GENERIC_READ,
+      FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, 0, nullptr);
+  DOBA_EXPECT(handle != INVALID_HANDLE_VALUE);
+  std::error_code error;
+  const auto attributes = filesystem_file::inspect(directory.path(), "file", error);
+  CloseHandle(handle);
+  DOBA_EXPECT(attributes.has_value());
+  DOBA_EXPECT(!error);
+  DOBA_EXPECT_EQUAL(attributes->size, 8);
+}
+#endif

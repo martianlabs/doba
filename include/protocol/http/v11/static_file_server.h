@@ -25,6 +25,7 @@
 #ifndef martianlabs_doba_protocol_http_v11_static_file_server_h
 #define martianlabs_doba_protocol_http_v11_static_file_server_h
 
+#include <array>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -51,6 +52,8 @@ struct static_file_representation {
   std::string bytes;
   common::filesystem_metadata metadata;
   std::string etag;
+  // Zero-terminated HTTP date, formatted once when the snapshot is loaded.
+  std::array<char, 40> last_modified{};
 };
 using static_file_cache = common::cache<std::string, static_file_representation>;
 
@@ -308,7 +311,10 @@ class static_file_server {
         {".br", "br", policies_.precompressed ? quality(accept_encoding, "br") : 0},
         {".gz", "gzip", policies_.precompressed ? quality(accept_encoding, "gzip") : 0},
         {"", "identity", quality(accept_encoding, "identity")}}};
-    std::stable_sort(variants.begin(), variants.end(), [](auto a, auto b) { return a.q > b.q; });
+    // Stable three-element ordering without a temporary heap allocation.
+    if (variants[1].q > variants[0].q) std::swap(variants[0], variants[1]);
+    if (variants[2].q > variants[1].q) std::swap(variants[1], variants[2]);
+    if (variants[1].q > variants[0].q) std::swap(variants[0], variants[1]);
     common::filesystem_file file;
     std::error_code error;
     std::shared_ptr<const static_file_representation> cached;
@@ -382,6 +388,8 @@ class static_file_server {
           if (!after || *opened != *after) return {};
           value->metadata = *after;
           value->etag = detail::static_file_etag(value->bytes);
+          const auto date = detail::static_file_date(value->metadata.modified_seconds);
+          std::copy(date.begin(), date.end(), value->last_modified.begin());
           return value;
         });
         // Another generation may have populated this key since we opened it.
@@ -413,7 +421,9 @@ class static_file_server {
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     const auto decorate = [&] {
       result.set_header("ETag", etag);
-      result.set_header("Last-Modified", detail::static_file_date(modified));
+      if (cached && modified == metadata.modified_seconds && cached->last_modified[0])
+        result.set_header("Last-Modified", std::string_view(cached->last_modified.data()));
+      else result.set_header("Last-Modified", detail::static_file_date(modified));
       if (!policies_.cache_control.empty()) result.set_header("Cache-Control", policies_.cache_control);
       if (policies_.precompressed) result.set_header("Vary", "Accept-Encoding");
     };

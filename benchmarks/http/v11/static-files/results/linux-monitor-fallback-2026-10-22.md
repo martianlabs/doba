@@ -1,5 +1,9 @@
 # Monitor fallback investigation
 
+Historical record: the native monitor and its example were removed on 29 October
+2026. Commands and implementation descriptions below refer to the archived build,
+not the current library.
+
 22 October 2026. This experiment follows the reported remote regression (67239
 initial TTL RPS versus 8443 current RPS). It reproduces a similar loss locally,
 but does not establish the cause on the remote host.

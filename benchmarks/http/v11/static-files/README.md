@@ -74,3 +74,8 @@ parent's monotonic wall duration. CPU/RSS come from the server process; RSS is
 sampled after load. Use native local storage, record filesystem and hardware,
 and run on an idle host. A 64-worker run on a 16-vCPU workstation is oversubscribed;
 it does not reproduce a 64-core Scaleway host.
+
+Final removal/attribute-validation measurements, all twenty routes and all twelve
+runs: [October 29 report](results/linux-attributes-20-routes-2026-10-29.md). The
+report includes the regression at 64 workers, the timeout run and CPU changes;
+it does not claim Scaleway throughput recovery.

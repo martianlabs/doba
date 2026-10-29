@@ -777,3 +777,26 @@ DOBA_TEST("static variants detect added removed and replaced files immediately")
   directory.write("nested/asset.webp.br", "new-variant");
   auto replaced = get(); DOBA_EXPECT_EQUAL(file_body(replaced), "new-variant");
 }
+
+// +===========================================================================+
+// | [>] cached HTTP dates preserve future timestamp clamping     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static cached dates never advertise a future last modified time") {
+  file_directory directory;
+  directory.write("file", "contents");
+  fs::last_write_time(directory.path() / "file",
+      fs::file_time_type::clock::now() + std::chrono::hours(24));
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(),
+      static_file_policies{.cache = std::make_shared<static_file_cache>()});
+  const auto before = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  for (int i = 0; i < 2; ++i) {
+    auto result = file_request(routes, "HEAD", "/file");
+    const auto modified = detail::static_file_time(result.get_header("Last-Modified").second);
+    const auto after = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    DOBA_EXPECT(modified.has_value());
+    DOBA_EXPECT(*modified >= before && *modified <= after);
+  }
+}

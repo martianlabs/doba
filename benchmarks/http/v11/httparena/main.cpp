@@ -228,7 +228,9 @@ int main() {
       std::cerr << "invalid CPU quota\n";
       return 1;
     }
-    const auto quota_workers = quota / period + (quota % period != 0);
+    // Match one worker per complete usable core, as Fulmine's automatic pool.
+    // A fractional quota still needs one worker, but not an extra full worker.
+    const auto quota_workers = std::max<std::uint64_t>(1, quota / period);
     workers = static_cast<std::size_t>(
         std::min<std::uint64_t>(workers, quota_workers));
     break;
@@ -386,18 +388,24 @@ int main() {
   tls_configuration.worker_count = workers;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";
-  tls_configuration.certificate_file = "/certs/server.crt";
-  tls_configuration.private_key_file = "/certs/server.key";
+  const char* certificate = std::getenv("TLS_CERT");
+  const char* private_key = std::getenv("TLS_KEY");
+  tls_configuration.certificate_file = certificate ? certificate : "/certs/server.crt";
+  tls_configuration.private_key_file = private_key ? private_key : "/certs/server.key";
   martianlabs::doba::https_server<> tls_server(tls_configuration,
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
-  // Use Doba's documented static-file controller, including representation
-  // negotiation, shared immutable readers and its built-in cache.
+  // The framework owns representation selection, attribute validation and the
+  // bounded cache. Keep all workers under one declared budget; no file preload
+  // or per-worker maps in the adapter. Compressed siblings are selected on disk.
+  const common::cache_policies cache_configuration;
   static_file_policies static_configuration;
   static_configuration.precompressed = true;
-  static_configuration.cache = std::make_shared<static_file_cache>();
+  static_configuration.cache = std::make_shared<static_file_cache>(cache_configuration);
+  const char* static_path = std::getenv("STATIC_DIR");
+  const std::filesystem::path static_root = static_path ? static_path : "/data/static";
   tls_server.add_controller<static_file_server>(
-      "/static", "/data/static", static_configuration);
+      "/static", static_root, static_configuration);
   tls_server.add_route(
       "POST", "/echo",
       [](const request& req, response& res) {
@@ -408,6 +416,10 @@ int main() {
   http_server.start();
   tls_server.start();
   std::cerr << "workers per listener: " << workers << '\n';
+  std::cerr << "static root: " << static_root << "; cache entries: "
+            << cache_configuration.max_entries << "; shared cache budget: "
+            << cache_configuration.max_cost << "; max cacheable file: "
+            << static_configuration.max_cached_file_size << '\n';
   // Docker owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

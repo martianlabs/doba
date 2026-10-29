@@ -35,13 +35,28 @@ representations. There is no benchmark-specific file loader, MIME table,
 preloaded directory or response-body cache in the adapter. HTTP and transport
 memory policies remain at their library defaults.
 
-Freshness caveat for `feature/static`: the current built-in cache uses a
-1-second TTL and does not check disk metadata on every cache hit. HttpArena's
-written rule requires the next response after a file replacement to contain
-the new bytes. Its current validator has a 2-second tolerance; passing that
-check alone does not establish strict compliance with the written rule.
-Resolve this in the library's static-file cache before an official submission;
-do not add benchmark-specific invalidation or bypass validation.
+Cached hits now validate identity, size, modification/change times, flags and link
+count through the library's confined attribute query. A changed snapshot is
+invalidated even for equal bytes. TTL limits retention; it does not delay file
+validation. Missing compressed variants are checked without a read open and are
+not cached, so publication is not hidden by a negative-cache window. There is no
+native monitor. Future timestamps, immutable readers and HTTP validators remain
+handled by the controller. Build against a Doba revision containing these changes;
+changing this adapter alone does not update the library fetched by Docker.
+
+The Fulmine review informed two adapter choices: on-disk compressed variants stay
+enabled and worker count follows CPU affinity and cgroup quota (at least one,
+rounded down for fractional cores). Cache sharing differs deliberately: Doba uses
+one bounded library cache across workers, rather than multiplying its memory
+budget per worker/process. Concurrency improvements and Last-Modified reuse are
+library capabilities, not a benchmark-specific fast path. The driver does not
+copy Trillium's one-second response-freshness window or Fulmine's negative TTL.
+
+For local and container reproduction, STATIC_DIR overrides /data/static; TLS_CERT
+and TLS_KEY override the two /certs paths. Defaults preserve the official mounts.
+Startup reports effective workers, asset root, shared entry/cost limits and the
+maximum cacheable file size. The twenty-route comparison is documented in the
+[static TLS harness](../static-files/README.md).
 
 The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,
