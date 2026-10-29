@@ -125,3 +125,11 @@ foreach(index RANGE 0 ${last})
   endif()
 endforeach()
 message(STATUS "Three mutations detected; originals unchanged. Evidence: ${run}")
+execute_process(COMMAND "${CMAKE_COMMAND}"
+  "-DDOBA_MUTATION_COMPILER=${DOBA_MUTATION_COMPILER}"
+  "-DDOBA_MUTATION_OUTPUT=${DOBA_MUTATION_OUTPUT}/policies"
+  -P "${CMAKE_CURRENT_LIST_DIR}/run_policy_detection.cmake"
+  RESULT_VARIABLE policy_result)
+if(NOT policy_result STREQUAL "0")
+  message(FATAL_ERROR "Policy mutation detection failed")
+endif()

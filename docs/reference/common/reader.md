@@ -17,6 +17,7 @@ This class provides a reader interface for reading bytes from a byte_storage bac
 ### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::reader
 
 [borrowed](#method-borrowed) ·
+[shared](#method-shared) ·
 [rebind_borrowed](#method-rebind-borrowed) ·
 [read](#method-read) ·
 [fetch](#method-fetch) ·
@@ -49,7 +50,7 @@ class reader { ... };
 
 This class provides a reader interface for reading bytes from a byte_storage backend. It supports reading into a span of bytes, fetching individual bytes, and checking the state of the reader (e.g., whether it has reached the end of the storage or encountered an error). It can also read all remaining bytes into a string.
 
-**Source:** [include/common/reader.h:51](../../../include/common/reader.h#L51)
+**Source:** [include/common/reader.h:53](../../../include/common/reader.h#L53)
 
 <a id="method-borrowed"></a>
 
@@ -71,7 +72,7 @@ Creates a non-owning reader over stable caller storage. The referenced bytes mus
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:98](../../../include/common/reader.h#L98)
+**Source:** [include/common/reader.h:102](../../../include/common/reader.h#L102)
 
 <a id="method-rebind-borrowed"></a>
 
@@ -93,7 +94,7 @@ Points borrowed byte views at the replacement buffer.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:101](../../../include/common/reader.h#L101)
+**Source:** [include/common/reader.h:114](../../../include/common/reader.h#L114)
 
 <a id="method-read"></a>
 
@@ -113,7 +114,7 @@ Reads data.
 
 **Returns:** The number of bytes processed.
 
-**Source:** [include/common/reader.h:108](../../../include/common/reader.h#L108)
+**Source:** [include/common/reader.h:121](../../../include/common/reader.h#L121)
 
 <a id="method-fetch"></a>
 
@@ -133,7 +134,7 @@ Fetches the requested value.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/common/reader.h:131](../../../include/common/reader.h#L131)
+**Source:** [include/common/reader.h:144](../../../include/common/reader.h#L144)
 
 <a id="method-eof"></a>
 
@@ -151,7 +152,7 @@ Reports whether the eof condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:145](../../../include/common/reader.h#L145)
+**Source:** [include/common/reader.h:158](../../../include/common/reader.h#L158)
 
 <a id="method-exhausted"></a>
 
@@ -169,7 +170,7 @@ Reports whether the exhausted condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:153](../../../include/common/reader.h#L153)
+**Source:** [include/common/reader.h:161](../../../include/common/reader.h#L161)
 
 <a id="method-failed"></a>
 
@@ -187,7 +188,7 @@ Reports whether the failed condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:157](../../../include/common/reader.h#L157)
+**Source:** [include/common/reader.h:125](../../../include/common/reader.h#L125)
 
 <a id="method-ok"></a>
 
@@ -205,7 +206,7 @@ Reports whether the ok condition holds.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:161](../../../include/common/reader.h#L161)
+**Source:** [include/common/reader.h:138](../../../include/common/reader.h#L138)
 
 <a id="method-size"></a>
 
@@ -223,7 +224,7 @@ Returns the current size.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/reader.h:168](../../../include/common/reader.h#L168)
+**Source:** [include/common/reader.h:129](../../../include/common/reader.h#L129)
 
 <a id="method-read-all"></a>
 
@@ -243,4 +244,21 @@ Reads all.
 
 **Returns:** The number of bytes processed.
 
-**Source:** [include/common/reader.h:176](../../../include/common/reader.h#L176)
+**Source:** [include/common/reader.h:189](../../../include/common/reader.h#L189)
+
+<a id="method-shared"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> shared
+
+```cpp
+static reader shared(std::shared_ptr<const void> owner,
+                     std::span<const std::byte> source);
+```
+
+**Parameters:** owner retains stable immutable storage; source must refer into it.
+Each reader has an independent cursor. Bytes must be immutable through all aliases.
+
+**Returns:** An owning reader moved safely through the existing transport pipeline.
+
+**Errors:** A null owner throws std::invalid_argument. rebind_borrowed() does not
+rebind an owning shared reader. See the [cache example](../../../examples/common/cache/README.md).

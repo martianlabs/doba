@@ -87,6 +87,9 @@ class basic_transport {
     if (!configuration_.max_buffered_send_bytes) {
       throw std::runtime_error("Invalid send buffer size!");
     }
+    if (configuration_.inactivity_period.count() < 0) {
+      throw std::runtime_error("Invalid inactivity period!");
+    }
     if (configuration_.listen_backlog < 0) {
       throw std::runtime_error("Invalid listen backlog!");
     }
@@ -129,7 +132,7 @@ class basic_transport {
       for (std::size_t i = 0; i < number_of_workers; i++) {
         auto entry = std::make_unique<worker<ENty, FAty, CNty, POty>>(
             configuration_, create_engine_, on_connection_, on_disconnection_,
-            shared_state_);
+            shared_state_, budget_);
         entry->setup(ip_address, port_number);
         {
           std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -271,6 +274,8 @@ class basic_transport {
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
   const policies_type configuration_;
+  const std::shared_ptr<connection_budget> budget_{
+      std::make_shared<connection_budget>(configuration_.max_connections)};
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
   std::vector<std::unique_ptr<worker<ENty, FAty, CNty, POty>>> workers_;

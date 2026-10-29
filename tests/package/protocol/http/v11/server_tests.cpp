@@ -73,7 +73,14 @@ int main() {
   if (error) return 1;
   martianlabs::doba::common::filesystem_file file;
   martianlabs::doba::common::reader input(std::move(file));
-  http_server<> value;
+  martianlabs::doba::transport::server::tcp_policies io;
+  io.max_connections = 65535;
+  io.inactivity_period = std::chrono::seconds{60};
+  io.max_pending_sources = 32;
+  policies limits;
+  limits.max_pending_requests = 128;
+  limits.max_pending_response_bytes = 1024 * 1024;
+  http_server<> value(io, limits);
   value.add_controller<package_controller>().add_controller<static_file_server>(
       "/files", root);
   return 0;

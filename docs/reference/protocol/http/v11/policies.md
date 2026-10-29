@@ -37,6 +37,8 @@ HTTP/1.1 resource limits, memory thresholds and feature switches. The defaults b
 [max_response_head_size](#field-max-response-head-size) ·
 [response_body_memory_threshold](#field-response-body-memory-threshold)
 
+[max_pending_response_bytes](#field-max-pending-response-bytes)
+
 <a id="api"></a>
 <a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
   <img src="../../../../../resources/docs/reference/api.svg" alt="API">
@@ -260,12 +262,12 @@ Whether the server allows protocol upgrades offered via Upgrade. NOTE: no protoc
 **FIELD** · *protocol::http::v11::policies*
 
 ```cpp
-std::size_t max_pending_requests = 32;
+std::size_t max_pending_requests = 128;
 ```
 
-Maximum requests awaiting ordered response delivery (0 means unlimited).
+Maximum response positions awaiting ordered delivery per connection (0 means unlimited), including retained sources. This is not a request rate. Cooperative transports pause at ceil(75%) and resume at floor(50%); without the optional hooks, hard-limit rejection still closes the connection.
 
-**Value:** `32`
+**Value:** `128`
 
 **Source:** [include/protocol/http/v11/policies.h:80](../../../../../include/protocol/http/v11/policies.h#L80)
 
@@ -283,7 +285,7 @@ Maximum query parameter pairs (0 means unlimited).
 
 **Value:** `kDefaultMaxQueryParameters`
 
-**Source:** [include/protocol/http/v11/policies.h:82](../../../../../include/protocol/http/v11/policies.h#L82)
+**Source:** [include/protocol/http/v11/policies.h:85](../../../../../include/protocol/http/v11/policies.h#L85)
 
 <a id="field-max-chunk-extension-size"></a>
 
@@ -299,7 +301,7 @@ Maximum chunk extension bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxChunkExtensionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:84](../../../../../include/protocol/http/v11/policies.h#L84)
+**Source:** [include/protocol/http/v11/policies.h:87](../../../../../include/protocol/http/v11/policies.h#L87)
 
 <a id="field-max-trailer-section-size"></a>
 
@@ -315,7 +317,7 @@ Maximum trailer section bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxTrailerSectionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:86](../../../../../include/protocol/http/v11/policies.h#L86)
+**Source:** [include/protocol/http/v11/policies.h:89](../../../../../include/protocol/http/v11/policies.h#L89)
 
 <a id="field-max-request-head-size"></a>
 
@@ -331,7 +333,7 @@ Maximum request head bytes (must be positive).
 
 **Value:** `kDefaultMaxRequestHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:88](../../../../../include/protocol/http/v11/policies.h#L88)
+**Source:** [include/protocol/http/v11/policies.h:91](../../../../../include/protocol/http/v11/policies.h#L91)
 
 <a id="field-request-body-memory-threshold"></a>
 
@@ -348,7 +350,7 @@ Request body wire bytes kept in memory (0 spills immediately).
 
 **Value:** `kDefaultRequestBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:90](../../../../../include/protocol/http/v11/policies.h#L90)
+**Source:** [include/protocol/http/v11/policies.h:93](../../../../../include/protocol/http/v11/policies.h#L93)
 
 <a id="field-max-response-head-size"></a>
 
@@ -364,7 +366,7 @@ Maximum response head bytes (must be positive).
 
 **Value:** `kDefaultMaxResponseHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:93](../../../../../include/protocol/http/v11/policies.h#L93)
+**Source:** [include/protocol/http/v11/policies.h:96](../../../../../include/protocol/http/v11/policies.h#L96)
 
 <a id="field-response-body-memory-threshold"></a>
 
@@ -381,4 +383,18 @@ Response body bytes kept inline (0 disables inline storage).
 
 **Value:** `kDefaultResponseBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:95](../../../../../include/protocol/http/v11/policies.h#L95)
+**Source:** [include/protocol/http/v11/policies.h:98](../../../../../include/protocol/http/v11/policies.h#L98)
+
+<a id="field-max-pending-response-bytes"></a>
+
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_pending_response_bytes
+
+**FIELD** · *protocol::http::v11::policies*
+
+```cpp
+std::size_t max_pending_response_bytes = 1024 * 1024;
+```
+
+Maximum serialized head and body bytes retained while waiting for ordered delivery, including interim responses. Zero means unlimited. Credit is checked before copying and released on transfer to the transport or discard. A hard overflow closes the connection. Reader-owned storage and arbitrary handler allocations are outside this budget.
+
+**Source:** [include/protocol/http/v11/policies.h:83](../../../../../include/protocol/http/v11/policies.h#L83)

@@ -176,7 +176,8 @@ class decoder {
       result = parse_core(input);
       if (result.code == deserialization_status::kMoreBytesNeeded) {
         const auto keep = body_framer_ && request_->body_is_stored()
-                              ? head_end_ : message.size();
+                              ? head_end_ : body_framer_ ? message.size()
+                                  : std::min(message.size(), context_.policies.max_request_head_size);
         const auto previous = reinterpret_cast<std::uintptr_t>(message.data());
         reminder_.assign(message.data(), message.data() + keep);
         reminder_active_ = true;
@@ -207,6 +208,8 @@ class decoder {
                  .find("\r\n\r\n") != std::string_view::npos)) {
       // A complete head cannot need more syntax bytes. In particular, a
       // malformed CONNECT target must not wait for a colon in later data.
+      if (reminder_.size() >= context_.policies.max_request_head_size)
+        context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
@@ -305,6 +308,7 @@ class decoder {
  private:
   // Find the first head terminator, including one crossing the receive boundary.
   std::size_t head_fragment_size(std::string_view input) const noexcept {
+    input = input.substr(0, context_.policies.max_request_head_size - reminder_.size());
     constexpr std::string_view end = "\r\n\r\n";
     std::size_t take = input.size();
     const std::string_view previous(reminder_.data(), reminder_.size());
@@ -323,7 +327,7 @@ class decoder {
   // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> parse_core(std::string_view& source) {
     head_request_ = false;
-    std::string_view sv = source;
+    std::string_view sv = source.substr(0, context_.policies.max_request_head_size);
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |

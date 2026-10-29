@@ -42,6 +42,7 @@
 
 #include "platform.h"
 #include "transport/server/contracts.h"
+#include "transport/server/operating_state.h"
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_windows_overlapped_receive.h"
 #include "transport/server/tcp_windows_overlapped_send.h"
@@ -75,8 +76,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
           std::function<void(context*)> on_retirement,
           typename CNty::shared_state shared_state,
           std::size_t encrypted_receive_buffer_capacity = 0,
-          std::size_t network_bio_buffer_capacity = 0)
-      : on_connection_{on_connection},
+          std::size_t network_bio_buffer_capacity = 0,
+          std::size_t max_pending_sources = 32,
+          connection_reservation reservation = {})
+      : reservation_{std::move(reservation)},
+        on_connection_{on_connection},
         on_disconnection_{on_disconnection},
         on_retirement_{on_retirement},
         socket_{in_socket},
@@ -95,7 +99,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
           }
         }()},
         stopping_{stopping},
-        output_{send_buffer_size} {}
+        output_{send_buffer_size, max_pending_sources} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() = default;
@@ -114,6 +118,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | data that’s still waiting.                                              |
   // +-------------------------------------------------------------------------+
   void send_completed(std::size_t size, std::size_t submitted_size) {
+    {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     send_state_ = send_status::kIdle;
     if (socket_ == INVALID_SOCKET) {
@@ -124,7 +129,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
+    progress_.transferred(size);
+    input_wakeup_ = true;
     send_pending_();
+    }
+    resume_input();
   }
   // +=========================================================================+
   // | [>] output_ready                                             ( public ) |
@@ -135,9 +144,31 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | connection. Otherwise, it keeps sending the remaining data.             |
   // +-------------------------------------------------------------------------+
   void output_ready() {
-    std::lock_guard<std::mutex> lock(sending_mutex_);
-    send_state_ = send_status::kIdle;
-    send_pending_();
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      send_state_ = send_status::kIdle;
+      send_pending_();
+    }
+    resume_input();
+  }
+  void resume_input() {
+    std::unique_lock<std::mutex> receive_lock(receive_mutex_, std::try_to_lock);
+    if (!receive_lock.owns_lock()) return;
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      if (closing_ || socket_ == INVALID_SOCKET || processing_receive_ ||
+          receiving_ || output_.pressured()) return;
+      processing_receive_ = true;
+      input_wakeup_ = false;
+    }
+    try { input_.resume_input(); }
+    catch (...) {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      processing_receive_ = false;
+      abort_();
+      return;
+    }
+    arm_next_receive_operation();
   }
   // +=========================================================================+
   // | [>] send                                                     ( public ) |
@@ -183,7 +214,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       closing_ = true;
       if (!input_.close_output()) abort_();
     }
+    // Resuming TLS plaintext can consume a buffered close_notify without a
+    // socket receive completion. Honor it before arming another receive.
+    if (input_.peer_closed() && !closing_) {
+      closing_ = true;
+      if (!input_.close_output()) abort_();
+    }
     send_pending_();
+    if (input_wakeup_ && !closing_) request_output_();
     if (closing_ || socket_ == INVALID_SOCKET) {
       cleanup_resources_();
       return false;
@@ -211,6 +249,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     {
       std::lock_guard<std::mutex> lock(sending_mutex_);
       receiving_ = false;
+      progress_.transferred(size);
       if (quiescing_) {
         abort_();
         return false;
@@ -275,6 +314,14 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  void expire(std::chrono::milliseconds period) {
+    {
+      std::lock_guard<std::mutex> lock(sending_mutex_);
+      if (socket_ != INVALID_SOCKET && progress_.expired(period)) abort_();
+    }
+    // A paused connection may have no overlapped operation left to report it.
+    notify_disconnection();
+  }
   void abort() {
     std::lock_guard<std::mutex> lock(sending_mutex_);
     abort_();
@@ -294,6 +341,25 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
     }
     if constexpr (contracts::execution_receiver<ENty>) {
       input_.engine.set_execution_capacity(execution);
+    }
+    if constexpr (requires { input_.engine.set_input_flow_control(
+        std::function<bool()>{}, std::function<void()>{}); }) {
+      input_.engine.set_input_flow_control(
+          [weak = this->weak_from_this()]() {
+            auto ctx = weak.lock();
+            if (!ctx) return true;
+            std::lock_guard<std::mutex> lock(ctx->sending_mutex_);
+            return ctx->closing_ || ctx->output_.pressured();
+          },
+          [weak = this->weak_from_this()]() {
+            if (auto ctx = weak.lock()) {
+              std::lock_guard<std::mutex> lock(ctx->sending_mutex_);
+              if (ctx->socket_ != INVALID_SOCKET && !ctx->closing_) {
+                ctx->input_wakeup_ = true;
+                ctx->request_output_();
+              }
+            }
+          });
     }
     input_.engine.set_on_close([weak = this->weak_from_this()]() {
       if (auto ctx = weak.lock()) ctx->close();
@@ -417,6 +483,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | it marks receiving as active and returns true.                          |
   // +-------------------------------------------------------------------------+
   bool receive_() {
+    if (receiving_) return true;
+    if (!closing_ && (output_.pressured() || input_.input_paused())) return true;
     const auto target = input_.receive_buffer();
     if (target.empty()) return false;
     DWORD f = 0, r = 0;
@@ -594,6 +662,8 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   enum class send_status { kIdle, kQueued, kPending };
+  connection_reservation reservation_;
+  connection_progress progress_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
   std::function<void(context*)> on_retirement_;
@@ -613,6 +683,7 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool receiving_{false};
   bool receive_closed_{false};
   bool processing_receive_{false};
+  bool input_wakeup_{false};
   bool socket_shutdown_{false};
   bool retired_{false};
   bool engine_stop_requested_{false};

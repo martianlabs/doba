@@ -98,6 +98,9 @@ struct worker {
     if (!configuration_.max_buffered_send_bytes) {
       throw std::runtime_error("Invalid send buffer size!");
     }
+    if (configuration_.inactivity_period.count() < 0) {
+      throw std::runtime_error("Invalid inactivity period!");
+    }
     if (configuration_.listen_backlog < 0) {
       throw std::runtime_error("Invalid listen backlog!");
     }
@@ -491,6 +494,11 @@ struct worker {
               tout = static_cast<DWORD>(milliseconds.count() + 1);
             }
           }
+          if (configuration_.inactivity_period.count() > 0) {
+            tout = std::min(tout, static_cast<DWORD>(std::min<std::int64_t>(
+                connection_progress::maintenance_interval.count(),
+                configuration_.inactivity_period.count())));
+          }
           BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
           if (st == FALSE && ovb == nullptr && GetLastError() == WAIT_TIMEOUT) {
@@ -543,6 +551,7 @@ struct worker {
               work.timers.pop();
             }
           }
+          expire_contexts();
           std::size_t count = work.ready.size();
           while (count--) {
             auto entry = work.ready.front();
@@ -628,6 +637,30 @@ struct worker {
   // | anything goes wrong, it closes the socket and finishes the accept.      |
   // | Called on an I/O worker thread.                                         |
   // +-------------------------------------------------------------------------+
+  void expire_contexts() {
+    if (!configuration_.inactivity_period.count()) return;
+    const auto now = std::chrono::steady_clock::now();
+    // The deadline is only a scheduling hint; context state stays protected by
+    // its existing locks. Avoid a shared mutex RMW on every IOCP completion.
+    if (now.time_since_epoch().count() <
+        next_expiry_ticks_.load(std::memory_order_relaxed)) return;
+    // Only one worker scans at a time, without holding lifecycle_mutex_ while
+    // entering a context (retirement takes these locks in the opposite order).
+    std::unique_lock<std::mutex> scan(expiry_mutex_, std::try_to_lock);
+    if (!scan.owns_lock()) return;
+    if (now < next_expiry_) return;
+    next_expiry_ = now + std::min(configuration_.inactivity_period,
+                                connection_progress::maintenance_interval);
+    next_expiry_ticks_.store(next_expiry_.time_since_epoch().count(),
+                             std::memory_order_relaxed);
+    std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
+    {
+      std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+      contexts.reserve(contexts_.size());
+      for (const auto& item : contexts_) contexts.push_back(item.second);
+    }
+    for (const auto& ctx : contexts) ctx->expire(configuration_.inactivity_period);
+  }
   void handle_accept(overlapped_accept* ova) {
     SOCKET listener = get_accept_socket();
     if (listener == INVALID_SOCKET) {
@@ -659,6 +692,12 @@ struct worker {
       finish_accept();
       return;
     }
+    auto reservation = connection_reservation::acquire(budget_);
+    if (!reservation) {
+      closesocket(ova->socket);
+      finish_accept();
+      return;
+    }
     std::shared_ptr<context<ENty, CNty>> ctx;
     try {
       std::size_t encrypted_receive_buffer_capacity = 0;
@@ -678,7 +717,8 @@ struct worker {
           on_connection_, on_disconnection_,
           [this](context<ENty, CNty>* context) { retire_context(context); },
           shared_state_, encrypted_receive_buffer_capacity,
-          network_bio_buffer_capacity);
+          network_bio_buffer_capacity, configuration_.max_pending_sources,
+          std::move(*reservation));
     } catch (...) {
       closesocket(ova->socket);
       finish_accept();
@@ -884,6 +924,11 @@ struct worker {
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
   const policies_type configuration_;
+  const std::shared_ptr<connection_budget> budget_{
+      std::make_shared<connection_budget>(configuration_.max_connections)};
+  std::mutex expiry_mutex_;
+  std::chrono::steady_clock::time_point next_expiry_{};
+  std::atomic<std::chrono::steady_clock::rep> next_expiry_ticks_{0};
   const FAty create_engine_;
   const typename CNty::shared_state shared_state_;
   network::detail::environment environment_;

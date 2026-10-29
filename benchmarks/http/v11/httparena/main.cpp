@@ -34,6 +34,7 @@
 #include <future>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -51,12 +52,12 @@
 #include <rapidjson/writer.h>
 #include <zlib.h>
 
-#include "common/filesystem.h"
 #include "common/reader.h"
 #include "common/task.h"
 #include "http_server.h"
 #include "https_server.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/static_file_server.h"
 #include "transport/server/tls.h"
 
 using martianlabs::doba::http_server;
@@ -123,161 +124,6 @@ bool encoding_weights(std::string_view value, std::array<int, 4>& quality) {
         }
         return true;
       });
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] static_content_type                                      ( function ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-std::string_view static_content_type(std::string_view path) {
-  const auto dot = path.rfind('.');
-  if (dot == path.npos) return "application/octet-stream";
-  const auto extension = path.substr(dot);
-  constexpr std::pair<std::string_view, std::string_view> types[] = {
-      {".html", "text/html"}, {".htm", "text/html"},
-      {".css", "text/css"}, {".js", "text/javascript"},
-      {".json", "application/json"}, {".txt", "text/plain"},
-      {".svg", "image/svg+xml"}, {".png", "image/png"},
-      {".jpg", "image/jpeg"}, {".jpeg", "image/jpeg"},
-      {".gif", "image/gif"}, {".webp", "image/webp"},
-      {".ico", "image/vnd.microsoft.icon"}, {".pdf", "application/pdf"},
-      {".wasm", "application/wasm"}, {".woff2", "font/woff2"},
-  };
-  for (const auto& type : types) {
-    if (helpers::iequals(extension, type.first)) return type.second;
-  }
-  return "application/octet-stream";
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] serve_static                                             ( function ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-void serve_static(const request& req, response& result,
-                  const std::filesystem::path& root) {
-  constexpr std::string_view prefix = "/static/";
-  const auto path = req.get_absolute_path();
-  if (!path.starts_with(prefix)) {
-    result.not_found_404();
-    return;
-  }
-  const auto relative = path.substr(prefix.size());
-  if (relative.empty() || relative.back() == '/') {
-    result.not_found_404();
-    return;
-  }
-  std::error_code error;
-  // Validate the original path before appending a representation suffix.
-  if (!common::detail::filesystem_relative_path(relative, error)) {
-    result.forbidden_403();
-    return;
-  }
-
-  constexpr std::array<std::string_view, 4> encodings = {
-      "br", "gzip", "identity", "*"};
-  std::array<int, 4> quality = {-1, -1, -1, -1};
-  bool if_match = false;
-  bool match_star = false;
-  bool none_star = false;
-  for (std::size_t i = 0; i < req.get_headers_length(); ++i) {
-    const auto header = req.get_header(i);
-    auto value = header.second;
-    helpers::ows_trim(value);
-    if (helpers::iequals(header.first, "Accept-Encoding")) {
-      if (!encoding_weights(value, quality)) {
-        result.bad_request_400();
-        return;
-      }
-    } else if (helpers::iequals(header.first, "If-Match")) {
-      if_match = true;
-      match_star = match_star || value == "*";
-    } else if (helpers::iequals(header.first, "If-None-Match")) {
-      none_star = none_star || value == "*";
-    }
-  }
-  for (std::size_t i = 0; i < 2; ++i) {
-    if (quality[i] < 0) quality[i] = std::max(0, quality[3]);
-  }
-  // RFC 9110 S12.5.3: implicit identity is a fallback unless *;q=0 excludes it.
-  if (quality[2] < 0) quality[2] = quality[3] == 0 ? 0 : 1;
-  std::array<std::size_t, 3> order = {0, 1, 2};
-  std::sort(order.begin(), order.end(), [&quality](auto left, auto right) {
-    return quality[left] == quality[right] ? left < right
-                                         : quality[left] > quality[right];
-  });
-
-  common::filesystem_file file;
-  std::size_t selected = encodings.size();
-  constexpr std::array<std::string_view, 3> suffixes = {".br", ".gz", ""};
-  for (const auto index : order) {
-    if (quality[index] == 0) continue;
-    std::string candidate(relative);
-    candidate += suffixes[index];
-    // Open directly; do not stat/read the original or reopen the chosen file.
-    if (file.open(root, candidate, error)) {
-      selected = index;
-      break;
-    }
-    if (error == std::errc::no_such_file_or_directory ||
-        error == std::errc::not_a_directory ||
-        error == std::errc::is_a_directory) continue;
-    if (error == std::errc::permission_denied ||
-        error == std::errc::operation_not_permitted ||
-        error == std::errc::too_many_symbolic_link_levels) {
-      result.forbidden_403();
-      return;
-    }
-    result.internal_server_error_500();
-    return;
-  }
-  if (selected == encodings.size()) {
-    if (quality[2] != 0) {
-      result.not_found_404();
-      return;
-    }
-    result.not_acceptable_406();
-    result.set_header("Vary", "Accept-Encoding");
-    return;
-  }
-  // Preserve Doba's existing precondition order (RFC 9110 S13.2.2).
-  if (if_match && !match_star) {
-    result.precondition_failed_412();
-    return;
-  }
-  if (none_star) {
-    result.not_modified_304();
-    result.clear_body();
-    result.set_header("Vary", "Accept-Encoding");
-    return;
-  }
-  result.ok_200();
-  const auto length = file.size();
-  if (req.get_method() != "HEAD") {
-    std::string contents(length, '\0');
-    auto remaining = std::as_writable_bytes(std::span(contents));
-    while (!remaining.empty()) {
-      const auto count = file.read(remaining);
-      if (count == 0 || file.failed()) {
-        result.internal_server_error_500();
-        return;
-      }
-      remaining = remaining.subspan(count);
-    }
-    auto writer = body::body_writer::raw();
-    if (!writer.write(std::string_view(contents))) {
-      result.internal_server_error_500();
-      return;
-    }
-    result.set_body(std::move(writer));
-  }
-  result.set_header("Content-Type", static_content_type(relative));
-  result.set_header("Vary", "Accept-Encoding");
-  if (selected != 2) result.set_header("Content-Encoding", encodings[selected]);
-  if (req.get_method() == "HEAD") {
-    result.set_header("Content-Length", std::to_string(length));
-  }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -382,7 +228,9 @@ int main() {
       std::cerr << "invalid CPU quota\n";
       return 1;
     }
-    const auto quota_workers = quota / period + (quota % period != 0);
+    // Match one worker per complete usable core, as Fulmine's automatic pool.
+    // A fractional quota still needs one worker, but not an extra full worker.
+    const auto quota_workers = std::max<std::uint64_t>(1, quota / period);
     workers = static_cast<std::size_t>(
         std::min<std::uint64_t>(workers, quota_workers));
     break;
@@ -404,13 +252,6 @@ int main() {
     return 1;
   }
   policies http_configuration;
-  std::error_code static_error;
-  const auto static_root =
-      common::filesystem_root("/data/static", static_error);
-  if (static_error) {
-    std::cerr << "unable to open static root\n";
-    return 1;
-  }
   http_server<> http_server(
       {.worker_count = workers, .ip = "0.0.0.0", .port = "8080"},
       http_configuration);
@@ -547,17 +388,24 @@ int main() {
   tls_configuration.worker_count = workers;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";
-  tls_configuration.certificate_file = "/certs/server.crt";
-  tls_configuration.private_key_file = "/certs/server.key";
+  const char* certificate = std::getenv("TLS_CERT");
+  const char* private_key = std::getenv("TLS_KEY");
+  tls_configuration.certificate_file = certificate ? certificate : "/certs/server.crt";
+  tls_configuration.private_key_file = private_key ? private_key : "/certs/server.key";
   martianlabs::doba::https_server<> tls_server(tls_configuration,
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
-  const auto static_handler =
-      [static_root](const request& req, response& res) {
-        serve_static(req, res, static_root);
-      };
-  tls_server.add_route("GET", "/static/*", static_handler);
-  tls_server.add_route("HEAD", "/static/*", static_handler);
+  // The framework owns representation selection, attribute validation and the
+  // bounded cache. Keep all workers under one declared budget; no file preload
+  // or per-worker maps in the adapter. Compressed siblings are selected on disk.
+  const common::cache_policies cache_configuration;
+  static_file_policies static_configuration;
+  static_configuration.precompressed = true;
+  static_configuration.cache = std::make_shared<static_file_cache>(cache_configuration);
+  const char* static_path = std::getenv("STATIC_DIR");
+  const std::filesystem::path static_root = static_path ? static_path : "/data/static";
+  tls_server.add_controller<static_file_server>(
+      "/static", static_root, static_configuration);
   tls_server.add_route(
       "POST", "/echo",
       [](const request& req, response& res) {
@@ -568,6 +416,10 @@ int main() {
   http_server.start();
   tls_server.start();
   std::cerr << "workers per listener: " << workers << '\n';
+  std::cerr << "static root: " << static_root << "; cache entries: "
+            << cache_configuration.max_entries << "; shared cache budget: "
+            << cache_configuration.max_cost << "; max cacheable file: "
+            << static_configuration.max_cached_file_size << '\n';
   // Docker owns process shutdown; wait after the server starts.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

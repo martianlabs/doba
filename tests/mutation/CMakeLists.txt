@@ -16,6 +16,13 @@ add_executable(detection_tests
   "${DOBA_MUTATION_ROOT}/tests/unit/protocol/http/v11/regression_detection_tests.cpp")
 target_include_directories(detection_tests PRIVATE
   "${DOBA_MUTATION_HEADERS}" "${DOBA_MUTATION_ROOT}/tests/unit/helpers")
+if(DOBA_MUTATION_POLICY_TESTS)
+  target_sources(detection_tests PRIVATE
+    "${DOBA_MUTATION_ROOT}/tests/unit/transport/server/operating_policies_tests.cpp"
+    "${DOBA_MUTATION_ROOT}/tests/unit/transport/server/policy_budget_audit_tests.cpp"
+    "${DOBA_MUTATION_ROOT}/tests/unit/protocol/http/v11/operating_limits_tests.cpp"
+    "${DOBA_MUTATION_ROOT}/tests/unit/protocol/http/v11/policy_budget_audit_tests.cpp")
+endif()
 target_compile_features(detection_tests PRIVATE cxx_std_20)
 find_package(Threads REQUIRED)
 target_link_libraries(detection_tests PRIVATE Threads::Threads)

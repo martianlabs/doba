@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <barrier>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -138,6 +139,41 @@ DOBA_TEST(
     finishing.join();
     DOBA_EXPECT_EQUAL(callbacks.load(), immediate ? 0 : 1);
   }
+}
+
+DOBA_TEST("completion publication survives repeated stop races on persistent threads") {
+  constexpr int rounds = 2048;
+  std::unique_ptr<engine_async> current;
+  std::barrier phase(3);
+  std::atomic<int> callbacks{0};
+  bool immediate = false;
+  int mismatches = 0;
+  std::jthread stopping([&] {
+    for (int i = 0; i < rounds; ++i) {
+      phase.arrive_and_wait();
+      immediate = current->stop([&] { ++callbacks; });
+      phase.arrive_and_wait();
+    }
+  });
+  std::jthread finishing([&] {
+    for (int i = 0; i < rounds; ++i) {
+      phase.arrive_and_wait();
+      current->end();
+      phase.arrive_and_wait();
+    }
+  });
+  for (int i = 0; i < rounds; ++i) {
+    current = std::make_unique<engine_async>(32, std::function<void()>{},
+                                           std::function<void()>{});
+    callbacks = 0;
+    current->begin();
+    phase.arrive_and_wait();
+    phase.arrive_and_wait();
+    if (callbacks.load() != (immediate ? 0 : 1)) ++mismatches;
+  }
+  stopping.join();
+  finishing.join();
+  DOBA_EXPECT_EQUAL(mismatches, 0);
 }
 
 // +===========================================================================+

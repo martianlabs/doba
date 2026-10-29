@@ -40,3 +40,10 @@ do than saying hello very quickly.
 A small adapter for the Web Frameworks benchmark: a root route, a route that
 returns a user identifier, and a user POST route. Simple handlers, plenty
 of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
+
+For the static-file controller, use the static-tls profile through the
+[HttpArena adapter](http/v11/httparena/README.md).
+
+For engine and input-flow overhead, use the
+[operating-policy microbenchmark](http/v11/operating-policies/README.md).
+Its CPU measurements complement the TCP/TLS comparisons.

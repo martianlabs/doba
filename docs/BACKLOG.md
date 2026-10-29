@@ -47,13 +47,13 @@ a selected value are marked "Not set".
 </h2>
 
 The planned first delivery is `0.1.0-beta1`, a beta for controlled
-deployments. There is currently no release candidate. Five open items gate
-that delivery: C1-C3, C7, and RE1. GZIP is future product work.
+deployments. There is currently no release candidate. Operational hardening
+C1-C3 and C7 is implemented and verified on Windows and Linux with TCP and TLS.
+RE1 is the remaining open release gate. GZIP is future product work.
 
-**Implementation order.** Complete inactivity and connection admission,
-settle the remaining per-request and retained-work contracts (C1/C2/C3/C7),
-then finish RE1 when publication is planned. Do not delay resource controls
-for optional product features.
+**Next release work.** Qualify the exact publication revision and complete RE1
+when publication is planned. Keep the operational regression tests passing;
+optional product features do not delay that qualification.
 
 **Exit criteria.**
 
@@ -80,9 +80,10 @@ an explicit scope decision supported by evidence.
   </a>
 </h2>
 
-22 open items across seven categories: five release gates and
-seventeen future items. Closed and archived identifiers remain in Git history.
-"Verification pending" requires a run on the relevant revision.
+18 open items across six active categories: one release gate and seventeen
+future items. The four completed operational items remain below with their
+verification evidence. Previously closed and archived identifiers remain in
+Git history. "Verification pending" requires a run on the relevant revision.
 
 QA2's initial fuzzing delivery is complete: HTTP and chunked harnesses,
 corpus, sanitizers, CI budgets and reproduction evidence are in
@@ -93,23 +94,23 @@ composition use case is selected.
 Test tooling uses repository C++ and CMake. Corpus generation and mutation
 campaigns must not require Python or another scripting runtime.
 
-| Category | Identifiers | Release | Future work | Total |
-| --- | --- | --- | --- | --- |
-| Operational hardening | C1-C3, C7 | 4 | 0 | 4 |
-| Bugs | B13 | 0 | 1 | 1 |
-| Product and convenience | F2, P2, P4-P8 | 0 | 7 | 7 |
-| Quality and validation | QA1, QA6 | 0 | 2 | 2 |
-| Release engineering | RE1 | 1 | 0 | 1 |
-| C++ maintainability | DT1-DT3 | 0 | 3 | 3 |
-| Beyond the first release | F3-F5, F7 | 0 | 4 | 4 |
-| **Total** | | **5** | **17** | **22** |
+| Category | Identifiers | Release | Future work | Complete | Total |
+| --- | --- | --- | --- | --- | --- |
+| Operational hardening | C1-C3, C7 | 0 | 0 | 4 | 4 |
+| Bugs | B13 | 0 | 1 | 0 | 1 |
+| Product and convenience | F2, P2, P4-P8 | 0 | 7 | 0 | 7 |
+| Quality and validation | QA1, QA6 | 0 | 2 | 0 | 2 |
+| Release engineering | RE1 | 1 | 0 | 0 | 1 |
+| C++ maintainability | DT1-DT3 | 0 | 3 | 0 | 3 |
+| Beyond the first release | F3-F5, F7 | 0 | 4 | 0 | 4 |
+| **Total** | | **1** | **17** | **4** | **22** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [C1](#c1-single-inactivity-timeout) | Hardening | Pending | Release gate | 0.1.0-beta1 |
-| [C2](#c2-effective-per-request-limits) | Hardening | Partially implemented | Release gate | 0.1.0-beta1 |
-| [C3](#c3-global-active-connection-limit) | Hardening | Pending | Release gate | 0.1.0-beta1 |
-| [C7](#c7-pending-response-and-work-budget) | Hardening | Partial; transport budget pending | Release gate | 0.1.0-beta1 |
+| [C1](#c1-single-inactivity-timeout) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
+| [C2](#c2-effective-per-request-limits) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
+| [C3](#c3-global-active-connection-limit) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
+| [C7](#c7-pending-response-and-work-budget) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
 | [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Fix and regression pending | Medium | Future work |
 | [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Not set | Future work |
 | [P2](#p2-access-logging) | Product | Decision pending | Not set | Future work |
@@ -145,9 +146,10 @@ campaigns must not require Python or another scripting runtime.
   </a>
 </h2>
 
-C1, C2, C3 and C7 are all required for `0.1.0-beta1`. Request and transport
-policies exist; the remaining admission and resource-budget contracts still
-need decisions before implementation.
+C1, C2, C3 and C7 are complete for the beta's operational scope. The
+[implementation plan and validation results](../plans/operational-policies.md)
+record the agreed budgets, regressions and compiler matrix. The exact release
+qualification remains part of RE1.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
@@ -165,18 +167,19 @@ need decisions before implementation.
   </a>
 </h3>
 
-**Status.** Pending; required for `0.1.0-beta1`. Neither TCP backend
-closes a connection that stops making progress.
+**Status.** Complete. Verified on IOCP and epoll, TCP and TLS.
 
-**Scope.** Add one transport-policy `inactivity_timeout` fixed at creation.
-Receiving or sending bytes renews the deadline; expiry closes the connection.
-Decide the default and disabling behavior before implementation. Phase-specific
-and absolute deadlines, dynamic changes, and automatic 408 responses are
-outside this item.
+`inactivity_period` defaults to 60 seconds; zero disables it and negative
+periods are rejected. Positive socket reads or writes renew the period,
+including TLS negotiation and discarded input during graceful close. Expiration
+aborts the socket even when no I/O completion is pending. Worker checks use
+intervals up to min(period, one second), plus scheduling delay.
 
-**Close when.** Fragmented reads that progress stay alive; stalled partial
-requests, idle keep-alive, and non-reading peers expire. Verify timing,
-ownership, response order, and one disconnect callback on IOCP and epoll.
+Unit tests control time at exact boundaries. Real sockets cover idle peers,
+partial messages, incomplete handshakes, progressing fragments, non-reading
+peers, paused input, single disconnect notification and retained async work.
+Absolute phase deadlines, minimum rates, forced handler cancellation and
+automatic 408 responses remain outside this item.
 
 <a name="c2-effective-per-request-limits"></a>
 <h3>
@@ -194,28 +197,23 @@ ownership, response order, and one disconnect callback on IOCP and epoll.
   </a>
 </h3>
 
-**Status.** Partially implemented; required for `0.1.0-beta1`.
+**Status.** Complete for the beta's operational scope.
 
-**Existing limits.** HTTP policies bound content length (16 MiB by default),
-query pairs, chunk extensions, trailers, request-head bytes, and body storage.
-Response limits are separate. A complete head over
-`max_request_head_size` returns 431; an incomplete head filling that
-limit currently returns 400.
+HTTP policies bound request heads, decoded body size, query pairs, chunk
+extensions and trailers. A valid head exactly at its budget is accepted;
+exhausting an incomplete or excessive head produces 431. Syntax errors within
+the budget retain 400, and excessive bodies retain 413.
 
-**Remaining release work.** Settle consistent head-limit rejection behavior
-and verify existing budgets with large receive blocks, including the work
-performed before final head-size rejection. An acceptance limit alone does
-not establish a bound on all transient parser work.
+Head parsing receives a view capped before target and field parsing, and
+incomplete-head retention is bounded by the same budget. A small head followed
+by a large body or pipeline is not mistaken for an excessive head. Unit and
+configured-server tests cover exact boundaries, fragmentation, oversized receive
+blocks, cumulative chunked bodies, disabled limits and early Content-Length
+rejection. The explicit parser slice and residual-size bounds establish the
+work/storage invariant; no performance benchmark is claimed.
 
-**Future granularity.** Separate header-field count, per-field size and
-request-target knobs are optional improvements, not additional beta gates.
-Define their accounting and 431/414 behavior if selected. Keep syntax
-checking separate from resource policy.
-
-**Close when.** Configured-server tests cover zero, limit-1, limit, and
-limit+1, including cumulative chunked bodies and rejection before reading
-an excessive declared body. Verify rejection reasons and stable configuration.
-Performance measurement requires a separate explicit benchmark request.
+Separate field count, per-field size and target-size knobs remain optional
+future granularity, outside this beta gate.
 
 <a name="c3-global-active-connection-limit"></a>
 <h3>
@@ -233,18 +231,19 @@ Performance measurement requires a separate explicit benchmark request.
   </a>
 </h3>
 
-**Status.** Pending; required for `0.1.0-beta1`. The current connection
-counter observes connections but does not limit admission.
+**Status.** Complete. Verified on IOCP and epoll, TCP and TLS.
 
-**Scope.** Add one global transport-policy maximum fixed at creation. Reserve
-capacity before admitting a context; close excess connections without
-interrupting admitted ones. Decide the default and unlimited value first.
-Per-worker quotas, dynamic changes, and HTTP rejection responses are outside
-this item.
+`max_connections` defaults to 65535 per transport instance, shared by every
+worker; zero means unlimited. Capacity is reserved before constructing engines,
+receive buffers or per-connection TLS state. Excess sockets close without
+interrupting admitted connections or inventing HTTP rejection responses.
 
-**Close when.** Concurrent-client tests on IOCP and epoll never exceed the
-maximum, release each reservation on every closure path, and admit a new
-connection after capacity becomes available.
+A reservation follows the context through construction failures, close and
+retirement. Closing a socket with accepted asynchronous work does not release
+its credit prematurely. Concurrent reservation tests, connection bursts,
+independent instances, failed factories, incomplete handshakes, expiration and
+restart verify release and subsequent admission. Per-worker quotas and dynamic
+reconfiguration remain outside this item.
 
 <a name="c7-pending-response-and-work-budget"></a>
 <h3>
@@ -262,23 +261,29 @@ connection after capacity becomes available.
   </a>
 </h3>
 
-**Status.** Partially implemented; required for `0.1.0-beta1`.
-`max_pending_requests` bounds asynchronous response positions. TCP
-`max_buffered_send_bytes` bounds queued reservations and the active batch but
-excludes source-owned storage; neither is a complete retained-work budget.
+**Status.** Complete for the beta's operational scope.
 
-**Remaining work.** Define accounting, defaults, and admission or resume
-behavior for retained transport work. Distinguish queued wire bytes,
-source-owned resident storage and temporary files; a source's logical
-length is not its resident memory. State what remains application-owned.
-Do not promise a universal budget for arbitrary allocations or external
-work inside handlers. Preserve response order and transport ownership
-without an HTTP-specific queue.
+The transport bounds inline output and active-batch reservations with
+`max_buffered_send_bytes` (1 MiB) and retained readers with
+`max_pending_sources` (32, including the active reader). HTTP bounds ordered
+response positions with `max_pending_requests` (128) and serialized bytes
+waiting behind earlier replies with `max_pending_response_bytes` (1 MiB).
+New count/HTTP byte limits accept zero as unlimited; the transport byte budget
+remains positive.
 
-**Close when.** A non-reading peer and delayed first handler with pipelined
-successors respect configured limits on both platforms. Verify another
-connection remains serviceable, and check resume, disconnect, and stop
-without leaks or duplicate completion.
+Bundled transports pause at the ceiling of 75% and resume at the floor of 50%,
+including a pipeline already in a receive block. Outstanding completions may
+still hit a hard limit and close the connection. Partial sends retain active
+batch credit, and growing reader batches reserve their full capacity. The
+optional flow hook preserves custom engine compatibility and response order.
+
+Real sockets verify a blocked 16 MiB delivery, service to another client,
+ordered resumption, delayed first handlers, terminal overflows, expiration and
+stop. Separate close regressions disable expiration and verify shutdown after
+resumed work produces no bytes. TSan repetitions and mutation detection cover
+the critical transitions. Source-owned memory/files, TLS BIO capacities, cache
+snapshots and arbitrary handler allocations remain distinct budgets; these
+limits do not promise a universal RSS or temporary-disk quota.
 
 <a name="bugs"></a>
 <h2>

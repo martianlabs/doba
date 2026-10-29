@@ -144,3 +144,8 @@ Network BIO capacity per connection (must be positive).
 **Value:** `kDefaultNetworkBioBufferCapacity`
 
 **Source:** [include/transport/server/tls_policies.h:53](../../../../include/transport/server/tls_policies.h#L53)
+
+TLS inherits `max_connections`, `inactivity_period`, `max_pending_sources` and
+`max_buffered_send_bytes` from [tcp_policies](tcp_policies.md). Admission happens
+before creating TLS state, and positive encrypted I/O renews inactivity. The
+finite BIO capacities remain separate from source-owned storage.

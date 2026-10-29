@@ -50,6 +50,22 @@ the first read.
   </a>
 </h2>
 
+The [operating policies](transport/server/operating_policies_tests.cpp),
+[flow closure](transport/server/flow_close_tests.cpp), and
+[policy audit](transport/server/policy_audit_tests.cpp) exercise real TCP/TLS
+listeners: admission and recovery, zero limits and configuration snapshots,
+receive/send progress, paused pipelines, slow readers, held async work,
+wakeups during receive, and TLS close notifications during resumption.
+TLS 1.2 and 1.3 handshakes also run with a 256-byte output BIO, forcing
+retries after output drains while HTTP input remains unpaused. Each
+connection must finish negotiation and serve an HTTP response.
+The [flow pressure tests](transport/server/flow_pressure_tests.cpp) verify immediate
+publication after enqueue, release after drain and safe queries after retirement.
+The [operating policy cases](transport/server/operating_policies_tests.cpp) and
+[policy audit](transport/server/policy_audit_tests.cpp) cover boundaries,
+inactivity, retained work and concurrent flow control. The
+[mutation campaign](../mutation/README.md) checks regression detection separately.
+
 The [resilience cases](protocol/http/v11/server_resilience_tests.cpp) mix
 several TCP or TLS clients, tiny reads, abrupt resets, suspended handlers,
 and bodies that spill to disk. The server drains, restarts, and repeats

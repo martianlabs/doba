@@ -151,6 +151,16 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  bool input_paused() const {
+    if constexpr (requires { engine.input_paused(); }) {
+      return engine.input_paused();
+    } else {
+      return false;
+    }
+  }
+  void resume_input() {
+    if constexpr (requires { engine.resume_input(); }) engine.resume_input();
+  }
   ENty engine;
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;

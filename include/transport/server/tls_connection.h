@@ -106,13 +106,14 @@ struct tls_connection {
       if (!process_plaintext_()) {
         throw std::runtime_error("TLS receive failed!");
       }
+      if (input_paused()) break;
       if (!next) break;
     }
     size -= received;
     if (received && size) {
       std::memmove(buffer.get(), buffer.get() + received, size);
     }
-    if (size == capacity) throw std::runtime_error("TLS receive stalled");
+    if (size == capacity && !input_paused()) throw std::runtime_error("TLS receive stalled");
   }
   // +=========================================================================+
   // | [>] prepare_output                                           ( public ) |
@@ -125,7 +126,13 @@ struct tls_connection {
   bool prepare_output(send_state& output) {
     for (;;) {
       if (session_.pending()) return true;
-      if (!session_.established()) return !session_.failed();
+      if (!session_.established()) {
+        const auto state = session_.handshake();
+        if (state == tls_session::status::failed || state == tls_session::status::closed)
+          return false;
+        if (session_.pending()) continue;
+        if (!session_.established()) return true;
+      }
       if (close_requested_ && output.offset == output.buffer.size() &&
           !output.queued()) {
         const auto state = session_.shutdown();
@@ -191,7 +198,7 @@ struct tls_connection {
   // | output buffer and offset.                                               |
   // +-------------------------------------------------------------------------+
   bool output_pending(const send_state& output) const {
-    return session_.pending() || output.queued() ||
+    return session_.output_pending() || output.queued() ||
            output.offset != output.buffer.size() ||
            (close_requested_ && !shutdown_complete_);
   }
@@ -218,6 +225,20 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  bool input_paused() const {
+    if constexpr (requires { engine.input_paused(); }) {
+      return engine.input_paused();
+    } else {
+      return false;
+    }
+  }
+  void resume_input() {
+    if constexpr (requires { engine.resume_input(); }) engine.resume_input();
+    if (!input_paused()) {
+      if (!process_plaintext_()) throw std::runtime_error("TLS receive failed!");
+      if (!input_paused()) process(0);
+    }
+  }
   ENty engine;
   std::unique_ptr<char[]> buffer;
   const std::size_t capacity;
@@ -237,6 +258,7 @@ struct tls_connection {
     }
     if (!session_.established()) return true;
     for (;;) {
+      if (input_paused()) return true;
       const auto result =
           session_.read(std::span(plaintext_.get(), plaintext_capacity_));
       if (result.state == tls_session::status::failed) return false;

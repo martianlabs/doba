@@ -224,6 +224,40 @@ view:
   Output can arrive from different threads, and a close request must stop
   further input for that connection.
 
+HTTP also exposes an optional flow-control extension. The bundled TCP and TLS
+transports recognize these engine methods:
+
+```cpp
+void set_input_flow_control(std::function<bool()> pressure,
+                            std::function<void()> ready);
+bool input_paused() const noexcept;
+void resume_input();
+```
+
+Install the hooks before delivering input. The pressure query reports transport
+output pressure. Once *input_paused()* is true, suspend further input delivery;
+the HTTP engine owns a copy of the unprocessed remainder of one receive block.
+It pauses between messages, allowing a message already in progress to finish.
+
+The *ready* callback is requested for pressured ordered-response credit, rather
+than every ordinary completion, and may run on any completing thread. Schedule and coalesce a
+wakeup onto the connection's serialized worker, retaining wakeups that arrive
+during a receive call. Invoke *resume_input()* outside output locks and serialize
+it with receive and stop calls. A wakeup can be spurious: recheck every budget,
+and service deferred input even when no new network bytes arrive. Honor close
+requests and TLS control records processed during resumption too.
+
+Keep callbacks lifetime-safe through accepted asynchronous work; weak context
+ownership avoids cycles in the bundled transports. Linux pressure queries read
+a separately owned flag published under the existing output lock; querying it
+does not lock or retain the connection. A custom transport owns its
+admission, inactivity and output budgets. Without these optional hooks, HTTP
+still enforces hard limits, but cannot cooperatively pause that transport.
+HTTP checks pressure before starting a message with available input. Empty
+receive or resume calls do not poll. With no deferred bytes, *input_paused()*
+can be false even while a budget is pressured: the next block is checked before
+decoding and can be retained within the same one-block bound.
+
 Custom HTTP requests accept a final `borrow_bytes` argument in `from(...)`.
 The decoder supplies true so fields can reference its immutable input;
 standalone factory calls default to owned field storage. Requests expose

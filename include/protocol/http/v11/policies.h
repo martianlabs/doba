@@ -77,7 +77,10 @@ struct policies {
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
   // Maximum requests awaiting ordered response delivery (0 means unlimited).
-  std::size_t max_pending_requests = 32;
+  std::size_t max_pending_requests = 128;
+  // Serialized head/body bytes waiting for ordered delivery (0 unlimited).
+  // Storage owned by response sources and handlers is outside this budget.
+  std::size_t max_pending_response_bytes = 1024 * 1024;
   // Maximum query parameter pairs (0 means unlimited).
   std::size_t max_query_parameters = kDefaultMaxQueryParameters;
   // Maximum chunk extension bytes (0 means unlimited).

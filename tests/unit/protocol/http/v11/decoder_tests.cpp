@@ -398,7 +398,7 @@ DOBA_TEST("request head size is bounded by HTTP policy") {
       DOBA_EXPECT(result.response.has_value());
       if (!result.response.has_value()) continue;
       auto output = result.response->serialize();
-      DOBA_EXPECT((wire_prefix(output)).starts_with("HTTP/1.1 400 "));
+      DOBA_EXPECT((wire_prefix(output)).starts_with("HTTP/1.1 431 "));
     }
   }
 }

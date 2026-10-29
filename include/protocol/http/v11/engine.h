@@ -77,7 +77,7 @@ class engine {
         decoder_{configuration},
         async_{std::make_shared<detail::engine_async>(
             configuration.max_pending_requests, std::move(on_async_started),
-            std::move(on_async_finished))} {}
+            std::move(on_async_finished), configuration.max_pending_response_bytes)} {}
   engine(const engine&) = delete;
   engine(engine&&) noexcept = delete;
   ~engine() = default;
@@ -125,14 +125,43 @@ class engine {
   // +-------------------------------------------------------------------------+
   // | Handles bytes received from the transport.                              |
   // +-------------------------------------------------------------------------+
+  // Optional transport flow control. At most one receive block is retained;
+  // the engine owns deferred bytes; do not deliver more input while paused.
+  void set_input_flow_control(std::function<bool()> pressure,
+                              std::function<void()> ready) {
+    output_pressure_ = std::move(pressure);
+    async_->set_on_input_ready(std::move(ready));
+  }
+  bool input_paused() const noexcept { return paused_.load(std::memory_order_relaxed); }
+  void resume_input() {
+    std::string_view remaining(deferred_);
+    process_input_(remaining);
+    deferred_.erase(0, deferred_.size() - remaining.size());
+  }
   void on_bytes_received(std::string_view input) {
-    if (closed_ || input.empty()) return;
+    process_input_(input);
+    if (!closed_ && !input.empty() && paused_.load(std::memory_order_relaxed)) deferred_.assign(input);
+  }
+
+ private:
+  void process_input_(std::string_view& input) {
+    if (closed_) { input = {}; return; }
+    paused_.store(false, std::memory_order_relaxed);
     while (!closed_) {
+      // Check pressure when there is input to admit, not at an empty boundary.
+      // The next block is still checked before starting another request.
+      if (input.empty()) return;
+      if (!message_started_ && output_pressure_ &&
+          (output_pressure_() || (!synchronous_ && async_->pressured()))) {
+        paused_.store(true, std::memory_order_relaxed);
+        return;
+      }
       if (!synchronous_) {
         if (!async_->accepting()) return;
         if (async_->idle()) synchronous_ = true;
       }
       try {
+        message_started_ = true;
         deserialization_result result = decoder_.deserialize(input);
         if (result.code != deserialization_status::kSucceeded) {
           const bool rejected =
@@ -153,6 +182,7 @@ class engine {
           }
           return;
         }
+        message_started_ = false;
         RQty& request = *result.request;
         router_match_result<RQty, RSty> match{};
         std::string_view path;
@@ -204,6 +234,12 @@ class engine {
   std::shared_ptr<detail::engine_async> async_;
   transport::server::execution_capacity execution_;
   protocol::send_delegate on_send_;
+  std::function<bool()> output_pressure_;
+  std::string deferred_;
+  // This flag gates transport input; it publishes no engine-owned data.
+  // Receive and resume calls remain serialized by the transport.
+  std::atomic<bool> paused_{false};
+  bool message_started_{false};
   bool closed_{false};
   bool synchronous_{true};
 };

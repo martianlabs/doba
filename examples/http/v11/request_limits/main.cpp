@@ -39,7 +39,15 @@ using namespace martianlabs::doba::protocol::http::v11;
 int main() {
   policies limits;
   limits.max_request_body_size = 5;
-  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"}, limits);
+  limits.max_pending_requests = 128;
+  limits.max_pending_response_bytes = 1024 * 1024;
+  martianlabs::doba::transport::server::tcp_policies io;
+  io.ip = "0.0.0.0";
+  io.port = "8080";
+  io.max_connections = 65535;
+  io.inactivity_period = std::chrono::seconds{60};
+  io.max_pending_sources = 32;
+  http_server<> http_server(io, limits);
   http_server.add_route("POST", "/upload",
                         [](const request&, response& res) {
                           res.ok_200().set_body("accepted");

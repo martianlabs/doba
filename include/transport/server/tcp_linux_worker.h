@@ -85,8 +85,9 @@ struct worker {
   worker(POty configuration, const FAty& create_engine,
          types::on_client_connected_delegate on_connection,
          types::on_client_disconnected_delegate on_disconnection,
-         typename CNty::shared_state shared_state)
-      : configuration_{configuration},
+         typename CNty::shared_state shared_state,
+         std::shared_ptr<connection_budget> budget)
+      : budget_{std::move(budget)}, configuration_{configuration},
         create_engine_{create_engine},
         shared_state_{std::move(shared_state)},
         on_connection_{std::move(on_connection)},
@@ -265,6 +266,12 @@ struct worker {
           tout = static_cast<int>(milliseconds.count() + 1);
         }
       }
+      if (configuration_.inactivity_period.count() > 0) {
+        const auto tick = std::min<std::int64_t>(
+            connection_progress::maintenance_interval.count(),
+            configuration_.inactivity_period.count());
+        if (tout < 0 || tout > tick) tout = static_cast<int>(tick);
+      }
       int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), tout);
       if (ready == -1) {
         if (errno == EINTR) continue;
@@ -300,6 +307,17 @@ struct worker {
         auto work = ready_.front();
         ready_.pop_front();
         work.run(work.context);
+      }
+      if (configuration_.inactivity_period.count() > 0) {
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= next_expiry_) {
+          for (const auto& item : contexts_) {
+            if (item.second->expire(configuration_.inactivity_period))
+              close_context(item.first);
+          }
+          next_expiry_ = now + std::min(configuration_.inactivity_period,
+                                      connection_progress::maintenance_interval);
+        }
       }
       retire_contexts();
       if (stopping_.load() && contexts_.empty()) break;
@@ -416,12 +434,6 @@ struct worker {
       ::close(socket);
       return;
     }
-    int no_delay = 1;
-    if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
-                     sizeof(no_delay)) == -1) {
-      ::close(socket);
-      return;
-    }
     try {
       register_context(socket);
     } catch (...) {
@@ -438,6 +450,12 @@ struct worker {
   // | connection is accepted.                                                 |
   // +-------------------------------------------------------------------------+
   void register_context(int socket) {
+    auto reservation = connection_reservation::acquire(budget_);
+    if (!reservation) { ::close(socket); return; }
+    int no_delay = 1;
+    if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
+                     sizeof(no_delay)) == -1)
+      throw std::runtime_error("Accepted socket could not be configured!");
     std::size_t encrypted_receive_buffer_capacity = 0;
     std::size_t network_bio_buffer_capacity = 0;
     if constexpr (requires(const POty& value) {
@@ -452,7 +470,8 @@ struct worker {
         socket, configuration_.receive_buffer_capacity,
         configuration_.max_buffered_send_bytes, create_engine_, on_connection_,
         on_disconnection_, shared_state_, encrypted_receive_buffer_capacity,
-        network_bio_buffer_capacity);
+        network_bio_buffer_capacity, configuration_.max_pending_sources,
+        std::move(*reservation));
     auto ctx_ptr = ctx.get();
     if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
       throw std::runtime_error("Context could not be registered!");
@@ -510,6 +529,7 @@ struct worker {
     }
     if (should_send || !ctx->can_receive()) {
       if (!ctx->send_pending()) close_context(ctx);
+      else ctx->resume_input();
     }
   }
   // +=========================================================================+
@@ -617,6 +637,8 @@ struct worker {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
+  const std::shared_ptr<connection_budget> budget_;
+  std::chrono::steady_clock::time_point next_expiry_{};
   const POty configuration_;
   const FAty& create_engine_;
   const typename CNty::shared_state shared_state_;

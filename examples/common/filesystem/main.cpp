@@ -25,6 +25,7 @@
 #include <array>
 #include <cstddef>
 #include <iostream>
+#include <string_view>
 #include <utility>
 
 #include "common/filesystem.h"
@@ -45,14 +46,36 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    std::cerr << "Usage: common_filesystem <root> <relative-file>\n";
+  const bool attributes = argc == 4 && std::string_view(argv[3]) == "--metadata";
+  if (argc != 3 && !attributes) {
+    std::cerr << "Usage: common_filesystem <root> <relative-file> [--metadata]\n";
     return 1;
   }
   std::error_code error;
   const auto root = filesystem_root(argv[1], error);
+  if (error) {
+    std::cerr << error.message() << '\n';
+    return 1;
+  }
+  if (attributes) {
+    const auto value = filesystem_file::inspect(root, argv[2], error);
+    if (!value) {
+      std::cerr << error.message() << '\n';
+      return 1;
+    }
+    std::cout << "size: " << value->size << '\n'
+              << "device: " << value->device << '\n'
+              << "identity: " << value->identity << '\n'
+              << "modified: " << value->modified_seconds << '.'
+              << value->modified_nanoseconds << '\n'
+              << "changed: " << value->changed_seconds << '.'
+              << value->changed_nanoseconds << '\n'
+              << "attributes: " << value->attributes << '\n'
+              << "links: " << value->links << '\n';
+    return std::cout ? 0 : 1;
+  }
   filesystem_file file;
-  if (error || !file.open(root, argv[2], error)) {
+  if (!file.open(root, argv[2], error)) {
     std::cerr << error.message() << '\n';
     return 1;
   }

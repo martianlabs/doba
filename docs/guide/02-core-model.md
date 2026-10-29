@@ -150,6 +150,10 @@ These are the callback and lifecycle calls the concept checks:
 { tr.stop() } -> std::same_as<void>;
 ```
 
+The optional [input flow-control hooks](05-extending-doba.md#keep-the-boundary-safe)
+let a transport cooperate with protocol backpressure without changing the
+minimal protocol contract.
+
 A working transport creates an engine for each connection, wires up its send
 and close callbacks, feeds it input, and handles its output. The concept
 checks the required C++ shape; it cannot check that bytes stay alive long

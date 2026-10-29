@@ -37,15 +37,15 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured on **Scaleway, 2026-10-20**, using the official HttpArena suite:
+Measured on **Scaleway, 2026-10-28**, using the official HttpArena suite:
 native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
 upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
 upstream from its repetitions, not averaged across runs.
 The campaign's reference-model verification is **incomplete**; these are
 local results, not the published HttpArena leaderboard.
 
-Every chart shows the **same top 10 from the overall ranking**, ordered by each
-test's metric. Scores retain normalization across all **15 measured servers**.
+Every chart shows the **same top 15 from the overall ranking**, ordered by each
+test's metric. Scores retain normalization across all **21 measured servers**.
 The total includes eight scored profiles and the upstream completeness factor;
 **pipelined**, **latency-500k-8cpu** and **static-tls** are reference-only profiles.
 Failed and skipped measurements are shown explicitly; they are not measured zeroes.
@@ -55,101 +55,20 @@ The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
 **2 x 3.84 TB NVMe** storage. It provides a **25 Gbps private network**
 and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-overall.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-overall.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
+<a href="resources/benchmarks/benchmark-summary.svg#gh-light-mode-only" title="Open full-size light card">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow.svg">
+    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+  </picture>
 </a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-overall.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-overall-dark.svg" alt="HttpArena overall top 10: total points including completeness; higher is better." width="100%">
+<a href="resources/benchmarks/benchmark-summary.svg#gh-dark-mode-only" title="Open full-size light card">
+  <picture>
+    <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow-dark.svg">
+    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+  </picture>
 </a>
-<br><br>
 
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-baseline.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-baseline.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-baseline.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-baseline-dark.svg" alt="HttpArena baseline: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-pipelined.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-pipelined.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-pipelined.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-pipelined-dark.svg" alt="HttpArena pipelined: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-limited-conn.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-limited-conn.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-limited-conn.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-limited-conn-dark.svg" alt="HttpArena limited-conn: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-10k.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-10k.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-10k.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-10k-dark.svg" alt="HttpArena latency-10k: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-1m.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-1m.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-1m.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-1m-dark.svg" alt="HttpArena latency-1m: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-500k-8cpu.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-500k-8cpu.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-500k-8cpu.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-latency-500k-8cpu-dark.svg" alt="HttpArena latency-500k-8cpu: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-async.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-async.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-async.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-async-dark.svg" alt="HttpArena async: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-comp.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-comp.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-comp.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-comp-dark.svg" alt="HttpArena json-comp: compression-adjusted requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-tls.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-tls.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-json-tls-dark.svg" alt="HttpArena json-tls: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-8gbit.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-8gbit.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-8gbit.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-8gbit-dark.svg" alt="HttpArena 8gbit: upstream fixed-rate score, p99 latency, achieved rate and status." width="100%">
-</a>
-<br><br>
-
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-static-tls.svg#gh-light-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-static-tls.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
-</a>
-<a href="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-static-tls.svg#gh-dark-mode-only" title="Open full-size light chart">
-  <img src="resources/benchmarks/scaleway-test-011-feature-memory/benchmark-static-tls-dark.svg" alt="HttpArena static-tls: selected requests per second; higher is better." width="100%">
-</a>
-<br><br>
+[See the full ranking, all 11 workloads, and machine specs](docs/benchmarks/README.md).
 
 <a name="no-magic-a-few-deliberate-choices"></a>
 <h2>
@@ -255,166 +174,18 @@ We like a good benchmark as much as the next person. But if a server needs
 well-behaved clients and a bit of luck to stay up, the numbers can wait.
 Here's what we put doba through before letting it brag about being fast.
 
-<a href="resources/readme/tests/unit.svg#gh-light-mode-only">
+<a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow.svg">
-    <img src="resources/readme/tests/unit.svg" alt="1,000+ unit tests. Yes, even for that." width="100%">
+    <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
-<a href="resources/readme/tests/unit-dark.svg#gh-dark-mode-only">
+<a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/unit-narrow-dark.svg">
-    <img src="resources/readme/tests/unit-dark.svg" alt="1,000+ unit tests. Yes, even for that." width="100%">
+    <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
-
-An empty buffer. A header that's almost legal. A body that fits the limit
-exactly, followed by one that misses it by a single byte. This is where
-"surely nobody would send that" goes to die.
-
-The [unit suite](tests/unit) checks HTTP parsing, raw and chunked bodies,
-routing, authentication, storage, and who actually owns those bytes once
-the buffer gets reused. Small details. Expensive bugs.
-
-<a href="resources/readme/tests/integration.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow.svg">
-    <img src="resources/readme/tests/integration.svg" alt="160+ integration cases. Sockets included." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/integration-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/integration-narrow-dark.svg">
-    <img src="resources/readme/tests/integration-dark.svg" alt="160+ integration cases. Sockets included." width="100%">
-  </picture>
-</a>
-
-That lovely request from the example? It may turn up in pieces, with three
-more requests behind it, from a client that hangs up halfway through.
-The [integration suite](tests/integration) runs actual TCP and TLS servers
-and makes those situations happen, including shutdown while work is still
-in flight.
-
-We also send hostile requests with another request right behind them.
-Rejecting the first is only half the job: the second mustn't sneak through
-to a handler while everyone's busy showing the first one the door.
-
-<a href="resources/readme/tests/concurrency.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow.svg">
-    <img src="resources/readme/tests/concurrency.svg" alt="Take your time. Stay in line." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/concurrency-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/concurrency-narrow-dark.svg">
-    <img src="resources/readme/tests/concurrency-dark.svg" alt="Take your time. Stay in line." width="100%">
-  </picture>
-</a>
-
-Request two finishes before request one. Meanwhile, another receive lands,
-shutdown starts, and a callback turns up late. You don't want to discover
-what that combination does on somebody else's server.
-
-So we suspend handlers and choose when to release them. We check response
-order and object lifetimes at those awkward overlaps, then repeat the
-[critical interleavings](tests/unit/protocol/http/v11/engine_concurrency_tests.cpp)
-**200 times under ThreadSanitizer** in CI. The scheduler doesn't get to
-decide whether we exercised the interesting bit today.
-
-<a href="resources/readme/tests/resilience.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow.svg">
-    <img src="resources/readme/tests/resilience.svg" alt="We wrote the clients nobody wants." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/resilience-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/resilience-narrow-dark.svg">
-    <img src="resources/readme/tests/resilience-dark.svg" alt="We wrote the clients nobody wants." width="100%">
-  </picture>
-</a>
-
-One client reads in tiny mouthfuls. Another resets the connection.
-Handlers are suspended, bodies spill to disk, and several TCP and TLS
-clients are doing this at once. Then we drain the server, restart it,
-and give the [resilience suite](tests/integration/protocol/http/v11/server_resilience_tests.cpp)
-another go.
-
-Surviving isn't the whole check. Did the payloads arrive in order? Are the
-handlers gone? Did we leave temporary files lying around? We check
-handles/descriptors after draining and record memory use after warmup.
-"It didn't crash" is a fairly low bar for a server.
-
-<a href="resources/readme/tests/fuzzing.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow.svg">
-    <img src="resources/readme/tests/fuzzing.svg" alt="HTTP, as written by a fuzzer." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/fuzzing-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/fuzzing-narrow-dark.svg">
-    <img src="resources/readme/tests/fuzzing-dark.svg" alt="HTTP, as written by a fuzzer." width="100%">
-  </picture>
-</a>
-
-We can dream up plenty of bad HTTP. libFuzzer has more time for this sort
-of thing, and considerably less taste.
-
-Our [HTTP decoder and chunked harnesses](tests/fuzz/README.md) feed its bytes
-through checks for consumption, message boundaries, fragmentation, buffer
-ownership, and memory/disk storage. Each harness gets **60 seconds per CI
-run on Linux and Windows** under AddressSanitizer and UndefinedBehaviorSanitizer,
-using a cached corpus so it doesn't start from scratch every time.
-
-When an input breaks something, we keep it. That particular nonsense now
-has a permanent seat in the test suite.
-
-<a href="resources/readme/tests/mutation.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow.svg">
-    <img src="resources/readme/tests/mutation.svg" alt="We broke it. The tests had better notice." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/mutation-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/mutation-narrow-dark.svg">
-    <img src="resources/readme/tests/mutation-dark.svg" alt="We broke it. The tests had better notice." width="100%">
-  </picture>
-</a>
-
-A green tick looks reassuring. You can also get one from a test that checks
-absolutely nothing useful.
-
-The [mutation checks](tests/mutation/README.md) deliberately sabotage private
-copies of the headers: remove a body limit, break response ordering, let
-requests reach a handler after rejection. Three bugs we very much want
-caught. Each has to trip its intended assertion, while the original code
-passes. If the broken version gets a green tick too, we've got work to do.
-
-<a href="resources/readme/tests/runners.svg#gh-light-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow.svg">
-    <img src="resources/readme/tests/runners.svg" alt="The test runner needs tests, too." width="100%">
-  </picture>
-</a>
-<a href="resources/readme/tests/runners-dark.svg#gh-dark-mode-only">
-  <picture>
-    <source media="(max-width: 600px)" srcset="resources/readme/tests/runners-narrow-dark.svg">
-    <img src="resources/readme/tests/runners-dark.svg" alt="The test runner needs tests, too." width="100%">
-  </picture>
-</a>
-
-Nothing like spending an afternoon debugging the server and finding out
-the test runner was lying to you.
-
-Ours gets its own [unit](tests/unit/helpers/test_helper_tests.cpp) and
-[integration](tests/integration/helpers/test_helper_tests.cpp) metatests:
-filters must select the right cases, failures must get reported, and
-exceptions, timeouts, and cleanup paths must behave. A stuck test gets a
-deadline and a name in the report, so you have somewhere better to start
-than "well, CI hung."
 
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
 **GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
@@ -425,16 +196,13 @@ And yes, **the tests run in Release, optimizations and all**. That's the code
 we care about running. Debug gets a compile check. The test tooling uses
 C++ and CMake; building doba is quite enough setup for testing doba.
 
-We also check **CMake 3.20** and build and run separate applications using
-both the installed package and **add_subdirectory**. It would be a bit
-embarrassing if the library only worked inside its own build directory.
-
 Fancy a second opinion? There are also adapters for manual protocol checks
 with [h1spec](compliance/http/v11/h1spec/README.md) and
 [Http11Probe](compliance/http/v11/http11probe/README.md). We wrote the server
 and the tests; letting somebody else's tools have a go seems only fair.
 
+[Inside the test suites](tests/README.md)
+
 ---
 
 [Apache 2.0](LICENSE)
-

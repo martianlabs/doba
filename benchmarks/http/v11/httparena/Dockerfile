@@ -1,6 +1,6 @@
 FROM ubuntu:24.04 AS build
 
-ARG DOBA_REF=ae9f736d29a3b6b31c0d1d35f6280cbb40b52783
+ARG DOBA_REF=main
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
