@@ -26,3 +26,8 @@ Call try_get_or_load() when a protocol worker should fall back rather than wait
 for another caller's active load. Admitted loads remain synchronous. The
 conditional erase(key, expected) overload removes an observed value only while
 it is still resident, preserving newer generations published by other callers.
+
+Immutable lookups share a read lock. LRU promotions use a nonblocking exclusive
+lock, so concurrent hits can coalesce recency updates instead of waiting for one
+another. Sequential accesses retain LRU order. Custom clocks, hashers and equality
+functions must support concurrent calls.

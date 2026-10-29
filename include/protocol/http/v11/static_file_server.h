@@ -51,10 +51,6 @@ struct static_file_representation {
   std::string bytes;
   common::filesystem_metadata metadata;
   std::string etag;
-  // Native root observation retained with this immutable snapshot, if usable.
-  std::shared_ptr<common::filesystem_monitor> monitor;
-  // Generation captured before reading and checked before reuse.
-  std::uint64_t monitor_generation = 0;
 };
 using static_file_cache = common::cache<std::string, static_file_representation>;
 
@@ -71,8 +67,6 @@ struct static_file_policies {
   std::string spa_fallback{};
   std::vector<std::string> excluded{};
   std::vector<std::pair<std::string, std::string>> mime_types{};
-  // Use native notifications when available; false selects attribute queries.
-  bool monitor_files = true;
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -126,8 +120,6 @@ class static_file_server {
     const auto root_key = root_.generic_u8string();
     key_prefix_.assign(root_key.begin(), root_key.end());
     key_prefix_ += '\0';
-    if (policies_.cache && policies_.monitor_files)
-      monitor_ = std::make_shared<common::filesystem_monitor>(root_);
   }
   // +=========================================================================+
   // | [>] register_routes                                          ( public ) |
@@ -281,39 +273,28 @@ class static_file_server {
   bool open_file(const std::string& selected, common::filesystem_file& file,
                  std::shared_ptr<const static_file_representation>& cached,
                  std::optional<common::filesystem_metadata>& opened,
-                 std::uint64_t& generation, std::error_code& error) const {
-    generation = 0;
+                 std::error_code& error) const {
     error.clear();
     opened.reset();
+    cached.reset();
+    if (!policies_.cache) {
+      if (!file.open(root_, selected, error)) return false;
+      opened = file.metadata(error);
+      return opened.has_value();
+    }
     const auto key = key_prefix_ + selected;
+    // Probe attributes before acquiring a data handle. Missing variants take
+    // only this confined query; no subscription, read open or failed load.
+    opened = common::filesystem_file::inspect(root_, selected, error);
     if (policies_.cache) {
       cached = policies_.cache->find(key);
       if (cached) {
-        if (policies_.monitor_files && cached->monitor) {
-          std::error_code observation_error;
-          if (cached->monitor->unchanged(cached->monitor_generation, observation_error)) {
-            opened = cached->metadata;
-            return true;
-          }
-        } else {
-          opened = common::filesystem_file::inspect(root_, selected, error);
-          if (opened && cached->metadata == *opened) return true;
-          if (!opened) {
-            policies_.cache->erase(key, cached);
-            cached.reset();
-            return false;
-          }
-        }
+        if (opened && cached->metadata == *opened) return true;
         policies_.cache->erase(key, cached);
         cached.reset();
       }
     }
-    if (monitor_) {
-      std::error_code observation_error;
-      generation = monitor_->observe(selected, observation_error);
-    }
-    // Cache misses and changed observations still use the existing read handle.
-    // Query it again after opening so admission describes this exact handle.
+    if (!opened) return false;
     if (!file.open(root_, selected, error)) return false;
     opened = file.metadata(error);
     return opened.has_value();
@@ -332,7 +313,6 @@ class static_file_server {
     std::error_code error;
     std::shared_ptr<const static_file_representation> cached;
     std::optional<common::filesystem_metadata> opened;
-    std::uint64_t generation = 0;
     std::string selected;
     std::string_view coding;
     bool acceptable = false;
@@ -342,7 +322,7 @@ class static_file_server {
       selected = relative + std::string(variant.suffix);
       // Validate every hit without acquiring a content-reading handle.
       // TTL controls retention; any observed attribute change retires the entry.
-      if (open_file(selected, file, cached, opened, generation, error)) {
+      if (open_file(selected, file, cached, opened, error)) {
         coding = variant.coding;
         break;
       }
@@ -373,7 +353,7 @@ class static_file_server {
           quality(accept_encoding, "identity")) {
         relative = policies_.spa_fallback;
         selected = relative;
-        if (!open_file(selected, file, cached, opened, generation, error)) {
+        if (!open_file(selected, file, cached, opened, error)) {
           file_error(result, error);
           return;
         }
@@ -402,21 +382,12 @@ class static_file_server {
           if (!after || *opened != *after) return {};
           value->metadata = *after;
           value->etag = detail::static_file_etag(value->bytes);
-          if (generation && monitor_) {
-            std::error_code observation_error;
-            if (!monitor_->unchanged(generation, observation_error)) return {};
-            value->monitor = monitor_;
-            value->monitor_generation = generation;
-          }
           return value;
         });
         // Another generation may have populated this key since we opened it.
         // A response must never adopt bytes from a different observed file.
         if (cached) {
-          std::error_code observation_error;
-          if (cached->metadata != *opened ||
-              (cached->monitor && !cached->monitor->unchanged(
-                  cached->monitor_generation, observation_error))) {
+          if (cached->metadata != *opened) {
             policies_.cache->erase(key_prefix_ + selected, cached);
             cached.reset();
           }
@@ -539,8 +510,6 @@ class static_file_server {
   std::filesystem::path root_;
   static_file_policies policies_;
   std::string key_prefix_;
-  // Shared lifetime permits cached snapshots to validate across controllers.
-  std::shared_ptr<common::filesystem_monitor> monitor_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

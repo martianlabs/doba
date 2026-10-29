@@ -83,13 +83,13 @@ def metrics(process):
             "handles": len(list((proc / "fd").iterdir()))}
 
 
-def measure(binary, root, size, files, clients, requests, direct, delay, metadata=False):
+def measure(binary, root, size, files, clients, requests, direct, delay):
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     command = (
         [str(binary), str(root)]
-        + (["--no-cache"] if direct else (["--metadata-cache"] if metadata else []))
+        + (["--no-cache"] if direct else [])
         + [str(port)]
     )
     process = subprocess.Popen(
@@ -200,8 +200,7 @@ def main():
                 for i in range(files):
                     (root / f"{i}.bin").write_bytes(b"x" * size)
                 for clients in args.clients:
-                    modes = [("direct", args.binary), ("metadata", args.binary),
-                             ("monitor", args.binary)]
+                    modes = [("direct", args.binary), ("attributes", args.binary)]
                     if args.ttl_binary:
                         modes.append(("ttl", args.ttl_binary))
                     for run in range(args.runs):
@@ -210,7 +209,6 @@ def main():
                             result = measure(
                                 binary.resolve(), root, size, files, clients,
                                 args.requests, mode == "direct", args.read_delay_ms,
-                                metadata=mode == "metadata",
                             )
                             result["mode"] = mode
                             result["run"] = run + 1

@@ -75,6 +75,14 @@ class filesystem_file {
   // +-------------------------------------------------------------------------+
   bool open(const std::filesystem::path& root, std::string_view path,
             std::error_code& error) {
+    return open_path(root, path, error, false);
+  }
+ private:
+  // +=========================================================================+
+  // | [>] open_path                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool open_path(const std::filesystem::path& root, std::string_view path,
+            std::error_code& error, bool attributes) {
     close();
     error.clear();
     if (!detail::filesystem_relative_path(path, error)) return false;
@@ -95,8 +103,9 @@ class filesystem_file {
     }
     if (!valid_path(relative, error)) return false;
     const auto target = directory / relative;
-    return open_target(directory, target, error);
+    return open_target(directory, target, error, attributes);
   }
+ public:
   // +=========================================================================+
   // | [>] inspect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -105,7 +114,7 @@ class filesystem_file {
       const std::filesystem::path& root, std::string_view path,
       std::error_code& error) {
     filesystem_file file;
-    if (!file.open(root, path, error)) return {};
+    if (!file.open_path(root, path, error, true)) return {};
     return file.metadata(error);
   }
   // +=========================================================================+
@@ -233,7 +242,7 @@ class filesystem_file {
   // +-------------------------------------------------------------------------+
   bool open_target(const std::filesystem::path& directory,
                    const std::filesystem::path& target,
-                   std::error_code& error) {
+                   std::error_code& error, bool attributes = false) {
     auto current_path = target.root_path();
     const auto parts = target.relative_path();
     auto part = parts.begin();
@@ -251,7 +260,7 @@ class filesystem_file {
       const bool last = current_path == target;
       filesystem_file next;
       next.file_ = CreateFileW(
-          current_path.c_str(), GENERIC_READ,
+          current_path.c_str(), attributes ? FILE_READ_ATTRIBUTES : GENERIC_READ,
           FILE_SHARE_READ | FILE_SHARE_WRITE | (last ? FILE_SHARE_DELETE : 0),
           nullptr, OPEN_EXISTING,
           FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);

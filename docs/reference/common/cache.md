@@ -55,7 +55,7 @@ template <typename KEty, typename VAty, typename CKty = std::chrono::steady_cloc
 class cache;
 ```
 
-**KEty** identifies immutable **VAty** payloads. **HAty**/**EQty** provide stable key lookup. **CKty** supplies a monotonic now(), time_point and duration compatible with chrono. Construction accepts cache_policies. The cache is noncopyable. Structural operations use a mutex; loaders execute outside it.
+**KEty** identifies immutable **VAty** payloads. **HAty**/**EQty** provide stable key lookup. **CKty** supplies a monotonic now(), time_point and duration compatible with chrono. Construction accepts cache_policies. The cache is noncopyable. Structural operations use an exclusive lock; immutable lookups use shared locks. Loaders execute outside those locks. Hash/equality and clock operations must support concurrent calls without throwing or reentering the cache.
 
 <a id="value-type"></a>
 
@@ -77,7 +77,7 @@ value_type find(const KEty& key);
 
 **Parameters:** key identifies the value.
 
-**Returns:** A handle on hit, null on miss/expiration. Hits update LRU recency. Expiration does not affect existing consumers.
+**Returns:** A handle on hit, null on miss/expiration. Sequential hits update LRU recency. Concurrent hits promote opportunistically with a nonblocking exclusive lock; recency updates can be coalesced under contention. Expiration does not affect existing consumers.
 
 <a id="load"></a>
 

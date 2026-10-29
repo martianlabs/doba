@@ -20,34 +20,21 @@ immutable bytes with independent cursors. Publish complete files by atomic
 replacement. Before/after metadata checks detect many writes during loading but
 cannot establish a snapshot against an arbitrary concurrent writer.
 
-Cached responses use [filesystem_monitor](../../../common/filesystem_monitor.md)
-by default. Before accepting a hit, the caller consumes pending native events and
-checks the snapshot's root-wide generation. A valid hit does not open/stat/read
-the file or recompute its hash. Relevant events invalidate generations even when
-contents are equal. Directory topology changes and lost events revoke coverage;
-observe() rebuilds it before a new snapshot can use the fast path. No background
-thread, callback or interval timer is involved. Unrelated changes within the
-covered root may conservatively invalidate multiple entries.
+Cached responses compare confined filesystem attributes on every reuse. Identity,
+device, size, modification/change times, native attributes and link count must all
+match. Any difference invalidates the entry, even when bytes are equal. Queries
+read attributes only; matching entries reuse their bytes and strong ETag.
 
-The monitor is registered before opening/reading a candidate; admission and reuse
-check its generation. A value returned by a concurrent cache load is checked too,
-so an obsolete publication cannot bypass observation validation. Active responses
-retain their immutable snapshots. TTL limits retention, not notification polling.
-Missing requests do not revoke valid observations of existing files.
+Compressed variants are selected with confined attribute queries before acquiring
+a data-reading handle. Missing variants are not retained: directory timestamps
+can remain equal across rapid publications, so they cannot safely validate an
+absence. Newly added, removed and replaced variants are checked on the next request.
 
-With monitor_files=false, unsupported monitoring or resource limits, entries use
-confined attribute validation instead. Identity, device, size, modification/change
-times, native attributes and link count are compared; any difference invalidates,
-even for equal bytes. Supported Linux kernels use inspect() with O_PATH/fstat;
-Windows and older kernels retain the confined open/metadata procedure.
-
-Notifications are not a universal next-response guarantee: native delivery depends
-on filesystem/publication semantics. Windows write/size notices can be delayed;
-Linux mmap/remote/mount changes and external Windows hard-link aliases are outside
-fast coverage. Use explicit invalidate()/coordinated publication or attribute mode
-where stronger coherence is required. Attribute validation itself cannot detect
-writes preserving all observed attributes. Prefer atomic replacement. Monitoring
-resources are bounded separately and are not included in the declared cache cost.
+TTL controls retention, not validation frequency. Active responses retain immutable
+snapshots. Before/after load attributes and concurrent cache results are validated.
+Attribute coherence depends on filesystem semantics and remote metadata caching;
+writes preserving every observed attribute cannot be detected. Prefer atomic
+replacement. There are no subscriptions, polling threads or callback mechanisms.
 Configuration is immutable after construction; register routes before serving.
 
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_server
@@ -71,12 +58,12 @@ struct static_file_representation {
   std::string bytes;
   common::filesystem_metadata metadata;
   std::string etag;
-  std::shared_ptr<common::filesystem_monitor> monitor;
-  std::uint64_t monitor_generation = 0;
 };
 ```
 
-Immutable published value. bytes contains the selected encoded payload; metadata comes from the open handle; etag is its quoted SHA-256. Strings start empty; metadata fields start at zero. Do not mutate a value after publication. monitor starts null and retains native coverage when usable; monitor_generation starts zero and identifies the observation captured before loading.
+Immutable published value. bytes contains the selected encoded payload; metadata
+comes from the open handle; etag is its quoted SHA-256. Do not mutate a value
+after publication.
 
 <a id="cache"></a>
 
@@ -109,7 +96,6 @@ struct static_file_policies { ... };
 | spa_fallback | std::string / empty | Safe root-relative fallback for missing paths. |
 | excluded | vector<string> / empty | Exact decoded relative paths and descendants to deny. |
 | mime_types | vector<pair<string,string>> / empty | Case-insensitive extension/MIME overrides before built-ins. |
-| monitor_files | bool / true | Validate hits through native generations when supported; false selects per-request attributes. |
 
 Policies are copied. Invalid prefixes, indexes, fallbacks, cache policies or MIME
 mappings throw std::invalid_argument; inaccessible/non-directory roots throw

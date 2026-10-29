@@ -1,132 +1,189 @@
 ===== Summary =====
-HttpArena: 8977be2721a5aba7b320345cddfcd6f6b654e698
-Servers: doba, dusty, tako, fulmine, actix, morojs, bun, fiber, elysia, ntex, genhttp-ioxide, libuvcpp, hono-bun, vertx, genhttp
+HttpArena: c9ae248b7026d4811aa6e4c65c59f1973a1ea3c9
+Servers: genhttp-ioxide, dusty, actix, fulmine, fiber, bun, vertx, spliffy, doba, tako, ntex, morojs, flare, araara, libuvcpp, micronaut-production, genhttp, trillium, lute, mq-bridge, axum
 Profiles: baseline, pipelined, limited-conn, latency-10k, latency-1m, latency-500k-8cpu, async, json-comp, json-tls, 8gbit, static-tls | official RUNS=3
 Results: selected by upstream from its repetitions; NOT averages across runs.
-Session: /home/ubuntu/tests/sessions/20261020T092437Z-7482b755
+Session: /home/ubuntu/tests/sessions/20261028T201325Z-12a4152b
 VALIDATION: profile-scoped official checks on the measured image; not a payload audit under load.
 HOST TUNING: upstream system_tune per profile; effective settings checked before server start. Mixed native/Docker generators; see REFERENCE MODEL.
 HOST RESTORATION: verified | record: host-tuning.json
 REFERENCE MODEL: INCOMPLETE / NOT VERIFIED | gcannon/wrk native; zrk and servers Docker; upstream profile affinity.
 REFERENCE EVIDENCE: run.json + per-job *.reference.jsonl; source-pinned local tools, not certified public-host binaries.
 REFERENCE DIFFERENCE: CPU/cache/memory/kernel may differ from the published host.
-REFERENCE DIFFERENCE: Local reproducible source selection checked 2026-10-07 and retained after HttpArena migration review 2026-10-16 (generator Dockerfiles, workload requests, benchmark profiles and measurement scripts unchanged). NOT proof of the exact binaries on the public benchmark host. gcannon follows the source used by upstream, wrk is pinned to 4.2.0, liburing is upstream's 2.9 dependency. zrk matches the pinned HttpArena Dockerfile release/checksum.
-SUCCESS: 159 | SKIPPED: 3 | FAILED: 3 | PENDING: 0
-doba/baseline: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/pipelined: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/limited-conn: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/latency-10k: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/latency-1m: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/latency-500k-8cpu: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/async: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/json-comp: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 4, timeout 0
-doba/json-tls: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/8gbit: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-doba/static-tls: Doba 4dc26e44f09f0bd290da5de715e70402d666db08
-MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9598 (target 500000/s)
-MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 3, timeout 0
-MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 27, timeout 0
-MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 12, timeout 0
-MEASUREMENT WARNING dusty/8gbit: [warn] offered rate fell short: rate_ratio=0.9795 (target 50000/s)
-MEASUREMENT WARNING dusty/8gbit: [warn]   the CPU number is not comparable with runs that held the rate
-SKIPPED: dusty/static-tls: not subscribed in meta.json
-MEASUREMENT WARNING tako/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9513 (target 500000/s)
-MEASUREMENT WARNING tako/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING tako/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING tako/8gbit: [warn] offered rate fell short: rate_ratio=0.9678 (target 50000/s)
-MEASUREMENT WARNING tako/8gbit: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7692 (target 500000/s)
-MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 9, timeout 0
-MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 5, timeout 0
-MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 3, timeout 0
-MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 4, timeout 0
-MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 6, timeout 0
-MEASUREMENT WARNING actix/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9081 (target 500000/s)
-MEASUREMENT WARNING actix/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 5, timeout 0
-MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 6, timeout 0
-MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 15, timeout 0
-MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 13, timeout 0
-MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8658 (target 500000/s)
-MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7626 (target 500000/s)
-MEASUREMENT WARNING bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 3, timeout 0
-MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 4, timeout 0
-MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7401 (target 500000/s)
-MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 5, timeout 0
-MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6302 (target 500000/s)
-MEASUREMENT WARNING elysia/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 3, timeout 0
-MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING elysia/json-comp: Errors: connect 0, read 5, timeout 0
-SKIPPED: ntex/pipelined: not subscribed in meta.json
-MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6662 (target 500000/s)
-MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 3, timeout 0
-MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 4, timeout 0
-MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 6, timeout 0
-MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 2, timeout 0
-SKIPPED: ntex/static-tls: not subscribed in meta.json
-MEASUREMENT WARNING genhttp-ioxide/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9469 (target 500000/s)
+REFERENCE DIFFERENCE: Local reproducible source selection checked 2026-10-07 and retained after HttpArena migration review 2026-10-27 (generator Dockerfiles, workload requests, benchmark profiles, validation and measurement scripts unchanged from 8977be2721a5aba7b320345cddfcd6f6b654e698; framework launch adds an optional command override, rejected in reference mode; scoring functions unchanged). NOT proof of the exact binaries on the public benchmark host. gcannon follows the source used by upstream, wrk is pinned to 4.2.0, liburing is upstream's 2.9 dependency. zrk matches the pinned HttpArena Dockerfile release/checksum.
+SUCCESS: 222 | SKIPPED: 6 | FAILED: 3 | PENDING: 0
+MEASUREMENT WARNING genhttp-ioxide/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9556 (target 500000/s)
 MEASUREMENT WARNING genhttp-ioxide/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
 MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 4, timeout 0
 MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 8, timeout 0
-MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 10, timeout 0
-MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 18, timeout 0
+MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 2, timeout 0
 MEASUREMENT WARNING genhttp-ioxide/json-comp: Errors: connect 0, read 11, timeout 0
-FAILED: genhttp-ioxide/json-tls: official server did not become ready; no measurement was run. Inspect 119-genhttp-ioxide-json-tls.log
-FAILED: genhttp-ioxide/8gbit: official server did not become ready; no measurement was run. Inspect 120-genhttp-ioxide-8gbit.log
-FAILED: genhttp-ioxide/static-tls: official server did not become ready; no measurement was run. Inspect 121-genhttp-ioxide-static-tls.log
-MEASUREMENT WARNING libuvcpp/baseline: #7 10.18 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) doesn't exist
-MEASUREMENT WARNING libuvcpp/baseline: #10 0.205 hint: of your new repositories, which will suppress this warning, call:
-MEASUREMENT WARNING libuvcpp/baseline: #11 24.61 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:31 (message):
-MEASUREMENT WARNING libuvcpp/baseline: #11 24.61 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:37 (message):
-MEASUREMENT WARNING libuvcpp/baseline: #11 34.48 CMake Warning:
-MEASUREMENT WARNING libuvcpp/baseline: #11 35.05 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
-MEASUREMENT WARNING libuvcpp/baseline: #11 35.88 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
-MEASUREMENT WARNING libuvcpp/baseline: #11 36.71 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
-MEASUREMENT WARNING libuvcpp/baseline: #11 36.81 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
-MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5677 (target 500000/s)
-MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 4, timeout 0
-MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 2, timeout 0
-MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 6, timeout 0
-MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6804 (target 500000/s)
-MEASUREMENT WARNING hono-bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7223 (target 500000/s)
+FAILED: genhttp-ioxide/json-tls: official server did not become ready; no measurement was run. Inspect 009-genhttp-ioxide-json-tls.log
+FAILED: genhttp-ioxide/8gbit: official server did not become ready; no measurement was run. Inspect 010-genhttp-ioxide-8gbit.log
+FAILED: genhttp-ioxide/static-tls: official server did not become ready; no measurement was run. Inspect 011-genhttp-ioxide-static-tls.log
+MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9360 (target 500000/s)
+MEASUREMENT WARNING dusty/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 14, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 15, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 13, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 23, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 28, timeout 0
+MEASUREMENT WARNING dusty/json-comp: Errors: connect 0, read 26, timeout 0
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8895 (target 500000/s)
+MEASUREMENT WARNING actix/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 11, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING actix/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8619 (target 500000/s)
+MEASUREMENT WARNING fulmine/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING fulmine/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7351 (target 500000/s)
+MEASUREMENT WARNING fiber/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING fiber/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7556 (target 500000/s)
+MEASUREMENT WARNING bun/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING bun/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8481 (target 500000/s)
 MEASUREMENT WARNING vertx/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
 MEASUREMENT WARNING vertx/json-comp: Errors: connect 0, read 1, timeout 0
-MEASUREMENT WARNING genhttp/baseline: #10 1.298 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
-MEASUREMENT WARNING genhttp/baseline: #12 1.217 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
-MEASUREMENT WARNING genhttp/baseline: #12 1.337 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(32,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(76,43): warning CS8600: Converting null literal or possible null value to non-nullable type. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(79,54): warning CS8604: Possible null reference argument for parameter 'content' in 'StringContent.StringContent(string content, ContentType? contentType = null)'. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(104,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(110,37): warning CS8604: Possible null reference argument for parameter 'value' in 'NpgsqlParameter NpgsqlParameterCollection.AddWithValue(object value)'. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/baseline: #12 2.777 /source/Tests/Crud.cs(125,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
-MEASUREMENT WARNING genhttp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6602 (target 500000/s)
+MEASUREMENT WARNING vertx/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING spliffy/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9068 (target 500000/s)
+MEASUREMENT WARNING spliffy/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING spliffy/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING spliffy/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING spliffy/json-comp: Errors: connect 0, read 6, timeout 0
+doba/baseline: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/pipelined: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/limited-conn: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/latency-10k: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/latency-1m: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/latency-500k-8cpu: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/async: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/json-comp: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING doba/json-comp: Errors: connect 0, read 3, timeout 0
+doba/json-tls: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/8gbit: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+doba/static-tls: Doba aad25d74d8b96d7b600ea865df8e051a3a7381d1
+MEASUREMENT WARNING tako/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.9578 (target 500000/s)
+MEASUREMENT WARNING tako/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING tako/8gbit: [warn] offered rate fell short: rate_ratio=0.9712 (target 50000/s)
+MEASUREMENT WARNING tako/8gbit: [warn]   the CPU number is not comparable with runs that held the rate
+SKIPPED: ntex/pipelined: not subscribed in meta.json
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6712 (target 500000/s)
+MEASUREMENT WARNING ntex/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 9, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 12, timeout 0
+MEASUREMENT WARNING ntex/json-comp: Errors: connect 0, read 11, timeout 0
+SKIPPED: ntex/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8812 (target 500000/s)
+MEASUREMENT WARNING morojs/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING morojs/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING flare/baseline: Errors: connect 0, read 1218, timeout 0
+MEASUREMENT WARNING flare/baseline: Errors: connect 0, read 953, timeout 0
+MEASUREMENT WARNING flare/baseline: Errors: connect 0, read 1147, timeout 0
+MEASUREMENT WARNING flare/pipelined: Errors: connect 0, read 48674, timeout 0
+MEASUREMENT WARNING flare/pipelined: Errors: connect 0, read 39900, timeout 0
+MEASUREMENT WARNING flare/pipelined: Errors: connect 0, read 37841, timeout 0
+MEASUREMENT WARNING flare/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8650 (target 500000/s)
+MEASUREMENT WARNING flare/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+SKIPPED: flare/async: not subscribed in meta.json
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 18, timeout 0
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 20, timeout 0
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 12, timeout 0
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 22, timeout 0
+MEASUREMENT WARNING flare/json-comp: Errors: connect 0, read 35, timeout 0
+MEASUREMENT WARNING araara/baseline: #11 21.77     [WARNING] opam >= 2.5.2 includes important security fixes; please consider upgrading (https://opam.ocaml.org/doc/Install.html)
+MEASUREMENT WARNING araara/baseline: #11 41.75     [WARNING] opam >= 2.5.2 includes important security fixes; please consider upgrading (https://opam.ocaml.org/doc/Install.html)
+MEASUREMENT WARNING araara/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6865 (target 500000/s)
+MEASUREMENT WARNING araara/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING araara/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING araara/json-comp: Errors: connect 0, read 8, timeout 0
+MEASUREMENT WARNING araara/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING libuvcpp/baseline: #7 11.76 update-alternatives: warning: skip creation of /usr/share/man/man1/c++.1.gz because associated file /usr/share/man/man1/g++.1.gz (of link group c++) doesn't exist
+MEASUREMENT WARNING libuvcpp/baseline: #10 0.207 hint: of your new repositories, which will suppress this warning, call:
+MEASUREMENT WARNING libuvcpp/baseline: #11 24.49 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:31 (message):
+MEASUREMENT WARNING libuvcpp/baseline: #11 24.49 CMake Warning at build/_deps/uvcpp-ngtcp2-src/crypto/CMakeLists.txt:37 (message):
+MEASUREMENT WARNING libuvcpp/baseline: #11 35.37 CMake Warning:
+MEASUREMENT WARNING libuvcpp/baseline: #11 35.96 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 36.80 /src/src/webapp/uvcpp_log_console.cpp:111:57: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 37.60 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/baseline: #11 37.72 /src/build/_deps/libuv-src/src/unix/linux.c:2354:47: warning: '/cpu.max' directive output may be truncated writing 8 bytes into a region of size between 1 and 256 [-Wformat-truncation=]
+MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.5982 (target 500000/s)
+MEASUREMENT WARNING libuvcpp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 3, timeout 0
+MEASUREMENT WARNING libuvcpp/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING micronaut-production/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6260 (target 500000/s)
+MEASUREMENT WARNING micronaut-production/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING micronaut-production/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING micronaut-production/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING genhttp/baseline: #10 1.269 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 1.236 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 1.356 /source/genhttp.csproj : warning NU1510: PackageReference Microsoft.Extensions.Caching.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(32,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(76,43): warning CS8600: Converting null literal or possible null value to non-nullable type. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(79,54): warning CS8604: Possible null reference argument for parameter 'content' in 'StringContent.StringContent(string content, ContentType? contentType = null)'. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(104,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(110,37): warning CS8604: Possible null reference argument for parameter 'value' in 'NpgsqlParameter NpgsqlParameterCollection.AddWithValue(object value)'. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/baseline: #12 2.756 /source/Tests/Crud.cs(125,31): warning CS8602: Dereference of a possibly null reference. [/source/genhttp.csproj]
+MEASUREMENT WARNING genhttp/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.6642 (target 500000/s)
 MEASUREMENT WARNING genhttp/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 8, timeout 0
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 107, timeout 0
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 108, timeout 0
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 13, timeout 0
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 116, timeout 0
-MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 105, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 93, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 80, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 7, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 87, timeout 0
+MEASUREMENT WARNING genhttp/json-comp: Errors: connect 0, read 92, timeout 0
+MEASUREMENT WARNING trillium/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.8072 (target 500000/s)
+MEASUREMENT WARNING trillium/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 10, timeout 0
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 6, timeout 0
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 11, timeout 0
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 34, timeout 0
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 36, timeout 0
+MEASUREMENT WARNING trillium/json-comp: Errors: connect 0, read 29, timeout 0
+MEASUREMENT WARNING trillium/8gbit: [warn] offered rate fell short: rate_ratio=0.9716 (target 50000/s)
+MEASUREMENT WARNING trillium/8gbit: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING lute/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7745 (target 500000/s)
+MEASUREMENT WARNING lute/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING lute/async: Errors: connect 0, read 3779, timeout 0
+MEASUREMENT WARNING lute/async: Errors: connect 0, read 3859, timeout 0
+MEASUREMENT WARNING lute/async: WARNING: 1/2939492 responses (0.0%) had unexpected status (expected 2xx)
+MEASUREMENT WARNING lute/async: Errors: connect 0, read 3906, timeout 0
+SKIPPED: lute/json-comp: not subscribed in meta.json
+SKIPPED: lute/static-tls: not subscribed in meta.json
+MEASUREMENT WARNING mq-bridge/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7180 (target 500000/s)
+MEASUREMENT WARNING mq-bridge/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING mq-bridge/json-comp: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING mq-bridge/json-comp: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING mq-bridge/json-comp: Errors: connect 0, read 5, timeout 0
+MEASUREMENT WARNING mq-bridge/json-comp: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 2, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 1, timeout 0
+MEASUREMENT WARNING axum/pipelined: Errors: connect 0, read 4, timeout 0
+MEASUREMENT WARNING axum/latency-500k-8cpu: [warn] offered rate fell short: rate_ratio=0.7705 (target 500000/s)
+MEASUREMENT WARNING axum/latency-500k-8cpu: [warn]   the CPU number is not comparable with runs that held the rate
+MEASUREMENT WARNING axum/json-comp: Errors: connect 0, read 1, timeout 0
+SKIPPED: axum/static-tls: not subscribed in meta.json
 
 HTTP/1.1 TOTAL WITH COMPLETENESS (LOCAL session field)
 League: flagship + emerging; standard shown; default scoring (no memory bonus/rescale).
@@ -135,700 +192,890 @@ Not the public leaderboard: normalization uses ONLY the measured participants.
 A local 1000-point leader can still miss a fixed-rate target; inspect measurement status below.
 Missing, skipped, failed or unrequested profiles add no points; no reweighting.
 COMPLETENESS ENABLED: upstream factor applied to the total using session metadata.
+INCOMPLETE flare: missing full scored coverage for async
 INCOMPLETE genhttp-ioxide: missing full scored coverage for json-tls, 8gbit
-+------+----------------+---------+------------+---------------+
-| Rank | Server         | Total   | Cmp factor | Full profiles |
-+------+----------------+---------+------------+---------------+
-| 1    | doba           | 7627.93 | 0.975      | 8/8           |
-| 2    | tako           | 6536.20 | 1.000      | 8/8           |
-| 3    | actix          | 6443.46 | 1.000      | 8/8           |
-| 4    | dusty          | 6438.96 | 1.000      | 8/8           |
-| 5    | fulmine.js     | 6429.03 | 1.000      | 8/8           |
-| 6    | morojs         | 6121.24 | 1.000      | 8/8           |
-| 7    | bun            | 6035.02 | 0.975      | 8/8           |
-| 8    | fiber          | 5669.84 | 1.000      | 8/8           |
-| 9    | elysia         | 5597.12 | 1.000      | 8/8           |
-| 10   | genhttp-ioxide | 5512.93 | 1.000      | 6/8           |
-| 11   | ntex           | 5446.17 | 1.000      | 8/8           |
-| 12   | libuvcpp       | 5300.60 | 1.000      | 8/8           |
-| 13   | hono-bun       | 5142.23 | 1.000      | 8/8           |
-| 14   | vertx          | 4948.47 | 1.000      | 8/8           |
-| 15   | genhttp        | 4583.54 | 1.000      | 8/8           |
-+------+----------------+---------+------------+---------------+
+INCOMPLETE lute: missing full scored coverage for json-comp
++------+----------------------+---------+------------+---------------+
+| Rank | Server               | Total   | Cmp factor | Full profiles |
++------+----------------------+---------+------------+---------------+
+| 1    | doba                 | 7366.65 | 0.975      | 8/8           |
+| 2    | spliffy              | 6945.70 | 1.000      | 8/8           |
+| 3    | fulmine.js           | 6677.84 | 1.000      | 8/8           |
+| 4    | dusty                | 6616.89 | 1.000      | 8/8           |
+| 5    | tako                 | 6379.30 | 1.000      | 8/8           |
+| 6    | actix                | 6243.56 | 1.000      | 8/8           |
+| 7    | morojs               | 6000.27 | 1.000      | 8/8           |
+| 8    | bun                  | 5832.48 | 0.975      | 8/8           |
+| 9    | vertx                | 5703.31 | 1.000      | 8/8           |
+| 10   | flare                | 5529.53 | 1.000      | 7/8           |
+| 11   | fiber                | 5498.73 | 1.000      | 8/8           |
+| 12   | genhttp-ioxide       | 5335.88 | 1.000      | 6/8           |
+| 13   | ntex                 | 5287.72 | 1.000      | 8/8           |
+| 14   | libuvcpp             | 5132.96 | 1.000      | 8/8           |
+| 15   | araara               | 5093.14 | 0.975      | 8/8           |
+| 16   | micronaut-production | 4617.03 | 1.000      | 8/8           |
+| 17   | genhttp              | 4481.24 | 1.000      | 8/8           |
+| 18   | lute                 | 4192.35 | 0.950      | 7/8           |
+| 19   | trillium             | 4011.23 | 1.000      | 8/8           |
+| 20   | mq-bridge            | 3955.88 | 0.975      | 8/8           |
+| 21   | axum                 | 3906.54 | 1.000      | 8/8           |
++------+----------------------+---------+------------+---------------+
 
 PROFILE SCORE: baseline (scored connections: 4096)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+-----------+
-| Rank | Server         | Points /1000 | Mean RPS  |
-+------+----------------+--------------+-----------+
-| 1    | doba           | 1000.00      | 3,772,120 |
-| 2    | genhttp-ioxide | 936.05       | 3,530,911 |
-| 3    | dusty          | 934.08       | 3,523,451 |
-| 4    | tako           | 913.47       | 3,445,736 |
-| 5    | actix          | 855.74       | 3,227,942 |
-| 6    | morojs         | 738.02       | 2,783,893 |
-| 7    | fiber          | 725.64       | 2,737,198 |
-| 8    | bun            | 645.55       | 2,435,099 |
-| 9    | fulmine.js     | 644.55       | 2,431,322 |
-| 10   | ntex           | 620.38       | 2,340,164 |
-| 11   | vertx          | 616.57       | 2,325,790 |
-| 12   | hono-bun       | 597.51       | 2,253,864 |
-| 13   | elysia         | 571.72       | 2,156,591 |
-| 14   | libuvcpp       | 570.08       | 2,150,400 |
-| 15   | genhttp        | 564.17       | 2,128,131 |
-+------+----------------+--------------+-----------+
++------+----------------------+--------------+-----------+
+| Rank | Server               | Points /1000 | Mean RPS  |
++------+----------------------+--------------+-----------+
+| 1    | doba                 | 1000.00      | 3,752,328 |
+| 2    | genhttp-ioxide       | 938.74       | 3,522,444 |
+| 3    | dusty                | 933.06       | 3,501,165 |
+| 4    | tako                 | 915.33       | 3,434,617 |
+| 5    | actix                | 861.51       | 3,232,685 |
+| 6    | flare                | 856.29       | 3,213,066 |
+| 7    | lute                 | 776.84       | 2,914,976 |
+| 8    | vertx                | 764.70       | 2,869,393 |
+| 9    | spliffy              | 757.98       | 2,844,208 |
+| 10   | morojs               | 745.74       | 2,798,273 |
+| 11   | fiber                | 723.50       | 2,714,799 |
+| 12   | fulmine.js           | 715.89       | 2,686,259 |
+| 13   | araara               | 663.60       | 2,490,029 |
+| 14   | bun                  | 652.08       | 2,446,813 |
+| 15   | ntex                 | 624.14       | 2,341,964 |
+| 16   | libuvcpp             | 614.15       | 2,304,507 |
+| 17   | genhttp              | 594.55       | 2,230,965 |
+| 18   | micronaut-production | 561.19       | 2,105,783 |
+| 19   | trillium             | 296.00       | 1,110,681 |
+| 20   | mq-bridge            | 283.17       | 1,062,539 |
+| 21   | axum                 | 271.20       | 1,017,646 |
++------+----------------------+--------------+-----------+
 
 REFERENCE ONLY: pipelined does not contribute to the framework HTTP/1.1 composite.
 
 PROFILE SCORE: limited-conn (scored connections: 4096)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+-----------+
-| Rank | Server         | Points /1000 | Mean RPS  |
-+------+----------------+--------------+-----------+
-| 1    | doba           | 1000.00      | 3,079,816 |
-| 2    | genhttp-ioxide | 921.88       | 2,839,206 |
-| 3    | tako           | 872.44       | 2,686,945 |
-| 4    | morojs         | 734.91       | 2,263,387 |
-| 5    | fiber          | 699.94       | 2,155,682 |
-| 6    | bun            | 675.84       | 2,081,465 |
-| 7    | fulmine.js     | 668.05       | 2,057,480 |
-| 8    | hono-bun       | 628.72       | 1,936,331 |
-| 9    | elysia         | 608.44       | 1,873,891 |
-| 10   | dusty          | 589.84       | 1,816,585 |
-| 11   | libuvcpp       | 568.91       | 1,752,129 |
-| 12   | ntex           | 406.92       | 1,253,229 |
-| 13   | actix          | 382.68       | 1,178,574 |
-| 14   | genhttp        | 353.57       | 1,088,924 |
-| 15   | vertx          | 200.58       | 617,755   |
-+------+----------------+--------------+-----------+
++------+----------------------+--------------+-----------+
+| Rank | Server               | Points /1000 | Mean RPS  |
++------+----------------------+--------------+-----------+
+| 1    | doba                 | 1000.00      | 3,068,681 |
+| 2    | genhttp-ioxide       | 919.40       | 2,821,338 |
+| 3    | tako                 | 862.77       | 2,647,575 |
+| 4    | flare                | 820.40       | 2,517,557 |
+| 5    | spliffy              | 769.60       | 2,361,654 |
+| 6    | lute                 | 746.15       | 2,289,710 |
+| 7    | morojs               | 733.78       | 2,251,723 |
+| 8    | fulmine.js           | 725.30       | 2,225,705 |
+| 9    | araara               | 696.63       | 2,137,747 |
+| 10   | fiber                | 692.54       | 2,125,197 |
+| 11   | bun                  | 667.33       | 2,047,826 |
+| 12   | libuvcpp             | 600.25       | 1,841,977 |
+| 13   | dusty                | 527.42       | 1,618,492 |
+| 14   | ntex                 | 412.67       | 1,266,361 |
+| 15   | actix                | 387.49       | 1,189,071 |
+| 16   | genhttp              | 368.24       | 1,130,002 |
+| 17   | vertx                | 226.04       | 693,656   |
+| 18   | mq-bridge            | 223.42       | 685,592   |
+| 19   | axum                 | 216.72       | 665,053   |
+| 20   | micronaut-production | 202.18       | 620,433   |
+| 21   | trillium             | 199.40       | 611,890   |
++------+----------------------+--------------+-----------+
 
 PROFILE SCORE: async (scored connections: 32000)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+-----------+
-| Rank | Server         | Points /1000 | Mean RPS  |
-+------+----------------+--------------+-----------+
-| 1    | doba           | 1000.00      | 2,673,128 |
-| 2    | actix          | 944.56       | 2,524,935 |
-| 3    | tako           | 923.74       | 2,469,284 |
-| 4    | genhttp-ioxide | 878.45       | 2,348,200 |
-| 5    | fulmine.js     | 877.22       | 2,344,920 |
-| 6    | morojs         | 851.67       | 2,276,610 |
-| 7    | dusty          | 839.66       | 2,244,520 |
-| 8    | bun            | 821.97       | 2,197,228 |
-| 9    | vertx          | 687.73       | 1,838,392 |
-| 10   | elysia         | 668.68       | 1,787,463 |
-| 11   | hono-bun       | 656.87       | 1,755,897 |
-| 12   | libuvcpp       | 614.23       | 1,641,904 |
-| 13   | fiber          | 586.49       | 1,567,770 |
-| 14   | genhttp        | 510.47       | 1,364,551 |
-| 15   | ntex           | 360.22       | 962,901   |
-+------+----------------+--------------+-----------+
++------+----------------------+--------------+-----------+
+| Rank | Server               | Points /1000 | Mean RPS  |
++------+----------------------+--------------+-----------+
+| 1    | doba                 | 1000.00      | 2,583,018 |
+| 2    | tako                 | 967.88       | 2,500,054 |
+| 3    | fulmine.js           | 967.47       | 2,498,983 |
+| 4    | dusty                | 960.67       | 2,481,415 |
+| 5    | spliffy              | 960.05       | 2,479,837 |
+| 6    | actix                | 916.55       | 2,367,463 |
+| 7    | genhttp-ioxide       | 893.80       | 2,308,702 |
+| 8    | morojs               | 858.39       | 2,217,229 |
+| 9    | bun                  | 838.49       | 2,165,827 |
+| 10   | vertx                | 820.88       | 2,120,344 |
+| 11   | libuvcpp             | 643.79       | 1,662,910 |
+| 12   | fiber                | 614.01       | 1,585,995 |
+| 13   | araara               | 523.64       | 1,352,568 |
+| 14   | genhttp              | 520.76       | 1,345,125 |
+| 15   | micronaut-production | 388.02       | 1,002,259 |
+| 16   | ntex                 | 378.29       | 977,138   |
+| 17   | trillium             | 234.32       | 605,256   |
+| 18   | lute                 | 114.00       | 294,457   |
+| 19   | mq-bridge            | 112.77       | 291,298   |
+| 20   | axum                 | 100.07       | 258,482   |
++------+----------------------+--------------+-----------+
 
 PROFILE SCORE: latency-10k (scored connections: 1024)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+----------+------------+
-| Rank | Server         | Points /1000 | Mean RPS | Score /100 |
-+------+----------------+--------------+----------+------------+
-| 1    | doba           | 1000.00      | 9,984    | 99.17      |
-| 2    | genhttp-ioxide | 981.96       | 9,983    | 97.38      |
-| 3    | dusty          | 894.05       | 9,983    | 88.67      |
-| 4    | tako           | 868.95       | 9,982    | 86.18      |
-| 5    | actix          | 805.67       | 9,982    | 79.90      |
-| 6    | ntex           | 780.86       | 9,983    | 77.44      |
-| 7    | fiber          | 775.60       | 9,983    | 76.92      |
-| 8    | libuvcpp       | 768.70       | 9,983    | 76.23      |
-| 9    | morojs         | 751.82       | 9,984    | 74.56      |
-| 10   | vertx          | 744.18       | 9,982    | 73.80      |
-| 11   | bun            | 735.36       | 9,984    | 72.93      |
-| 12   | fulmine.js     | 699.62       | 9,981    | 69.38      |
-| 13   | hono-bun       | 669.55       | 9,983    | 66.40      |
-| 14   | elysia         | 652.68       | 9,983    | 64.73      |
-| 15   | genhttp        | 637.66       | 9,984    | 63.24      |
-+------+----------------+--------------+----------+------------+
++------+----------------------+--------------+----------+------------+
+| Rank | Server               | Points /1000 | Mean RPS | Score /100 |
++------+----------------------+--------------+----------+------------+
+| 1    | trillium             | 1000.00      | 9,881    | 100.00     |
+| 2    | mq-bridge            | 979.17       | 9,983    | 97.92      |
+| 3    | axum                 | 963.05       | 9,983    | 96.30      |
+| 4    | doba                 | 956.22       | 9,983    | 95.62      |
+| 5    | genhttp-ioxide       | 880.05       | 9,983    | 88.01      |
+| 6    | flare                | 828.95       | 9,983    | 82.89      |
+| 7    | dusty                | 827.29       | 9,983    | 82.73      |
+| 8    | lute                 | 816.04       | 9,983    | 81.60      |
+| 9    | tako                 | 787.27       | 9,983    | 78.73      |
+| 10   | ntex                 | 756.28       | 9,982    | 75.63      |
+| 11   | actix                | 745.27       | 9,982    | 74.53      |
+| 12   | vertx                | 732.49       | 9,982    | 73.25      |
+| 13   | fiber                | 731.93       | 9,983    | 73.19      |
+| 14   | spliffy              | 723.66       | 9,983    | 72.37      |
+| 15   | morojs               | 709.68       | 9,982    | 70.97      |
+| 16   | fulmine.js           | 701.75       | 9,982    | 70.18      |
+| 17   | libuvcpp             | 692.10       | 9,983    | 69.21      |
+| 18   | bun                  | 686.08       | 9,982    | 68.61      |
+| 19   | araara               | 677.13       | 9,985    | 67.71      |
+| 20   | micronaut-production | 646.67       | 9,983    | 64.67      |
+| 21   | genhttp              | 609.65       | 9,983    | 60.97      |
++------+----------------------+--------------+----------+------------+
 
 PROFILE SCORE: latency-1m (scored connections: 1024)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+----------+------------+
-| Rank | Server         | Points /1000 | Mean RPS | Score /100 |
-+------+----------------+--------------+----------+------------+
-| 1    | doba           | 1000.00      | 998,155  | 100.00     |
-| 2    | genhttp-ioxide | 944.99       | 998,208  | 94.50      |
-| 3    | tako           | 941.98       | 997,998  | 94.20      |
-| 4    | actix          | 921.27       | 998,177  | 92.13      |
-| 5    | morojs         | 889.78       | 997,950  | 88.98      |
-| 6    | dusty          | 881.58       | 998,475  | 88.16      |
-| 7    | fulmine.js     | 847.08       | 998,059  | 84.71      |
-| 8    | vertx          | 816.41       | 997,928  | 81.64      |
-| 9    | ntex           | 803.25       | 998,272  | 80.32      |
-| 10   | libuvcpp       | 751.42       | 998,327  | 75.14      |
-| 11   | fiber          | 731.42       | 998,231  | 73.14      |
-| 12   | hono-bun       | 728.23       | 998,195  | 72.82      |
-| 13   | bun            | 692.78       | 998,106  | 69.28      |
-| 14   | elysia         | 690.59       | 997,967  | 69.06      |
-| 15   | genhttp        | 585.85       | 998,016  | 58.59      |
-+------+----------------+--------------+----------+------------+
++------+----------------------+--------------+----------+------------+
+| Rank | Server               | Points /1000 | Mean RPS | Score /100 |
++------+----------------------+--------------+----------+------------+
+| 1    | doba                 | 1000.00      | 998,335  | 100.00     |
+| 2    | tako                 | 958.10       | 998,556  | 95.81      |
+| 3    | genhttp-ioxide       | 955.41       | 997,716  | 95.54      |
+| 4    | actix                | 939.63       | 998,236  | 93.96      |
+| 5    | spliffy              | 931.60       | 998,393  | 93.16      |
+| 6    | flare                | 926.77       | 998,368  | 92.68      |
+| 7    | dusty                | 926.66       | 998,296  | 92.67      |
+| 8    | lute                 | 908.97       | 998,502  | 90.90      |
+| 9    | morojs               | 903.44       | 998,415  | 90.34      |
+| 10   | fulmine.js           | 902.56       | 998,325  | 90.26      |
+| 11   | vertx                | 889.59       | 998,200  | 88.96      |
+| 12   | araara               | 815.82       | 997,959  | 81.58      |
+| 13   | ntex                 | 812.21       | 998,360  | 81.22      |
+| 14   | libuvcpp             | 772.00       | 998,363  | 77.20      |
+| 15   | fiber                | 733.94       | 997,983  | 73.39      |
+| 16   | bun                  | 705.44       | 998,222  | 70.54      |
+| 17   | micronaut-production | 683.23       | 997,811  | 68.32      |
+| 18   | genhttp              | 571.75       | 998,414  | 57.18      |
+| 19   | trillium             | 516.21       | 986,795  | 51.62      |
+| 20   | axum                 | 499.55       | 998,097  | 49.95      |
+| 21   | mq-bridge            | 430.73       | 998,154  | 43.07      |
++------+----------------------+--------------+----------+------------+
 
 REFERENCE ONLY: latency-500k-8cpu does not contribute to the framework HTTP/1.1 composite.
 
 PROFILE SCORE: json-comp (scored connections: 4096, 16384)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+----------------+--------------+----------+----------------+--------------+
-| Rank | Server         | Points /1000 | Mean RPS | Bytes/response | Adjusted RPS |
-+------+----------------+--------------+----------+----------------+--------------+
-| 1    | bun            | 1000.00      | 549,178  | 1336.99        | 460,990.82   |
-| 2    | dusty          | 951.59       | 496,262  | 1302.87        | 438,673.16   |
-| 3    | doba           | 888.18       | 488,671  | 1338.22        | 409,443.80   |
-| 4    | fulmine.js     | 862.83       | 565,336  | 1460.36        | 397,758.54   |
-| 5    | genhttp-ioxide | 849.60       | 731,668  | 1674.26        | 391,655.82   |
-| 6    | elysia         | 777.28       | 439,048  | 1355.93        | 358,318.11   |
-| 7    | ntex           | 671.03       | 593,876  | 1697.26        | 309,339.60   |
-| 8    | fiber          | 648.28       | 352,108  | 1329.62        | 298,851.92   |
-| 9    | libuvcpp       | 646.98       | 405,948  | 1429.09        | 298,253.24   |
-| 10   | morojs         | 637.14       | 355,196  | 1347.06        | 293,716.58   |
-| 11   | actix          | 629.32       | 579,968  | 1731.95        | 290,112.47   |
-| 12   | vertx          | 629.26       | 320,098  | 1286.76        | 290,082.89   |
-| 13   | genhttp        | 595.63       | 538,850  | 1716.00        | 274,578.99   |
-| 14   | tako           | 482.10       | 222,242  | 1224.95        | 222,242.50   |
-| 15   | hono-bun       | 414.80       | 243,069  | 1381.07        | 191,219.72   |
-+------+----------------+--------------+----------+----------------+--------------+
++------+----------------------+--------------+----------+----------------+--------------+
+| Rank | Server               | Points /1000 | Mean RPS | Bytes/response | Adjusted RPS |
++------+----------------------+--------------+----------+----------------+--------------+
+| 1    | flare                | 1000.00      | 844,227  | 1563.56        | 518,200.90   |
+| 2    | dusty                | 901.83       | 671,523  | 1468.43        | 467,328.51   |
+| 3    | spliffy              | 894.87       | 551,267  | 1335.63        | 463,720.71   |
+| 4    | bun                  | 886.94       | 547,500  | 1336.99        | 459,614.56   |
+| 5    | fulmine.js           | 853.16       | 524,134  | 1333.80        | 442,107.50   |
+| 6    | doba                 | 779.58       | 482,066  | 1338.16        | 403,980.74   |
+| 7    | genhttp-ioxide       | 748.49       | 727,298  | 1677.44        | 387,868.88   |
+| 8    | vertx                | 667.13       | 381,472  | 1286.80        | 345,706.34   |
+| 9    | mq-bridge            | 652.80       | 428,446  | 1378.61        | 338,282.82   |
+| 10   | micronaut-production | 651.79       | 393,382  | 1322.02        | 337,758.68   |
+| 11   | araara               | 635.31       | 401,288  | 1352.45        | 329,219.22   |
+| 12   | ntex                 | 597.08       | 591,629  | 1693.92        | 309,406.58   |
+| 13   | morojs               | 579.76       | 363,243  | 1346.98        | 300,431.28   |
+| 14   | fiber                | 572.74       | 349,609  | 1329.53        | 296,794.50   |
+| 15   | actix                | 559.94       | 580,058  | 1732.01        | 290,161.66   |
+| 16   | genhttp              | 541.34       | 550,556  | 1716.14        | 280,521.05   |
+| 17   | libuvcpp             | 502.10       | 354,348  | 1429.57        | 260,188.39   |
+| 18   | axum                 | 493.65       | 306,610  | 1341.12        | 255,810.82   |
+| 19   | tako                 | 424.45       | 219,952  | 1224.99        | 219,952.00   |
+| 20   | trillium             | 213.78       | 135,578  | 1355.19        | 110,778.89   |
++------+----------------------+--------------+----------+----------------+--------------+
 
 PROFILE SCORE: json-tls (scored connections: 4096)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+------------+--------------+-----------+
-| Rank | Server     | Points /1000 | Mean RPS  |
-+------+------------+--------------+-----------+
-| 1    | fulmine.js | 1000.00      | 1,524,725 |
-| 2    | doba       | 935.34       | 1,426,136 |
-| 3    | actix      | 932.13       | 1,421,240 |
-| 4    | ntex       | 930.55       | 1,418,839 |
-| 5    | elysia     | 920.31       | 1,403,226 |
-| 6    | bun        | 870.40       | 1,327,128 |
-| 7    | morojs     | 719.13       | 1,096,483 |
-| 8    | hono-bun   | 716.67       | 1,092,722 |
-| 9    | fiber      | 683.58       | 1,042,265 |
-| 10   | genhttp    | 637.56       | 972,107   |
-| 11   | tako       | 632.22       | 963,956   |
-| 12   | dusty      | 627.77       | 957,183   |
-| 13   | libuvcpp   | 600.09       | 914,971   |
-| 14   | vertx      | 512.03       | 780,699   |
-+------+------------+--------------+-----------+
++------+----------------------+--------------+-----------+
+| Rank | Server               | Points /1000 | Mean RPS  |
++------+----------------------+--------------+-----------+
+| 1    | spliffy              | 1000.00      | 1,656,137 |
+| 2    | fulmine.js           | 953.61       | 1,579,317 |
+| 3    | actix                | 862.28       | 1,428,061 |
+| 4    | ntex                 | 856.82       | 1,419,010 |
+| 5    | doba                 | 841.94       | 1,394,370 |
+| 6    | bun                  | 794.33       | 1,315,518 |
+| 7    | dusty                | 757.40       | 1,254,355 |
+| 8    | vertx                | 698.11       | 1,156,165 |
+| 9    | micronaut-production | 691.89       | 1,145,866 |
+| 10   | morojs               | 679.76       | 1,125,778 |
+| 11   | fiber                | 626.07       | 1,036,850 |
+| 12   | trillium             | 606.08       | 1,003,759 |
+| 13   | genhttp              | 583.61       | 966,537   |
+| 14   | tako                 | 575.36       | 952,870   |
+| 15   | araara               | 554.70       | 918,664   |
+| 16   | mq-bridge            | 541.14       | 896,197   |
+| 17   | axum                 | 511.58       | 847,239   |
+| 18   | libuvcpp             | 503.63       | 834,084   |
+| 19   | flare                | 221.52       | 366,861   |
+| 20   | lute                 | 50.99        | 84,439    |
++------+----------------------+--------------+-----------+
 
 PROFILE SCORE: 8gbit (scored connections: 512)
 Points /1000 before completeness; connection sets averaged by upstream, NOT repetitions.
-+------+------------+--------------+----------+------------+
-| Rank | Server     | Points /1000 | Mean RPS | Score /100 |
-+------+------------+--------------+----------+------------+
-| 1    | doba       | 1000.00      | 49,390   | 99.94      |
-| 2    | actix      | 972.09       | 49,426   | 97.15      |
-| 3    | tako       | 901.31       | 48,389   | 90.08      |
-| 4    | ntex       | 872.96       | 49,418   | 87.24      |
-| 5    | fulmine.js | 829.68       | 49,372   | 82.92      |
-| 6    | fiber      | 818.90       | 49,345   | 81.84      |
-| 7    | morojs     | 798.77       | 49,345   | 79.83      |
-| 8    | libuvcpp   | 780.20       | 49,320   | 77.97      |
-| 9    | bun        | 747.86       | 49,375   | 74.74      |
-| 10   | vertx      | 741.70       | 49,251   | 74.12      |
-| 11   | hono-bun   | 729.90       | 49,396   | 72.94      |
-| 12   | dusty      | 720.40       | 48,976   | 72.00      |
-| 13   | elysia     | 707.42       | 49,366   | 70.70      |
-| 14   | genhttp    | 698.63       | 49,354   | 69.82      |
-+------+------------+--------------+----------+------------+
++------+----------------------+--------------+----------+------------+
+| Rank | Server               | Points /1000 | Mean RPS | Score /100 |
++------+----------------------+--------------+----------+------------+
+| 1    | lute                 | 1000.00      | 49,410   | 99.79      |
+| 2    | doba                 | 977.79       | 49,371   | 97.58      |
+| 3    | actix                | 970.89       | 49,383   | 96.89      |
+| 4    | trillium             | 945.44       | 48,579   | 94.35      |
+| 5    | spliffy              | 907.92       | 49,374   | 90.60      |
+| 6    | vertx                | 904.37       | 49,439   | 90.25      |
+| 7    | tako                 | 888.13       | 48,558   | 88.63      |
+| 8    | flare                | 875.61       | 49,364   | 87.38      |
+| 9    | fulmine.js           | 858.11       | 49,408   | 85.63      |
+| 10   | axum                 | 850.72       | 49,269   | 84.90      |
+| 11   | ntex                 | 850.24       | 49,361   | 84.85      |
+| 12   | mq-bridge            | 834.12       | 49,354   | 83.24      |
+| 13   | libuvcpp             | 804.94       | 49,364   | 80.33      |
+| 14   | fiber                | 804.01       | 49,378   | 80.23      |
+| 15   | micronaut-production | 792.06       | 49,306   | 79.04      |
+| 16   | morojs               | 789.74       | 49,434   | 78.81      |
+| 17   | dusty                | 782.55       | 49,196   | 78.09      |
+| 18   | bun                  | 751.34       | 49,382   | 74.98      |
+| 19   | genhttp              | 691.34       | 49,381   | 68.99      |
+| 20   | araara               | 656.89       | 49,402   | 65.55      |
++------+----------------------+--------------+----------+------------+
 
 REFERENCE ONLY: static-tls does not contribute to the framework HTTP/1.1 composite.
 
 MEASUREMENT DETAILS (per connection count; not composite standings)
 
 THROUGHPUT DETAIL: baseline (4096 connections)
-+-----------+----------------+--------------+---------+---------+--------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
-+-----------+----------------+--------------+---------+---------+--------+
-| 1         | doba           | 3,772,120    | 100.0%  | 6140.9% | 111MiB |
-| 2         | genhttp-ioxide | 3,530,911    | 93.6%   | 6152.8% | 2.3GiB |
-| 3         | dusty          | 3,523,451    | 93.4%   | 6180.6% | 203MiB |
-| 4         | tako           | 3,445,736    | 91.3%   | 6187.6% | 123MiB |
-| 5         | actix          | 3,227,942    | 85.6%   | 6611.1% | 170MiB |
-| 6         | morojs         | 2,783,893    | 73.8%   | 6222.8% | 3.9GiB |
-| 7         | fiber          | 2,737,198    | 72.6%   | 6655.7% | 353MiB |
-| 8         | bun            | 2,435,099    | 64.6%   | 6162.1% | 1.1GiB |
-| 9         | fulmine        | 2,431,322    | 64.5%   | 6252.5% | 2.5GiB |
-| 10        | ntex           | 2,340,164    | 62.0%   | 6273.9% | 156MiB |
-| 11        | vertx          | 2,325,790    | 61.7%   | 6205.7% | 3.6GiB |
-| 12        | hono-bun       | 2,253,864    | 59.8%   | 6268.9% | 1.2GiB |
-| 13        | elysia         | 2,156,591    | 57.2%   | 6225.9% | 1.5GiB |
-| 14        | libuvcpp       | 2,150,400    | 57.0%   | 6685.0% | 134MiB |
-| 15        | genhttp        | 2,128,131    | 56.4%   | 5666.8% | 571MiB |
-+-----------+----------------+--------------+---------+---------+--------+
++-----------+----------------------+--------------+---------+---------+--------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------------+--------------+---------+---------+--------+
+| 1         | doba                 | 3,752,328    | 100.0%  | 6154.9% | 111MiB |
+| 2         | genhttp-ioxide       | 3,522,444    | 93.9%   | 6141.9% | 2.3GiB |
+| 3         | dusty                | 3,501,165    | 93.3%   | 6593.5% | 204MiB |
+| 4         | tako                 | 3,434,617    | 91.5%   | 6208.8% | 115MiB |
+| 5         | actix                | 3,232,685    | 86.2%   | 6161.6% | 155MiB |
+| 6         | flare                | 3,213,066    | 85.6%   | 6175.2% | 549MiB |
+| 7         | lute                 | 2,914,976    | 77.7%   | 5903.2% | 131MiB |
+| 8         | vertx                | 2,869,393    | 76.5%   | 6113.4% | 5.2GiB |
+| 9         | spliffy              | 2,844,208    | 75.8%   | 6236.1% | 1.8GiB |
+| 10        | morojs               | 2,798,273    | 74.6%   | 6623.4% | 4.0GiB |
+| 11        | fiber                | 2,714,799    | 72.3%   | 6235.4% | 373MiB |
+| 12        | fulmine              | 2,686,259    | 71.6%   | 6660.8% | 2.0GiB |
+| 13        | araara               | 2,490,029    | 66.4%   | 6144.0% | 780MiB |
+| 14        | bun                  | 2,446,813    | 65.2%   | 6506.3% | 1.3GiB |
+| 15        | ntex                 | 2,341,964    | 62.4%   | 6223.4% | 158MiB |
+| 16        | libuvcpp             | 2,304,507    | 61.4%   | 6213.8% | 136MiB |
+| 17        | genhttp              | 2,230,965    | 59.5%   | 5673.1% | 641MiB |
+| 18        | micronaut-production | 2,105,783    | 56.1%   | 6216.5% | 4.7GiB |
+| 19        | trillium             | 1,110,681    | 29.6%   | 2464.5% | 204MiB |
+| 20        | mq-bridge            | 1,062,539    | 28.3%   | 3642.5% | 176MiB |
+| 21        | axum                 | 1,017,646    | 27.1%   | 3065.9% | 225MiB |
++-----------+----------------------+--------------+---------+---------+--------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+--------+--------+
-| Server         | Avg    | p99    |
-+----------------+--------+--------+
-| doba           | 1.09ms | 2.01ms |
-| genhttp-ioxide | 1.16ms | 1.63ms |
-| dusty          | 1.04ms | 1.90ms |
-| tako           | 1.19ms | 2.06ms |
-| actix          | 1.12ms | 2.17ms |
-| morojs         | 1.47ms | 2.62ms |
-| fiber          | 1.50ms | 3.28ms |
-| bun            | 1.68ms | 3.54ms |
-| fulmine        | 1.69ms | 2.30ms |
-| ntex           | 1.75ms | 2.13ms |
-| vertx          | 1.77ms | 4.07ms |
-| hono-bun       | 1.82ms | 3.42ms |
-| elysia         | 1.90ms | 3.62ms |
-| libuvcpp       | 1.91ms | 2.52ms |
-| genhttp        | 1.90ms | 4.90ms |
-+----------------+--------+--------+
++----------------------+--------+---------+
+| Server               | Avg    | p99     |
++----------------------+--------+---------+
+| doba                 | 1.09ms | 1.99ms  |
+| genhttp-ioxide       | 1.16ms | 1.73ms  |
+| dusty                | 1.17ms | 1.81ms  |
+| tako                 | 1.19ms | 2.10ms  |
+| actix                | 1.10ms | 2.17ms  |
+| flare                | 1.27ms | 18.40ms |
+| lute                 | 1.41ms | 2.46ms  |
+| vertx                | 1.43ms | 2.80ms  |
+| spliffy              | 1.44ms | 2.28ms  |
+| morojs               | 1.46ms | 2.66ms  |
+| fiber                | 1.51ms | 3.37ms  |
+| fulmine              | 1.53ms | 2.24ms  |
+| araara               | 1.65ms | 2.41ms  |
+| bun                  | 1.67ms | 3.55ms  |
+| ntex                 | 1.75ms | 2.13ms  |
+| libuvcpp             | 1.78ms | 2.29ms  |
+| genhttp              | 1.84ms | 4.87ms  |
+| micronaut-production | 1.95ms | 3.81ms  |
+| trillium             | 1.52ms | 2.67ms  |
+| mq-bridge            | 3.87ms | 6.00ms  |
+| axum                 | 4.02ms | 6.13ms  |
++----------------------+--------+---------+
 
 THROUGHPUT DETAIL: pipelined (4096 connections)
-+-----------+----------------+--------------+---------+---------+--------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
-+-----------+----------------+--------------+---------+---------+--------+
-| 1         | morojs         | 41,265,036   | 100.0%  | 6191.0% | 3.8GiB |
-| 2         | fulmine        | 36,884,838   | 89.4%   | 6251.7% | 2.0GiB |
-| 3         | doba           | 28,174,377   | 68.3%   | 6672.6% | 128MiB |
-| 4         | genhttp-ioxide | 26,707,539   | 64.7%   | 6131.9% | 2.3GiB |
-| 5         | tako           | 24,142,390   | 58.5%   | 6664.0% | 125MiB |
-| 6         | fiber          | 21,547,638   | 52.2%   | 6237.1% | 368MiB |
-| 7         | actix          | 19,828,496   | 48.1%   | 6618.6% | 214MiB |
-| 8         | genhttp        | 18,932,665   | 45.9%   | 5903.5% | 335MiB |
-| 9         | vertx          | 13,862,470   | 33.6%   | 6036.7% | 5.6GiB |
-| 10        | libuvcpp       | 8,912,875    | 21.6%   | 6601.0% | 176MiB |
-| 11        | bun            | 5,407,040    | 13.1%   | 6216.5% | 370MiB |
-| 12        | dusty          | 4,681,557    | 11.3%   | 6095.2% | 203MiB |
-| 13        | hono-bun       | 3,122,673    | 7.6%    | 6258.8% | 1.2GiB |
-| 14        | elysia         | 2,975,841    | 7.2%    | 6658.1% | 1.6GiB |
-+-----------+----------------+--------------+---------+---------+--------+
++-----------+----------------------+--------------+---------+---------+---------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory  |
++-----------+----------------------+--------------+---------+---------+---------+
+| 1         | morojs               | 40,972,940   | 100.0%  | 6590.1% | 3.9GiB  |
+| 2         | fulmine              | 36,755,657   | 89.7%   | 6232.9% | 1.5GiB  |
+| 3         | spliffy              | 35,599,776   | 86.9%   | 6635.1% | 1.3GiB  |
+| 4         | doba                 | 28,009,091   | 68.4%   | 6231.0% | 131MiB  |
+| 5         | genhttp-ioxide       | 27,766,153   | 67.8%   | 6099.4% | 2.3GiB  |
+| 6         | tako                 | 24,641,436   | 60.1%   | 6628.3% | 126MiB  |
+| 7         | fiber                | 21,467,462   | 52.4%   | 6553.1% | 366MiB  |
+| 8         | actix                | 19,927,276   | 48.6%   | 6609.2% | 218MiB  |
+| 9         | genhttp              | 18,700,643   | 45.6%   | 5860.1% | 339MiB  |
+| 10        | araara               | 18,588,563   | 45.4%   | 6105.8% | 924MiB  |
+| 11        | flare                | 17,020,607   | 41.5%   | 6596.1% | 356MiB  |
+| 12        | vertx                | 14,596,105   | 35.6%   | 6095.7% | 7.9GiB  |
+| 13        | lute                 | 13,882,339   | 33.9%   | 5849.4% | 136MiB  |
+| 14        | libuvcpp             | 9,745,556    | 23.8%   | 6229.7% | 178MiB  |
+| 15        | micronaut-production | 9,538,608    | 23.3%   | 6026.6% | 10.6GiB |
+| 16        | axum                 | 6,946,544    | 17.0%   | 6449.6% | 217MiB  |
+| 17        | mq-bridge            | 6,262,268    | 15.3%   | 6089.6% | 177MiB  |
+| 18        | bun                  | 5,409,912    | 13.2%   | 6567.8% | 367MiB  |
+| 19        | dusty                | 4,690,061    | 11.4%   | 6080.3% | 207MiB  |
+| 20        | trillium             | 4,294,305    | 10.5%   | 6168.1% | 252MiB  |
++-----------+----------------------+--------------+---------+---------+---------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+---------+
-| Server         | Avg     | p99     |
-+----------------+---------+---------+
-| morojs         | 1.59ms  | 2.68ms  |
-| fulmine        | 1.78ms  | 2.36ms  |
-| doba           | 2.33ms  | 3.05ms  |
-| genhttp-ioxide | 2.45ms  | 4.00ms  |
-| tako           | 2.71ms  | 2.79ms  |
-| fiber          | 3.04ms  | 6.74ms  |
-| actix          | 3.00ms  | 3.40ms  |
-| genhttp        | 3.46ms  | 6.25ms  |
-| vertx          | 4.74ms  | 7.87ms  |
-| libuvcpp       | 7.37ms  | 10.00ms |
-| bun            | 12.12ms | 15.60ms |
-| dusty          | 12.24ms | 34.80ms |
-| hono-bun       | 20.98ms | 30.80ms |
-| elysia         | 22.02ms | 32.20ms |
-+----------------+---------+---------+
++----------------------+---------+---------+
+| Server               | Avg     | p99     |
++----------------------+---------+---------+
+| morojs               | 1.60ms  | 2.40ms  |
+| fulmine              | 1.78ms  | 2.29ms  |
+| spliffy              | 1.84ms  | 2.47ms  |
+| doba                 | 2.34ms  | 2.88ms  |
+| genhttp-ioxide       | 2.36ms  | 3.06ms  |
+| tako                 | 2.66ms  | 2.73ms  |
+| fiber                | 3.05ms  | 6.70ms  |
+| actix                | 3.09ms  | 3.38ms  |
+| genhttp              | 3.45ms  | 6.33ms  |
+| araara               | 3.52ms  | 5.54ms  |
+| flare                | 3.83ms  | 28.60ms |
+| vertx                | 4.50ms  | 7.37ms  |
+| lute                 | 4.72ms  | 6.40ms  |
+| libuvcpp             | 6.74ms  | 8.68ms  |
+| micronaut-production | 6.87ms  | 12.90ms |
+| axum                 | 9.46ms  | 30.40ms |
+| mq-bridge            | 10.51ms | 33.10ms |
+| bun                  | 12.13ms | 15.60ms |
+| dusty                | 14.00ms | 44.40ms |
+| trillium             | 7.63ms  | 29.10ms |
++----------------------+---------+---------+
 
 THROUGHPUT DETAIL: limited-conn (4096 connections)
-+-----------+----------------+--------------+---------+---------+--------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory |
-+-----------+----------------+--------------+---------+---------+--------+
-| 1         | doba           | 3,079,816    | 100.0%  | 6309.3% | 106MiB |
-| 2         | genhttp-ioxide | 2,839,206    | 92.2%   | 6369.1% | 2.7GiB |
-| 3         | tako           | 2,686,945    | 87.2%   | 6056.9% | 162MiB |
-| 4         | morojs         | 2,263,387    | 73.5%   | 6476.6% | 3.9GiB |
-| 5         | fiber          | 2,155,682    | 70.0%   | 6085.9% | 883MiB |
-| 6         | bun            | 2,081,465    | 67.6%   | 6066.3% | 1.2GiB |
-| 7         | fulmine        | 2,057,480    | 66.8%   | 6126.9% | 2.6GiB |
-| 8         | hono-bun       | 1,936,331    | 62.9%   | 6140.6% | 1.3GiB |
-| 9         | elysia         | 1,873,891    | 60.8%   | 6086.8% | 1.6GiB |
-| 10        | dusty          | 1,816,585    | 59.0%   | 6157.0% | 76MiB  |
-| 11        | libuvcpp       | 1,752,129    | 56.9%   | 6113.5% | 114MiB |
-| 12        | ntex           | 1,253,229    | 40.7%   | 4870.7% | 110MiB |
-| 13        | actix          | 1,178,574    | 38.3%   | 3275.4% | 93MiB  |
-| 14        | genhttp        | 1,088,924    | 35.4%   | 4799.4% | 555MiB |
-| 15        | vertx          | 617,755      | 20.1%   | 2240.6% | 2.8GiB |
-+-----------+----------------+--------------+---------+---------+--------+
++-----------+----------------------+--------------+---------+---------+--------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------------+--------------+---------+---------+--------+
+| 1         | doba                 | 3,068,681    | 100.0%  | 5940.7% | 100MiB |
+| 2         | genhttp-ioxide       | 2,821,338    | 91.9%   | 6320.1% | 2.8GiB |
+| 3         | tako                 | 2,647,575    | 86.3%   | 6463.7% | 162MiB |
+| 4         | flare                | 2,517,557    | 82.0%   | 6504.1% | 530MiB |
+| 5         | spliffy              | 2,361,654    | 77.0%   | 6455.1% | 1.8GiB |
+| 6         | lute                 | 2,289,710    | 74.6%   | 5324.3% | 151MiB |
+| 7         | morojs               | 2,251,723    | 73.4%   | 6060.1% | 3.9GiB |
+| 8         | fulmine              | 2,225,705    | 72.5%   | 6494.2% | 2.1GiB |
+| 9         | araara               | 2,137,747    | 69.7%   | 6496.7% | 976MiB |
+| 10        | fiber                | 2,125,197    | 69.3%   | 6445.9% | 904MiB |
+| 11        | bun                  | 2,047,826    | 66.7%   | 6442.2% | 1.3GiB |
+| 12        | libuvcpp             | 1,841,977    | 60.0%   | 6503.8% | 120MiB |
+| 13        | dusty                | 1,618,492    | 52.7%   | 6470.2% | 76MiB  |
+| 14        | ntex                 | 1,266,361    | 41.3%   | 4801.0% | 86MiB  |
+| 15        | actix                | 1,189,071    | 38.7%   | 3479.8% | 87MiB  |
+| 16        | genhttp              | 1,130,002    | 36.8%   | 4593.8% | 469MiB |
+| 17        | vertx                | 693,656      | 22.6%   | 2010.6% | 2.7GiB |
+| 18        | mq-bridge            | 685,592      | 22.3%   | 6017.9% | 259MiB |
+| 19        | axum                 | 665,053      | 21.7%   | 5944.8% | 305MiB |
+| 20        | micronaut-production | 620,433      | 20.2%   | 2405.7% | 1.7GiB |
+| 21        | trillium             | 611,890      | 19.9%   | 1761.8% | 137MiB |
++-----------+----------------------+--------------+---------+---------+--------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+--------+---------+
-| Server         | Avg    | p99     |
-+----------------+--------+---------+
-| doba           | 1.27ms | 14.00ms |
-| genhttp-ioxide | 1.42ms | 3.92ms  |
-| tako           | 1.51ms | 3.00ms  |
-| morojs         | 1.80ms | 6.06ms  |
-| fiber          | 1.89ms | 6.64ms  |
-| bun            | 1.96ms | 7.25ms  |
-| fulmine        | 1.98ms | 7.84ms  |
-| hono-bun       | 2.11ms | 7.38ms  |
-| elysia         | 2.18ms | 7.75ms  |
-| dusty          | 793us  | 5.95ms  |
-| libuvcpp       | 2.31ms | 36.20ms |
-| ntex           | 3.26ms | 32.70ms |
-| actix          | 1.10ms | 8.74ms  |
-| genhttp        | 2.07ms | 21.20ms |
-| vertx          | 6.61ms | 71.30ms |
-+----------------+--------+---------+
++----------------------+--------+---------+
+| Server               | Avg    | p99     |
++----------------------+--------+---------+
+| doba                 | 1.30ms | 17.50ms |
+| genhttp-ioxide       | 1.43ms | 4.42ms  |
+| tako                 | 1.53ms | 3.04ms  |
+| flare                | 1.61ms | 11.70ms |
+| spliffy              | 1.72ms | 6.91ms  |
+| lute                 | 1.78ms | 7.50ms  |
+| morojs               | 1.81ms | 6.25ms  |
+| fulmine              | 1.83ms | 7.39ms  |
+| araara               | 1.91ms | 28.10ms |
+| fiber                | 1.92ms | 6.89ms  |
+| bun                  | 1.99ms | 7.29ms  |
+| libuvcpp             | 2.20ms | 35.10ms |
+| dusty                | 2.52ms | 25.00ms |
+| ntex                 | 3.22ms | 32.60ms |
+| actix                | 1.14ms | 8.87ms  |
+| genhttp              | 2.04ms | 20.30ms |
+| vertx                | 5.88ms | 59.80ms |
+| mq-bridge            | 6.00ms | 27.40ms |
+| axum                 | 6.17ms | 28.00ms |
+| micronaut-production | 6.57ms | 67.80ms |
+| trillium             | 844us  | 1.93ms  |
++----------------------+--------+---------+
 
 FIXED RATE: latency-10k (1024 connections)
 Official score formula, normalized to THIS session only (not the public leaderboard).
 Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
-+------+----------------+-------+------------+-------+-------+--------+
-| Rank | Server         | Score | CPU us/req | RPS   | Rate  | Status |
-+------+----------------+-------+------------+-------+-------+--------+
-| 1    | doba           | 99.17 | 28.103     | 9,984 | 99.8% | OK     |
-| 2    | genhttp-ioxide | 97.38 | 29.155     | 9,983 | 99.8% | OK     |
-| 3    | dusty          | 88.67 | 34.650     | 9,983 | 99.8% | OK     |
-| 4    | tako           | 86.18 | 35.814     | 9,982 | 99.8% | OK     |
-| 5    | actix          | 79.90 | 41.120     | 9,982 | 99.8% | OK     |
-| 6    | ntex           | 77.44 | 45.144     | 9,983 | 99.8% | OK     |
-| 7    | fiber          | 76.92 | 48.237     | 9,983 | 99.8% | OK     |
-| 8    | libuvcpp       | 76.23 | 46.909     | 9,983 | 99.8% | OK     |
-| 9    | morojs         | 74.56 | 49.554     | 9,984 | 99.8% | OK     |
-| 10   | vertx          | 73.80 | 50.311     | 9,982 | 99.8% | OK     |
-| 11   | bun            | 72.93 | 56.452     | 9,984 | 99.8% | OK     |
-| 12   | fulmine        | 69.38 | 55.857     | 9,981 | 99.8% | OK     |
-| 13   | hono-bun       | 66.40 | 68.778     | 9,983 | 99.8% | OK     |
-| 14   | elysia         | 64.73 | 72.272     | 9,983 | 99.8% | OK     |
-| 15   | genhttp        | 63.24 | 106.139    | 9,984 | 99.8% | OK     |
-+------+----------------+-------+------------+-------+-------+--------+
++------+----------------------+--------+------------+-------+-------+--------+
+| Rank | Server               | Score  | CPU us/req | RPS   | Rate  | Status |
++------+----------------------+--------+------------+-------+-------+--------+
+| 1    | trillium             | 100.00 | 25.016     | 9,881 | 98.8% | OK     |
+| 2    | mq-bridge            | 97.92  | 25.477     | 9,983 | 99.8% | OK     |
+| 3    | axum                 | 96.30  | 26.411     | 9,983 | 99.8% | OK     |
+| 4    | doba                 | 95.62  | 26.584     | 9,983 | 99.8% | OK     |
+| 5    | genhttp-ioxide       | 88.01  | 31.235     | 9,983 | 99.8% | OK     |
+| 6    | flare                | 82.89  | 36.779     | 9,983 | 99.8% | OK     |
+| 7    | dusty                | 82.73  | 34.962     | 9,983 | 99.8% | OK     |
+| 8    | lute                 | 81.60  | 36.266     | 9,983 | 99.8% | OK     |
+| 9    | tako                 | 78.73  | 39.208     | 9,983 | 99.8% | OK     |
+| 10   | ntex                 | 75.63  | 41.971     | 9,982 | 99.8% | OK     |
+| 11   | actix                | 74.53  | 43.315     | 9,982 | 99.8% | OK     |
+| 12   | vertx                | 73.25  | 45.803     | 9,982 | 99.8% | OK     |
+| 13   | fiber                | 73.19  | 48.769     | 9,983 | 99.8% | OK     |
+| 14   | spliffy              | 72.37  | 45.795     | 9,983 | 99.8% | OK     |
+| 15   | morojs               | 70.97  | 48.294     | 9,982 | 99.8% | OK     |
+| 16   | fulmine              | 70.18  | 49.285     | 9,982 | 99.8% | OK     |
+| 17   | libuvcpp             | 69.21  | 52.017     | 9,983 | 99.8% | OK     |
+| 18   | bun                  | 68.61  | 56.956     | 9,982 | 99.8% | OK     |
+| 19   | araara               | 67.71  | 55.150     | 9,985 | 99.9% | OK     |
+| 20   | micronaut-production | 64.67  | 60.400     | 9,983 | 99.8% | OK     |
+| 21   | genhttp              | 60.97  | 106.505    | 9,983 | 99.8% | OK     |
++------+----------------------+--------+------------+-------+-------+--------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+---------+----------+
-| Server         | Avg     | p99     | p99.9    |
-+----------------+---------+---------+----------+
-| doba           | 76.6us  | 130.0us | 525.0us  |
-| genhttp-ioxide | 76.3us  | 131.0us | 727.0us  |
-| dusty          | 83.2us  | 136.0us | 769.0us  |
-| tako           | 92.0us  | 139.0us | 804.0us  |
-| actix          | 101.2us | 146.0us | 6858.0us |
-| ntex           | 93.8us  | 156.0us | 766.0us  |
-| fiber          | 85.1us  | 139.0us | 554.0us  |
-| libuvcpp       | 94.1us  | 156.0us | 501.0us  |
-| morojs         | 96.0us  | 150.0us | 573.0us  |
-| vertx          | 100.1us | 145.0us | 803.0us  |
-| bun            | 82.2us  | 144.0us | 613.0us  |
-| fulmine        | 110.9us | 168.0us | 1220.0us |
-| hono-bun       | 96.2us  | 159.0us | 661.0us  |
-| elysia         | 100.6us | 168.0us | 959.0us  |
-| genhttp        | 74.6us  | 112.0us | 176.0us  |
-+----------------+---------+---------+----------+
++----------------------+---------+---------+----------+
+| Server               | Avg     | p99     | p99.9    |
++----------------------+---------+---------+----------+
+| trillium             | 70.8us  | 108.0us | 155.0us  |
+| mq-bridge            | 78.2us  | 111.0us | 266.0us  |
+| axum                 | 76.4us  | 115.0us | 329.0us  |
+| doba                 | 76.3us  | 128.0us | 2189.0us |
+| genhttp-ioxide       | 79.3us  | 135.0us | 177.0us  |
+| flare                | 76.6us  | 116.0us | 393.0us  |
+| dusty                | 86.8us  | 136.0us | 1632.0us |
+| lute                 | 84.7us  | 140.0us | 421.0us  |
+| tako                 | 87.4us  | 138.0us | 416.0us  |
+| ntex                 | 91.6us  | 158.0us | 653.0us  |
+| actix                | 95.8us  | 145.0us | 420.0us  |
+| vertx                | 93.7us  | 143.0us | 1026.0us |
+| fiber                | 81.6us  | 139.0us | 236.0us  |
+| spliffy              | 99.2us  | 154.0us | 1348.0us |
+| morojs               | 99.5us  | 152.0us | 442.0us  |
+| fulmine              | 100.5us | 159.0us | 784.0us  |
+| libuvcpp             | 98.2us  | 154.0us | 482.0us  |
+| bun                  | 86.8us  | 148.0us | 698.0us  |
+| araara               | 99.6us  | 153.0us | 681.0us  |
+| micronaut-production | 108.8us | 158.0us | 1603.0us |
+| genhttp              | 75.6us  | 110.0us | 511.0us  |
++----------------------+---------+---------+----------+
 
 FIXED RATE: latency-1m (1024 connections)
 Official score formula, normalized to THIS session only (not the public leaderboard).
 Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
-+------+----------------+--------+------------+---------+-------+--------+
-| Rank | Server         | Score  | CPU us/req | RPS     | Rate  | Status |
-+------+----------------+--------+------------+---------+-------+--------+
-| 1    | doba           | 100.00 | 17.527     | 998,155 | 99.8% | OK     |
-| 2    | genhttp-ioxide | 94.50  | 19.076     | 998,208 | 99.8% | OK     |
-| 3    | tako           | 94.20  | 19.714     | 997,998 | 99.8% | OK     |
-| 4    | actix          | 92.13  | 20.396     | 998,177 | 99.8% | OK     |
-| 5    | morojs         | 88.98  | 21.513     | 997,950 | 99.8% | OK     |
-| 6    | dusty          | 88.16  | 22.277     | 998,475 | 99.9% | OK     |
-| 7    | fulmine        | 84.71  | 23.601     | 998,059 | 99.8% | OK     |
-| 8    | vertx          | 81.64  | 24.846     | 997,928 | 99.8% | OK     |
-| 9    | ntex           | 80.32  | 26.145     | 998,272 | 99.8% | OK     |
-| 10   | libuvcpp       | 75.14  | 29.727     | 998,327 | 99.8% | OK     |
-| 11   | fiber          | 73.14  | 31.872     | 998,231 | 99.8% | OK     |
-| 12   | hono-bun       | 72.82  | 28.455     | 998,195 | 99.8% | OK     |
-| 13   | bun            | 69.28  | 33.382     | 998,106 | 99.8% | OK     |
-| 14   | elysia         | 69.06  | 30.009     | 997,967 | 99.8% | OK     |
-| 15   | genhttp        | 58.59  | 33.447     | 998,016 | 99.8% | OK     |
-+------+----------------+--------+------------+---------+-------+--------+
++------+----------------------+--------+------------+---------+-------+--------+
+| Rank | Server               | Score  | CPU us/req | RPS     | Rate  | Status |
++------+----------------------+--------+------------+---------+-------+--------+
+| 1    | doba                 | 100.00 | 18.081     | 998,335 | 99.8% | OK     |
+| 2    | tako                 | 95.81  | 19.426     | 998,556 | 99.9% | OK     |
+| 3    | genhttp-ioxide       | 95.54  | 19.102     | 997,716 | 99.8% | OK     |
+| 4    | actix                | 93.96  | 20.189     | 998,236 | 99.8% | OK     |
+| 5    | spliffy              | 93.16  | 20.467     | 998,393 | 99.8% | OK     |
+| 6    | flare                | 92.68  | 20.656     | 998,368 | 99.8% | OK     |
+| 7    | dusty                | 92.67  | 20.788     | 998,296 | 99.8% | OK     |
+| 8    | lute                 | 90.90  | 20.867     | 998,502 | 99.9% | OK     |
+| 9    | morojs               | 90.34  | 21.178     | 998,415 | 99.8% | OK     |
+| 10   | fulmine              | 90.26  | 21.522     | 998,325 | 99.8% | OK     |
+| 11   | vertx                | 88.96  | 21.627     | 998,200 | 99.8% | OK     |
+| 12   | araara               | 81.58  | 26.221     | 997,959 | 99.8% | OK     |
+| 13   | ntex                 | 81.22  | 26.367     | 998,360 | 99.8% | OK     |
+| 14   | libuvcpp             | 77.20  | 28.726     | 998,363 | 99.8% | OK     |
+| 15   | fiber                | 73.39  | 32.046     | 997,983 | 99.8% | OK     |
+| 16   | bun                  | 70.54  | 33.010     | 998,222 | 99.8% | OK     |
+| 17   | micronaut-production | 68.32  | 28.401     | 997,811 | 99.8% | OK     |
+| 18   | genhttp              | 57.18  | 33.178     | 998,414 | 99.8% | OK     |
+| 19   | trillium             | 51.62  | 23.195     | 986,795 | 98.7% | OK     |
+| 20   | axum                 | 49.95  | 24.311     | 998,097 | 99.8% | OK     |
+| 21   | mq-bridge            | 43.07  | 27.171     | 998,154 | 99.8% | OK     |
++------+----------------------+--------+------------+---------+-------+--------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+----------+----------+
-| Server         | Avg     | p99      | p99.9    |
-+----------------+---------+----------+----------+
-| doba           | 67.6us  | 94.0us   | 845.0us  |
-| genhttp-ioxide | 75.6us  | 100.0us  | 4406.0us |
-| tako           | 69.2us  | 94.0us   | 561.0us  |
-| actix          | 71.3us  | 101.0us  | 377.0us  |
-| morojs         | 76.6us  | 105.0us  | 3163.0us |
-| dusty          | 73.1us  | 103.0us  | 2038.0us |
-| fulmine        | 77.9us  | 120.0us  | 3057.0us |
-| vertx          | 85.2us  | 128.0us  | 2319.0us |
-| ntex           | 82.5us  | 125.0us  | 617.0us  |
-| libuvcpp       | 88.9us  | 137.0us  | 4106.0us |
-| fiber          | 84.2us  | 162.0us  | 1656.0us |
-| hono-bun       | 92.9us  | 328.0us  | 3065.0us |
-| bun            | 90.4us  | 270.0us  | 1474.0us |
-| elysia         | 98.7us  | 498.0us  | 3633.0us |
-| genhttp        | 129.2us | 1750.0us | 8668.0us |
-+----------------+---------+----------+----------+
++----------------------+----------+----------+-----------+
+| Server               | Avg      | p99      | p99.9     |
++----------------------+----------+----------+-----------+
+| doba                 | 67.0us   | 94.0us   | 958.0us   |
+| tako                 | 71.4us   | 95.0us   | 1497.0us  |
+| genhttp-ioxide       | 77.9us   | 98.0us   | 6442.0us  |
+| actix                | 71.0us   | 99.0us   | 2807.0us  |
+| spliffy              | 71.8us   | 101.0us  | 3799.0us  |
+| flare                | 71.4us   | 105.0us  | 2989.0us  |
+| dusty                | 70.8us   | 100.0us  | 1476.0us  |
+| lute                 | 80.0us   | 108.0us  | 7294.0us  |
+| morojs               | 79.4us   | 108.0us  | 7050.0us  |
+| fulmine              | 75.4us   | 107.0us  | 4466.0us  |
+| vertx                | 79.6us   | 123.0us  | 3751.0us  |
+| araara               | 80.2us   | 122.0us  | 1557.0us  |
+| ntex                 | 80.6us   | 126.0us  | 252.0us   |
+| libuvcpp             | 87.8us   | 136.0us  | 4098.0us  |
+| fiber                | 88.2us   | 156.0us  | 5378.0us  |
+| bun                  | 90.0us   | 257.0us  | 3291.0us  |
+| micronaut-production | 110.0us  | 888.0us  | 6438.0us  |
+| genhttp              | 141.3us  | 2569.0us | 5370.0us  |
+| trillium             | 716.5us  | 2857.0us | 9964.0us  |
+| axum                 | 846.3us  | 2761.0us | 19192.0us |
+| mq-bridge            | 1158.1us | 6270.0us | 30776.0us |
++----------------------+----------+----------+-----------+
 
 FIXED RATE: latency-500k-8cpu (1024 connections)
 Official score formula, normalized to THIS session only (not the public leaderboard).
 Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
 WARNING: inspect rate penalties, missing CPU and topology fallback before interpreting scores.
-+------+----------------+--------+------------+---------+-------+--------------+
-| Rank | Server         | Score  | CPU us/req | RPS     | Rate  | Status       |
-+------+----------------+--------+------------+---------+-------+--------------+
-| 1    | doba           | 100.00 | 15.930     | 493,292 | 98.7% | OK           |
-| 2    | tako           | 82.27  | 16.732     | 475,636 | 95.1% | OK           |
-| 3    | dusty          | 81.97  | 16.606     | 479,921 | 96.0% | OK           |
-| 4    | genhttp-ioxide | 78.06  | 16.704     | 473,460 | 94.7% | RATE PENALTY |
-| 5    | actix          | 67.22  | 17.583     | 454,033 | 90.8% | RATE PENALTY |
-| 6    | morojs         | 57.45  | 18.388     | 432,920 | 86.6% | RATE PENALTY |
-| 7    | fulmine        | 45.73  | 20.720     | 384,579 | 76.9% | RATE PENALTY |
-| 8    | bun            | 45.00  | 20.914     | 381,306 | 76.3% | RATE PENALTY |
-| 9    | fiber          | 42.43  | 21.553     | 370,069 | 74.0% | RATE PENALTY |
-| 10   | vertx          | 41.53  | 22.077     | 361,125 | 72.2% | RATE PENALTY |
-| 11   | genhttp        | 38.30  | 21.346     | 330,115 | 66.0% | RATE PENALTY |
-| 12   | hono-bun       | 36.86  | 23.352     | 340,188 | 68.0% | RATE PENALTY |
-| 13   | ntex           | 35.84  | 23.963     | 333,076 | 66.6% | RATE PENALTY |
-| 14   | elysia         | 32.35  | 25.244     | 315,083 | 63.0% | RATE PENALTY |
-| 15   | libuvcpp       | 26.96  | 28.124     | 283,871 | 56.8% | RATE PENALTY |
-+------+----------------+--------+------------+---------+-------+--------------+
++------+----------------------+-------+------------+---------+-------+--------------+
+| Rank | Server               | Score | CPU us/req | RPS     | Rate  | Status       |
++------+----------------------+-------+------------+---------+-------+--------------+
+| 1    | doba                 | 97.58 | 16.111     | 490,955 | 98.2% | OK           |
+| 2    | tako                 | 87.37 | 16.645     | 478,910 | 95.8% | OK           |
+| 3    | genhttp-ioxide       | 84.56 | 16.483     | 477,786 | 95.6% | OK           |
+| 4    | dusty                | 77.67 | 17.028     | 468,011 | 93.6% | RATE PENALTY |
+| 5    | spliffy              | 68.90 | 17.507     | 453,388 | 90.7% | RATE PENALTY |
+| 6    | actix                | 65.72 | 17.918     | 444,752 | 88.9% | RATE PENALTY |
+| 7    | morojs               | 63.07 | 18.090     | 440,611 | 88.1% | RATE PENALTY |
+| 8    | flare                | 60.13 | 18.441     | 432,507 | 86.5% | RATE PENALTY |
+| 9    | fulmine              | 58.55 | 18.528     | 430,935 | 86.2% | RATE PENALTY |
+| 10   | vertx                | 56.46 | 18.774     | 424,064 | 84.8% | RATE PENALTY |
+| 11   | trillium             | 51.37 | 19.732     | 403,612 | 80.7% | RATE PENALTY |
+| 12   | axum                 | 46.81 | 20.703     | 385,242 | 77.0% | RATE PENALTY |
+| 13   | lute                 | 45.33 | 20.641     | 387,247 | 77.5% | RATE PENALTY |
+| 14   | bun                  | 44.67 | 21.087     | 377,815 | 75.6% | RATE PENALTY |
+| 15   | fiber                | 42.03 | 21.723     | 367,565 | 73.5% | RATE PENALTY |
+| 16   | mq-bridge            | 41.03 | 22.233     | 358,976 | 71.8% | RATE PENALTY |
+| 17   | genhttp              | 38.63 | 21.299     | 332,076 | 66.4% | RATE PENALTY |
+| 18   | araara               | 37.04 | 23.218     | 343,247 | 68.7% | RATE PENALTY |
+| 19   | ntex                 | 36.29 | 23.797     | 335,597 | 67.1% | RATE PENALTY |
+| 20   | micronaut-production | 32.11 | 25.427     | 313,025 | 62.6% | RATE PENALTY |
+| 21   | libuvcpp             | 29.45 | 26.655     | 299,090 | 59.8% | RATE PENALTY |
++------+----------------------+-------+------------+---------+-------+--------------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+-------------+-------------+-------------+
-| Server         | Avg         | p99         | p99.9       |
-+----------------+-------------+-------------+-------------+
-| doba           | 115094.0us  | 916224.0us  | 983296.0us  |
-| tako           | 469989.7us  | 930048.0us  | 1026304.0us |
-| dusty          | 400769.0us  | 1799680.0us | 2792448.0us |
-| genhttp-ioxide | 509073.5us  | 2231296.0us | 2345984.0us |
-| actix          | 915572.4us  | 1804800.0us | 1836544.0us |
-| morojs         | 1291563.7us | 3941376.0us | 4241408.0us |
-| fulmine        | 2195558.1us | 6264832.0us | 6424576.0us |
-| bun            | 2329404.9us | 6383616.0us | 6883328.0us |
-| fiber          | 2496678.9us | 7272448.0us | 8597504.0us |
-| vertx          | 2752029.7us | 5453824.0us | 5531648.0us |
-| genhttp        | 3391900.0us | 6711296.0us | 6813696.0us |
-| hono-bun       | 3175623.0us | 7555072.0us | 8128512.0us |
-| ntex           | 3326908.3us | 6572032.0us | 6653952.0us |
-| elysia         | 3652488.8us | 7874560.0us | 8157184.0us |
-| libuvcpp       | 4273252.1us | 8867840.0us | 9490432.0us |
-+----------------+-------------+-------------+-------------+
++----------------------+-------------+-------------+-------------+
+| Server               | Avg         | p99         | p99.9       |
++----------------------+-------------+-------------+-------------+
+| doba                 | 157587.7us  | 1593856.0us | 1713664.0us |
+| tako                 | 435159.7us  | 817408.0us  | 848640.0us  |
+| genhttp-ioxide       | 429951.1us  | 2098176.0us | 2235392.0us |
+| dusty                | 596534.6us  | 2485248.0us | 3093504.0us |
+| spliffy              | 903693.6us  | 3132416.0us | 3372032.0us |
+| actix                | 1110640.9us | 2192384.0us | 2298880.0us |
+| morojs               | 1099278.7us | 3679232.0us | 3963904.0us |
+| flare                | 1351724.8us | 2688000.0us | 2864128.0us |
+| fulmine              | 1342285.4us | 3929088.0us | 4237312.0us |
+| vertx                | 1568704.0us | 3009536.0us | 3118080.0us |
+| trillium             | 1716169.9us | 3599360.0us | 3714048.0us |
+| axum                 | 2292080.2us | 4528128.0us | 4646912.0us |
+| lute                 | 2003041.6us | 8392704.0us | 9072640.0us |
+| bun                  | 2404245.3us | 5728256.0us | 6174720.0us |
+| fiber                | 2566625.3us | 6989824.0us | 8275968.0us |
+| mq-bridge            | 2814130.6us | 5564416.0us | 5675008.0us |
+| genhttp              | 3348338.0us | 6621184.0us | 6723584.0us |
+| araara               | 3025752.0us | 8425472.0us | 9113600.0us |
+| ntex                 | 3279200.0us | 6481920.0us | 6608896.0us |
+| micronaut-production | 3747454.0us | 7354368.0us | 7981056.0us |
+| libuvcpp             | 3971961.2us | 8441856.0us | 8646656.0us |
++----------------------+-------------+-------------+-------------+
 
 THROUGHPUT DETAIL: async (32000 connections)
-+-----------+----------------+--------------+---------+---------+---------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory  |
-+-----------+----------------+--------------+---------+---------+---------+
-| 1         | doba           | 2,673,128    | 100.0%  | 6280.0% | 448MiB  |
-| 2         | actix          | 2,524,935    | 94.5%   | 4884.8% | 898MiB  |
-| 3         | tako           | 2,469,284    | 92.4%   | 5288.9% | 964MiB  |
-| 4         | genhttp-ioxide | 2,348,200    | 87.8%   | 6259.7% | 6.7GiB  |
-| 5         | fulmine        | 2,344,920    | 87.7%   | 6334.9% | 5.7GiB  |
-| 6         | morojs         | 2,276,610    | 85.2%   | 6092.2% | 4.5GiB  |
-| 7         | dusty          | 2,244,520    | 84.0%   | 5334.9% | 1.3GiB  |
-| 8         | bun            | 2,197,228    | 82.2%   | 6159.1% | 1.5GiB  |
-| 9         | vertx          | 1,838,392    | 68.8%   | 6257.2% | 16.0GiB |
-| 10        | elysia         | 1,787,463    | 66.9%   | 6242.2% | 2.2GiB  |
-| 11        | hono-bun       | 1,755,897    | 65.7%   | 6157.2% | 1.9GiB  |
-| 12        | libuvcpp       | 1,641,904    | 61.4%   | 6379.4% | 512MiB  |
-| 13        | fiber          | 1,567,770    | 58.6%   | 4186.2% | 1.0GiB  |
-| 14        | genhttp        | 1,364,551    | 51.0%   | 4722.9% | 2.1GiB  |
-| 15        | ntex           | 962,901      | 36.0%   | 2855.6% | 786MiB  |
-+-----------+----------------+--------------+---------+---------+---------+
++-----------+----------------------+--------------+---------+---------+---------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory  |
++-----------+----------------------+--------------+---------+---------+---------+
+| 1         | doba                 | 2,583,018    | 100.0%  | 6264.3% | 458MiB  |
+| 2         | tako                 | 2,500,054    | 96.8%   | 5259.1% | 911MiB  |
+| 3         | fulmine              | 2,498,983    | 96.7%   | 6162.6% | 5.1GiB  |
+| 4         | dusty                | 2,481,415    | 96.1%   | 6297.1% | 1.3GiB  |
+| 5         | spliffy              | 2,479,837    | 96.0%   | 6183.3% | 4.8GiB  |
+| 6         | actix                | 2,367,463    | 91.7%   | 4617.0% | 964MiB  |
+| 7         | genhttp-ioxide       | 2,308,702    | 89.4%   | 6256.8% | 8.6GiB  |
+| 8         | morojs               | 2,217,229    | 85.8%   | 6076.5% | 4.2GiB  |
+| 9         | bun                  | 2,165,827    | 83.8%   | 6161.8% | 1.5GiB  |
+| 10        | vertx                | 2,120,344    | 82.1%   | 6090.4% | 16.8GiB |
+| 11        | libuvcpp             | 1,662,910    | 64.4%   | 6340.3% | 508MiB  |
+| 12        | fiber                | 1,585,995    | 61.4%   | 4179.5% | 1.0GiB  |
+| 13        | araara               | 1,352,568    | 52.4%   | 4480.0% | 2.0GiB  |
+| 14        | genhttp              | 1,345,125    | 52.1%   | 4659.8% | 1.9GiB  |
+| 15        | micronaut-production | 1,002,259    | 38.8%   | 4978.3% | 14.4GiB |
+| 16        | ntex                 | 977,138      | 37.8%   | 2876.7% | 797MiB  |
+| 17        | trillium             | 605,256      | 23.4%   | 3486.1% | 1.5GiB  |
+| 18        | lute                 | 294,457      | 11.4%   | 5698.1% | 893MiB  |
+| 19        | mq-bridge            | 291,298      | 11.3%   | 5435.2% | 1.2GiB  |
+| 20        | axum                 | 258,482      | 10.0%   | 1395.4% | 1.4GiB  |
++-----------+----------------------+--------------+---------+---------+---------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+---------+
-| Server         | Avg     | p99     |
-+----------------+---------+---------+
-| doba           | 12.13ms | 13.80ms |
-| actix          | 13.46ms | 15.30ms |
-| tako           | 12.99ms | 14.60ms |
-| genhttp-ioxide | 13.63ms | 19.30ms |
-| fulmine        | 13.68ms | 15.60ms |
-| morojs         | 14.44ms | 19.80ms |
-| dusty          | 13.06ms | 16.70ms |
-| bun            | 15.01ms | 23.10ms |
-| vertx          | 17.41ms | 28.10ms |
-| elysia         | 17.92ms | 29.40ms |
-| hono-bun       | 18.46ms | 27.40ms |
-| libuvcpp       | 19.32ms | 22.00ms |
-| fiber          | 20.41ms | 30.00ms |
-| genhttp        | 24.85ms | 45.00ms |
-| ntex           | 30.89ms | 34.80ms |
-+----------------+---------+---------+
++----------------------+----------+----------+
+| Server               | Avg      | p99      |
++----------------------+----------+----------+
+| doba                 | 12.39ms  | 14.70ms  |
+| tako                 | 13.03ms  | 14.80ms  |
+| fulmine              | 12.91ms  | 18.00ms  |
+| dusty                | 12.92ms  | 16.00ms  |
+| spliffy              | 12.88ms  | 15.70ms  |
+| actix                | 13.34ms  | 14.50ms  |
+| genhttp-ioxide       | 13.85ms  | 19.40ms  |
+| morojs               | 14.43ms  | 19.80ms  |
+| bun                  | 14.88ms  | 22.80ms  |
+| vertx                | 15.10ms  | 24.80ms  |
+| libuvcpp             | 18.78ms  | 21.60ms  |
+| fiber                | 20.49ms  | 30.00ms  |
+| araara               | 23.59ms  | 27.50ms  |
+| genhttp              | 25.45ms  | 48.20ms  |
+| micronaut-production | 31.85ms  | 119.10ms |
+| ntex                 | 30.66ms  | 34.60ms  |
+| trillium             | 46.12ms  | 51.50ms  |
+| lute                 | 107.51ms | 121.20ms |
+| mq-bridge            | 109.83ms | 162.00ms |
+| axum                 | 124.71ms | 175.30ms |
++----------------------+----------+----------+
 
 THROUGHPUT DETAIL: json-comp (4096 connections)
 Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
-+-----------+----------------+--------------+---------+---------+--------+-------------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory | Bandwidth   |
-+-----------+----------------+--------------+---------+---------+--------+-------------+
-| 1         | genhttp-ioxide | 735,305      | 100.0%  | 6073.6% | 2.5GiB | 1.23GB/s    |
-| 2         | ntex           | 602,094      | 81.9%   | 6542.6% | 190MiB | 1.01GB/s    |
-| 3         | actix          | 580,365      | 78.9%   | 6137.2% | 240MiB | 1005.21MB/s |
-| 4         | fulmine        | 562,890      | 76.6%   | 6446.7% | 8.3GiB | 822.04MB/s  |
-| 5         | bun            | 547,039      | 74.4%   | 5890.8% | 1.1GiB | 731.38MB/s  |
-| 6         | genhttp        | 542,722      | 73.8%   | 6035.5% | 753MiB | 931.32MB/s  |
-| 7         | doba           | 496,446      | 67.5%   | 6510.3% | 124MiB | 664.32MB/s  |
-| 8         | dusty          | 495,893      | 67.4%   | 6184.5% | 197MiB | 646.14MB/s  |
-| 9         | elysia         | 437,335      | 59.5%   | 6420.5% | 1.8GiB | 593.01MB/s  |
-| 10        | libuvcpp       | 394,801      | 53.7%   | 6122.7% | 146MiB | 564.24MB/s  |
-| 11        | morojs         | 363,219      | 49.4%   | 6129.0% | 8.6GiB | 489.32MB/s  |
-| 12        | fiber          | 352,909      | 48.0%   | 6436.3% | 824MiB | 469.28MB/s  |
-| 13        | vertx          | 319,639      | 43.5%   | 6007.1% | 5.8GiB | 411.30MB/s  |
-| 14        | hono-bun       | 242,616      | 33.0%   | 6145.6% | 1.4GiB | 335.10MB/s  |
-| 15        | tako           | 223,718      | 30.4%   | 6462.5% | 247MiB | 274.04MB/s  |
-+-----------+----------------+--------------+---------+---------+--------+-------------+
++-----------+----------------------+--------------+---------+---------+--------+-------------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory | Bandwidth   |
++-----------+----------------------+--------------+---------+---------+--------+-------------+
+| 1         | flare                | 843,438      | 100.0%  | 6134.8% | 373MiB | 1.32GB/s    |
+| 2         | genhttp-ioxide       | 738,600      | 87.6%   | 6430.0% | 2.5GiB | 1.24GB/s    |
+| 3         | dusty                | 672,483      | 79.7%   | 6124.2% | 341MiB | 987.49MB/s  |
+| 4         | ntex                 | 598,595      | 71.0%   | 6540.2% | 199MiB | 1.00GB/s    |
+| 5         | actix                | 584,200      | 69.3%   | 6117.2% | 245MiB | 1011.86MB/s |
+| 6         | genhttp              | 547,384      | 64.9%   | 6070.4% | 725MiB | 939.38MB/s  |
+| 7         | spliffy              | 546,580      | 64.8%   | 6463.3% | 2.2GiB | 730.04MB/s  |
+| 8         | bun                  | 542,730      | 64.3%   | 5894.3% | 1.1GiB | 725.64MB/s  |
+| 9         | fulmine              | 520,758      | 61.7%   | 6070.9% | 7.0GiB | 694.57MB/s  |
+| 10        | doba                 | 476,615      | 56.5%   | 6061.4% | 130MiB | 637.86MB/s  |
+| 11        | mq-bridge            | 431,974      | 51.2%   | 6500.8% | 271MiB | 595.51MB/s  |
+| 12        | araara               | 396,515      | 47.0%   | 5972.2% | 980MiB | 536.30MB/s  |
+| 13        | micronaut-production | 393,407      | 46.6%   | 6061.2% | 2.8GiB | 520.08MB/s  |
+| 14        | vertx                | 383,329      | 45.4%   | 6411.1% | 5.5GiB | 493.27MB/s  |
+| 15        | morojs               | 364,045      | 43.2%   | 6081.3% | 8.7GiB | 490.36MB/s  |
+| 16        | libuvcpp             | 353,848      | 42.0%   | 6072.0% | 147MiB | 505.88MB/s  |
+| 17        | fiber                | 348,307      | 41.3%   | 6364.2% | 822MiB | 463.10MB/s  |
+| 18        | axum                 | 325,423      | 38.6%   | 6111.6% | 319MiB | 436.40MB/s  |
+| 19        | tako                 | 219,666      | 26.0%   | 6137.9% | 248MiB | 269.08MB/s  |
+| 20        | trillium             | 130,103      | 15.4%   | 6455.4% | 791MiB | 176.36MB/s  |
++-----------+----------------------+--------------+---------+---------+--------+-------------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+----------+
-| Server         | Avg     | p99      |
-+----------------+---------+----------+
-| genhttp-ioxide | 5.56ms  | 14.70ms  |
-| ntex           | 6.79ms  | 29.20ms  |
-| actix          | 5.72ms  | 34.60ms  |
-| fulmine        | 7.27ms  | 22.20ms  |
-| bun            | 7.49ms  | 19.50ms  |
-| genhttp        | 7.54ms  | 24.60ms  |
-| doba           | 8.14ms  | 194.30ms |
-| dusty          | 2.78ms  | 52.30ms  |
-| elysia         | 9.36ms  | 20.90ms  |
-| libuvcpp       | 10.22ms | 234.30ms |
-| morojs         | 11.26ms | 32.90ms  |
-| fiber          | 11.61ms | 33.80ms  |
-| vertx          | 12.83ms | 28.50ms  |
-| hono-bun       | 16.87ms | 36.10ms  |
-| tako           | 18.32ms | 27.20ms  |
-+----------------+---------+----------+
++----------------------+---------+----------+
+| Server               | Avg     | p99      |
++----------------------+---------+----------+
+| flare                | 4.86ms  | 28.90ms  |
+| genhttp-ioxide       | 5.54ms  | 14.50ms  |
+| dusty                | 5.99ms  | 146.50ms |
+| ntex                 | 6.82ms  | 41.40ms  |
+| actix                | 5.90ms  | 52.40ms  |
+| genhttp              | 7.20ms  | 19.90ms  |
+| spliffy              | 7.49ms  | 21.80ms  |
+| bun                  | 7.53ms  | 19.80ms  |
+| fulmine              | 7.86ms  | 22.80ms  |
+| doba                 | 8.46ms  | 224.20ms |
+| mq-bridge            | 9.48ms  | 29.50ms  |
+| araara               | 10.21ms | 191.60ms |
+| micronaut-production | 10.42ms | 24.70ms  |
+| vertx                | 10.70ms | 29.80ms  |
+| morojs               | 11.23ms | 33.40ms  |
+| libuvcpp             | 11.33ms | 274.30ms |
+| fiber                | 11.74ms | 34.40ms  |
+| axum                 | 12.57ms | 38.10ms  |
+| tako                 | 18.65ms | 28.40ms  |
+| trillium             | 7.13ms  | 20.80ms  |
++----------------------+---------+----------+
 
 THROUGHPUT DETAIL: json-comp (16384 connections)
 Raw throughput detail only; compression-weighted ranking is in PROFILE SCORE above.
-+-----------+----------------+--------------+---------+---------+---------+-------------+
-| RPS order | Server         | Selected RPS | vs best | CPU     | Memory  | Bandwidth   |
-+-----------+----------------+--------------+---------+---------+---------+-------------+
-| 1         | genhttp-ioxide | 728,032      | 100.0%  | 6118.8% | 3.8GiB  | 1.22GB/s    |
-| 2         | ntex           | 585,659      | 80.4%   | 6077.6% | 374MiB  | 1005.92MB/s |
-| 3         | actix          | 579,570      | 79.6%   | 6535.7% | 438MiB  | 1003.74MB/s |
-| 4         | fulmine        | 567,782      | 78.0%   | 6114.3% | 8.0GiB  | 829.15MB/s  |
-| 5         | bun            | 551,318      | 75.7%   | 5819.6% | 1.1GiB  | 737.11MB/s  |
-| 6         | genhttp        | 534,977      | 73.5%   | 5906.3% | 1.6GiB  | 918.01MB/s  |
-| 7         | dusty          | 496,630      | 68.2%   | 6093.7% | 309MiB  | 646.99MB/s  |
-| 8         | doba           | 480,896      | 66.1%   | 6525.9% | 216MiB  | 643.58MB/s  |
-| 9         | elysia         | 440,761      | 60.5%   | 6525.0% | 1.8GiB  | 597.63MB/s  |
-| 10        | libuvcpp       | 417,094      | 57.3%   | 6507.1% | 156MiB  | 596.03MB/s  |
-| 11        | fiber          | 351,308      | 48.3%   | 6536.6% | 1.7GiB  | 467.06MB/s  |
-| 12        | morojs         | 347,173      | 47.7%   | 6124.0% | 10.1GiB | 467.62MB/s  |
-| 13        | vertx          | 320,558      | 44.0%   | 6050.0% | 12.5GiB | 412.48MB/s  |
-| 14        | hono-bun       | 243,522      | 33.4%   | 6085.3% | 1.5GiB  | 336.29MB/s  |
-| 15        | tako           | 220,767      | 30.3%   | 6496.2% | 586MiB  | 270.43MB/s  |
-+-----------+----------------+--------------+---------+---------+---------+-------------+
++-----------+----------------------+--------------+---------+---------+---------+-------------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory  | Bandwidth   |
++-----------+----------------------+--------------+---------+---------+---------+-------------+
+| 1         | flare                | 845,016      | 100.0%  | 6081.9% | 585MiB  | 1.32GB/s    |
+| 2         | genhttp-ioxide       | 715,995      | 84.7%   | 6026.3% | 4.1GiB  | 1.20GB/s    |
+| 3         | dusty                | 670,563      | 79.4%   | 6080.5% | 661MiB  | 984.68MB/s  |
+| 4         | ntex                 | 584,663      | 69.2%   | 6093.2% | 410MiB  | 1004.35MB/s |
+| 5         | actix                | 575,916      | 68.2%   | 6079.9% | 407MiB  | 997.47MB/s  |
+| 6         | spliffy              | 555,954      | 65.8%   | 6100.0% | 3.2GiB  | 742.54MB/s  |
+| 7         | genhttp              | 553,728      | 65.5%   | 5941.5% | 1.5GiB  | 950.28MB/s  |
+| 8         | bun                  | 552,271      | 65.4%   | 5803.5% | 1.1GiB  | 738.37MB/s  |
+| 9         | fulmine              | 527,509      | 62.4%   | 6093.3% | 7.7GiB  | 703.61MB/s  |
+| 10        | doba                 | 487,517      | 57.7%   | 6507.5% | 241MiB  | 652.30MB/s  |
+| 11        | mq-bridge            | 424,917      | 50.3%   | 6506.4% | 752MiB  | 585.81MB/s  |
+| 12        | araara               | 406,061      | 48.1%   | 6488.3% | 1.4GiB  | 549.14MB/s  |
+| 13        | micronaut-production | 393,358      | 46.6%   | 5963.4% | 5.6GiB  | 520.04MB/s  |
+| 14        | vertx                | 379,616      | 44.9%   | 6027.4% | 10.8GiB | 488.49MB/s  |
+| 15        | morojs               | 362,441      | 42.9%   | 6095.9% | 9.9GiB  | 488.20MB/s  |
+| 16        | libuvcpp             | 354,848      | 42.0%   | 6487.9% | 157MiB  | 507.25MB/s  |
+| 17        | fiber                | 350,911      | 41.5%   | 6544.6% | 1.7GiB  | 466.53MB/s  |
+| 18        | axum                 | 287,796      | 34.1%   | 6024.5% | 898MiB  | 386.00MB/s  |
+| 19        | tako                 | 220,238      | 26.1%   | 6491.6% | 590MiB  | 269.80MB/s  |
+| 20        | trillium             | 141,054      | 16.7%   | 6440.2% | 886MiB  | 191.11MB/s  |
++-----------+----------------------+--------------+---------+---------+---------+-------------+
 LATENCY: values saved by upstream for its selected repetition
-+----------------+---------+----------+
-| Server         | Avg     | p99      |
-+----------------+---------+----------+
-| genhttp-ioxide | 22.47ms | 35.40ms  |
-| ntex           | 23.53ms | 67.80ms  |
-| actix          | 19.40ms | 47.20ms  |
-| fulmine        | 28.79ms | 70.60ms  |
-| bun            | 29.73ms | 56.90ms  |
-| genhttp        | 27.00ms | 63.20ms  |
-| dusty          | 4.01ms  | 52.60ms  |
-| doba           | 31.68ms | 814.30ms |
-| elysia         | 37.07ms | 66.10ms  |
-| libuvcpp       | 24.88ms | 509.00ms |
-| fiber          | 46.47ms | 80.30ms  |
-| morojs         | 47.11ms | 106.30ms |
-| vertx          | 50.97ms | 107.40ms |
-| hono-bun       | 66.85ms | 111.20ms |
-| tako           | 73.75ms | 122.70ms |
-+----------------+---------+----------+
++----------------------+---------+----------+
+| Server               | Avg     | p99      |
++----------------------+---------+----------+
+| flare                | 19.08ms | 269.10ms |
+| genhttp-ioxide       | 22.86ms | 46.50ms  |
+| dusty                | 22.95ms | 608.00ms |
+| ntex                 | 24.46ms | 61.70ms  |
+| actix                | 16.25ms | 42.30ms  |
+| spliffy              | 29.48ms | 71.60ms  |
+| genhttp              | 25.12ms | 66.70ms  |
+| bun                  | 29.61ms | 55.70ms  |
+| fulmine              | 31.05ms | 76.10ms  |
+| doba                 | 31.27ms | 799.80ms |
+| mq-bridge            | 38.52ms | 76.40ms  |
+| araara               | 37.62ms | 864.30ms |
+| micronaut-production | 41.50ms | 69.60ms  |
+| vertx                | 43.07ms | 87.40ms  |
+| morojs               | 45.13ms | 98.50ms  |
+| libuvcpp             | 29.07ms | 602.50ms |
+| fiber                | 46.48ms | 80.60ms  |
+| axum                 | 56.96ms | 136.00ms |
+| tako                 | 74.05ms | 122.80ms |
+| trillium             | 14.92ms | 87.00ms  |
++----------------------+---------+----------+
 
 THROUGHPUT DETAIL: json-tls (4096 connections)
-+-----------+----------+--------------+---------+---------+---------+
-| RPS order | Server   | Selected RPS | vs best | CPU     | Memory  |
-+-----------+----------+--------------+---------+---------+---------+
-| 1         | fulmine  | 1,524,725    | 100.0%  | 6214.6% | 6.9GiB  |
-| 2         | doba     | 1,426,136    | 93.5%   | 6197.6% | 665MiB  |
-| 3         | actix    | 1,421,240    | 93.2%   | 6505.8% | 245MiB  |
-| 4         | ntex     | 1,418,839    | 93.1%   | 6177.0% | 164MiB  |
-| 5         | elysia   | 1,403,226    | 92.0%   | 6460.8% | 1.4GiB  |
-| 6         | bun      | 1,327,128    | 87.0%   | 5868.2% | 997MiB  |
-| 7         | morojs   | 1,096,483    | 71.9%   | 6201.9% | 4.1GiB  |
-| 8         | hono-bun | 1,092,722    | 71.7%   | 6213.2% | 1.3GiB  |
-| 9         | fiber    | 1,042,265    | 68.4%   | 6149.6% | 736MiB  |
-| 10        | genhttp  | 972,107      | 63.8%   | 5817.2% | 1.1GiB  |
-| 11        | tako     | 963,956      | 63.2%   | 4379.4% | 245MiB  |
-| 12        | dusty    | 957,183      | 62.8%   | 6523.4% | 801MiB  |
-| 13        | libuvcpp | 914,971      | 60.0%   | 6542.0% | 673MiB  |
-| 14        | vertx    | 780,699      | 51.2%   | 6137.9% | 11.3GiB |
-+-----------+----------+--------------+---------+---------+---------+
++-----------+----------------------+--------------+---------+---------+--------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------------+--------------+---------+---------+--------+
+| 1         | spliffy              | 1,656,137    | 100.0%  | 6472.9% | 1.8GiB |
+| 2         | fulmine              | 1,579,317    | 95.4%   | 6168.6% | 2.8GiB |
+| 3         | actix                | 1,428,061    | 86.2%   | 6182.8% | 251MiB |
+| 4         | ntex                 | 1,419,010    | 85.7%   | 6463.4% | 160MiB |
+| 5         | doba                 | 1,394,370    | 84.2%   | 6505.8% | 618MiB |
+| 6         | bun                  | 1,315,518    | 79.4%   | 5858.3% | 999MiB |
+| 7         | dusty                | 1,254,355    | 75.7%   | 6270.3% | 746MiB |
+| 8         | vertx                | 1,156,165    | 69.8%   | 6175.0% | 6.1GiB |
+| 9         | micronaut-production | 1,145,866    | 69.2%   | 6211.8% | 5.6GiB |
+| 10        | morojs               | 1,125,778    | 68.0%   | 6200.0% | 4.0GiB |
+| 11        | fiber                | 1,036,850    | 62.6%   | 6142.7% | 736MiB |
+| 12        | trillium             | 1,003,759    | 60.6%   | 3833.8% | 366MiB |
+| 13        | genhttp              | 966,537      | 58.4%   | 5619.6% | 1.1GiB |
+| 14        | tako                 | 952,870      | 57.5%   | 5605.3% | 281MiB |
+| 15        | araara               | 918,664      | 55.5%   | 6524.8% | 1.1GiB |
+| 16        | mq-bridge            | 896,197      | 54.1%   | 4092.5% | 264MiB |
+| 17        | axum                 | 847,239      | 51.2%   | 4295.7% | 203MiB |
+| 18        | libuvcpp             | 834,084      | 50.4%   | 6151.4% | 432MiB |
+| 19        | flare                | 366,861      | 22.2%   | 6099.9% | 667MiB |
+| 20        | lute                 | 84,439       | 5.1%    | 5766.4% | 179MiB |
++-----------+----------------------+--------------+---------+---------+--------+
 LATENCY: values saved by upstream for its selected repetition
 Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
-+----------+--------+-----------+
-| Server   | Avg    | Max (wrk) |
-+----------+--------+-----------+
-| fulmine  | 2.66ms | 113.81ms  |
-| doba     | 2.85ms | 62.12ms   |
-| actix    | 2.89ms | 72.13ms   |
-| ntex     | 2.86ms | 49.58ms   |
-| elysia   | 2.91ms | 65.94ms   |
-| bun      | 3.18ms | 81.33ms   |
-| morojs   | 3.70ms | 50.61ms   |
-| hono-bun | 3.74ms | 79.39ms   |
-| fiber    | 4.14ms | 136.80ms  |
-| genhttp  | 4.15ms | 52.29ms   |
-| tako     | 3.01ms | 23.49ms   |
-| dusty    | 3.77ms | 105.57ms  |
-| libuvcpp | 4.43ms | 50.99ms   |
-| vertx    | 5.88ms | 193.39ms  |
-+----------+--------+-----------+
++----------------------+---------+-----------+
+| Server               | Avg     | Max (wrk) |
++----------------------+---------+-----------+
+| spliffy              | 2.44ms  | 84.68ms   |
+| fulmine              | 2.57ms  | 104.34ms  |
+| actix                | 2.88ms  | 81.83ms   |
+| ntex                 | 2.86ms  | 74.49ms   |
+| doba                 | 2.93ms  | 56.60ms   |
+| bun                  | 3.20ms  | 50.58ms   |
+| dusty                | 3.09ms  | 49.24ms   |
+| vertx                | 3.55ms  | 69.96ms   |
+| micronaut-production | 4.08ms  | 269.81ms  |
+| morojs               | 3.61ms  | 55.69ms   |
+| fiber                | 4.18ms  | 135.30ms  |
+| trillium             | 3.08ms  | 26.34ms   |
+| genhttp              | 5.04ms  | 128.36ms  |
+| tako                 | 3.40ms  | 29.66ms   |
+| araara               | 4.42ms  | 48.17ms   |
+| mq-bridge            | 4.57ms  | 73.79ms   |
+| axum                 | 3.32ms  | 52.99ms   |
+| libuvcpp             | 4.84ms  | 54.37ms   |
+| flare                | 11.30ms | 104.33ms  |
+| lute                 | 48.72ms | 1.07s     |
++----------------------+---------+-----------+
 
 FIXED RATE: 8gbit (512 connections)
 Official score formula, normalized to THIS session only (not the public leaderboard).
 Upstream rules: full rate credit at 95%; missing CPU contributes zero CPU points.
-+------+----------+-------+------------+--------+-------+--------+
-| Rank | Server   | Score | CPU us/req | RPS    | Rate  | Status |
-+------+----------+-------+------------+--------+-------+--------+
-| 1    | doba     | 99.94 | 42.488     | 49,390 | 98.8% | OK     |
-| 2    | actix    | 97.15 | 44.779     | 49,426 | 98.9% | OK     |
-| 3    | tako     | 90.08 | 51.190     | 48,389 | 96.8% | OK     |
-| 4    | ntex     | 87.24 | 54.573     | 49,418 | 98.8% | OK     |
-| 5    | fulmine  | 82.92 | 59.877     | 49,372 | 98.7% | OK     |
-| 6    | fiber    | 81.84 | 63.850     | 49,345 | 98.7% | OK     |
-| 7    | morojs   | 79.83 | 63.576     | 49,345 | 98.7% | OK     |
-| 8    | libuvcpp | 77.97 | 65.419     | 49,320 | 98.6% | OK     |
-| 9    | bun      | 74.74 | 76.781     | 49,375 | 98.8% | OK     |
-| 10   | vertx    | 74.12 | 69.017     | 49,251 | 98.5% | OK     |
-| 11   | hono-bun | 72.94 | 78.800     | 49,396 | 98.8% | OK     |
-| 12   | dusty    | 72.00 | 74.816     | 48,976 | 98.0% | OK     |
-| 13   | elysia   | 70.70 | 82.204     | 49,366 | 98.7% | OK     |
-| 14   | genhttp  | 69.82 | 97.072     | 49,354 | 98.7% | OK     |
-+------+----------+-------+------------+--------+-------+--------+
++------+----------------------+-------+------------+--------+-------+--------+
+| Rank | Server               | Score | CPU us/req | RPS    | Rate  | Status |
++------+----------------------+-------+------------+--------+-------+--------+
+| 1    | lute                 | 99.79 | 41.551     | 49,410 | 98.8% | OK     |
+| 2    | doba                 | 97.58 | 43.010     | 49,371 | 98.7% | OK     |
+| 3    | actix                | 96.89 | 43.299     | 49,383 | 98.8% | OK     |
+| 4    | trillium             | 94.35 | 44.334     | 48,579 | 97.2% | OK     |
+| 5    | spliffy              | 90.60 | 49.238     | 49,374 | 98.8% | OK     |
+| 6    | vertx                | 90.25 | 50.017     | 49,439 | 98.9% | OK     |
+| 7    | tako                 | 88.63 | 50.876     | 48,558 | 97.1% | OK     |
+| 8    | flare                | 87.38 | 52.623     | 49,364 | 98.7% | OK     |
+| 9    | fulmine              | 85.63 | 54.552     | 49,408 | 98.8% | OK     |
+| 10   | axum                 | 84.90 | 54.653     | 49,269 | 98.5% | OK     |
+| 11   | ntex                 | 84.85 | 55.800     | 49,361 | 98.7% | OK     |
+| 12   | mq-bridge            | 83.24 | 56.613     | 49,354 | 98.7% | OK     |
+| 13   | libuvcpp             | 80.33 | 61.845     | 49,364 | 98.7% | OK     |
+| 14   | fiber                | 80.23 | 64.149     | 49,378 | 98.8% | OK     |
+| 15   | micronaut-production | 79.04 | 62.931     | 49,306 | 98.6% | OK     |
+| 16   | morojs               | 78.81 | 63.691     | 49,434 | 98.9% | OK     |
+| 17   | dusty                | 78.09 | 65.673     | 49,196 | 98.4% | OK     |
+| 18   | bun                  | 74.98 | 73.496     | 49,382 | 98.8% | OK     |
+| 19   | genhttp              | 68.99 | 95.916     | 49,381 | 98.8% | OK     |
+| 20   | araara               | 65.55 | 80.342     | 49,402 | 98.8% | OK     |
++------+----------------------+-------+------------+--------+-------+--------+
 LATENCY: values saved by upstream for its selected repetition
-+----------+---------+---------+-----------+
-| Server   | Avg     | p99     | p99.9     |
-+----------+---------+---------+-----------+
-| doba     | 88.4us  | 107.0us | 5830.0us  |
-| actix    | 87.9us  | 116.0us | 2575.0us  |
-| tako     | 92.3us  | 137.0us | 2831.0us  |
-| ntex     | 98.0us  | 123.0us | 2631.0us  |
-| fulmine  | 102.5us | 137.0us | 3939.0us  |
-| fiber    | 96.0us  | 122.0us | 2083.0us  |
-| morojs   | 111.3us | 142.0us | 9508.0us  |
-| libuvcpp | 117.6us | 155.0us | 9180.0us  |
-| bun      | 102.4us | 152.0us | 5090.0us  |
-| vertx    | 111.7us | 328.0us | 5798.0us  |
-| hono-bun | 106.0us | 185.0us | 4886.0us  |
-| dusty    | 138.3us | 161.0us | 10924.0us |
-| elysia   | 111.7us | 216.0us | 5522.0us  |
-| genhttp  | 102.9us | 118.0us | 7842.0us  |
-+----------+---------+---------+-----------+
++----------------------+---------+---------+----------+
+| Server               | Avg     | p99     | p99.9    |
++----------------------+---------+---------+----------+
+| lute                 | 84.0us  | 108.0us | 3499.0us |
+| doba                 | 88.4us  | 107.0us | 4638.0us |
+| actix                | 92.9us  | 102.0us | 9332.0us |
+| trillium             | 94.6us  | 143.0us | 2247.0us |
+| spliffy              | 92.9us  | 117.0us | 5394.0us |
+| vertx                | 90.6us  | 116.0us | 2755.0us |
+| tako                 | 92.4us  | 141.0us | 1393.0us |
+| flare                | 97.1us  | 118.0us | 7298.0us |
+| fulmine              | 97.6us  | 128.0us | 5598.0us |
+| axum                 | 99.1us  | 147.0us | 2057.0us |
+| ntex                 | 96.5us  | 130.0us | 3099.0us |
+| mq-bridge            | 101.8us | 149.0us | 1937.0us |
+| libuvcpp             | 103.1us | 136.0us | 2181.0us |
+| fiber                | 95.7us  | 125.0us | 3199.0us |
+| micronaut-production | 108.7us | 141.0us | 6366.0us |
+| morojs               | 106.1us | 145.0us | 5210.0us |
+| dusty                | 104.0us | 143.0us | 3885.0us |
+| bun                  | 100.0us | 150.0us | 5822.0us |
+| genhttp              | 103.5us | 114.0us | 7794.0us |
+| araara               | 126.1us | 520.0us | 6062.0us |
++----------------------+---------+---------+----------+
 
 THROUGHPUT DETAIL: static-tls (1024 connections)
-+-----------+----------+--------------+---------+---------+--------+
-| RPS order | Server   | Selected RPS | vs best | CPU     | Memory |
-+-----------+----------+--------------+---------+---------+--------+
-| 1         | fulmine  | 838,421      | 100.0%  | 6530.8% | 3.1GiB |
-| 2         | fiber    | 660,120      | 78.7%   | 6221.5% | 544MiB |
-| 3         | bun      | 606,152      | 72.3%   | 6271.2% | 1.1GiB |
-| 4         | elysia   | 588,043      | 70.1%   | 6520.4% | 1.9GiB |
-| 5         | genhttp  | 492,986      | 58.8%   | 5666.8% | 434MiB |
-| 6         | hono-bun | 326,523      | 38.9%   | 6528.6% | 1.4GiB |
-| 7         | libuvcpp | 287,870      | 34.3%   | 4938.7% | 565MiB |
-| 8         | vertx    | 229,285      | 27.3%   | 6203.0% | 1.7GiB |
-| 9         | tako     | 183,828      | 21.9%   | 3151.7% | 175MiB |
-| 10        | doba     | 175,672      | 21.0%   | 6330.4% | 238MiB |
-| 11        | actix    | 76,427       | 9.1%    | 5759.0% | 4.7GiB |
-| 12        | morojs   | 65,600       | 7.8%    | 5697.9% | 4.4GiB |
-+-----------+----------+--------------+---------+---------+--------+
++-----------+----------------------+--------------+---------+---------+--------+
+| RPS order | Server               | Selected RPS | vs best | CPU     | Memory |
++-----------+----------------------+--------------+---------+---------+--------+
+| 1         | fulmine              | 861,397      | 100.0%  | 6514.5% | 3.1GiB |
+| 2         | trillium             | 785,539      | 91.2%   | 6063.5% | 640MiB |
+| 3         | araara               | 729,214      | 84.7%   | 6563.7% | 610MiB |
+| 4         | spliffy              | 696,100      | 80.8%   | 6495.2% | 1.7GiB |
+| 5         | libuvcpp             | 679,451      | 78.9%   | 6273.2% | 563MiB |
+| 6         | fiber                | 662,005      | 76.9%   | 6271.4% | 555MiB |
+| 7         | bun                  | 602,163      | 69.9%   | 6258.7% | 1.1GiB |
+| 8         | genhttp              | 518,017      | 60.1%   | 5760.2% | 437MiB |
+| 9         | dusty                | 418,197      | 48.5%   | 6546.0% | 202MiB |
+| 10        | micronaut-production | 281,704      | 32.7%   | 5935.8% | 4.9GiB |
+| 11        | vertx                | 245,625      | 28.5%   | 6284.6% | 1.6GiB |
+| 12        | doba                 | 232,402      | 27.0%   | 2006.6% | 187MiB |
+| 13        | tako                 | 163,215      | 18.9%   | 2852.2% | 180MiB |
+| 14        | flare                | 156,788      | 18.2%   | 6197.4% | 743MiB |
+| 15        | mq-bridge            | 121,557      | 14.1%   | 3913.3% | 289MiB |
+| 16        | actix                | 76,236       | 8.9%    | 5773.1% | 4.6GiB |
+| 17        | morojs               | 66,654       | 7.7%    | 5665.4% | 4.5GiB |
++-----------+----------------------+--------------+---------+---------+--------+
 LATENCY: values saved by upstream for its selected repetition
 Upstream p99 field contains wrk MAX, not a measured percentile. HTTP status fields are assumed by its parser.
-+----------+---------+-----------+
-| Server   | Avg     | Max (wrk) |
-+----------+---------+-----------+
-| fulmine  | 1.22ms  | 21.87ms   |
-| fiber    | 1.60ms  | 48.46ms   |
-| bun      | 1.74ms  | 28.61ms   |
-| elysia   | 1.77ms  | 21.73ms   |
-| genhttp  | 2.22ms  | 46.93ms   |
-| hono-bun | 3.14ms  | 25.05ms   |
-| libuvcpp | 3.54ms  | 12.75ms   |
-| vertx    | 4.52ms  | 65.57ms   |
-| tako     | 5.40ms  | 33.40ms   |
-| doba     | 6.22ms  | 35.58ms   |
-| actix    | 16.28ms | 402.54ms  |
-| morojs   | 15.55ms | 36.04ms   |
-+----------+---------+-----------+
++----------------------+---------+-----------+
+| Server               | Avg     | Max (wrk) |
++----------------------+---------+-----------+
+| fulmine              | 1.18ms  | 24.41ms   |
+| trillium             | 1.28ms  | 21.90ms   |
+| araara               | 1.38ms  | 7.84ms    |
+| spliffy              | 1.47ms  | 22.37ms   |
+| libuvcpp             | 1.50ms  | 10.68ms   |
+| fiber                | 1.59ms  | 46.72ms   |
+| bun                  | 1.76ms  | 36.68ms   |
+| genhttp              | 2.10ms  | 34.66ms   |
+| dusty                | 2.78ms  | 47.82ms   |
+| micronaut-production | 4.08ms  | 69.52ms   |
+| vertx                | 4.19ms  | 28.50ms   |
+| doba                 | 4.92ms  | 40.08ms   |
+| tako                 | 5.68ms  | 43.36ms   |
+| flare                | 6.56ms  | 41.30ms   |
+| mq-bridge            | 8.79ms  | 60.56ms   |
+| actix                | 16.27ms | 427.54ms  |
+| morojs               | 15.39ms | 40.76ms   |
++----------------------+---------+-----------+
 
 Official formulas on local data; not published/certified HttpArena results.

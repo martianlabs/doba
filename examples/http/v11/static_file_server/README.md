@@ -31,20 +31,10 @@ curl --path-as-is -i http://localhost:8080/assets/../hello.txt
 GET and HEAD share file length and validators. Cached snapshots have strong
 SHA-256 ETags; direct streams have weak metadata ETags. Both emit Last-Modified
 and, by default, Cache-Control: no-cache. That HTTP policy allows revalidation;
-it is independent of the internal cache's one-second retention TTL. Native
-monitoring is enabled by default: each cache hit consumes pending kernel events
-and checks a root-wide generation, without opening/statting/reading the file.
-There is no callback thread. Any relevant event invalidates the generation even
-for equal contents; topology changes/overflow require rebuilding coverage.
-
-To compare attribute-based caching, use:
-
-```sh
-static_file_server /absolute/asset/root --metadata-cache 8080
-```
-
-This sets monitor_files=false while retaining the same cache and transport.
-Unsupported native coverage falls back to attribute validation automatically.
+it is independent of the internal cache's one-second retention TTL. Every cache
+hit compares file identity, device, size, modification/change timestamps, flags
+and link count. Equal attributes reuse cached bytes without rereading the file.
+No subscriptions or background callbacks are used.
 
 The example enables precompressed asset negotiation. Publish **hello.txt.br** or
 **hello.txt.gz** alongside the original and request the corresponding encoding.
@@ -62,20 +52,14 @@ charged until their consumers/loaders release them. Declared cost excludes keys,
 allocator/control-block overhead and excess string capacity; it is not a process
 RSS limit.
 
-Publish complete files by atomic replacement. Cached readers have stable bytes,
-and each hit verifies its native generation (or attributes in fallback mode).
-Native subscriptions are installed before reading; generations are checked after
-loading and before reuse. A change racing a load cannot make an old token valid.
-In-flight responses retain their old snapshots. Missing/forbidden paths are not
-served from stale entries.
-
-Delivery guarantees depend on the filesystem: notifications can be delayed on
-Windows; mmap/remote/mount changes on Linux and external hard-link aliases on
-Windows are not a fast-coverage guarantee. Use explicit invalidate()/coordinated
-publication or --metadata-cache for stronger attribute-based checks. No strategy
-can detect a write that preserves every attribute it observes. Direct streams own
-a handle, not a snapshot: concurrent writes can alter bytes, growth is ignored,
-and premature EOF closes the connection.
+Publish complete files by atomic replacement. Attributes are checked before and
+after a load and when adopting a concurrently cached value. In-flight responses
+retain their old snapshots. Missing compressed variants use confined attribute probes and are never cached;
+new variants are discovered without waiting for a directory timestamp or TTL.
+Remote metadata caching or a write preserving all observed attributes can hide a
+change; filesystem semantics still apply. Direct streams own a handle, not a
+snapshot: concurrent writes can alter bytes, growth is ignored, and premature EOF
+closes the connection.
 Reads and cold loads remain synchronous. The existing transport buffers and send
 algorithm are unchanged.
 
@@ -91,6 +75,3 @@ navigation options are disabled by default and no directory listing is provided.
 
 For repeatable measurements, use the
 [static-file benchmark](../../../../benchmarks/http/v11/static-files/README.md).
-
-The [generic monitor example](../../../common/filesystem_monitor/README.md) shows
-manual polling without HTTP, a cache dependency or a callback thread.

@@ -11,15 +11,13 @@ python benchmarks/http/v11/static-files/benchmark.py out/build/windows-parity/ex
 Use the corresponding executable path on Linux. Results include first-request
 application-cold latency, warm throughput, p50/p95/p99, server CPU time, RSS/peak RSS
 and handles/file descriptors after the run. Each case starts a fresh server. The
-OS page cache is never flushed. Modes are direct streaming, attribute-based cache
-(--metadata-cache) and native monitor cache (the example default). --runs defaults
-to 3 and rotates mode order; every repetition is retained. Native hits check queued
-events and a generation without opening/statting/reading the payload. Empty-queue
-queries run concurrently; event consumption and generation changes are exclusive.
-No callback thread or interval timer participates. Unsupported/lost coverage uses
-safe attribute revalidation or a new load. Files above 1 MiB stream in every mode.
+OS page cache is never flushed. Modes are direct streaming and attribute-validated
+caching (the example default). --runs defaults to 3 and rotates mode order; every
+repetition is retained. Cached bytes require matching identity, size, timestamps,
+flags and link count on every reuse. Missing variants use an attribute-only query,
+not a data open or cached absence. Files above 1 MiB stream in every mode.
 The default budget is 512 MiB, 1024 entries and 16 simultaneous loads; occupied
-same-key loaders are bypassed. Native monitor resources are bounded separately.
+same-key loaders are bypassed.
 
 To include the initial TTL implementation, provide a separately built example
 binary from revision 6fbb4290:
@@ -50,13 +48,29 @@ Archived results predate per-request metadata validation and nonwaiting load
 admission. Re-run the harness for comparable current performance numbers.
 
 
-Current native-monitor development comparison (all 18 final runs, initial TTL
-headers from 6fbb4290, metadata and monitor modes):
-[Linux/WSL report](results/linux-monitor-2026-10-22.md). The report retains timeouts,
-raw data, the preliminary series and syscall counts; it is not a remote benchmark
-claim. Rerun the same remote workload to evaluate production performance.
+The October 22 native-monitor reports below are historical: that implementation
+and its example have been removed. Their single-file numbers do not represent the
+twenty-route TLS workload:
+[original comparison](results/linux-monitor-2026-10-22.md),
+[fallback investigation](results/linux-monitor-fallback-2026-10-22.md).
 
-A [fallback investigation](results/linux-monitor-fallback-2026-10-22.md) reproduces
-a roughly tenfold throughput loss on a WSL Windows-drive mount. Monitoring enabled
-in policy does not prove native coverage: check the filesystem and observation
-probe in the same container/mount namespace before comparing modes.
+## Twenty real TLS routes
+
+Build tls_server.cpp twice with matching compiler flags, once against the baseline
+include tree and once against the current tree. The program uses only the normal
+static_file_server controller and cache, with the unchanged TLS transport:
+
+```sh
+clang++ -O3 -DNDEBUG -std=c++20 -pthread -Iinclude benchmarks/http/v11/static-files/tls_server.cpp -lssl -lcrypto -o out/static-tls-current
+python3 benchmarks/http/v11/static-files/compare_tls.py BASELINE_BINARY out/static-tls-current /path/to/HttpArena/data/static /path/to/server.crt /path/to/server.key --workers 16 64 --runs 3 --output out/static-tls-20.json
+```
+
+The script rotates the official twenty paths with Accept-Encoding: br;q=1,
+gzip;q=0.8, 1024 connections, four wrk threads and five seconds per run. It checks
+the exact encoded bytes for all twenty paths before each load run. Both servers
+use the same worker count, TLS fixtures, cache defaults and asset root. All runs
+and raw wrk socket errors are retained. Throughput uses requests divided by the
+parent's monotonic wall duration. CPU/RSS come from the server process; RSS is
+sampled after load. Use native local storage, record filesystem and hardware,
+and run on an idle host. A 64-worker run on a 16-vCPU workstation is oversubscribed;
+it does not reproduce a 64-core Scaleway host.

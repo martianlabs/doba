@@ -34,6 +34,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
@@ -46,7 +47,8 @@ namespace martianlabs::doba::common {
 // Thread-safe, cost-bounded LRU with single-flight loading per key.
 // Values must be immutable through ALL aliases supplied by the loader.
 // The cache must outlive concurrent calls; returned values may outlive it.
-// Hash/equality and clock operations must not throw or reenter the cache.
+// Hash/equality and clock operations must support concurrent calls and must
+// not throw or reenter the cache. Concurrent hits may coalesce LRU promotions.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] cache                                                       ( class ) |
@@ -80,10 +82,28 @@ class cache {
   // +=========================================================================+
   // | [>] find                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Expired entries are removed lazily. A hit updates LRU recency.
+  // Expired entries are removed lazily. Hits promote without waiting for LRU writes.
   value_type find(const KEty& key) {
-    std::lock_guard lock(mutex_);
-    return find_locked(key);
+    value_type value;
+    {
+      std::shared_lock lock(mutex_);
+      auto found = entries_.find(key);
+      if (found == entries_.end()) return {};
+      if (CKty::now() < found->second.expires) value = found->second.value;
+    }
+    if (!value) {
+      std::lock_guard lock(mutex_);
+      return find_locked(key);
+    }
+    // Readers never queue behind one another for an LRU write. Sequential
+    // hits promote exactly; overlapping hits may coalesce recency updates.
+    std::unique_lock lock(mutex_, std::try_to_lock);
+    if (lock.owns_lock()) {
+      auto found = entries_.find(key);
+      if (found != entries_.end() && found->second.value == value)
+        lru_.splice(lru_.begin(), lru_, found->second.recency);
+    }
+    return value;
   }
 
   // +=========================================================================+
@@ -193,7 +213,7 @@ class cache {
     // +-------------------------------------------------------------------------+
 
     std::thread::id owner = std::this_thread::get_id();
-    std::condition_variable changed;
+    std::condition_variable_any changed;
     bool done = false;
     value_type value;
     std::exception_ptr error;
@@ -351,7 +371,7 @@ class cache {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   const cache_policies policies_;
-  mutable std::mutex mutex_;
+  mutable std::shared_mutex mutex_;
   std::list<KEty> lru_;
   entries_type entries_;
   std::unordered_map<KEty, std::shared_ptr<flight>, HAty, EQty> flights_;

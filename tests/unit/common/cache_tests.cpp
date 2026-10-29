@@ -66,6 +66,40 @@ struct clock_stub {
   // +-------------------------------------------------------------------------+
   static time_point now() { return time_point(ticks); }
 };
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] parallel_clock                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Gate two lookups inside now() to verify overlapping read access.          |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct parallel_clock {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  using duration = std::chrono::milliseconds;
+  using time_point = std::chrono::time_point<parallel_clock>;
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Enabled only after the initial value has been admitted.
+  static inline std::atomic<bool> gated{false};
+  // Number of concurrent calls that reached the gate.
+  static inline std::atomic<unsigned> arrivals{0};
+  // Test-owned events, valid until all lookup threads have joined.
+  static inline manual_event* entered = nullptr;
+  static inline manual_event* release = nullptr;
+  // +=========================================================================+
+  // | [>] now                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  static time_point now() {
+    if (gated.load()) {
+      if (arrivals.fetch_add(1) + 1 == 2) entered->open();
+      release->wait();
+    }
+    return time_point{};
+  }
+};
 using test_cache = cache<std::string, std::string, clock_stub>;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -471,4 +505,32 @@ DOBA_TEST("cache conditional erase preserves a newer generation") {
   DOBA_EXPECT_EQUAL(*first, "old");
   DOBA_EXPECT(value.erase(1, second));
   DOBA_EXPECT(!value.find(1));
+}
+
+// +===========================================================================+
+// | [>] cache lookups overlap without serializing readers        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache permits concurrent hits while retaining invalidation contracts") {
+  cache<int, int, parallel_clock> value;
+  auto pinned = value.get_or_load(1, 4, [] { return std::make_shared<const int>(42); });
+  manual_event entered, release;
+  parallel_clock::arrivals = 0;
+  parallel_clock::entered = &entered;
+  parallel_clock::release = &release;
+  parallel_clock::gated = true;
+  std::shared_ptr<const int> first, second;
+  std::jthread one([&] { first = value.find(1); });
+  std::jthread two([&] { second = value.find(1); });
+  scope_exit cleanup([&] { release.open(); });
+  const bool concurrent = entered.wait_for();
+  release.open();
+  one.join(); two.join();
+  parallel_clock::gated = false;
+  DOBA_EXPECT(concurrent);
+  DOBA_EXPECT_EQUAL(first, pinned);
+  DOBA_EXPECT_EQUAL(second, pinned);
+  value.erase(1);
+  DOBA_EXPECT(!value.find(1));
+  DOBA_EXPECT_EQUAL(*first, 42);
+  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 4);
 }

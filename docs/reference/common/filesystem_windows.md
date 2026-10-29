@@ -239,3 +239,7 @@ See [filesystem_metadata](filesystem.md#type-filesystem-metadata).
 
 Uses the existing confined open()/metadata() procedure and closes the temporary
 handle. The Linux fast path does not change Windows path or reparse-point checks.
+
+Attribute inspection uses FILE_READ_ATTRIBUTES handles, preserving the confined
+resolver and reparse-point checks without requesting file-content read access.
+The normal open()/read() data path is unchanged.

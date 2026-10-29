@@ -37,15 +37,15 @@ The TCP transport needs no external libraries; optional TLS uses OpenSSL.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured on **Scaleway, 2026-10-20**, using the official HttpArena suite:
+Measured on **Scaleway, 2026-10-28**, using the official HttpArena suite:
 native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
 upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
 upstream from its repetitions, not averaged across runs.
 The campaign's reference-model verification is **incomplete**; these are
 local results, not the published HttpArena leaderboard.
 
-Every chart shows the **same top 10 from the overall ranking**, ordered by each
-test's metric. Scores retain normalization across all **15 measured servers**.
+Every chart shows the **same top 15 from the overall ranking**, ordered by each
+test's metric. Scores retain normalization across all **21 measured servers**.
 The total includes eight scored profiles and the upstream completeness factor;
 **pipelined**, **latency-500k-8cpu** and **static-tls** are reference-only profiles.
 Failed and skipped measurements are shown explicitly; they are not measured zeroes.
@@ -58,13 +58,13 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 <a href="resources/benchmarks/benchmark-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow.svg">
-    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-10-20. doba ranks 1 of 15 with 7,627.93 overall points, 16.7% more points than tako. Upstream totals include completeness. Top ten shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
 <a href="resources/benchmarks/benchmark-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow-dark.svg">
-    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-20. doba ranks 1 of 15 with 7,627.93 overall points, 16.7% more points than tako. Upstream totals include completeness. Top ten shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
 

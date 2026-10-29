@@ -718,42 +718,9 @@ DOBA_TEST("static file cache expires and large files preserve direct reading") {
 }
 
 // +===========================================================================+
-// | [>] static monitor reset and attribute fallback              ( test-case ) |
+// | [>] missing files preserve unrelated cache hits                ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("static file cache rejects reset monitor tokens and supports attribute mode") {
-  for (bool monitored : {false, true}) {
-    file_directory directory;
-    directory.write("file", "first");
-    auto cache = std::make_shared<static_file_cache>();
-    router<request, response> routes;
-    routes.add_controller<static_file_server>("/", directory.path(),
-        static_file_policies{.cache = cache, .monitor_files = monitored});
-    auto first = file_request(routes, "GET", "/file");
-    const auto root_key = fs::canonical(directory.path()).generic_u8string();
-    std::string key(root_key.begin(), root_key.end());
-    key += '\0'; key += "file";
-    const auto original = cache->find(key);
-    DOBA_EXPECT(original != nullptr);
-    if (monitored) {
-      DOBA_EXPECT(original->monitor != nullptr);
-      original->monitor->reset();
-      auto reset = file_request(routes, "GET", "/file");
-      DOBA_EXPECT(cache->find(key) != original);
-      DOBA_EXPECT_EQUAL(file_body(reset), "first");
-    } else DOBA_EXPECT(original->monitor == nullptr);
-    const auto timestamp = fs::last_write_time(directory.path() / "file");
-    directory.write("file", "other");
-    fs::last_write_time(directory.path() / "file", timestamp + std::chrono::seconds(2));
-    auto next = file_request(routes, "GET", "/file");
-    DOBA_EXPECT_EQUAL(file_body(first), "first");
-    DOBA_EXPECT_EQUAL(file_body(next), "other");
-  }
-}
-
-// +===========================================================================+
-// | [>] missing files preserve watched cache hits                ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("static file cache keeps covered hits after requests for missing files") {
+DOBA_TEST("static file cache keeps hits after requests for missing files") {
   file_directory directory;
   directory.write("file", "first");
   auto cache = std::make_shared<static_file_cache>();
@@ -770,4 +737,43 @@ DOBA_TEST("static file cache keeps covered hits after requests for missing files
   DOBA_EXPECT(cache->find(key) == original);
   DOBA_EXPECT_EQUAL(file_body(first), "first");
   DOBA_EXPECT_EQUAL(file_body(next), "first");
+}
+
+// +===========================================================================+
+// | [>] variant selection follows newly published files      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static variants detect added removed and replaced files immediately") {
+  file_directory directory;
+  fs::create_directory(directory.path() / "nested");
+  directory.write("nested/asset.webp", "identity");
+  auto cache = std::make_shared<static_file_cache>();
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(),
+      static_file_policies{.cache = cache, .precompressed = true});
+  const auto get = [&] { return file_request(routes, "GET", "/nested/asset.webp",
+      "Accept-Encoding: br, gzip\r\n"); };
+  for (int i = 0; i < 3; ++i) {
+    auto plain = get(); DOBA_EXPECT_EQUAL(file_body(plain), "identity");
+  }
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
+  directory.write("nested/asset.webp.gz", "gzip");
+  auto gzip = get();
+  DOBA_EXPECT_EQUAL(gzip.get_header("Content-Encoding").second, "gzip");
+  DOBA_EXPECT_EQUAL(file_body(gzip), "gzip");
+  directory.write("nested/asset.webp.br", "brotli");
+  auto brotli = get();
+  DOBA_EXPECT_EQUAL(brotli.get_header("Content-Encoding").second, "br");
+  DOBA_EXPECT_EQUAL(file_body(brotli), "brotli");
+  const auto timestamp = fs::last_write_time(directory.path() / "nested/asset.webp.br");
+  fs::rename(directory.path() / "nested/asset.webp.br", directory.path() / "previous");
+  directory.write("nested/asset.webp.br", "update");
+  fs::last_write_time(directory.path() / "nested/asset.webp.br", timestamp);
+  auto updated = get(); DOBA_EXPECT_EQUAL(file_body(updated), "update");
+  fs::remove(directory.path() / "nested/asset.webp.br");
+  auto fallback = get(); DOBA_EXPECT_EQUAL(file_body(fallback), "gzip");
+  fs::rename(directory.path() / "nested", directory.path() / "old-directory");
+  fs::create_directory(directory.path() / "nested");
+  directory.write("nested/asset.webp", "new-root");
+  directory.write("nested/asset.webp.br", "new-variant");
+  auto replaced = get(); DOBA_EXPECT_EQUAL(file_body(replaced), "new-variant");
 }
