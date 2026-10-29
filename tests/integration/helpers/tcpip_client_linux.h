@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <poll.h>
 #include <string>
 #include <string_view>
 
@@ -191,36 +192,35 @@ class tcpip_client {
     operation_ = "receive";
     error_ = {};
     native_error_ = 0;
-    if (!maximum ||
-        !wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
-      return std::nullopt;
-    }
+    if (!maximum) return std::nullopt;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
     std::string result((std::min)(maximum, static_cast<std::size_t>(INT_MAX)),
                        '\0');
-    const int count =
-        ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
-    if (count <= 0) {
-      if (count == 0)
-        error_ = "eof";
-      else
-        fail_socket();
-      return std::nullopt;
+    for (;;) {
+      if (!wait_ready(false, deadline)) return std::nullopt;
+      const int count =
+          ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count <= 0) {
+        if (count == 0)
+          error_ = "eof";
+        else
+          fail_socket();
+        return std::nullopt;
+      }
+      result.resize(static_cast<std::size_t>(count));
+      return result;
     }
-    result.resize(static_cast<std::size_t>(count));
-    return result;
   }
   // +=========================================================================+
   // | [>] has_data                                                 ( public ) |
   // +-------------------------------------------------------------------------+
   bool has_data(std::chrono::milliseconds timeout) const {
-    fd_set read_set;
-    FD_ZERO(&read_set);
-    FD_SET(socket_, &read_set);
-    timeval value{};
-    value.tv_sec = static_cast<long>(timeout.count() / 1000);
-    value.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
-    int ready = ::select(socket_ + 1, &read_set, nullptr, nullptr, &value);
-    return ready > 0 && FD_ISSET(socket_, &read_set);
+    if (socket_ == invalid_socket()) return false;
+    pollfd descriptor{socket_, POLLIN, 0};
+    const auto count = (std::clamp)(timeout.count(),
+        decltype(timeout.count()){0}, decltype(timeout.count()){INT_MAX});
+    return ::poll(&descriptor, 1, static_cast<int>(count)) > 0;
   }
   // +=========================================================================+
   // | [>] wait_for_close                                           ( public ) |
@@ -229,14 +229,16 @@ class tcpip_client {
     operation_ = "receive";
     error_ = {};
     native_error_ = 0;
-    if (!wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
-      return false;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+      if (!wait_ready(false, deadline)) return false;
+      char value = 0;
+      const int count = ::recv(socket_, &value, 1, 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count < 0) return fail_socket();
+      if (count == 0) error_ = "eof";
+      return count == 0;
     }
-    char value = 0;
-    int count = ::recv(socket_, &value, 1, 0);
-    if (count < 0) return fail_socket();
-    if (count == 0) error_ = "eof";
-    return count == 0;
   }
   // +=========================================================================+
   // | [>] receive_until_close                                      ( public ) |
@@ -353,6 +355,11 @@ class tcpip_client {
   // +-------------------------------------------------------------------------+
   bool wait_ready(bool writing,
                   std::chrono::steady_clock::time_point deadline) {
+    if (socket_ == invalid_socket()) {
+      error_ = "socket";
+      native_error_ = EBADF;
+      return false;
+    }
     for (;;) {
       const auto remaining =
           std::chrono::duration_cast<std::chrono::microseconds>(
@@ -361,18 +368,11 @@ class tcpip_client {
         error_ = "timeout";
         return false;
       }
-      fd_set selected;
-      fd_set errors;
-      FD_ZERO(&selected);
-      FD_ZERO(&errors);
-      FD_SET(socket_, &selected);
-      FD_SET(socket_, &errors);
-      timeval timeout{};
-      timeout.tv_sec = static_cast<long>(remaining.count() / 1000000);
-      timeout.tv_usec = static_cast<long>(remaining.count() % 1000000);
-      const int count =
-          ::select(socket_ + 1, writing ? nullptr : &selected,
-                   writing ? &selected : nullptr, &errors, &timeout);
+      pollfd descriptor{socket_, static_cast<short>(writing ? POLLOUT : POLLIN), 0};
+      auto milliseconds = (remaining.count() + 999) / 1000;
+      const int timeout = static_cast<int>((std::min)(
+          milliseconds, static_cast<decltype(milliseconds)>(INT_MAX)));
+      const int count = ::poll(&descriptor, 1, timeout);
       if (count > 0) return true;
       if (count == 0) {
         error_ = "timeout";

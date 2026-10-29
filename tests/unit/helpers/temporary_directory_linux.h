@@ -27,23 +27,52 @@
 
 #include <cstdlib>
 #include <string>
+#include <optional>
 
 namespace martianlabs::doba::tests::unit {
 class temporary_directory {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit temporary_directory(const std::string& path) {
     const char* value = std::getenv("TMPDIR");
     had_previous_ = value != nullptr;
     if (value) previous_ = value;
     changed_ = setenv("TMPDIR", path.c_str(), 1);
   }
+  temporary_directory(const temporary_directory&) = delete;
+  temporary_directory& operator=(const temporary_directory&) = delete;
+  ~temporary_directory() { if (changed_ == 0) (void)restore(); }
+  // +=========================================================================+
+  // | [>] current                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  static std::optional<std::string> current() {
+    const char* value = std::getenv("TMPDIR");
+    if (!value) return std::nullopt;
+    return std::string(value);
+  }
+  // +=========================================================================+
+  // | [>] changed                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   int changed() const { return changed_; }
-  int restore() const {
-    return had_previous_ ? setenv("TMPDIR", previous_.c_str(), 1)
-                         : unsetenv("TMPDIR");
+  // +=========================================================================+
+  // | [>] restore                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  int restore() {
+    if (restored_) return 0;
+    const int result = had_previous_ ? setenv("TMPDIR", previous_.c_str(), 1)
+                                     : unsetenv("TMPDIR");
+    if (result == 0) restored_ = true;
+    return result;
   }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Whether the original environment has already been restored.
+  bool restored_ = false;
   std::string previous_;
   bool had_previous_ = false;
   int changed_ = -1;

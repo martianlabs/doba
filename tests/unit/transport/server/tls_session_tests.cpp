@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <span>
 #include <stdexcept>
@@ -34,6 +35,7 @@
 
 #include "test_helper.h"
 #include "transport/server/tls_session.h"
+#include "transport/server/tls_connection.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -621,4 +623,63 @@ DOBA_TEST("tls session handles malformed handshake records") {
                         tls_session::status::failed);
     }
   }
+}
+
+// +===========================================================================+
+// | [>] handshake output pressure retains a plaintext wakeup    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tls connection resumes buffered plaintext after handshake output") {
+  namespace tr = martianlabs::doba::transport::server::detail;
+  struct input_engine {
+    using policies_type = int;
+    std::string received;
+    void set_on_send(martianlabs::doba::protocol::send_delegate) {}
+    void set_on_close(std::function<void()>) {}
+    void on_bytes_received(std::string_view value) { received.append(value); }
+  };
+  auto factory = [] { return input_engine{}; };
+  tr::tls_connection<input_engine> server(4096, 2048, factory,
+      make_tls_context(server_policies()), 17408, 64);
+  tr::send_state output(2048);
+  test_client client;
+  DOBA_EXPECT(SSL_set_min_proto_version(client.ssl.get(), TLS1_3_VERSION) == 1);
+  DOBA_EXPECT(SSL_set_max_proto_version(client.ssl.get(), TLS1_3_VERSION) == 1);
+  bool sent = false;
+  bool paused = false;
+  for (int step = 0; step < 2048 && server.engine.received.empty(); ++step) {
+    if (!SSL_is_init_finished(client.ssl.get())) {
+      const int result = SSL_do_handshake(client.ssl.get());
+      if (result != 1) {
+        const int error = SSL_get_error(client.ssl.get(), result);
+        DOBA_EXPECT(error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE);
+      }
+    }
+    if (SSL_is_init_finished(client.ssl.get()) && !sent) {
+      std::size_t written = 0;
+      DOBA_EXPECT(SSL_write_ex(client.ssl.get(), "request", 7, &written) == 1);
+      DOBA_EXPECT_EQUAL(written, 7);
+      sent = true;
+    }
+    if (BIO_ctrl_pending(client.network.get()) && !server.input_paused()) {
+      auto bytes = server.receive_buffer();
+      std::size_t count = 0;
+      DOBA_EXPECT(BIO_read_ex(client.network.get(), bytes.data(), bytes.size(),
+                             &count) == 1);
+      server.process(count);
+    }
+    paused = paused || server.input_paused();
+    DOBA_EXPECT(server.prepare_output(output));
+    const auto bytes = server.output_bytes(output);
+    if (!bytes.empty()) {
+      std::size_t written = 0;
+      DOBA_EXPECT(BIO_write_ex(client.network.get(), bytes.data(), bytes.size(),
+                              &written) == 1);
+      DOBA_EXPECT_EQUAL(written, bytes.size());
+      DOBA_EXPECT(server.output_sent(output, written));
+    }
+    if (server.input_paused()) server.resume_input();
+  }
+  DOBA_EXPECT(sent);
+  DOBA_EXPECT_EQUAL(server.engine.received, "request");
+  DOBA_EXPECT(paused);
 }

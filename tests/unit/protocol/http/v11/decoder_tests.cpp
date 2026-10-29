@@ -49,6 +49,7 @@
 #include "response_wire.h"
 #include "test_helper.h"
 #include "temporary_directory.h"
+#include "file_directory.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -147,13 +148,10 @@ std::size_t accumulate(decoder_input& value, std::string_view source) {
 std::vector<std::filesystem::path> body_temp_files() {
   namespace fs = std::filesystem;
   std::vector<fs::path> paths;
-  std::error_code error;
-  const auto directory = fs::temp_directory_path(error);
-  if (error) return paths;
-  for (fs::directory_iterator it(directory, error), end; !error && it != end;
-       it.increment(error)) {
-    if (it->path().filename().string().starts_with("doba_bytes_")) {
-      paths.push_back(it->path());
+  const auto directory = fs::temp_directory_path();
+  for (const auto& entry : fs::directory_iterator(directory)) {
+    if (entry.path().filename().string().starts_with("doba_bytes_")) {
+      paths.push_back(entry.path());
     }
   }
   return paths;
@@ -2591,6 +2589,9 @@ DOBA_TEST("decoder reads chunked bodies across the wire memory boundary") {
 // | [>] temporary body removed before dispatch                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes an unread temporary body before dispatch") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string payload(16385, 'x');
   const std::string source =
@@ -2618,6 +2619,9 @@ DOBA_TEST("decoder removes an unread temporary body before dispatch") {
 // | [>] invalid chunk after spill removes temporary body        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes a temporary body after invalid framing") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string source =
       "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -2648,6 +2652,9 @@ DOBA_TEST("decoder removes a temporary body after invalid framing") {
 // | [>] handler failure leaves no temporary body                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("handler failure leaves no temporary body") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string source =
       "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 16385\r\n\r\n" +
@@ -2707,6 +2714,9 @@ DOBA_TEST("decoder returns 500 when temporary body creation fails") {
 // | [>] temporary body read-open failure returns 500            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request retains its open temporary body after unlink") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   decoder_input value;
   bool called = false;

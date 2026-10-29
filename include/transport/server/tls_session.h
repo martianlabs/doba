@@ -32,6 +32,8 @@
 #include <span>
 #include <stdexcept>
 
+#include "platform.h"
+
 #include <openssl/ssl.h>
 
 #include "transport/server/tls_policies.h"

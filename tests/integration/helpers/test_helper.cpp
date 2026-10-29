@@ -25,6 +25,8 @@
 #include "test_helper.h"
 #include "../../helpers/test_watchdog.h"
 
+#include <atomic>
+#include <mutex>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
@@ -95,7 +97,7 @@ std::vector<test_case>& tests() {
 // +---------------------------------------------------------------------------+
 // | [>] failures                                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to a static size_t variable that keeps  |
+// | This function returns a reference to a static atomic counter that keeps  |
 // | track of the number of test failures. It is used to count the number of   |
 // | failed test cases in the integration test framework. The variable is      |
 // | initialized to zero and persists for the lifetime of the program,         |
@@ -103,8 +105,20 @@ std::vector<test_case>& tests() {
 // | execution of the tests.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-std::size_t& failures() {
-  static std::size_t value = 0;
+std::atomic<std::size_t>& failures() {
+  static std::atomic<std::size_t> value{0};
+  return value;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] diagnostics_mutex                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// | Serialize failure diagnostics and context changes made by test workers.   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+std::mutex& diagnostics_mutex() {
+  static std::mutex value;
   return value;
 }
 
@@ -161,6 +175,7 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 bool test_helper::expect(bool condition, std::string_view expression,
                          std::string_view file, int line) {
   if (condition) return true;
+  std::lock_guard lock(diagnostics_mutex());
   failures()++;
   file = relative_test_path(file);
   std::fprintf(stderr, "%.*s:%d - assertion failed: %.*s\n",
@@ -186,6 +201,7 @@ bool test_helper::expect(bool condition, std::string_view expression,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
+  std::lock_guard lock(diagnostics_mutex());
   context().assign(value);
 }
 
@@ -205,7 +221,7 @@ int test_helper::run(int argc, char** argv) {
   bool timeout_given = false;
   std::string file;
   std::string_view name;
-  std::string_view exclude;
+  std::vector<std::string> exclude;
   for (int i = 1; i < argc; i++) {
     const std::string_view argument{argv[i]};
     if (argument == "--list") {
@@ -216,7 +232,7 @@ int test_helper::run(int argc, char** argv) {
       const std::string_view value{argv[++i]};
       if (argument == "--file") file = value;
       if (argument == "--name") name = value;
-      if (argument == "--exclude") exclude = value;
+      if (argument == "--exclude") exclude.emplace_back(value);
       if (argument == "--timeout-ms") {
         timeout_argument = value;
         timeout_given = true;
@@ -229,18 +245,41 @@ int test_helper::run(int argc, char** argv) {
   for (char& value : file) {
     if (value == '\\') value = '/';
   }
+  for (std::string& value : exclude) {
+    const std::size_t separator = value.find("::");
+    if (separator == std::string::npos) continue;
+    for (std::size_t i = 0; i < separator; i++) {
+      if (value[i] == '\\') value[i] = '/';
+    }
+  }
+  const auto is_excluded = [&](const test_case& test) {
+    std::string normalized{test.file};
+    for (char& value : normalized) {
+      if (value == '\\') value = '/';
+    }
+    for (const std::string& value : exclude) {
+      const std::string_view entry{value};
+      const std::size_t separator = entry.find("::");
+      if (separator == std::string_view::npos) {
+        if (test.name == entry) return true;
+      } else if (normalized == entry.substr(0, separator) &&
+                 test.name == entry.substr(separator + 2)) {
+        return true;
+      }
+    }
+    return false;
+  };
   const auto matches = [&](const test_case& test) {
     std::string normalized{test.file};
     for (char& value : normalized) {
       if (value == '\\') value = '/';
     }
     return (file.empty() || normalized.find(file) != std::string::npos) &&
-           (name.empty() || test.name == name) &&
-           (exclude.empty() || test.name != exclude);
+           (name.empty() || test.name == name);
   };
   std::size_t selected = 0;
   for (const auto& test : tests()) {
-    if (matches(test)) selected++;
+    if (matches(test) && !is_excluded(test)) selected++;
   }
   if (selected == 0) {
     std::fputs("No tests matched\n", stderr);
@@ -248,7 +287,7 @@ int test_helper::run(int argc, char** argv) {
   }
   if (list) {
     for (const auto& test : tests()) {
-      if (!matches(test)) continue;
+      if (!matches(test) || is_excluded(test)) continue;
       std::printf("%.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
                   test.file.data(), test.line,
                   static_cast<int>(test.name.size()), test.name.data());
@@ -281,9 +320,20 @@ int test_helper::run(int argc, char** argv) {
   std::fflush(stdout);
   logger.info() << "running " << selected << " integration tests";
   std::size_t failed_tests = 0;
+  std::size_t skipped_tests = 0;
   for (const auto& test : tests()) {
     if (!matches(test)) continue;
-    context().clear();
+    if (is_excluded(test)) {
+      skipped_tests++;
+      std::printf("skipped %.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line, static_cast<int>(test.name.size()),
+                  test.name.data());
+      continue;
+    }
+    {
+      std::lock_guard lock(diagnostics_mutex());
+      context().clear();
+    }
     const std::size_t failures_before = failures();
     std::printf("running %.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
                 test.file.data(), test.line, static_cast<int>(test.name.size()),
@@ -308,6 +358,9 @@ int test_helper::run(int argc, char** argv) {
       logger.info() << test.file << ':' << test.line << " - " << test.name
                     << common::console_log_color::kGreen << " passed";
     }
+  }
+  if (skipped_tests != 0) {
+    logger.info() << skipped_tests << " test(s) skipped by explicit exclusions";
   }
   if (failed_tests != 0) {
     logger.error() << failed_tests << " test(s) failed";

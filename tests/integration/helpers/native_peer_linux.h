@@ -73,11 +73,9 @@ class native_peer {
   // | [>] accept                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   bool accept() {
-    fd_set selected;
-    FD_ZERO(&selected);
-    FD_SET(listener_, &selected);
-    timeval timeout{3, 0};
-    int ready = ::select(listener_ + 1, &selected, nullptr, nullptr, &timeout);
+    if (listener_ == invalid_socket()) return false;
+    pollfd descriptor{listener_, POLLIN, 0};
+    const int ready = ::poll(&descriptor, 1, 3000);
     if (ready <= 0) return false;
     peer_ = ::accept(listener_, nullptr, nullptr);
     return peer_ != invalid_socket();

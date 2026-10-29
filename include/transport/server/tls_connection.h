@@ -226,6 +226,7 @@ struct tls_connection {
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   bool input_paused() const {
+    if (plaintext_resume_.load(std::memory_order_relaxed)) return true;
     if constexpr (requires { engine.input_paused(); }) {
       return engine.input_paused();
     } else {
@@ -233,6 +234,7 @@ struct tls_connection {
     }
   }
   void resume_input() {
+    plaintext_resume_.store(false, std::memory_order_relaxed);
     if constexpr (requires { engine.resume_input(); }) engine.resume_input();
     if (!input_paused()) {
       if (!process_plaintext_()) throw std::runtime_error("TLS receive failed!");
@@ -251,6 +253,10 @@ struct tls_connection {
   bool process_plaintext_() {
     if (!session_.established()) {
       const auto state = session_.handshake();
+      if (state == tls_session::status::need_output) {
+        plaintext_resume_.store(true, std::memory_order_relaxed);
+        return true;
+      }
       if (state == tls_session::status::failed ||
           state == tls_session::status::closed) {
         return false;
@@ -266,6 +272,8 @@ struct tls_connection {
         peer_closed_ = true;
         return true;
       }
+      if (result.state == tls_session::status::need_output)
+        plaintext_resume_.store(true, std::memory_order_relaxed);
       if (result.state != tls_session::status::ready) return true;
       if (!result.size) return true;
       engine.on_bytes_received({plaintext_.get(), result.size});
@@ -275,6 +283,8 @@ struct tls_connection {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
+  // A TLS read needs another turn after its required output has drained.
+  std::atomic<bool> plaintext_resume_{false};
   tls_session session_;
   std::unique_ptr<char[]> plaintext_;
   const std::size_t plaintext_capacity_;

@@ -124,7 +124,7 @@ DOBA_TEST("unknown exception reports an error") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("execution continues after failed tests") {
   const auto result = run_probe(
-      {"--file", "test_helper_probe.cpp", "--exclude", "probe blocks"});
+      {"--file", "test_helper_probe.cpp", "--exclude", "probe blocks", "--exclude", "probe concurrent assertions"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("probe continued") != std::string::npos);
@@ -211,10 +211,10 @@ DOBA_TEST("exclusions accept names and normalized file paths") {
        "--exclude",
        "tests\\unit\\helpers\\test_helper_probe.cpp::probe standard exception",
        "--exclude", "probe unknown exception", "--exclude", "probe row context",
-       "--exclude", "probe blocks"});
+       "--exclude", "probe blocks", "--exclude", "probe concurrent assertions"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
-  DOBA_EXPECT(result.output.find("5 test(s) skipped by explicit exclusions") !=
+  DOBA_EXPECT(result.output.find("6 test(s) skipped by explicit exclusions") !=
               std::string::npos);
   DOBA_EXPECT(result.output.find("probe body") != std::string::npos);
   DOBA_EXPECT(result.output.find("probe continued") != std::string::npos);
@@ -269,4 +269,21 @@ DOBA_TEST("exclusion without a value reports an error") {
   DOBA_EXPECT_EQUAL(result.exit_code, 2);
   DOBA_EXPECT(result.output.find("Invalid test arguments") !=
               std::string::npos);
+}
+
+// +===========================================================================+
+// | [>] concurrent failures remain visible                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("runner reports every concurrent assertion failure") {
+  const auto result = run_probe({"--name", "probe concurrent assertions"});
+  DOBA_EXPECT(!result.timed_out);
+  DOBA_EXPECT_EQUAL(result.exit_code, 1);
+  std::size_t count = 0;
+  std::size_t position = 0;
+  while ((position = result.output.find("assertion failed: worker failure", position)) !=
+         std::string::npos) {
+    ++count;
+    ++position;
+  }
+  DOBA_EXPECT_EQUAL(count, 128);
 }
