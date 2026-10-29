@@ -55,8 +55,8 @@ copy Trillium's one-second response-freshness window or Fulmine's negative TTL.
 For local and container reproduction, STATIC_DIR overrides /data/static; TLS_CERT
 and TLS_KEY override the two /certs paths. Defaults preserve the official mounts.
 Startup reports effective workers, asset root, shared entry/cost limits and the
-maximum cacheable file size. The twenty-route comparison is documented in the
-[static TLS harness](../static-files/README.md).
+maximum cacheable file size. Run the official static-tls profile to measure the
+twenty-route workload with this adapter.
 
 The adapter listens on port 8080 for HTTP/1.1 and port 8081 for HTTP/1.1 over
 TLS. It implements `GET /baseline11`, `POST /baseline11`, `GET /delay/:ms`,

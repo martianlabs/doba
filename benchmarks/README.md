@@ -41,9 +41,8 @@ A small adapter for the Web Frameworks benchmark: a root route, a route that
 returns a user identifier, and a user POST route. Simple handlers, plenty
 of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
 
-For the static-file controller specifically, use the
-[local cache comparison](http/v11/static-files/README.md). It measures direct and
-cached delivery through the same transport and validates response bytes.
+For the static-file controller, use the static-tls profile through the
+[HttpArena adapter](http/v11/httparena/README.md).
 
 For engine and input-flow overhead, use the
 [operating-policy microbenchmark](http/v11/operating-policies/README.md).

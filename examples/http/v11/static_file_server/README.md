@@ -74,4 +74,5 @@ redirects, SPA fallback, MIME overrides and exclusions are separate policy optio
 navigation options are disabled by default and no directory listing is provided.
 
 For repeatable measurements, use the
-[static-file benchmark](../../../../benchmarks/http/v11/static-files/README.md).
+[HttpArena adapter](../../../../benchmarks/http/v11/httparena/README.md) and its
+static-tls profile.
