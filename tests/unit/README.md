@@ -122,3 +122,15 @@ selection, assertion reports, exceptions, exit status, and timeouts.
 They also check that a failed assertion releases suspended work before
 joining threads, and that blocked cleanup leaves the test's identity in
 the diagnostics. A broken test shouldn't take the rest of the suite hostage.
+
+Failure counters and context diagnostics are synchronized across test workers.
+The metatests require all 128 failures from eight concurrent workers to be
+reported. Temporary directory overrides restore the prior environment during
+unwinding; decoder spill checks use private directories and propagate directory
+inspection errors instead of treating them as empty results.
+
+The TLS connection regression drives both peers entirely in memory, including
+a request queued immediately after TLS 1.3 negotiation with a 64-byte output
+BIO. Draining handshake output must retain a plaintext wakeup even when the
+protocol engine has never paused input. The TLS headers also compile together
+in their standalone include order on Windows.

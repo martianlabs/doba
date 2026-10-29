@@ -25,6 +25,8 @@
 #include "test_helper.h"
 #include "../../helpers/test_watchdog.h"
 
+#include <atomic>
+#include <mutex>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
@@ -87,8 +89,20 @@ std::vector<test_case>& tests() {
 // | all test cases.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-std::size_t& failures() {
-  static std::size_t value = 0;
+std::atomic<std::size_t>& failures() {
+  static std::atomic<std::size_t> value{0};
+  return value;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] diagnostics_mutex                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// | Serialize failure diagnostics and context changes made by test workers.   |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+std::mutex& diagnostics_mutex() {
+  static std::mutex value;
   return value;
 }
 
@@ -142,6 +156,7 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 bool test_helper::expect(bool condition, std::string_view expression,
                          std::string_view file, int line) {
   if (condition) return true;
+  std::lock_guard lock(diagnostics_mutex());
   failures()++;
   file = relative_test_path(file);
   std::fprintf(stderr, "%.*s:%d - assertion failed: %.*s\n",
@@ -167,6 +182,7 @@ bool test_helper::expect(bool condition, std::string_view expression,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
+  std::lock_guard lock(diagnostics_mutex());
   context().assign(value);
 }
 
@@ -299,7 +315,10 @@ int test_helper::run(int argc, char** argv) {
       std::fflush(stdout);
       continue;
     }
-    context().clear();
+    {
+      std::lock_guard lock(diagnostics_mutex());
+      context().clear();
+    }
     const std::size_t failures_before = failures();
     std::printf("running %.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
                 test.file.data(), test.line, static_cast<int>(test.name.size()),

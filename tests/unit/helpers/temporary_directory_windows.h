@@ -26,11 +26,17 @@
 #define martianlabs_doba_tests_unit_temporary_directory_windows_h
 
 #include <cstdlib>
+#include <memory>
 #include <string>
+#include <stdexcept>
+#include <optional>
 
 namespace martianlabs::doba::tests::unit {
 class temporary_directory {
  public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit temporary_directory(const std::string& path) {
     char* value = nullptr;
     std::size_t size = 0;
@@ -39,10 +45,41 @@ class temporary_directory {
     std::free(value);
     if (saved_ == 0) changed_ = _putenv_s("TMP", path.c_str());
   }
+  temporary_directory(const temporary_directory&) = delete;
+  temporary_directory& operator=(const temporary_directory&) = delete;
+  ~temporary_directory() { if (changed_ == 0) (void)restore(); }
+  // +=========================================================================+
+  // | [>] current                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  static std::optional<std::string> current() {
+    char* raw = nullptr;
+    std::size_t size = 0;
+    if (_dupenv_s(&raw, &size, "TMP") != 0)
+      throw std::runtime_error("Unable to read TMP");
+    const std::unique_ptr<char, decltype(&std::free)> owner(raw, std::free);
+    if (!owner) return std::nullopt;
+    return std::string(owner.get());
+  }
+  // +=========================================================================+
+  // | [>] changed                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   int changed() const { return changed_; }
-  int restore() const { return _putenv_s("TMP", previous_.c_str()); }
+  // +=========================================================================+
+  // | [>] restore                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  int restore() {
+    if (restored_) return 0;
+    const int result = _putenv_s("TMP", previous_.c_str());
+    if (result == 0) restored_ = true;
+    return result;
+  }
 
  private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Whether the original environment has already been restored.
+  bool restored_ = false;
   std::string previous_;
   int saved_ = -1;
   int changed_ = -1;

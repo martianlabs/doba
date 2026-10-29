@@ -80,7 +80,9 @@ struct tls_client {
         return false;
     }
     if (!socket.has_data(std::chrono::milliseconds(10))) return true;
-    auto received = socket.receive_some(bytes.size());
+    const auto capacity = BIO_ctrl_get_write_guarantee(network.get());
+    if (capacity == 0) return true;
+    auto received = socket.receive_some((std::min)(bytes.size(), capacity));
     if (!received) return false;
     std::size_t written = 0;
     return BIO_write_ex(network.get(), received->data(), received->size(),
@@ -91,7 +93,9 @@ struct tls_client {
   // | [>] negotiate                                                ( public ) |
   // +-------------------------------------------------------------------------+
   bool negotiate(std::size_t fragment = 4096) {
-    for (int step = 0; step < 100; ++step) {
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (std::chrono::steady_clock::now() < deadline) {
       const int result = SSL_do_handshake(ssl.get());
       if (result != 1) {
         const int error = SSL_get_error(ssl.get(), result);
@@ -107,7 +111,9 @@ struct tls_client {
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool send(std::string_view value, std::size_t fragment = 4096) {
-    for (int step = 0; step < 100; ++step) {
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (std::chrono::steady_clock::now() < deadline) {
       std::size_t written = 0;
       const int result =
           SSL_write_ex(ssl.get(), value.data(), value.size(), &written);
@@ -122,10 +128,14 @@ struct tls_client {
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  std::optional<std::string> receive(std::size_t size) {
+  std::optional<std::string> receive(
+      std::size_t size,
+      std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
     std::string result(size, '\0');
     std::size_t total = 0;
-    for (int step = 0; step < 400 && total < size; ++step) {
+    if (size == 0) return result;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (total < size && std::chrono::steady_clock::now() < deadline) {
       std::size_t received = 0;
       const int value = SSL_read_ex(ssl.get(), result.data() + total,
                                     size - total, &received);
@@ -146,7 +156,9 @@ struct tls_client {
   // +-------------------------------------------------------------------------+
   bool receive_close() {
     std::array<char, 32> bytes;
-    for (int step = 0; step < 100; ++step) {
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (std::chrono::steady_clock::now() < deadline) {
       std::size_t received = 0;
       const int result =
           SSL_read_ex(ssl.get(), bytes.data(), bytes.size(), &received);
@@ -163,7 +175,9 @@ struct tls_client {
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool send_outgoing(std::string_view value) {
-    for (int step = 0; step < 100; ++step) {
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::seconds(3);
+    while (std::chrono::steady_clock::now() < deadline) {
       std::size_t written = 0;
       const int result =
           SSL_write_ex(ssl.get(), value.data(), value.size(), &written);

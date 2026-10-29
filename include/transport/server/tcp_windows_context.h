@@ -485,6 +485,11 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
   bool receive_() {
     if (receiving_) return true;
     if (!closing_ && (output_.pressured() || input_.input_paused())) return true;
+    // Finish a pending handshake flight before posting another socket read.
+    // Otherwise its completion can leave application bytes in the TLS BIO
+    // while resume_input() is suppressed by that outstanding socket read.
+    if (!closing_ && !input_.established() && input_.output_pending(output_))
+      return true;
     const auto target = input_.receive_buffer();
     if (target.empty()) return false;
     DWORD f = 0, r = 0;

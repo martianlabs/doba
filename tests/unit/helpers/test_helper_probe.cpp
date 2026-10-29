@@ -22,6 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
+#include <atomic>
+#include <string>
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
@@ -86,4 +89,23 @@ DOBA_TEST("probe row context") {
   martianlabs::doba::tests::unit::test_helper::set_context(
       "row 7: input=invalid");
   DOBA_EXPECT(false);
+}
+
+// +===========================================================================+
+// | [>] concurrent assertion diagnostics                        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("probe concurrent assertions") {
+  std::atomic<bool> ready{false};
+  std::array<std::jthread, 8> workers;
+  for (auto& worker : workers) {
+    worker = std::jthread([&] {
+      while (!ready.load()) std::this_thread::yield();
+      for (int i = 0; i < 16; ++i) {
+        martianlabs::doba::tests::unit::test_helper::set_context("concurrent worker");
+        (void)martianlabs::doba::tests::unit::test_helper::expect(
+            false, "worker failure", __FILE__, __LINE__);
+      }
+    });
+  }
+  ready = true;
 }

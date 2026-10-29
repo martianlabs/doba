@@ -160,8 +160,12 @@ inline std::optional<http_test_response> receive_http_response(
     std::size_t begin = colon + 1;
     while (begin < end && (wire[begin] == ' ' || wire[begin] == '\t')) begin++;
     const std::string name = wire.substr(position, colon - position);
-    if ((name == "Content-Length" || name == "Transfer-Encoding" ||
-         name == "Date") &&
+    std::string normalized = name;
+    for (char& value : normalized) {
+      if (value >= 'A' && value <= 'Z') value += 'a' - 'A';
+    }
+    if ((normalized == "content-length" || normalized == "transfer-encoding" ||
+         normalized == "date") &&
         result.header(name).has_value()) {
       return std::nullopt;
     }

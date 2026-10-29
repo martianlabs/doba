@@ -598,11 +598,38 @@ DOBA_TEST("TLS handshake progresses while a small output BIO drains") {
   DOBA_EXPECT(reply(input, "ok"));
   server.stop();
 }
+// +===========================================================================+
+// | [>] fragmented TLS response exceeds fixed iteration budgets ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("TLS client receives more than four hundred small records") {
+  tls_client peer;
+  const auto port = peer.socket.find_available_port();
+  auto p = server_policies(port);
+  p.network_bio_buffer_capacity = 64;
+  p.max_buffered_send_bytes = 2048;
+  p.inactivity_period = 0ms;
+  const std::string body(32768, 'x');
+  https_server<> server(p);
+  server.add_route("GET", "/", [&](const request&, response& res) {
+    res.ok_200().set_body(body);
+  });
+  server.start();
+  DOBA_EXPECT(peer.socket.connect(port));
+  DOBA_EXPECT(peer.negotiate());
+  DOBA_EXPECT(peer.send_outgoing(get));
+  struct adapter {
+    tls_client& client;
+    auto receive(std::size_t size) { return client.receive(size, 10s); }
+  } input{peer};
+  DOBA_EXPECT(reply(input, body));
+  server.stop();
+}
 DOBA_TEST("TLS policies enforce admission before allocating handshake state") {
   admission<https_server<>, secure_peer>(server_policies(1));
 }
 DOBA_TEST("TLS retries a handshake after draining its BIO without paused HTTP input") {
   for (const int version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+    test_helper::set_context(version == TLS1_2_VERSION ? "TLS 1.2" : "TLS 1.3");
     tls_client peer;
     DOBA_EXPECT(SSL_set_min_proto_version(peer.ssl.get(), version) == 1);
     DOBA_EXPECT(SSL_set_max_proto_version(peer.ssl.get(), version) == 1);

@@ -138,3 +138,16 @@ DOBA_TEST("client distinguishes eof from reset") {
     DOBA_EXPECT_EQUAL(client.native_error() != 0, reset);
   }
 }
+
+// +===========================================================================+
+// | [>] closed clients fail without touching an invalid handle  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("client rejects receive operations on a closed socket") {
+  martianlabs::doba::tests::integration::tcpip_client client;
+  DOBA_EXPECT(!client.receive_some(1).has_value());
+  DOBA_EXPECT_EQUAL(client.error(), "socket");
+  DOBA_EXPECT(client.native_error() != 0);
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(1)));
+  DOBA_EXPECT(!client.wait_for_close(std::chrono::milliseconds(1)));
+  DOBA_EXPECT_EQUAL(client.error(), "socket");
+}

@@ -642,7 +642,7 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - name: Verify original tests and detect ten mutants
+      - name: Verify original tests and detect twelve mutants
         run: >-
           cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
           "-DDOBA_MUTATION_OUTPUT=out/mutations" -P tests/mutation/run_detection.cmake

@@ -192,28 +192,31 @@ class tcpip_client {
     operation_ = "receive";
     error_ = {};
     native_error_ = 0;
-    if (!maximum ||
-        !wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
-      return std::nullopt;
-    }
+    if (!maximum) return std::nullopt;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
     std::string result((std::min)(maximum, static_cast<std::size_t>(INT_MAX)),
                        '\0');
-    const int count =
-        ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
-    if (count <= 0) {
-      if (count == 0)
-        error_ = "eof";
-      else
-        fail_socket();
-      return std::nullopt;
+    for (;;) {
+      if (!wait_ready(false, deadline)) return std::nullopt;
+      const int count =
+          ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count <= 0) {
+        if (count == 0)
+          error_ = "eof";
+        else
+          fail_socket();
+        return std::nullopt;
+      }
+      result.resize(static_cast<std::size_t>(count));
+      return result;
     }
-    result.resize(static_cast<std::size_t>(count));
-    return result;
   }
   // +=========================================================================+
   // | [>] has_data                                                 ( public ) |
   // +-------------------------------------------------------------------------+
   bool has_data(std::chrono::milliseconds timeout) const {
+    if (socket_ == invalid_socket()) return false;
     fd_set read_set;
     FD_ZERO(&read_set);
     FD_SET(socket_, &read_set);
@@ -230,14 +233,16 @@ class tcpip_client {
     operation_ = "receive";
     error_ = {};
     native_error_ = 0;
-    if (!wait_ready(false, std::chrono::steady_clock::now() + timeout)) {
-      return false;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+      if (!wait_ready(false, deadline)) return false;
+      char value = 0;
+      const int count = ::recv(socket_, &value, 1, 0);
+      if (count < 0 && pending(socket_error())) continue;
+      if (count < 0) return fail_socket();
+      if (count == 0) error_ = "eof";
+      return count == 0;
     }
-    char value = 0;
-    int count = ::recv(socket_, &value, 1, 0);
-    if (count < 0) return fail_socket();
-    if (count == 0) error_ = "eof";
-    return count == 0;
   }
   // +=========================================================================+
   // | [>] receive_until_close                                      ( public ) |
@@ -354,6 +359,11 @@ class tcpip_client {
   // +-------------------------------------------------------------------------+
   bool wait_ready(bool writing,
                   std::chrono::steady_clock::time_point deadline) {
+    if (socket_ == invalid_socket()) {
+      error_ = "socket";
+      native_error_ = WSAENOTSOCK;
+      return false;
+    }
     for (;;) {
       const auto remaining =
           std::chrono::duration_cast<std::chrono::microseconds>(

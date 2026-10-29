@@ -99,3 +99,14 @@ suspended work, so the error path has to clean up too.
 
 A timeout must identify the blocked test, including when its cleanup gets
 stuck. "Something hung somewhere" is not a useful test result.
+
+Both runners apply every repeated `--exclude`; qualified exclusions use
+`tests/integration/path.cpp::test name` and accept either path separator.
+Concurrent assertion reports are checked by child-process metatests.
+
+The HTTP response oracle has independent raw-wire regressions for mixed-case
+duplicate Content-Length, Transfer-Encoding and Date fields. The TLS test client
+uses elapsed-time deadlines rather than iteration budgets and respects inbound
+BIO capacity. A response with more than 400 small TLS records exercises this
+boundary. TCP helper reads retry interrupted operations against the original
+deadline; Linux readiness uses `poll` to support high descriptors safely.

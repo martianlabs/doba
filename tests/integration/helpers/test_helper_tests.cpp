@@ -213,3 +213,33 @@ DOBA_TEST("assertion failure unwinds active transport") {
   DOBA_EXPECT(result.output.find("probe cleanup complete") !=
               std::string::npos);
 }
+
+// +===========================================================================+
+// | [>] concurrent failures remain visible                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("runner reports every concurrent assertion failure") {
+  const auto result = run_probe({"--name", "probe concurrent assertions"});
+  DOBA_EXPECT(!result.timed_out);
+  DOBA_EXPECT_EQUAL(result.exit_code, 1);
+  std::size_t count = 0;
+  std::size_t position = 0;
+  while ((position = result.output.find("assertion failed: worker failure", position)) !=
+         std::string::npos) {
+    ++count;
+    ++position;
+  }
+  DOBA_EXPECT_EQUAL(count, 128);
+}
+
+// +===========================================================================+
+// | [>] integration filters accept repeated qualified exclusions( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("integration runner applies every exclusion with normalized paths") {
+  const auto result = run_probe({"--list", "--exclude", "probe assertion fails",
+      "--exclude", "tests\\integration\\helpers\\test_helper_probe.cpp::probe blocks"});
+  DOBA_EXPECT(!result.timed_out);
+  DOBA_EXPECT_EQUAL(result.exit_code, 0);
+  DOBA_EXPECT(result.output.find("probe passes") != std::string::npos);
+  DOBA_EXPECT(result.output.find("probe assertion fails") == std::string::npos);
+  DOBA_EXPECT(result.output.find(" - probe blocks") == std::string::npos);
+}

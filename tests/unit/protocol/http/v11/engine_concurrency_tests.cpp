@@ -278,6 +278,7 @@ DOBA_TEST("pending limit retains frames until late completion then releases") {
   policies config;
   config.max_pending_requests = 2;
   fixture current(routes, config);
+  int completions = 0;
   scope_exit resume([&] { pending.open(); });
   current.receive(slow);
   DOBA_EXPECT(pending.wait_for_waiters(1));
@@ -285,7 +286,6 @@ DOBA_TEST("pending limit retains frames until late completion then releases") {
   current.receive(fast);
   current.receive(fast);
   DOBA_EXPECT_EQUAL(current.output->closes.load(), 1);
-  int completions = 0;
   DOBA_EXPECT(!current.value.stop([&] { ++completions; }));
   pending.open();
   DOBA_EXPECT(frame.expired());
