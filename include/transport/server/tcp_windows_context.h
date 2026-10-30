@@ -168,6 +168,9 @@ struct context : public std::enable_shared_from_this<context<ENty, CNty>> {
       abort_();
       return;
     }
+    // A send can complete as soon as output is armed. Release input ownership
+    // first so that completion cannot lose its resume attempt to this lock.
+    receive_lock.unlock();
     arm_next_receive_operation();
   }
   // +=========================================================================+
