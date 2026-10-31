@@ -39,7 +39,10 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] send_delegate                                              ( public ) |
 // +---------------------------------------------------------------------------+
-// | A function that takes the head and body data, plus an optional source.    |
+// | Sends head, body and an optional source, in that order. Bundled TCP      |
+// | copies inline bytes before returning and takes ownership of the reader.  |
+// | Invoke only inside the current engine input call, on its calling thread. |
+// | A reader is terminal; later nonempty output is a contract violation.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using send_delegate = std::function<void(std::string_view, std::string_view,
@@ -51,13 +54,13 @@ namespace martianlabs::doba::protocol::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      (concept) |
 // +---------------------------------------------------------------------------+
-// | Protocol engine contract.                                                 |
-// +---------------------------------------------------------------------------+
-// | Input callbacks are serialized per connection and stop when closing       |
-// | begins. Input bytes stay immutable and valid during the callback.         |
-// | The output delegate accepts concurrent submissions from any thread.      |
-// | The transport owns and drains submitted output independently              |
-// | of the engine.                                                            |
+// | Structural engine interface. Bundled TCP applies this runtime contract:  |
+// | input calls are serialized per connection; bytes are immutable and       |
+// | borrowed until input returns. Engines retain incomplete messages.        |
+// | Registered send/close callbacks run only inside that input call, on its  |
+// | calling thread. Do not export callbacks or invoke them later/from other  |
+// | threads. Registration in the engine is valid for its context lifetime.   |
+// | Transport owns socket I/O and accepted output; engine owns protocol work.|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
@@ -76,6 +79,8 @@ concept engine = requires(ENty& engine, std::string_view input,
 // +---------------------------------------------------------------------------+
 // | A stopped engine reports when all work accepted by it has completed.     |
 // | A false result means the callback will be called exactly once later.     |
+// | This optional interface serves independent engine execution services.    |
+// | Bundled TCP never calls engine.stop or waits for application work.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
@@ -88,7 +93,8 @@ concept completion_engine =
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |
 // +---------------------------------------------------------------------------+
-// | Protocol engine factory contract.                                         |
+// | Creates an independent engine per connection. Calls for different        |
+// | connections may overlap on different workers; shared state must be safe. |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty, typename ENty>

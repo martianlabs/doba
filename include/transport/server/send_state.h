@@ -27,8 +27,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstring>
-#include <deque>
 #include <memory>
 #include <span>
 #include <string>
@@ -36,193 +34,116 @@
 #include <utility>
 
 #include "common/reader.h"
-#include "protocol/contracts.h"
-#include "transport/server/operating_state.h"
 
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] send_state                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct manages the state of outgoing data for a TCP connection.      |
-// | It maintains a buffer for inline data and a queue of sources for          |
-// | additional data to be sent. It provides methods to push new data, fill    |
-// | the buffer, consume sent data, and check if there is pending data         |
-// | to be sent.                                                               |
+// | Owns the active socket batch, accumulated output and one terminal reader. |
+// | Only consume may change the active batch while socket I/O is pending.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct send_state {
   // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                ( public ) |
   // +-------------------------------------------------------------------------+
-  struct source_entry {
-    // Prefix data to be sent before reading from the source (memory based)
-    std::string prefix;
-    // Source reader for additional data (stream based)
-    std::unique_ptr<common::reader> source;
-  };
+  explicit send_state(std::size_t capacity) : capacity_{capacity} {}
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // | [>] push                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit send_state(std::size_t capacity, std::size_t max_sources = 32)
-      : capacity_{capacity}, max_sources_{max_sources} {}
-  // +=========================================================================+
-  // | [>] push                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Tries to add a new data entry to the send state.                        |
-  // | It checks whether there is enough room for the head, body, and any      |
-  // | space reserved for sources. If everything fits, it adds the head and    |
-  // | body to the pending buffer and puts the source in the sources queue,    |
-  // | if one was provided. Returns true if the push succeeds,                 |
-  // | or false if it doesn’t.                                                 |
-  // +-------------------------------------------------------------------------+
+  // Copy inline bytes before returning. A reader terminates the input call:
+  // further nonempty output is rejected until its final batch has drained.
   bool push(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
-    const auto available = capacity_ - inline_bytes_ - source_reservation_;
+    if (head.empty() && body.empty() && !source) return true;
+    if (source_) return false;
+    const auto available = capacity_ - buffer.size() - pending_.size();
     if (head.size() > available || body.size() > available - head.size())
       return false;
-    if (source && max_sources_ && sources_.size() >= max_sources_) return false;
-    const std::size_t size = head.size() + body.size();
-    if (source) {
-      if (sources_.empty() && !active_from_source_) {
-        source_reservation_ =
-            std::min<std::size_t>(8192, capacity_ - inline_bytes_ - size);
-      }
-      pending_.append(head);
-      pending_.append(body);
-      inline_bytes_ += size;
-      sources_.push_back({std::move(pending_), std::move(source)});
-      pending_.clear();
-    } else {
-      pending_.append(head);
-      pending_.append(body);
-      inline_bytes_ += size;
-    }
+    pending_.append(head);
+    pending_.append(body);
+    source_ = std::move(source);
     return true;
   }
   // +=========================================================================+
-  // | [>] fill                                                     ( public ) |
+  // | [>] fill                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Fills the buffer with data from the pending buffer or the               |
-  // | sources queue. First, it clears the current buffer and resets the       |
-  // | offset. If there are no sources, it swaps the pending buffer into the   |
-  // | main buffer and returns true. Otherwise, it checks the first source     |
-  // | for a prefix to send. If it finds one, it swaps it into the main        |
-  // | buffer and returns true. If the source has failed or reached EOF,       |
-  // | it removes it from the queue and moves on. When source data is          |
-  // | available, it reads up to 8192 bytes—or whatever space is left—into     |
-  // | the main buffer and returns true if the read succeeds.If the read       |
-  // | fails or there’s no data available, it returns false.                   |
-  // +-------------------------------------------------------------------------+
+  // Never move or resize bytes still borrowed by WSASend. A prefix is sent
+  // before the reader is touched. Reader blocks need no speculative credit:
+  // they are read only after all inline output has drained.
   bool fill() {
-    if (!active_from_source_) inline_bytes_ -= buffer.size();
+    if (offset != buffer.size()) return true;
     buffer.clear();
     offset = 0;
-    active_from_source_ = false;
-    for (;;) {
-      if (sources_.empty()) {
-        buffer.swap(pending_);
-        return true;
-      }
-      auto& entry = sources_.front();
-      if (!entry.prefix.empty()) {
-        buffer.swap(entry.prefix);
-        return true;
-      }
-      if (entry.source->failed()) return false;
-      if (entry.source->eof()) {
-        sources_.pop_front();
-        if (sources_.empty()) source_reservation_ = 0;
-        continue;
-      }
-      const std::size_t available =
-          std::min<std::size_t>(8192, capacity_ - inline_bytes_);
-      if (!available) return false;
-      // Prefix retirement can make a larger source batch possible. Charge its
-      // entire read reservation before allowing concurrent inline submissions.
-      source_reservation_ = available;
-      buffer.resize(available);
-      const std::size_t count = entry.source->read(std::span<std::byte>(
-          reinterpret_cast<std::byte*>(buffer.data()), available));
-      buffer.resize(count);
-      if (entry.source->failed() || (!count && !entry.source->eof())) {
-        return false;
-      }
-      if (count) {
-        active_from_source_ = true;
-        return true;
-      }
+    // Recycle idle TX storage into the accumulator for the next RX batch.
+    if (!pending_.empty() || !source_) {
+      buffer.swap(pending_);
+      return true;
     }
+    if (source_->failed()) return false;
+    if (source_->eof()) {
+      source_.reset();
+      return true;
+    }
+    buffer.resize(std::min<std::size_t>(8192, capacity_));
+    const auto count = source_->read(std::as_writable_bytes(std::span(buffer)));
+    if (count > buffer.size() || source_->failed() ||
+        (!count && !source_->eof())) return false;
+    buffer.resize(count);
+    if (!count) source_.reset();
+    return true;
   }
   // +=========================================================================+
-  // | [>] consume                                                  ( public ) |
+  // | [>] consume                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Removes the requested number of bytes from the buffer. If that’s more   |
-  // | than the number of bytes left, it returns false. Otherwise, it moves    |
-  // | the offset forward. Inline batch credit survives partial sends and     |
-  // | is released only after the final byte of that batch is consumed.        |
-  // | Returns true when the bytes have been consumed successfully.            |
-  // +-------------------------------------------------------------------------+
+  // Partial sends retain the whole active batch in the hard byte limit.
+  // The reader stays owned until its final block has completed socket I/O.
   bool consume(std::size_t sent) {
     if (sent > buffer.size() - offset) return false;
     offset += sent;
     if (offset == buffer.size()) {
-      if (!active_from_source_) inline_bytes_ -= buffer.size();
       buffer.clear();
       offset = 0;
     }
     return true;
   }
-  // An inline batch retains its full credit until its final byte is consumed.
-  bool pressured() {
-    byte_pressure_ = update_pressure(byte_pressure_, inline_bytes_ + source_reservation_, capacity_);
-    source_pressure_ = max_sources_ && !sources_.empty() &&
-        update_pressure(source_pressure_, sources_.size(), max_sources_);
-    return byte_pressure_ || source_pressure_;
-  }
   // +=========================================================================+
-  // | [>] queued                                                   ( public ) |
+  // | [>] queued                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Checks whether there’s any data waiting to be sent. Returns true if the |
-  // | pending buffer or the sources queue contains data.                      |
-  // +-------------------------------------------------------------------------+
-  bool queued() const { return !pending_.empty() || !sources_.empty(); }
+  bool queued() const noexcept { return !pending_.empty() || source_; }
   // +=========================================================================+
-  // | [>] clear                                                    ( public ) |
+  // | [>] has_source                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Clears the send state by removing all pending data and resetting the    |
-  // | buffer, offset, inline byte count, source reservation, and active       |
-  // | source flag.                                                            |
+  bool has_source() const noexcept { return source_ != nullptr; }
+  // +=========================================================================+
+  // | [>] clear                                                   ( public ) |
   // +-------------------------------------------------------------------------+
+  // Only called without outstanding socket I/O borrowing buffer.
   void clear() {
     buffer.clear();
     pending_.clear();
-    sources_.clear();
+    source_.reset();
     offset = 0;
-    inline_bytes_ = 0;
-    source_reservation_ = 0;
-    active_from_source_ = false;
-    byte_pressure_ = source_pressure_ = false;
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
+  // | [>] ATTRIBUTEs                                              ( public ) |
   // +-------------------------------------------------------------------------+
+  // Active socket batch; its address is stable until completion.
   std::string buffer;
+  // Bytes already completed within the active batch.
   std::size_t offset{0};
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
+  // Inline bytes produced while the kernel owns the active batch.
   std::string pending_;
-  std::deque<source_entry> sources_;
-  std::size_t capacity_;
-  std::size_t max_sources_;
-  bool byte_pressure_{false};
-  bool source_pressure_{false};
-  std::size_t inline_bytes_{0};
-  std::size_t source_reservation_{0};
-  bool active_from_source_{false};
+  // The sole reader, terminal until its final socket batch has completed.
+  std::unique_ptr<common::reader> source_;
+  // Combined active and accumulated byte limit, without preallocation.
+  const std::size_t capacity_;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

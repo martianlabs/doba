@@ -26,4 +26,11 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Internal WSASend operation. It owns a shared context reference and the WSABUF
+view submitted to the kernel. That context keeps the TX bytes alive; the active
+batch is not moved or resized during I/O. The completion uses the submitted byte
+count to validate partial progress before continuing output.
+
+The worker destroys the operation after processing its completion. Failed
+submissions with no completion release it immediately. See
+[context](tcp_windows_context.md) for synchronization and closure.

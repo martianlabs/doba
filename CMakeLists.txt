@@ -86,19 +86,15 @@ include(
   GNUInstallDirs
 )
 
+if(DOBA_ENABLE_TLS)
+  message(FATAL_ERROR
+    "TLS is outside the current transport scope; configure DOBA_ENABLE_TLS=OFF")
+endif()
+
 find_package(
   Threads
   REQUIRED
 )
-if(
-  DOBA_ENABLE_TLS
-)
-  find_package(
-    OpenSSL
-    REQUIRED
-    COMPONENTS SSL
-  )
-endif()
 
 option(
   DOBA_ENABLE_STRICT_WARNINGS
@@ -181,39 +177,6 @@ if(DOBA_BUILD_FUZZERS)
   add_subdirectory(tests/fuzz)
 endif()
 
-if(
-  DOBA_ENABLE_TLS
-)
-  add_library(
-    doba_tls
-    INTERFACE
-  )
-  add_library(
-    martianlabs::doba_tls
-    ALIAS
-    doba_tls
-  )
-  set_target_properties(
-    doba_tls
-    PROPERTIES
-    EXPORT_NAME doba_tls
-  )
-  target_link_libraries(
-    doba_tls
-    INTERFACE
-    doba_headers
-    OpenSSL::SSL
-  )
-  target_compile_definitions(
-    doba_tls
-    INTERFACE
-    DOBA_ENABLE_TLS
-  )
-  install(
-    TARGETS doba_tls
-    EXPORT dobaTargets
-  )
-endif()
 
 file(
   GLOB_RECURSE
@@ -326,16 +289,6 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_router
   )
   add_subdirectory(
-    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
-  )
-  if(
-    DOBA_ENABLE_TLS
-  )
-    add_subdirectory(
-      ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/https_hello_world
-    )
-  endif()
-  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
   )
   add_subdirectory(
@@ -412,15 +365,6 @@ if(
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/unit
     )
-    if(
-      DOBA_ENABLE_TLS
-    )
-      target_link_libraries(
-        doba_unit_tests
-        PRIVATE
-        doba_tls
-      )
-    endif()
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/integration
     )

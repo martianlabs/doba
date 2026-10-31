@@ -35,34 +35,29 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] basic_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
 // | This class provides a basic transport for an engine.                      |
-// | It’s a template that takes the engine, engine factory, connection, and    |
-// | policies types as parameters. It manages the worker that handles the      |
-// | transport, including starting, stopping, and quiescing it.                |
+// | The engine and factory are template parameters; TCP policies configure   |
+// | the IOCP worker group. Start and stop belong to a sequential external    |
+// | owner. Application execution and TLS are outside this transport.         |
 // | You can also set callbacks for connection and disconnection events.       |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   ENty - engine type being used.                                          |
 // |   FAty - engine factory type being used.                                  |
-// |   CNty - connection type being used.                                      |
-// |   POty - policies type being used.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
-          protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename POty>
+          protocol::contracts::engine_factory<ENty> FAty>
 class basic_transport {
  public:
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  using policies_type = POty;
+  using policies_type = tcp_policies;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit basic_transport(policies_type configuration, FAty create_engine,
-                           typename CNty::shared_state shared_state)
-      : worker_{std::move(configuration), std::move(create_engine),
-                std::move(shared_state)} {}
+  explicit basic_transport(policies_type configuration, FAty create_engine)
+      : worker_{std::move(configuration), std::move(create_engine)} {}
   basic_transport(const basic_transport&) = delete;
   basic_transport(basic_transport&&) noexcept = delete;
   ~basic_transport() { stop(); }
@@ -79,10 +74,6 @@ class basic_transport {
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   void stop() { worker_.stop(); }
-  // +=========================================================================+
-  // | [>] quiesce                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  void quiesce() { worker_.quiesce(); }
   // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
@@ -102,7 +93,7 @@ class basic_transport {
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  worker<ENty, FAty, CNty, POty> worker_;
+  worker<ENty, FAty> worker_;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

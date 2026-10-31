@@ -8,7 +8,10 @@
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
 
-Provides the execution work transport component.
+Declares the structural transport interface and execution capability types.
+Execution capabilities are supplied independently to engines; bundled TCP
+provides synchronous socket I/O and never injects an application executor.
+See the [TCP runtime contract](tcp.md#runtime-contract).
 
 ### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
 
@@ -50,7 +53,9 @@ Provides the execution work transport component.
 struct execution_work { ... };
 ```
 
-Provides the execution work transport component.
+An opaque work item for an independently supplied execution service. The
+engine/service owns its state and execution lifetime. Bundled TCP does not
+queue or execute these items.
 
 **Source:** [include/transport/server/contracts.h:41](../../../../include/transport/server/contracts.h#L41)
 
@@ -100,7 +105,7 @@ struct execution_capacity { ... };
 
 While active, accepted work runs once, no earlier than its threshold.
 
-**Source:** [include/transport/server/contracts.h:53](../../../../include/transport/server/contracts.h#L53)
+**Source:** [include/transport/server/contracts.h:55](../../../../include/transport/server/contracts.h#L55)
 
 <a id="field-owner"></a>
 
@@ -116,7 +121,7 @@ Stores the owner value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/transport/server/contracts.h:54](../../../../include/transport/server/contracts.h#L54)
+**Source:** [include/transport/server/contracts.h:56](../../../../include/transport/server/contracts.h#L56)
 
 <a id="field-submit"></a>
 
@@ -133,7 +138,7 @@ Stores the submit value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/transport/server/contracts.h:55](../../../../include/transport/server/contracts.h#L55)
+**Source:** [include/transport/server/contracts.h:57](../../../../include/transport/server/contracts.h#L57)
 
 <a id="concept-execution-receiver"></a>
 
@@ -155,7 +160,7 @@ Checks the compile-time requirements for execution receiver.
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/transport/server/contracts.h:67](../../../../include/transport/server/contracts.h#L67)
+**Source:** [include/transport/server/contracts.h:69](../../../../include/transport/server/contracts.h#L69)
 
 <a id="concept-transport"></a>
 
@@ -181,7 +186,21 @@ concept transport =
     };
 ```
 
-This concept defines the requirements for a transport type. It requires that the transport type is constructible from its policies and an engine factory, and that it provides methods for setting callbacks for connection and disconnection events, as well as starting and stopping the transport.
+Checks construction from policies and an engine factory, notification
+registration, start and stop. Runtime requirements of bundled TCP also apply:
+
+- A sequential external owner configures, starts and stops the transport;
+  administrative calls must not originate inside worker callbacks.
+- Input is serialized per connection. Send/close run synchronously inside input;
+  accepted inline output is copied before returning and readers transfer ownership.
+- Socket buffers and operation state remain valid until the kernel releases them.
+- Engine close drains accepted output. Linux administrative stop cancels pending
+  output; Windows administrative stop drains it and real IOCP completions.
+- TLS, coroutine scheduling and application-task lifetime are outside TCP.
+
+The concept checks signatures, not these behavioral guarantees. The
+[TCP runtime contract](tcp.md#runtime-contract) defines ownership, terminal
+readers, limits, errors and the deliberate differences between platforms.
 
 **Template parameters:**
 
@@ -189,4 +208,8 @@ This concept defines the requirements for a transport type. It requires that the
 - **ENty:** `typename ENty`.
 - **FNty:** `typename FNty`.
 
-**Source:** [include/transport/server/contracts.h:84](../../../../include/transport/server/contracts.h#L84)
+**Source:** [include/transport/server/contracts.h:90](../../../../include/transport/server/contracts.h#L90)
+
+The bundled TCP transports do not supply execution_capacity. These shared
+types remain available to protocol engines and their independently supplied
+execution services.

@@ -26,4 +26,17 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Internal connection state owned exclusively by its Linux worker. It owns the
+engine, a fixed RX block, one accumulated TX string and at most one reader.
+The worker owns the socket; no context mutex or shared ownership is required.
+
+Fresh RX bytes are borrowed by one synchronous engine call. The engine stores
+registered callbacks and invokes them only inside that call. Inline output is
+copied before returning. Empty sends without a reader are no-ops; a non-null
+empty reader is terminal. A second reader or later nonempty output is rejected.
+
+TX preserves partial writes and EAGAIN without accepting new input until it
+and the source drain. Source chunks respect the logical TX limit; backing
+storage is independent. Engine close drains valid accepted output; an error
+aborts it. Administrative stop releases pending output after the current call.
+See the [runtime contract](tcp.md#runtime-contract) and [policies](tcp_policies.md).

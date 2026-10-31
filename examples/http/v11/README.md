@@ -2,7 +2,7 @@
 
 Build the project from the repository root as described in the
 [examples index](../../README.md). The TCP examples listen on
-`0.0.0.0:8080`; the TLS example listens on `0.0.0.0:8443`. Build the target
+`0.0.0.0:8080`. TLS is currently unsupported. Build the target
 named by its directory, run that executable, one server at a time, and stop it
 with Ctrl+C.
 
@@ -34,13 +34,12 @@ your application needs. Each step below lists examples in reading order:
 6. **Serve resources:** [head_requests](head_requests/README.md),
    [static_file_server](static_file_server/README.md), and
    [file_download](file_download/README.md).
-7. **Add asynchronous work or TLS:** [async_routes](async_routes/README.md)
-   and [https_hello_world](https_hello_world/README.md).
 
 Protect individual endpoints with [basic_auth](basic_auth/README.md) or
 [bearer_auth](bearer_auth/README.md). Both keep a public health route.
 
-To customize HTTP composition, continue with [custom_http_request](custom_http_request/README.md),
+To customize HTTP composition, continue with
+[custom_http_request](custom_http_request/README.md),
 [custom_http_response](custom_http_response/README.md), and
 [custom_http_router](custom_http_router/README.md). For a different protocol
 or transport, see the [examples index](../../README.md).
@@ -56,5 +55,12 @@ server.start();
 
 Engine policies are optional and follow the transport policies. The
 [request limits example](request_limits/README.md) configures one explicitly.
-The [TLS example](https_hello_world/README.md) uses `DOBA_ENABLE_TLS=ON` and
-requires an OpenSSL certificate and private key.
+`DOBA_ENABLE_TLS=ON` is explicitly rejected on both platforms.
+
+These are synchronous TCP examples on both platforms. Coroutine scheduling is
+not supplied by the transports. Inline-response pipelining is supported; an
+input batch can own only one terminal reader. Later nonempty output or another
+reader closes the connection. Empty sends without a reader are no-ops.
+
+See the [runtime contract](../../../docs/reference/transport/server/tcp.md#runtime-contract)
+for ownership and Linux/Windows differences.

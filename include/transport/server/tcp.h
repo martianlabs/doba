@@ -30,7 +30,6 @@
 
 #include "platform.h"
 #include "transport/server/contracts.h"
-#include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::transport::server::detail {
@@ -74,18 +73,30 @@ namespace martianlabs::doba::transport::server {
 // |   FAty - engine factory type being used.                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+#ifdef _WIN32
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
 class tcp
-    : public detail::basic_transport<ENty, FAty, detail::tcp_connection<ENty>, tcp_policies> {
+    : public detail::basic_transport<ENty, FAty> {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit tcp(tcp_policies configuration, FAty create_engine)
-      : detail::basic_transport<ENty, FAty, detail::tcp_connection<ENty>, tcp_policies>(
-            std::move(configuration), std::move(create_engine), nullptr) {}
+      : detail::basic_transport<ENty, FAty>(
+            std::move(configuration), std::move(create_engine)) {}
 };
+#else
+template <protocol::contracts::engine ENty,
+          protocol::contracts::engine_factory<ENty> FAty>
+class tcp : public detail::linux_transport<ENty, FAty> {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  using detail::linux_transport<ENty, FAty>::linux_transport;
+};
+#endif
 }  // namespace martianlabs::doba::transport::server
 
 #endif

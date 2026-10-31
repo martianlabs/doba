@@ -25,268 +25,145 @@
 #ifndef martianlabs_doba_transport_server_tcp_linux_transport_h
 #define martianlabs_doba_transport_server_tcp_linux_transport_h
 
-#include <algorithm>
 #include <arpa/inet.h>
 #include <charconv>
-#include <condition_variable>
 #include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <functional>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
-#include <thread>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "platform.h"
 #include "transport/server/tcp_linux_worker.h"
 
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] basic_transport                                             ( class ) |
+// | [>] linux_transport                                            ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a basic TCP transport for Linux. It manages the       |
-// | worker threads that handle incoming and outgoing connections, and lets    |
-// | you set callbacks for connection and disconnection events. Before         |
-// | starting the transport, it also sets up the buffer sizes and listen       |
-// | backlog.                                                                  |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
-// |   FAty - engine factory type being used.                                  |
-// |   CNty - connection type being used.                                      |
-// |   POty - policies type being used.                                        |
+// | Synchronous TCP transport. Configuration/start/stop are owner operations. |
+// | Each worker owns its listener, connections and one reader per socket.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
-          protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename POty>
-class basic_transport {
+          protocol::contracts::engine_factory<ENty> FAty>
+class linux_transport {
  public:
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  using policies_type = POty;
+  using policies_type = tcp_policies;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit basic_transport(policies_type configuration, FAty create_engine,
-                           typename CNty::shared_state shared_state)
-      : configuration_{configuration},
-        create_engine_{std::move(create_engine)},
-        shared_state_{std::move(shared_state)} {
+  linux_transport(tcp_policies configuration, FAty factory)
+      : configuration_(std::move(configuration)), factory_(std::move(factory)) {
     if (!configuration_.receive_buffer_capacity ||
         configuration_.receive_buffer_capacity >
-            static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())) {
-      throw std::runtime_error("Invalid receive buffer size!");
+            static_cast<std::size_t>(std::numeric_limits<ssize_t>::max()) ||
+        !configuration_.max_buffered_send_bytes ||
+        configuration_.max_buffered_send_bytes >
+            static_cast<std::size_t>(std::numeric_limits<ssize_t>::max()) ||
+        configuration_.listen_backlog < 0) {
+      throw std::runtime_error("Invalid Linux transport buffer or backlog");
     }
-    if (!configuration_.max_buffered_send_bytes) {
-      throw std::runtime_error("Invalid send buffer size!");
-    }
-    if (configuration_.inactivity_period.count() < 0) {
-      throw std::runtime_error("Invalid inactivity period!");
-    }
-    if (configuration_.listen_backlog < 0) {
-      throw std::runtime_error("Invalid listen backlog!");
+    if (configuration_.max_connections &&
+        configuration_.worker_count > configuration_.max_connections) {
+      throw std::runtime_error("Each Linux worker needs admission capacity");
     }
   }
-  basic_transport(const basic_transport&) = delete;
-  basic_transport(basic_transport&&) noexcept = delete;
-  ~basic_transport() { stop(); }
+  linux_transport(const linux_transport&) = delete;
+  ~linux_transport() { stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  basic_transport& operator=(const basic_transport&) = delete;
-  basic_transport& operator=(basic_transport&&) noexcept = delete;
+  linux_transport& operator=(const linux_transport&) = delete;
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Starts the transport, sets up the listening socket, and starts the      |
-  // | worker threads. It also checks that the IP address and port are valid.  |
-  // | If it’s already starting or stopping, or has active workers, it returns |
-  // | without doing anything. Once everything is up and running, it lets any  |
-  // | waiting threads know that startup is complete. If setup fails, it       |
-  // | stops the transport and throws the error again.                         |
-  // +-------------------------------------------------------------------------+
   void start() {
-    {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      if (starting_ || stopping_ || !workers_.empty()) return;
-      starting_ = true;
+    if (!workers_.empty()) return;
+    in_addr ip{};
+    unsigned int port = 0;
+    const std::string_view text(configuration_.port);
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(),
+                                        port);
+    if (configuration_.ip.find('\0') != std::string::npos ||
+        ::inet_pton(AF_INET, configuration_.ip.c_str(), &ip) != 1 ||
+        parsed.ec != std::errc() || parsed.ptr != text.data() + text.size() ||
+        port == 0 || port > 65535) {
+      throw std::runtime_error("Invalid Linux transport IPv4 address or port");
     }
-    try {
-      in_addr ip_address{};
-      if (::inet_pton(AF_INET, configuration_.ip.c_str(), &ip_address) != 1) {
-        throw std::runtime_error("Invalid IPv4 address!");
+    const auto count = configuration_.worker_count
+        ? configuration_.worker_count : 1;
+    std::vector<std::unique_ptr<linux_worker<ENty, FAty>>> workers;
+    workers.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+      auto policies = configuration_;
+      if (policies.max_connections) {
+        policies.max_connections = configuration_.max_connections / count +
+            (index < configuration_.max_connections % count ? 1 : 0);
       }
-      uint16_t port_number = parse_port(configuration_.port.c_str());
-      std::size_t number_of_workers = configuration_.worker_count;
-      if (!number_of_workers) {
-        number_of_workers =
-            std::max<std::size_t>(1, std::thread::hardware_concurrency());
-      }
-      for (std::size_t i = 0; i < number_of_workers; i++) {
-        auto entry = std::make_unique<worker<ENty, FAty, CNty, POty>>(
-            configuration_, create_engine_, on_connection_, on_disconnection_,
-            shared_state_, budget_);
-        entry->setup(ip_address, port_number);
-        {
-          std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-          workers_.emplace_back(std::move(entry));
-        }
-      }
-      for (const auto& entry : workers_) entry->start();
-    } catch (...) {
-      stop_(true);
-      throw;
+      auto worker = std::make_unique<linux_worker<ENty, FAty>>(
+          std::move(policies), factory_, connected_, disconnected_);
+      worker->start(ip, static_cast<std::uint16_t>(port));
+      workers.push_back(std::move(worker));
     }
-    {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      starting_ = false;
-    }
-    lifecycle_condition_.notify_all();
+    workers_ = std::move(workers);
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  void stop() { stop_(false); }
-  // +=========================================================================+
-  // | [>] quiesce                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Asks all workers to quiesce: they stop accepting new connections and    |
-  // | finish handling the ones they already have. The method waits until      |
-  // | all workers are done. If called from a worker thread, it throws an      |
-  // | exception to avoid a deadlock.                                          |
-  // +-------------------------------------------------------------------------+
-  void quiesce() {
-    if (worker<ENty, FAty, CNty, POty>::is_current_thread(create_engine_)) {
-      throw std::runtime_error("Transport cannot quiesce from a worker!");
+  void stop() {
+    for (const auto& worker : workers_) {
+      if (worker->is_current_thread()) {
+        throw std::runtime_error("Stop must be called outside Linux workers");
+      }
     }
-    std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    lifecycle_condition_.wait(lifecycle_lock,
-                              [this]() { return !starting_ && !quiescing_; });
-    if (stopping_ || workers_.empty()) return;
-    quiescing_ = true;
-    lifecycle_lock.unlock();
-    for (const auto& entry : workers_) entry->request_quiesce();
-    for (const auto& entry : workers_) entry->wait_quiesced();
-    lifecycle_lock.lock();
-    quiescing_ = false;
-    lifecycle_lock.unlock();
-    lifecycle_condition_.notify_all();
+    workers_.clear();
   }
   // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename FNty>
-  void set_on_connection(FNty&& fn) {
-    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+  void set_on_connection(FNty&& callback) {
     ensure_stopped();
-    on_connection_ = std::forward<FNty>(fn);
+    connected_ = std::forward<FNty>(callback);
   }
   // +=========================================================================+
   // | [>] set_on_disconnection                                     ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename FNty>
-  void set_on_disconnection(FNty&& fn) {
-    std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
+  void set_on_disconnection(FNty&& callback) {
     ensure_stopped();
-    on_disconnection_ = std::forward<FNty>(fn);
+    disconnected_ = std::forward<FNty>(callback);
   }
 
  private:
   // +=========================================================================+
-  // | [>] stop_                                                   ( private ) |
-  // +-------------------------------------------------------------------------+
-  void stop_(bool starting_failure) {
-    if (worker<ENty, FAty, CNty, POty>::is_current_thread(create_engine_)) {
-      throw std::runtime_error("Transport cannot be stopped from a worker!");
-    }
-    std::vector<std::unique_ptr<worker<ENty, FAty, CNty, POty>>> workers;
-    {
-      std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      if (starting_failure) {
-        starting_ = false;
-        lifecycle_condition_.notify_all();
-      } else {
-        lifecycle_condition_.wait(lifecycle_lock, [this]() {
-          return !starting_ && !quiescing_;
-        });
-      }
-      if (stopping_) {
-        if (stopping_thread_ == std::this_thread::get_id()) return;
-        lifecycle_condition_.wait(lifecycle_lock,
-                                  [this]() { return !stopping_; });
-        return;
-      }
-      if (workers_.empty()) return;
-      stopping_ = true;
-      stopping_thread_ = std::this_thread::get_id();
-      workers.swap(workers_);
-    }
-    try {
-      for (const auto& entry : workers) entry->request_stop();
-      for (const auto& entry : workers) entry->stop();
-    } catch (...) {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      stopping_ = false;
-      stopping_thread_ = {};
-      lifecycle_condition_.notify_all();
-      throw;
-    }
-    {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      stopping_ = false;
-      stopping_thread_ = {};
-    }
-    lifecycle_condition_.notify_all();
-  }
-  // +=========================================================================+
-  // | [>] parse_port                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  static uint16_t parse_port(const char port[]) {
-    if (!port || !*port) {
-      throw std::runtime_error("Invalid port (range from 1 to 65535)!");
-    }
-    unsigned int port_number = 0;
-    const char* end = port + std::strlen(port);
-    auto result = std::from_chars(port, end, port_number);
-    if (result.ec != std::errc() || result.ptr != end || port_number < 1 ||
-        port_number > 65535) {
-      throw std::runtime_error("Invalid port (range from 1 to 65535)!");
-    }
-    return static_cast<uint16_t>(port_number);
-  }
-  // +=========================================================================+
   // | [>] ensure_stopped                                          ( private ) |
   // +-------------------------------------------------------------------------+
   void ensure_stopped() const {
-    if (starting_ || stopping_ || !workers_.empty()) {
-      throw std::runtime_error(
-          "Transport callbacks cannot change while active!");
+    if (!workers_.empty()) {
+      throw std::runtime_error("Transport callbacks are fixed");
     }
   }
   // +=========================================================================+
-  // | ATTRIBUTEs                                                  ( private ) |
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  const policies_type configuration_;
-  const std::shared_ptr<connection_budget> budget_{
-      std::make_shared<connection_budget>(configuration_.max_connections)};
-  const FAty create_engine_;
-  const typename CNty::shared_state shared_state_;
-  std::vector<std::unique_ptr<worker<ENty, FAty, CNty, POty>>> workers_;
-  std::mutex lifecycle_mutex_;
-  std::condition_variable lifecycle_condition_;
-  bool starting_{false};
-  bool quiescing_{false};
-  bool stopping_{false};
-  std::thread::id stopping_thread_{};
-  types::on_client_connected_delegate on_connection_;
-  types::on_client_disconnected_delegate on_disconnection_;
+  // Configuration is immutable for the transport's lifetime.
+  const tcp_policies configuration_;
+  // Creates each connection's independent protocol engine.
+  const FAty factory_;
+  // Optional connection notification, fixed before start.
+  std::function<void()> connected_;
+  // Optional disconnection notification, fixed before start.
+  std::function<void()> disconnected_;
+  // Independent workers; clear joins them before releasing shared callbacks.
+  std::vector<std::unique_ptr<linux_worker<ENty, FAty>>> workers_;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

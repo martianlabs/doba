@@ -45,8 +45,8 @@ int main() {
   io.ip = "0.0.0.0";
   io.port = "8080";
   io.max_connections = 65535;
-  io.inactivity_period = std::chrono::seconds{60};
-  io.max_pending_sources = 32;
+#ifdef _WIN32
+#endif
   http_server<> http_server(io, limits);
   http_server.add_route("POST", "/upload",
                         [](const request&, response& res) {

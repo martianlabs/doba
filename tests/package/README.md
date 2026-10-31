@@ -51,9 +51,10 @@ The [HTTP consumer](protocol/http/v11/server_tests.cpp) exercises filesystem
 and reader types, an HTTP server, a controller with a typed route parameter,
 and the static-file controller.
 
-The [TLS consumer](transport/server/tls_tests.cpp) checks the OpenSSL link
-dependency by creating and freeing a context. It constructs an HTTPS server
-with fixture credentials and a route, and another with a custom engine.
+The installed package exports the synchronous TCP interface and its thread
+and Windows socket dependencies. TLS is outside the current transport scope;
+`DOBA_PACKAGE_USE_TLS=ON` fails configuration explicitly. There is no OpenSSL
+package dependency or TLS consumer executable.
 
 These are consumption and construction checks. The consumer programs do
 not open listening sockets or exchange requests; those behaviors belong to

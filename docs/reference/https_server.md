@@ -8,7 +8,11 @@
 
 **Header:** [include/https_server.h](../../include/https_server.h)
 
-Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
+Compatibility declaration for the TLS server type. TLS is unsupported by the
+current Linux and Windows backends; constructing it with the bundled TLS
+transport fails explicitly.
+Use [http_server](http_server.md) for synchronous TCP. This declaration does not
+provide an HTTPS backend or an enable-TLS procedure.
 
 ### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
@@ -42,7 +46,11 @@ class https_server
                          AUty...> { ... };
 ```
 
-Composes a TLS HTTP/1.1 routing with a protocol engine and transport.
+Compatibility declaration for the TLS server type. TLS is unsupported by the
+current Linux and Windows backends; constructing it with the bundled TLS
+transport fails explicitly.
+Use [http_server](http_server.md) for synchronous TCP. This declaration does not
+provide an HTTPS backend or an enable-TLS procedure.
 
 **Template parameters:**
 

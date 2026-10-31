@@ -26,4 +26,15 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Use the public TCP transport and policy types. These declarations are internal.
+
+connection_budget and connection_reservation implement shared Windows admission.
+A reservation is acquired before engine construction and released once by its
+final owner, including I/O that survives socket closure. Moving a reservation
+transfers that release obligation. Linux partitions admission by worker and does
+not use this shared budget.
+
+update_pressure is used by independent HTTP engine logic and its tests. Its
+presence here does not install pressure queries, input wakeups or an application
+executor in the TCP transports. See the
+[policy reference](tcp_policies.md) and [runtime contract](tcp.md#runtime-contract).

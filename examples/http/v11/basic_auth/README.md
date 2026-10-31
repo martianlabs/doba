@@ -7,8 +7,8 @@ it for **GET /private**. **GET /health** stays public. See the
 for its constructor and authentication method.
 
 The hard-coded credentials are for this demo. Use TLS to protect credentials
-in deployments; the [HTTPS example](../https_hello_world/README.md) shows
-transport setup. This example binds to loopback for local testing.
+in deployments through an external TLS terminator. The bundled TCP transports
+currently do not implement TLS. This example binds to loopback for local testing.
 
 ## Run it
 

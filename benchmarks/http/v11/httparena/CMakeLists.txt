@@ -26,19 +26,6 @@ find_package(
   Threads
   REQUIRED
 )
-find_package(
-  OpenSSL
-  REQUIRED
-)
-find_package(
-  ZLIB
-  REQUIRED
-)
-find_path(
-  RAPIDJSON_INCLUDE_DIR
-  rapidjson/document.h
-  REQUIRED
-)
 
 add_executable(
   doba_httparena_http_v11
@@ -49,16 +36,12 @@ target_include_directories(
   doba_httparena_http_v11
   PRIVATE
   "${DOBA_INCLUDE_DIR}"
-  "${RAPIDJSON_INCLUDE_DIR}"
 )
 
 target_link_libraries(
   doba_httparena_http_v11
   PRIVATE
   Threads::Threads
-  OpenSSL::SSL
-  OpenSSL::Crypto
-  ZLIB::ZLIB
 )
 
 source_group(

@@ -21,7 +21,15 @@ mind their own business. HTTP/1.1 comes first; the architecture leaves room
 for more.
 
 **Native IOCP on Windows. Native epoll on Linux.**
-The TCP transport needs no external libraries; optional TLS uses OpenSSL.
+
+Both backends support synchronous TCP, inline pipelining and one terminal
+prefix/source reader per connection. Linux uses independent SO_REUSEPORT
+workers; Windows uses IOCP. See the
+[TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
+and [policy limits](docs/reference/transport/server/tcp_policies.md).
+
+TCP needs no external libraries. TLS and coroutine execution are outside the
+current bundled transport scope; engine execution services remain independent.
 
 [Try the examples](examples/README.md)
 
@@ -148,9 +156,8 @@ find_package(doba CONFIG REQUIRED)
 target_link_libraries(application PRIVATE martianlabs::doba)
 ```
 
-For TLS, configure with `-DDOBA_ENABLE_TLS=ON` and link
-`martianlabs::doba_tls`. OpenSSL is required for this optional transport.
-See the [HTTPS example](examples/http/v11/https_hello_world/README.md).
+TLS is outside the current transport scope. `DOBA_ENABLE_TLS=ON` fails
+configuration explicitly on Linux and Windows.
 
 Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,
@@ -177,21 +184,25 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; twelve deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; twelve deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
   </picture>
 </a>
 
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
 **GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
-Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan and UBSan
-with TLS**, including a Clang build alongside MSVC. Both platforms repeat
-the critical concurrency cases **200 times**; TSan checks for races on Linux.
+Linux validates synchronous TCP with **ASan, UBSan, and TSan**; Windows runs
+**ASan and UBSan**, including a Clang build alongside MSVC. Independent engine concurrency cases
+repeat **200 times** in CI; Windows
+also repeats its native IOCP lifecycle cases **20 times**. TSan checks Linux
+races. These are the configured CI jobs, not a new remote run for this document.
+The illustrated counts describe source declarations across the tree, not cases
+executed on one platform.
 And yes, **the tests run in Release, optimizations and all**. That's the code
 we care about running. Debug gets a compile check. The test tooling uses
 C++ and CMake; building doba is quite enough setup for testing doba.
@@ -206,3 +217,4 @@ and the tests; letting somebody else's tools have a go seems only fair.
 ---
 
 [Apache 2.0](LICENSE)
+

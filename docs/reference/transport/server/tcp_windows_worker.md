@@ -26,4 +26,40 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Use the public TCP transport. This header is internal.
+
+The worker group owns its listener and IOCP. Start validates the endpoint,
+creates IOCP, associates the listener, starts workers and arms AcceptEx. Failed
+startup drains any operations already submitted and releases partial resources.
+Each completion dispatches exactly one native accept, receive or send operation;
+there are no synthetic output packets or application jobs. Workers wait without
+a timer scan. TCP_NODELAY is enabled on accepted sockets.
+
+The accept operation owns its socket until successful context construction.
+The context then owns cleanup, including failed IOCP association or registration.
+The operation destructor closes only untransferred sockets. Connection budget
+reservation precedes engine allocation. Excess connections are rejected; the
+reservation follows context lifetime, including outstanding I/O after closure.
+
+A set retains admitted contexts so stop can visit idle connections. Real RX/TX
+OVERLAPPED objects also retain their contexts until completion. A completion or
+stop that observes a finished context claims removal by erasing it once. Only
+the successful eraser reports disconnection, outside both transport locks.
+
+Stop closes admission and waits for pending accepts to finish initialization.
+It snapshots live contexts, releases the lifecycle lock and requests their drain.
+Once real context I/O finishes and the live set is empty, stop wakes and joins
+all workers, then closes IOCP. The temporary snapshot avoids entering context
+locks under the lifecycle lock. Stop never waits for application tasks.
+
+The lifecycle mutex protects admission, pending accepts and the live set.
+A condition variable waits only for real accept/context completion. The stop
+signal and shared admission counter remain atomic because independent workers
+and context locks access them. Each context has its own engine/socket mutex.
+User notifications run outside these locks. No try_lock or weak_ptr is used.
+
+Configuration, callback registration, start and stop are sequential operations
+of an external owner. Reentrant or worker-owned administration is rejected.
+Concurrent administrative success is unsupported. Engine callbacks are strictly
+synchronous; no external producers, TLS, scheduler, quiescence, inactivity or
+pressure/resume mechanism is provided.

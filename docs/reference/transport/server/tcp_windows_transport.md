@@ -26,4 +26,25 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Use the public TCP transport. This header is internal.
+
+basic_transport delegates start, stop and notification registration to its IOCP
+worker group. Its parameters are the engine and its factory; tcp_policies
+configure workers, the IPv4 endpoint, RX capacity, buffered TX and admission.
+IOCP, AcceptEx, WSARecv and WSASend remain the native Windows architecture.
+
+Engines receive bytes synchronously and retain their own incomplete messages.
+Transport callbacks accumulate output before submission. Prefix/source output
+supports one terminal reader; inline RX and TX may overlap in the kernel while
+connection state remains serialized. See the context and worker references for
+buffer ownership, close progression and completion lifetime.
+
+An external sequential owner configures, starts and stops the transport. Engine
+callbacks cannot escape synchronous input, and administrative calls cannot run
+from its IOCP workers. Stop drains accepted output and socket operations before
+joining workers and closing IOCP. Connection notifications are paired once and
+run outside the transport's locks.
+
+There is no application executor, TLS, inactivity timer, quiescence or flow
+pressure/resume handshake. The transport does not schedule or retain application
+tasks. A blocking engine or reader occupies its IOCP worker.

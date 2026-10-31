@@ -48,7 +48,11 @@ a selected value are marked "Not set".
 
 The planned first delivery is `0.1.0-beta1`, a beta for controlled
 deployments. There is currently no release candidate. Operational hardening
-C1-C3 and C7 is implemented and verified on Windows and Linux with TCP and TLS.
+C1-C3 and C7 was verified on the earlier Windows and Linux TCP/TLS backends.
+The current Linux and Windows designs supersede those backends. They support
+synchronous TCP and prefix/source, without TLS, async execution, inactivity
+timers or output-credit queues. Historical verification does not qualify these
+backends as a release candidate; use their current TCP contracts and test evidence.
 RE1 is the remaining open release gate. GZIP is future product work.
 
 **Next release work.** Qualify the exact publication revision and complete RE1
@@ -146,10 +150,11 @@ campaigns must not require Python or another scripting runtime.
   </a>
 </h2>
 
-C1, C2, C3 and C7 are complete for the beta's operational scope. The
-[implementation plan and validation results](../plans/operational-policies.md)
-record the agreed budgets, regressions and compiler matrix. The exact release
-qualification remains part of RE1.
+The completion records for C1, C2, C3 and C7 below describe the earlier
+backends. Their implementation plan and validation results remain in repository
+history. For the current backends, use the [TCP runtime contract](reference/transport/server/tcp.md#runtime-contract)
+and [policy reference](reference/transport/server/tcp_policies.md). The exact
+release qualification remains part of RE1.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
@@ -169,7 +174,8 @@ qualification remains part of RE1.
 
 **Status.** Complete. Verified on IOCP and epoll, TCP and TLS.
 
-`inactivity_period` defaults to 60 seconds; zero disables it and negative
+The previous `inactivity_period` policy was removed in Windows block 3.
+Historically it defaulted to 60 seconds; zero disabled it and negative
 periods are rejected. Positive socket reads or writes renew the period,
 including TLS negotiation and discarded input during graceful close. Expiration
 aborts the socket even when no I/O completion is pending. Worker checks use
@@ -862,3 +868,7 @@ changing existing `stop()` semantics.
 
 **Close when selected.** Test active sends, idle keep-alive, pipelining,
 pending output, expiry, repeated stop, and single cleanup on both backends.
+
+Windows block 4 supersedes the historical output-credit/reader-queue design:
+max_pending_sources and source reservations are removed. One terminal reader
+is accepted, with bounded TX blocks and a fixed restriction on later output.

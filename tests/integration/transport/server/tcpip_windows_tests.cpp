@@ -143,9 +143,9 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
-// | [>] tcpip receives bytes beyond one readiness event         ( test-case ) |
+// | [>] Windows receives bytes across RX blocks                ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip receives bytes beyond one readiness event") {
+DOBA_TEST("Windows TCP receives bytes across multiple RX blocks") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -171,9 +171,9 @@ DOBA_TEST("tcpip receives bytes beyond one readiness event") {
 }
 
 // +===========================================================================+
-// | [>] tcpip reuses a connection after each completed send     ( test-case ) |
+// | [>] Windows serves sequential connection exchanges         ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip reuses a connection after each completed send") {
+DOBA_TEST("Windows TCP serves sequential exchanges on one connection") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -199,9 +199,9 @@ DOBA_TEST("tcpip reuses a connection after each completed send") {
 }
 
 // +===========================================================================+
-// | [>] tcpip retains unconsumed fragments for the engine       ( test-case ) |
+// | [>] Windows engine retains incomplete input                ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip retains unconsumed fragments for the engine") {
+DOBA_TEST("Windows TCP delivers fragments retained by the engine") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -380,7 +380,7 @@ DOBA_TEST("tcpip drains an engine close delivery before eof") {
 // +===========================================================================+
 // | [>] transport contract                                      ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip removes an empty delivery without blocking its queue") {
+DOBA_TEST("Windows TCP ignores an empty send before inline output") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -1088,71 +1088,9 @@ DOBA_TEST("tcpip batches output after the receive callback") {
 }
 
 // +===========================================================================+
-// | [>] tcpip accepts concurrent producers without new input    ( test-case ) |
+// | [>] Windows limits accumulated inline output               ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip accepts concurrent producers without new input") {
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  auto state = std::make_shared<byte_state>();
-  martianlabs::doba::protocol::send_delegate output;
-  std::atomic<int> ready{0};
-  state->receive = [&](byte_engine& engine, const char*, std::size_t) {
-    output = engine.send;
-    ready++;
-    return;
-  };
-  auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 4;
-  configuration.max_buffered_send_bytes = 64 * 1024;
-  {
-    tr::tcp<byte_engine, decltype(factory)> server(configuration, factory);
-    server.set_on_connection([]() {});
-    server.set_on_disconnection([]() {});
-    server.start();
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all("x"));
-    DOBA_EXPECT(wait_count(ready, 1));
-    for (int round = 0; round < 3; round++) {
-      std::array<std::jthread, 6> producers;
-      for (std::size_t i = 0; i < producers.size(); i++) {
-        producers[i] = std::jthread([output, i]() {
-          for (int sequence = 0; sequence < 128; sequence++) {
-            std::string bytes(16, static_cast<char>('a' + i));
-            bytes[1] = static_cast<char>(sequence);
-            output(std::move(bytes), {}, nullptr);
-          }
-        });
-      }
-      for (auto& producer : producers) producer.join();
-      const auto bytes = client.receive(6 * 128 * 16, 5s);
-      DOBA_EXPECT(bytes.has_value());
-      if (!bytes) break;
-      std::array<int, 6> next{};
-      for (std::size_t offset = 0; offset < bytes->size(); offset += 16) {
-        const auto i = static_cast<std::size_t>((*bytes)[offset] - 'a');
-        DOBA_EXPECT(i < next.size());
-        if (i >= next.size()) break;
-        DOBA_EXPECT_EQUAL(static_cast<unsigned char>((*bytes)[offset + 1]),
-                          next[i]++);
-        DOBA_EXPECT_EQUAL(bytes->substr(offset + 2, 14),
-                          std::string(14, static_cast<char>('a' + i)));
-      }
-      for (const int sequence : next) DOBA_EXPECT_EQUAL(sequence, 128);
-    }
-    client.close();
-    server.stop();
-  }
-  output(std::string(16, '\0'), {}, nullptr);
-}
-
-// +===========================================================================+
-// | [>] tcpip limits the sum of queued deliveries               ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip limits the sum of queued deliveries") {
+DOBA_TEST("Windows TCP limits accumulated inline output per input call") {
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
@@ -1181,60 +1119,5 @@ DOBA_TEST("tcpip limits the sum of queued deliveries") {
   server.stop();
   DOBA_EXPECT(bytes.has_value() || error == "socket");
   if (bytes) DOBA_EXPECT(bytes->empty());
-}
-
-// +===========================================================================+
-// | [>] tcpip closes safely while producers enqueue             ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcpip closes safely while producers enqueue") {
-  for (const bool destroy : {false, true}) {
-    tcpip_client client;
-    const auto port = client.find_available_port();
-    DOBA_EXPECT(port != 0);
-    auto state = std::make_shared<byte_state>();
-    martianlabs::doba::protocol::send_delegate output;
-    std::atomic<int> ready{0};
-    std::atomic<bool> release{false};
-    state->receive = [&](byte_engine& engine, const char*, std::size_t) {
-      output = engine.send;
-      ready++;
-      return;
-    };
-    auto factory = [state]() { return byte_engine{state, {}, {}}; };
-    tr::tcp_policies configuration;
-    configuration.ip = "127.0.0.1";
-    configuration.port = std::to_string(port);
-    configuration.worker_count = 4;
-    auto server = std::make_unique<tr::tcp<byte_engine, decltype(factory)>>(
-        configuration, factory);
-    server->set_on_connection([]() {});
-    server->set_on_disconnection([state, &output]() {
-      output(std::string(32, '\0'), {}, nullptr);
-      state->disconnected++;
-    });
-    server->start();
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all("x"));
-    DOBA_EXPECT(wait_count(ready, 1));
-    std::array<std::jthread, 4> producers;
-    for (auto& producer : producers) {
-      producer = std::jthread([&]() {
-        while (!release.load()) std::this_thread::yield();
-        for (int i = 0; i < 1024; i++) {
-          output(std::string(32, '\0'), {}, nullptr);
-        }
-      });
-    }
-    release = true;
-    if (destroy)
-      server.reset();
-    else
-      client.abort();
-    for (auto& producer : producers) producer.join();
-    client.close();
-    if (server) server->stop();
-    DOBA_EXPECT_EQUAL(state->disconnected.load(), 1);
-    output(std::string(32, '\0'), {}, nullptr);
-  }
 }
 

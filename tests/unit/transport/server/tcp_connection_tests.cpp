@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <array>
 #include <cstddef>
 #include <cstring>
 #include <functional>
@@ -45,7 +44,6 @@ namespace {
 using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::detail::tcp_connection;
-using martianlabs::doba::transport::server::detail::send_state;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -154,9 +152,9 @@ DOBA_TEST("tcp connection propagates engine errors") {
 }
 
 // +===========================================================================+
-// | [>] tcp connection keeps engine callbacks                   ( test-case ) |
+// | [>] RX adapter invokes callbacks during input              ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection keeps engine callbacks") {
+DOBA_TEST("TCP RX adapter invokes callbacks during engine input") {
   auto factory = []() { return test_engine{}; };
   tcp_connection<test_engine> input(4, factory);
   bool sent = false;
@@ -165,58 +163,16 @@ DOBA_TEST("tcp connection keeps engine callbacks") {
       [&sent](std::string_view head, std::string_view body,
               std::unique_ptr<reader>) { sent = head == "x" && body.empty(); });
   input.engine.set_on_close([&closed]() { closed = true; });
-  input.engine.send("x", {}, nullptr);
-  input.engine.close();
+  bool delivered = false;
+  input.engine.receive = [&](const char* bytes, std::size_t size) {
+    delivered = size == 1 && bytes[0] == 'x';
+    input.engine.send(std::string_view(bytes, size), {}, nullptr);
+    input.engine.close();
+  };
+  input.receive_buffer()[0] = 'x';
+  input.process(1);
+  DOBA_EXPECT(delivered);
   DOBA_EXPECT(sent);
   DOBA_EXPECT(closed);
 }
 
-// +===========================================================================+
-// | [>] tcp connection sends queue bytes directly               ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection sends queue bytes directly") {
-  auto factory = []() { return test_engine{}; };
-  tcp_connection<test_engine> input(8, 8, factory, nullptr);
-  DOBA_EXPECT(input.established());
-  DOBA_EXPECT(!input.peer_closed());
-  DOBA_EXPECT(input.eof());
-  DOBA_EXPECT(input.close_output());
-  send_state output(8);
-  DOBA_EXPECT(output.push("abc", {}, nullptr));
-  DOBA_EXPECT(input.prepare_output(output));
-  auto bytes = input.output_bytes(output);
-  DOBA_EXPECT_EQUAL(std::string(bytes.data(), bytes.size()), "abc");
-  DOBA_EXPECT(input.output_pending(output));
-  DOBA_EXPECT(input.output_sent(output, 2));
-  bytes = input.output_bytes(output);
-  DOBA_EXPECT_EQUAL(std::string(bytes.data(), bytes.size()), "c");
-  DOBA_EXPECT(input.output_sent(output, 1));
-  DOBA_EXPECT(!input.output_pending(output));
-}
-
-// +===========================================================================+
-// | [>] tcp connection batches queued output                    ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("tcp connection batches queued output") {
-  auto factory = []() { return test_engine{}; };
-  tcp_connection<test_engine> input(8, 8, factory, nullptr);
-  send_state output(32);
-  DOBA_EXPECT(output.push("head", "body", nullptr));
-  DOBA_EXPECT(output.push("next", {}, nullptr));
-  DOBA_EXPECT(input.prepare_output(output));
-  std::array<std::span<char>, 4> buffers{};
-  auto count = input.output_buffers(output, buffers);
-  DOBA_EXPECT_EQUAL(count, 1);
-  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
-                    "headbodynext");
-  DOBA_EXPECT(!input.output_sent(output, 13));
-  DOBA_EXPECT_EQUAL(output.offset, 0);
-  DOBA_EXPECT(input.output_sent(output, 5));
-  count = input.output_buffers(output, buffers);
-  DOBA_EXPECT_EQUAL(count, 1);
-  DOBA_EXPECT_EQUAL(std::string(buffers[0].data(), buffers[0].size()),
-                    "odynext");
-  DOBA_EXPECT(input.output_sent(output, 7));
-  DOBA_EXPECT(!input.output_pending(output));
-  DOBA_EXPECT_EQUAL(input.output_buffers(output, {}), 0);
-}

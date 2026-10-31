@@ -50,9 +50,20 @@ struct overlapped_accept : overlapped_base {
   // +-------------------------------------------------------------------------+
   overlapped_accept(SOCKET in_socket)
       : overlapped_base(io_type::kAccept), socket{in_socket} {}
+  overlapped_accept(const overlapped_accept&) = delete;
+  overlapped_accept(overlapped_accept&&) = delete;
+  ~overlapped_accept() {
+    if (socket != INVALID_SOCKET) closesocket(socket);
+  }
+  // +=========================================================================+
+  // | [>] OPERATORs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  overlapped_accept& operator=(const overlapped_accept&) = delete;
+  overlapped_accept& operator=(overlapped_accept&&) = delete;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  // Owned until context construction succeeds and takes the socket.
   SOCKET socket{INVALID_SOCKET};
   CHAR addresses[(kAcceptAddressBytes * 2)]{0};
 };

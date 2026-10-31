@@ -39,9 +39,19 @@ using send_delegate = std::function<void(std::string_view, std::string_view,
                                          std::unique_ptr<common::reader>)>;
 ```
 
-A function that takes the head and body data, plus an optional source.
+Sends head, body and an optional source, in that order. With bundled TCP,
+head/body bytes are copied into transport storage before the callback returns;
+reader ownership transfers to the transport. Borrowed backing storage must
+remain valid until the reader is released. A reader is terminal: subsequent
+nonempty output or another reader is rejected until that output drains.
 
-**Source:** [include/protocol/contracts.h:45](../../../include/protocol/contracts.h#L45)
+Invoke send/close only inside the current engine input call, on the thread
+executing that call. Registration stores the callbacks in the engine for its
+context lifetime; they must not escape for delayed or cross-thread invocation.
+See the [TCP runtime contract](../transport/server/tcp.md#runtime-contract)
+for closure, empty submissions, limits and platform differences.
+
+**Source:** [include/protocol/contracts.h:48](../../../include/protocol/contracts.h#L48)
 
 <a id="concept-engine"></a>
 
@@ -61,13 +71,26 @@ concept engine = requires(ENty& engine, std::string_view input,
 };
 ```
 
-Protocol engine contract. Input callbacks are serialized per connection and stop when closing begins. Input views borrow bytes that remain immutable and valid throughout the callback. The output delegate accepts concurrent submissions from any thread. The transport owns and drains submitted output independently of the engine.
+This concept checks the structural engine interface. Bundled TCP serializes
+input per connection and stops delivering new input once closing begins. Input
+views borrow immutable bytes only for the duration of the call; the engine
+retains its own incomplete protocol messages.
+
+Send/close execute synchronously inside that input call. Windows may use a
+different IOCP worker for a later call; serialization does not imply fixed thread
+affinity. Other connections may execute concurrently. Protocol work and any
+independent execution service belong to the engine. TCP handles socket I/O,
+accepted output and its own operation lifetime.
+
+The concept cannot enforce these runtime rules. A custom implementation must
+honor the [runtime contract](../transport/server/tcp.md#runtime-contract);
+satisfying the C++ requires-expression alone does not establish conformance.
 
 **Template parameters:**
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:64](../../../include/protocol/contracts.h#L64)
+**Source:** [include/protocol/contracts.h:67](../../../include/protocol/contracts.h#L67)
 
 <a id="concept-completion-engine"></a>
 
@@ -83,13 +106,16 @@ concept completion_engine =
     };
 ```
 
-A stopped engine reports when all work accepted by it has completed. A false result means the callback will be called exactly once later.
+A stopped engine reports when all work accepted by it has completed. A false
+result means the callback will be called exactly once later. This optional
+interface remains available to independent execution services. Bundled TCP
+does not call engine.stop, schedule coroutines or wait for application tasks.
 
 **Template parameters:**
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:82](../../../include/protocol/contracts.h#L82)
+**Source:** [include/protocol/contracts.h:87](../../../include/protocol/contracts.h#L87)
 
 <a id="concept-engine-factory"></a>
 
@@ -105,11 +131,13 @@ concept engine_factory = engine<ENty> && std::move_constructible<FNty> &&
                          };
 ```
 
-Protocol engine factory contract.
+Creates an independent engine for each connection. Factory calls for different
+connections may overlap across workers. Synchronization of shared factory or
+application state belongs to its owner.
 
 **Template parameters:**
 
 - **FNty:** `typename FNty`.
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:95](../../../include/protocol/contracts.h#L95)
+**Source:** [include/protocol/contracts.h:101](../../../include/protocol/contracts.h#L101)

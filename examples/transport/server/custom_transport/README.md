@@ -15,4 +15,8 @@ Build and run the `custom_transport` target. The output starts with
 `HTTP/1.1 200` and ends with the body `hello from memory`.
 
 The transport shows where incoming and outgoing bytes cross the protocol
-boundary. It is a single-request example, not a general HTTP middleware API.
+boundary. It processes one fixed request synchronously in memory.
+It does not demonstrate socket concurrency, TCP policies, timers or application
+execution. The native [TCP contract](../../../../docs/reference/transport/server/tcp.md#runtime-contract)
+applies to the bundled network backends; the engine/transport concepts check
+signatures and do not make this demo a production network implementation.

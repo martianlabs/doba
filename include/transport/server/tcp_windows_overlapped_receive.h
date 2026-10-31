@@ -26,6 +26,7 @@
 #define martianlabs_doba_transport_server_tcp_windows_overlapped_receive_h
 
 #include <memory>
+#include <utility>
 
 #include "protocol/contracts.h"
 #include "transport/server/tcp_windows_overlapped_base.h"
@@ -36,7 +37,7 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] FORWARDs                                                   ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty, typename CNty>
+template <protocol::contracts::engine ENty>
 struct context;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -46,17 +47,17 @@ struct context;
 // | Windows overlapped receive operation.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty, typename CNty>
+template <protocol::contracts::engine ENty>
 struct overlapped_receive : overlapped_base {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  overlapped_receive(std::shared_ptr<context<ENty, CNty>> context)
-      : overlapped_base(io_type::kReceive), ctx{context} {}
+  overlapped_receive(std::shared_ptr<context<ENty>> context)
+      : overlapped_base(io_type::kReceive), ctx{std::move(context)} {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  std::shared_ptr<context<ENty, CNty>> ctx;
+  std::shared_ptr<context<ENty>> ctx;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

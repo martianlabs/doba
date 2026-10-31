@@ -23,6 +23,12 @@ of head-scratching.
   </a>
 </h2>
 
+Both TCP backends use synchronous engine callbacks and one terminal reader per
+connection. They do not schedule application work or implement inactivity scans
+or pressure/resume hooks. Engine features discussed below for asynchronous
+work require an independent embedding and execution service; they do not describe
+capabilities of http_server over the bundled TCP transports.
+
 The first **http_server<>** argument configures the transport. The second
 configures the HTTP engine. The
 [request_limits example](../../examples/http/v11/request_limits/README.md)
@@ -129,7 +135,8 @@ not remain in the residual vector. Transport capacity controls the I/O block
 size independently of HTTP limits. Percent-encoded paths need a writable
 copy of the path; other field bytes remain borrowed during synchronous work.
 
-Before any asynchronous handler is invoked, the request copies its fields
+In an independent asynchronous engine embedding, before a handler is invoked,
+the request copies its fields
 and inline wire body into one owned vector. This includes handlers that
 complete immediately. The engine does not copy bytes belonging to other
 requests. The request and response then outlive the input and decoder
@@ -211,46 +218,38 @@ are worth knowing:
 
 - **Async responses.** Once a connection uses async handling,
   *max_pending_requests* caps response positions awaiting ordered delivery.
-  It defaults to **128**. The bundled transports pause new request processing
-  under pressure and resume it after credit is released. A hard overflow closes
-  the connection. **0** removes this limit.
+  It defaults to **128**. These are protocol limits; the TCP transport
+  does not provide async execution or a pause/resume handshake. A hard
+  overflow closes the connection. **0** removes this limit.
 - **Queued output.** The TCP policy *max_buffered_send_bytes* defaults to
-  **1 MiB** per connection. It bounds queued send reservations plus the
-  active batch; partial sends retain the whole batch reservation until its
+  **1 MiB** per connection. Linux bounds its single accumulated TX string and
+  source chunks; it stops receiving until output drains. Windows bounds
+  its active socket batch plus accumulated inline bytes; partial sends retain
+  the whole active batch until its
   last byte is consumed. A connection that exceeds it closes. Storage owned by a body
   source is outside this cap.
 
-The transport also caps retained readers with *max_pending_sources* (**32**,
-including the active reader). HTTP caps serialized heads and inline bodies
-waiting for their turn with *max_pending_response_bytes* (**1 MiB**). Readers
-with empty prefixes still count; source-owned memory and files do not become
-inline bytes just because their contents will eventually reach the wire.
+Both backends accept one terminal reader per connection; there is no
+configurable reader count or queue. HTTP caps serialized heads and inline
+bodies waiting for their turn with max_pending_response_bytes (1 MiB).
+Reader backing storage does not count as buffered transport bytes. Pipeline
+inline replies normally; a reader must be the final output of its RX call.
 
-The bundled transports pause input at 75% of a budget and resume at 50%, rounded
-up and down respectively. A received pipeline stops between requests too; its
-remaining bytes wait in one bounded receive block. Handlers already running can
-still complete. If their output exhausts a hard budget, the connection closes.
-Workers never wait synchronously for output credit.
+On Linux, *max_connections* defaults to **65535**, partitioned across workers
+without a shared counter. It must be at least the worker count when finite;
+a full worker rejects even if another has free slots. **0** disables the cap.
+Linux holds a slot only while that worker owns the live context.
 
-*max_connections* defaults to **65535**, shared by all workers of one server.
-Excess sockets close before allocating their engines and TLS state. A closed
-socket with unfinished async work keeps its reservation until the context can
-retire, so reconnecting cannot bypass the live-work limit. Independent servers
+On Windows, *max_connections* defaults to **65535**, shared by all workers.
+Excess sockets close before allocating their engines. A closed
+socket keeps its reservation until pending I/O completes and the context can
+be released, so reconnecting cannot bypass the context budget. Independent servers
 have independent budgets. The maximum does not preallocate connections.
 
-*inactivity_period* defaults to **60 seconds**. Only positive socket reads or
-writes renew it, including TLS handshake bytes. Expiration aborts the socket;
-queued responses and suspended handlers do not count as progress. Recording a
-context's activity only sets a flag under its existing lock; this needs no clock
-read or new atomic operation. Workers query the clock for maintenance scheduling
-and sample activity at intervals of the smaller of the
-configured period and **250 ms**. The first sample starts the idle clock, and a
-sample observing activity renews it. A silent connection therefore expires no
-earlier than its configured period and normally within two extra sample intervals
-(at most **500 ms**), plus scheduling and scan delay. Expiration also applies during a pause or a graceful
-close. It does not forcibly cancel a handler that external code may still resume.
-A peer sending occasional bytes can keep this period alive: it is not a total
-request deadline or minimum transfer rate.
+Neither TCP backend expires inactive connections or performs maintenance
+scans. Neither backend installs pressure queries or input wakeups into the
+engine. Buffered send bytes and reader counts are hard limits; overflowing
+one closes the connection instead of pausing and resuming input.
 
 For example, configure transport and HTTP budgets independently:
 
@@ -259,28 +258,26 @@ martianlabs::doba::transport::server::tcp_policies io;
 io.ip = "0.0.0.0";
 io.port = "8080";
 io.max_connections = 65535;
-io.inactivity_period = std::chrono::seconds{60};
-io.max_pending_sources = 32;
 martianlabs::doba::protocol::http::v11::policies http;
 http.max_pending_requests = 128;
 http.max_pending_response_bytes = 1024 * 1024;
 http_server<> server(io, http);
 ```
 
-Zero disables each new limit and the existing pending-request limit. Negative
-inactivity periods are invalid; heads, transport receive/send capacities and TLS
-BIO capacities must remain positive. Transport construction validates its
-policies; the public HTTP/HTTPS server constructs its transport on the first
-*start()*, so invalid transport settings fail there, before listening. Servers
+Zero disables the connection limit; the one-reader restriction is fixed. Transport receive
+and send capacities must remain positive. TLS is unsupported. The public
+HTTP server constructs its transport on first start; invalid transport
+settings fail before listening. Servers
 copy configuration: later changes to the original policy object do not update
-a running server. Byte budgets count logical queued bytes and reservations,
-not allocator capacity or total process memory. These limits cover framework queues, not arbitrary handler allocations,
+a running server. Transport byte budgets count active and accumulated bytes,
+not allocator capacity or total process memory. These transport/engine budgets
+do not bound arbitrary handler allocations,
 external operations or all temporary disk use. Cache and application-owned
 storage need their own budgets.
 
 These limits sit on different sides of the protocol/transport boundary.
-The [async routes chapter](03-http-1-1.md#async-routes) shows why responses
-may wait for their turn; the [transport chapter](04-transports-and-tls.md)
+The [engine-scope discussion](03-http-1-1.md#async-routes) separates independent
+coroutine work from the synchronous server; the [transport chapter](04-transports-and-tls.md)
 explains the TCP side.
 
 <a name="start-and-stop"></a>
@@ -295,7 +292,7 @@ explains the TCP side.
 
 Register routes before *start*. Starting opens the listener; doba rejects
 new routes while the server is running. The
-[https_hello_world example](../../examples/http/v11/https_hello_world/README.md)
+[hello_world example](../../examples/http/v11/hello_world/README.md)
 uses *signaler::wait* to hold the process until Ctrl+C, then stops the server:
 
 ```cpp
@@ -304,14 +301,22 @@ signaler::wait();
 http_server.stop();
 ```
 
-With the bundled TCP and TLS transports, *stop* quiesces incoming work,
-waits for pending async handlers, then stops transport workers. The server
-destructor also calls *stop*, but an explicit call makes the shutdown point
-clear. Call it from the control thread; the bundled transports reject a
-quiesce request from one of their workers. If *start* fails, it propagates
-the error.
+On Linux TCP, *stop* wakes and joins workers, then releases their resources.
+It waits for the current synchronous engine or reader call, closes accepted
+connections and releases pending readers; it does not drain outstanding TX
+or wait for application tasks. Lifecycle calls must come from the sequential
+external owner. A failed start releases the partially started worker group.
+
+Windows TCP stop closes admission, waits for accept initialization, drains accepted
+output and real socket completions, then joins workers and closes IOCP. Engine
+close drains TX and waits for peer EOF; administrative stop does not wait for that
+EOF. Neither backend stops or waits for suspended application tasks. Administrative
+calls must be external, sequential and outside worker callbacks. There is no stop
+timeout: a blocking engine/reader can delay shutdown, and Windows also waits for
+pending output to make socket progress.
 
 That's the working set: choose separate transport and HTTP limits, keep
 storage thresholds distinct from acceptance limits, and stop the server
 deliberately. The [guide index](README.md) is here whenever you need to
 jump back to another chapter.
+

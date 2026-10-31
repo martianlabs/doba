@@ -36,17 +36,11 @@
 #include <vector>
 
 #include "http_server.h"
-#include "common/task.h"
 #include "resilience_resources.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"
 #include "../../../../helpers/concurrency.h"
-#ifdef DOBA_ENABLE_TLS
-#include "https_server.h"
-#include "tls_client.h"
-#include "tls_server_policies.h"
-#endif
 
 namespace {
 // +---------------------------------------------------------------------------+
@@ -77,23 +71,6 @@ struct plain_peer {
   auto receive(std::size_t size) { return socket.receive(size); }
   bool drained() { return socket.wait_for_close(5s); }
 };
-#ifdef DOBA_ENABLE_TLS
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] secure_peer                                                ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct secure_peer {
-  tls_client client;
-  tcpip_client& socket = client.socket;
-  bool connect(std::uint16_t port) {
-    return socket.connect(port) && client.negotiate();
-  }
-  bool send(std::string_view wire) { return client.send_outgoing(wire); }
-  auto receive(std::size_t size) { return client.receive(size); }
-  bool drained() { return client.receive_close() && socket.wait_for_close(5s); }
-};
-#endif
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -180,7 +157,7 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
   std::shared_ptr<cycle_state> state;
   tests::scope_exit stop_before_state_destruction([&] { server.stop(); });
   server.on_stopping([&] { state->stopping.open(); });
-  auto hold = [&](const request& req, response& res) -> common::task<void> {
+  auto hold = [&](const request& req, response& res) {
     auto owner = state;
     ++owner->entered;
     ++owner->live;
@@ -188,22 +165,18 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
       --owner->live;
       ++owner->released;
     });
-    if (req.get_absolute_path() == "/late")
-      co_await owner->late;
-    else
-      co_await owner->pending;
     std::array<std::byte, 257> buffer{};
     std::string body;
     auto* source = req.get_body_reader();
-    require(source != nullptr, "suspended request lost its body reader");
+    require(source != nullptr, "request lost its body reader");
     for (;;) {
       const auto read = source->read(buffer);
       require(!read.has_error && read.produced <= buffer.size(),
-              "suspended body read failed");
+              "body read failed");
       body.append(reinterpret_cast<const char*>(buffer.data()), read.produced);
       if (read.complete) break;
       require(read.produced > 0 && body.size() <= 4096,
-              "suspended body did not progress");
+              "body did not progress");
     }
     res.ok_200().set_body(body + std::string(32768, 'r'));
     ++owner->completed;
@@ -224,10 +197,6 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
       std::promise<void> stopped;
       auto stop_result = stopped.get_future();
       std::jthread stopper;
-      tests::scope_exit release_before_join([&] {
-        state->pending.open();
-        state->late.open();
-      });
       std::vector<std::unique_ptr<Peer>> clients;
       std::vector<std::string> payloads;
       server.start();
@@ -267,21 +236,14 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
                     "GET /fast HTTP/1.1\r\nHost: x\r\n\r\n"),
                 "resilience body completion send failed");
       }
-      require(state->pending.wait_for_waiters(peers - 1) &&
-                  state->late.wait_for_waiters(1),
-              "not all handlers suspended");
       require(wait_count(state->fast, peers),
-              "successors were not queued behind suspended handlers");
-      require(state->live == peers && state->completed == 0,
-              "suspension census mismatch");
+              "pipeline successors did not complete");
+      require(state->entered == peers && state->completed == peers &&
+                  state->live == 0,
+              "synchronous handler census mismatch");
       require(temporary.empty(),
               "completed request bodies retained temporary names");
       clients.back()->socket.abort();
-      // Only bytes submitted before stop are promised by the drain contract.
-      // Keep the disconnected handler pending to test retirement independently.
-      state->pending.open();
-      require(state->completed == peers - 1,
-              "live handlers did not complete before drain");
       stopper = std::jthread([&] {
         try {
           server.stop();
@@ -290,10 +252,6 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
           stopped.set_exception(std::current_exception());
         }
       });
-      require(state->stopping.wait_for(), "server did not enter quiesce/stop");
-      require(stop_result.wait_for(0ms) == std::future_status::timeout,
-              "stop returned before suspended handlers finished");
-      state->late.open();
       for (int index = 0; index < peers - 1; ++index) {
         auto& client = *clients[static_cast<std::size_t>(index)];
         const auto capacity = index == 0 ? 17UL : 4096UL;
@@ -309,6 +267,7 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
       require(stop_result.wait_for(5s) == std::future_status::ready,
               "resilience stop did not complete");
       stop_result.get();
+      require(state->stopping.wait_for(), "missing stopping notification");
       stopper.join();
       require(state->entered == peers && state->completed == peers &&
                   state->released == peers && state->live == 0 &&
@@ -348,30 +307,12 @@ DOBA_TEST(
   DOBA_EXPECT(port != 0);
   protocol::http::v11::policies http;
   http.request_body_memory_threshold = 64;
+  // This fixture pipelines inline replies. Readers are terminal and tested
+  // separately with constrained receive windows and multiworker IOCP.
+  http.response_body_memory_threshold = 64 * 1024;
   observed_server<http_server<>> server(
       {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
       http);
   run_cycles<plain_peer>(server, port, "TCP", temporary);
 }
 
-#ifdef DOBA_ENABLE_TLS
-// +===========================================================================+
-// | [>] resilience TLS drains mixed clients and restarts        ( test-case ) |
-// |     without retained resources                                            |
-// +---------------------------------------------------------------------------+
-DOBA_TEST(
-    "resilience TLS drains mixed clients and restarts without retained "
-    "resources") {
-  resilience_temp_directory temporary;
-  std::uint16_t port = 0;
-  {
-    tcpip_client probe;
-    port = probe.find_available_port();
-  }
-  DOBA_EXPECT(port != 0);
-  protocol::http::v11::policies http;
-  http.request_body_memory_threshold = 64;
-  observed_server<https_server<>> server(server_policies(port), http);
-  run_cycles<secure_peer>(server, port, "TLS", temporary);
-}
-#endif

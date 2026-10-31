@@ -22,9 +22,8 @@ and collect the results.
   </a>
 </h2>
 
-Baseline requests, delayed responses, JSON generation and compression,
-static files, and body echo, with HTTP and TLS routes. A few more things to
-do than saying hello very quickly.
+The current Linux transport work measures baseline and pipelined requests
+over HTTP. TLS and asynchronous execution are outside this phase.
 [HttpArena adapter](http/v11/httparena/README.md).
 
 <a name="web-frameworks"></a>
@@ -40,9 +39,6 @@ do than saying hello very quickly.
 A small adapter for the Web Frameworks benchmark: a root route, a route that
 returns a user identifier, and a user POST route. Simple handlers, plenty
 of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
-
-For the static-file controller, use the static-tls profile through the
-[HttpArena adapter](http/v11/httparena/README.md).
 
 For engine and input-flow overhead, use the
 [operating-policy microbenchmark](http/v11/operating-policies/README.md).

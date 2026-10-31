@@ -77,7 +77,12 @@ Starts the transport and begins accepting connections. A second call while runni
 void stop();
 ```
 
-Stops accepting connections and closes active connections. A call while stopped has no effect.
+Calls the selected transport's stop operation. With bundled TCP, the caller is
+a sequential external owner outside worker callbacks. Linux cancels outstanding
+TX after the active call; Windows drains accepted output and real I/O before
+joining workers. Neither waits for application tasks or promises a stop timeout.
+A call while stopped has no effect. See the
+[TCP lifecycle contract](transport/server/tcp.md#runtime-contract).
 
 **Returns:** No value (`void`).
 

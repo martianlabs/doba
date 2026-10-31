@@ -105,9 +105,11 @@ using send_delegate = std::function<void(std::string_view, std::string_view,
                                          std::unique_ptr<common::reader>)>;
 ```
 
-The transport owns and drains submitted output. The two views do not own
-their bytes, so the transport must preserve their contents if it sends them
-later.
+Bundled TCP copies accepted head/body bytes before send returns and owns the
+transferred reader. The two views can then be reused; borrowed reader backing
+must remain valid until its reader is released. One terminal reader is allowed;
+a second reader or later nonempty output while it is pending closes the
+connection. Empty submissions without a reader are no-ops.
 
 The transport needs a fresh engine for each connection. An **engine factory**
 is the callable you give it to create that engine. TCP calls the factory when
@@ -116,9 +118,14 @@ that setup in TCP. The [factory contract](../../include/protocol/contracts.h)
 requires a move-constructible callable that takes no arguments even when const
 and returns the engine type.
 
-Input calls for a connection are serialized and stop when closing begins.
-Output may be submitted from different threads, so the transport must accept
-it safely.
+Input calls are serialized per connection and stop when closing begins. The
+engine stores its registered callbacks but invokes send/close only inside the
+current input call, on that calling thread. They must not escape for delayed or
+cross-thread use. Windows may use another IOCP worker for the next serialized
+input call; serialization does not imply fixed thread affinity.
+
+See the [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+for ownership, close and deliberate Linux/Windows differences.
 
 <a name="transport-contract"></a>
 <h2>
@@ -150,9 +157,10 @@ These are the callback and lifecycle calls the concept checks:
 { tr.stop() } -> std::same_as<void>;
 ```
 
-The optional [input flow-control hooks](05-extending-doba.md#keep-the-boundary-safe)
-let a transport cooperate with protocol backpressure without changing the
-minimal protocol contract.
+The engine retains optional execution and flow-control interfaces for
+independent embedding and tests. The bundled TCP backends neither install
+these hooks nor execute application tasks. Configuration and start/stop come
+from a sequential external owner, outside worker callbacks.
 
 A working transport creates an engine for each connection, wires up its send
 and close callbacks, feeds it input, and handles its output. The concept
@@ -183,7 +191,8 @@ martianlabs::doba::server<custom_protocol, transport_type> server(
 ```
 
 The engine reads complete lines and submits an **echo:** response. TCP still
-accepts clients, buffers incomplete input, and sends the output. The engine
+accepts clients, supplies fresh RX blocks, and sends the output. The engine
+retains incomplete lines between input calls and
 only implements the protocol contract; it does not need socket code.
 
 <a name="bring-a-transport"></a>

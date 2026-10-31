@@ -156,12 +156,11 @@ struct reader_state {
   // +-------------------------------------------------------------------------+
   std::atomic<int> queued{0};
   bool close{false};
-  bool single{false};
+  std::size_t prefix_size{1};
   bool empty_deliveries{false};
   int source_error{0};
   std::size_t rejected_size{0};
   std::size_t size{8 * 1024 * 1024};
-  std::string later = std::string(1025, 'd');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -193,7 +192,7 @@ struct reader_engine {
   void on_bytes_received(std::string_view) {
     namespace common = martianlabs::doba::common;
     common::reader source;
-    std::size_t prefix_size = state_->single ? 0 : 1;
+    std::size_t prefix_size = state_->prefix_size;
     if (state_->source_error == 1) {
       source = common::reader(common::filesystem_file{});
       std::byte byte;
@@ -215,15 +214,6 @@ struct reader_engine {
     output_(std::move(prefix), {},
             std::make_unique<common::reader>(std::move(source)));
     if (state_->empty_deliveries) output_({}, {}, nullptr);
-    if (!state_->single) {
-      output_("B", {}, nullptr);
-      output_("C", {},
-              std::make_unique<common::reader>(
-                  common::reader::borrowed(std::as_bytes(
-                      std::span(state_->later.data(), state_->later.size())))));
-      output_({}, {}, std::make_unique<common::reader>());
-      output_("DE", {}, nullptr);
-    }
     if (state_->empty_deliveries) output_({}, {}, nullptr);
     if (state_->rejected_size) {
       output_(std::string(state_->rejected_size, '\0'), {}, nullptr);
@@ -284,8 +274,7 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   if (!close) {
     waited = stopped.wait_for(150ms) == std::future_status::timeout;
   }
-  const std::string expected = "A" + std::string(state->size, 'a') + "BC" +
-                               std::string(1025, 'd') + "DE";
+  const std::string expected = "A" + std::string(state->size, 'a');
   const auto bytes = client.receive(expected.size(), 15s);
   const bool closed = client.wait_for_close(5s);
   client.close();
@@ -390,23 +379,23 @@ DOBA_TEST("stop rejects new engine input") {
 }
 
 // +===========================================================================+
-// | [>] stop drains ordered byte sources                        ( test-case ) |
+// | [>] prefix/source drain                                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("stop drains ordered byte sources") {
+DOBA_TEST("stop drains a prefix and one byte source") {
   check_reader_drain(false, false);
 }
 
 // +===========================================================================+
-// | [>] destruction drains ordered byte sources                 ( test-case ) |
+// | [>] prefix/source drain                                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("destruction drains ordered byte sources") {
+DOBA_TEST("destruction drains a prefix and one byte source") {
   check_reader_drain(true, false);
 }
 
 // +===========================================================================+
-// | [>] close drains ordered byte sources                       ( test-case ) |
+// | [>] prefix/source drain                                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("close drains ordered byte sources") {
+DOBA_TEST("close drains a prefix and one byte source") {
   check_reader_drain(false, true);
 }
 
@@ -417,7 +406,7 @@ DOBA_TEST("sources work with a small send buffer") {
   for (const std::size_t capacity : {1U, 7U, 8192U}) {
     for (const std::size_t length : {0U, 37U}) {
       auto state = std::make_shared<reader_state>();
-      state->single = true;
+      state->prefix_size = 0;
       state->close = true;
       state->size = length;
       auto factory = [state]() -> reader_engine {
@@ -450,9 +439,9 @@ DOBA_TEST("sources work with a small send buffer") {
 }
 
 // +===========================================================================+
-// | [>] source failure cancels later deliveries                 ( test-case ) |
+// | [>] source failure closes connection                       ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("source failure cancels later deliveries") {
+DOBA_TEST("source failure closes after accepted prefix and source bytes") {
   for (const int source_error : {1, 2}) {
     auto state = std::make_shared<reader_state>();
     state->source_error = source_error;
@@ -493,7 +482,7 @@ DOBA_TEST("source failure cancels later deliveries") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("sources without progress close the connection") {
   auto state = std::make_shared<reader_state>();
-  state->single = true;
+  state->prefix_size = 0;
   state->source_error = 3;
   state->size = 37;
   auto factory = [state]() -> reader_engine { return reader_engine{state}; };
@@ -524,6 +513,7 @@ DOBA_TEST("sources without progress close the connection") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("source buffers respect the send limit") {
   auto state = std::make_shared<reader_state>();
+  state->close = true;
   auto factory = [state]() -> reader_engine { return reader_engine{state}; };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -545,68 +535,15 @@ DOBA_TEST("source buffers respect the send limit") {
   const std::string error(client.error());
   client.close();
   transport.stop();
-  DOBA_EXPECT(!bytes || bytes->size() < state->size + 1);
+  DOBA_EXPECT(bytes.has_value());
+  if (bytes) DOBA_EXPECT_EQUAL(*bytes, "A" + std::string(state->size, 'a'));
   DOBA_EXPECT(error != "timeout");
 }
 
 // +===========================================================================+
-// | [>] concurrent stops drain before returning                 ( test-case ) |
+// | [>] Windows accept burst preserves notification pairs      ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("concurrent stops drain before returning") {
-  auto state = std::make_shared<drain_state>();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 8;
-  configuration.max_buffered_send_bytes = 32 * 1024 * 1024;
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration,
-                                                     std::move(factory));
-  transport.set_on_connection([]() {});
-  transport.set_on_disconnection([]() {});
-  for (int iteration = 0; iteration < 16; iteration++) {
-    transport.start();
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(client.send_all("x"));
-    DOBA_EXPECT(wait_count(state->queued, iteration + 1));
-    std::promise<void> release;
-    auto ready = release.get_future().share();
-    std::atomic<int> entered{0};
-    std::atomic<int> stopped{0};
-    std::array<std::jthread, 8> callers;
-    for (auto& caller : callers) {
-      caller = std::jthread([&]() {
-        ready.wait();
-        entered++;
-        try {
-          for (int i = 0; i < 8; i++) transport.stop();
-          stopped++;
-        } catch (...) {
-        }
-      });
-    }
-    release.set_value();
-    const bool concurrent = wait_count(entered, 8);
-    const auto bytes = client.receive(8 * 1024 * 1024, 10s);
-    const bool closed = client.wait_for_close(5s);
-    client.close();
-    for (auto& caller : callers) caller.join();
-    DOBA_EXPECT(concurrent);
-    DOBA_EXPECT_EQUAL(stopped.load(), 8);
-    DOBA_EXPECT(bytes.has_value());
-    DOBA_EXPECT_EQUAL(*bytes, std::string(8 * 1024 * 1024, 'x'));
-    DOBA_EXPECT(closed);
-    DOBA_EXPECT_EQUAL(state->destroyed.load(), iteration + 1);
-  }
-}
-
-// +===========================================================================+
-// | [>] stop retires an accept burst                            ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("stop retires an accept burst") {
+DOBA_TEST("Windows stop pairs notifications across accepts and restart") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
   std::array<tcpip_client, 24> clients;
@@ -639,47 +576,6 @@ DOBA_TEST("stop retires an accept burst") {
   clients[0].close();
   transport.stop();
   DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
-}
-
-// +===========================================================================+
-// | [>] quiesce waits for an accepting callback                ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("quiesce waits for an accepting callback") {
-  auto state = std::make_shared<drain_state>();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
-  std::promise<void> entered;
-  martianlabs::doba::tests::manual_event release;
-  auto active = entered.get_future();
-  transport.set_on_connection([&]() {
-    entered.set_value();
-    release.wait();
-  });
-  transport.set_on_disconnection([]() {});
-  martianlabs::doba::tests::scope_exit cleanup([&] {
-    release.open();
-    transport.stop();
-  });
-  transport.start();
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(active.wait_for(5s) == std::future_status::ready);
-  auto quiescing =
-      std::async(std::launch::async, [&]() { transport.quiesce(); });
-  martianlabs::doba::tests::scope_exit release_before_join(
-      [&] { release.open(); });
-  const bool waited = quiescing.wait_for(200ms) == std::future_status::timeout;
-  release.open();
-  quiescing.get();
-  client.close();
-  transport.stop();
-  DOBA_EXPECT(waited);
 }
 
 // +===========================================================================+
@@ -723,157 +619,6 @@ DOBA_TEST("stop preserves accepting callback order") {
   DOBA_EXPECT(pending);
   DOBA_EXPECT(ordered);
   DOBA_EXPECT_EQUAL(disconnected.load(), 1);
-}
-
-// +===========================================================================+
-// | [>] quiesce permits callback updates to fail promptly     ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("quiesce permits callback updates to fail promptly") {
-  auto state = std::make_shared<drain_state>();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 2;
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
-  std::atomic<int> connected{0};
-  std::atomic<bool> prompt{false};
-  martianlabs::doba::tests::manual_event attempt, done;
-  transport.set_on_connection([&]() { connected++; });
-  transport.set_on_disconnection([&]() {
-    attempt.open();
-    prompt = done.wait_for(1s);
-  });
-  std::jthread setter([&]() {
-    attempt.wait();
-    try {
-      transport.set_on_connection([]() {});
-    } catch (const std::runtime_error&) {
-    }
-    done.open();
-  });
-  martianlabs::doba::tests::scope_exit finish_setter([&] {
-    attempt.open();
-    if (setter.joinable()) setter.join();
-    transport.stop();
-  });
-  transport.start();
-  DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(wait_count(connected, 1));
-  transport.quiesce();
-  // IOCP completes disconnection during stop; Linux completes it in quiesce.
-  transport.stop();
-  setter.join();
-  client.close();
-  transport.stop();
-  DOBA_EXPECT(prompt.load());
-}
-
-// +===========================================================================+
-// | [>] concurrent start and quiesce permit restart           ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("concurrent start and quiesce permit restart") {
-  auto state = std::make_shared<drain_state>();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 8;
-  std::atomic<int> connected{0};
-  std::atomic<int> disconnected{0};
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
-  transport.set_on_connection([&]() { connected++; });
-  transport.set_on_disconnection([&]() { disconnected++; });
-  for (int iteration = 0; iteration < 8; iteration++) {
-    std::promise<void> release;
-    auto ready = release.get_future().share();
-    std::atomic<int> failures{0};
-    std::jthread starting([&]() {
-      ready.wait();
-      try {
-        transport.start();
-      } catch (...) {
-        failures++;
-      }
-    });
-    std::jthread quiescing([&]() {
-      ready.wait();
-      try {
-        transport.quiesce();
-      } catch (...) {
-        failures++;
-      }
-    });
-    release.set_value();
-    starting.join();
-    quiescing.join();
-    transport.stop();
-    DOBA_EXPECT_EQUAL(failures.load(), 0);
-    transport.start();
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(wait_count(connected, iteration + 1));
-    client.close();
-    transport.stop();
-    DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
-  }
-}
-
-// +===========================================================================+
-// | [>] concurrent start and stop permit restart                ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("concurrent start and stop permit restart") {
-  auto state = std::make_shared<drain_state>();
-  auto factory = [state]() -> drain_engine { return drain_engine{state}; };
-  tcpip_client client;
-  const auto port = client.find_available_port();
-  DOBA_EXPECT(port != 0);
-  tr::tcp_policies configuration;
-  configuration.ip = "127.0.0.1";
-  configuration.port = std::to_string(port);
-  configuration.worker_count = 8;
-  std::atomic<int> connected{0};
-  std::atomic<int> disconnected{0};
-  tr::tcp<drain_engine, decltype(factory)> transport(configuration, factory);
-  transport.set_on_connection([&]() { connected++; });
-  transport.set_on_disconnection([&]() { disconnected++; });
-  for (int iteration = 0; iteration < 8; iteration++) {
-    std::promise<void> release;
-    auto ready = release.get_future().share();
-    std::atomic<int> failures{0};
-    std::jthread starting([&]() {
-      ready.wait();
-      try {
-        transport.start();
-      } catch (...) {
-        failures++;
-      }
-    });
-    std::jthread stopping([&]() {
-      ready.wait();
-      try {
-        transport.stop();
-      } catch (...) {
-        failures++;
-      }
-    });
-    release.set_value();
-    starting.join();
-    stopping.join();
-    transport.stop();
-    DOBA_EXPECT_EQUAL(failures.load(), 0);
-    transport.start();
-    DOBA_EXPECT(client.connect(port));
-    DOBA_EXPECT(wait_count(connected, iteration + 1));
-    client.close();
-    transport.stop();
-    DOBA_EXPECT_EQUAL(connected.load(), disconnected.load());
-  }
 }
 
 // +===========================================================================+
@@ -921,9 +666,9 @@ DOBA_TEST("stop from a worker is rejected") {
 }
 
 // +===========================================================================+
-// | [>] disconnection can reenter an external stop              ( test-case ) |
+// | [>] reentrant administration is rejected                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("disconnection can reenter an external stop") {
+DOBA_TEST("disconnection rejects reentrant administrative stop") {
   auto state = std::make_shared<drain_state>();
   auto factory = [state]() -> drain_engine { return drain_engine{state}; };
   tcpip_client client;
@@ -937,7 +682,6 @@ DOBA_TEST("disconnection can reenter an external stop") {
   auto connection = connected.get_future();
   std::atomic<int> disconnected{0};
   std::atomic<bool> correct{false};
-  const auto caller = std::this_thread::get_id();
   tr::tcp<drain_engine, decltype(factory)> transport(configuration,
                                                      std::move(factory));
   transport.set_on_connection([&]() { connected.set_value(); });
@@ -948,7 +692,7 @@ DOBA_TEST("disconnection can reenter an external stop") {
     } catch (const std::runtime_error&) {
       rejected = true;
     }
-    correct = rejected == (std::this_thread::get_id() != caller);
+    correct = rejected;
     disconnected++;
   });
   transport.start();
@@ -1044,7 +788,7 @@ DOBA_TEST("close discards input after draining output") {
   for (const bool stop : {false, true}) {
     auto state = std::make_shared<reader_state>();
     state->close = true;
-    state->single = true;
+    state->prefix_size = 0;
     state->size = 24001;
     auto factory = [state]() -> reader_engine { return reader_engine{state}; };
     tcpip_client client;
@@ -1104,7 +848,7 @@ DOBA_TEST("close drains empty deliveries with sources") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("rejection discards a pending source and later output") {
   auto state = std::make_shared<reader_state>();
-  state->single = true;
+  state->prefix_size = 0;
   state->empty_deliveries = true;
   state->rejected_size = 1;
   auto factory = [state]() -> reader_engine { return reader_engine{state}; };

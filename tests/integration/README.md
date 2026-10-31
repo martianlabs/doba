@@ -22,23 +22,26 @@ and gives the clients plenty of opportunities to be inconvenient.
   </a>
 </h2>
 
-The [HTTP server cases](protocol/http/v11) exercise routing, authentication,
-controllers, request limits, static files, and response ordering over TCP.
-Requests arrive fragmented or pipelined; clients disconnect while work is
-pending; handlers suspend and resume before the server shuts down.
+The [HTTP cases](protocol/http/v11) exercise synchronous routing, authentication,
+controllers, limits, static files and ordered inline responses over TCP. Clients
+fragment requests, pipeline messages, half-close and reset real connections.
+Rejected input must not dispatch a later handler on that connection.
 
-Security cases check rejection boundaries, including a hostile request
-followed by another request on the same connection. Rejecting one message
-mustn't leave a back door into the next handler.
+The [native transport cases](transport/server) check Linux epoll/SO_REUSEPORT
+and Windows IOCP under the [TCP contract](../../docs/reference/transport/server/tcp.md#runtime-contract).
+They cover fresh RX blocks, engine-owned fragments, bounded/partial TX, one
+terminal reader, failure isolation, startup/stop and restart. TLS handshakes,
+transport-scheduled tasks and pressure/resume are outside this suite's scope.
 
-The [transport cases](transport/server) check TCP draining and TLS behavior:
-negotiation, fragmented encrypted input, binary HTTP bodies, bounded
-buffers, sequential requests, and asynchronous work. Native transport
-scenarios exercise Linux startup coordination and Windows IOCP workers.
+[Portable empty-send cases](transport/server/tcp_empty_source_tests.cpp) run in
+both binaries with one/four workers and an exact TX budget: reader or empty
+reader, continuation, close, and rejection of a second reader or later bytes.
+[Portable policy cases](transport/server/tcp_policy_limits_tests.cpp) check full
+endpoint strings, NUL rejection, snapshots, RX bounds, default workers, backlog,
+zero/finite admission, exact TX, overflow and recovery.
 
-[Filesystem cases](common/filesystem_tests.cpp) check real file readers,
-including independent cursors after ownership moves and changes made before
-the first read.
+[Filesystem cases](common/filesystem_tests.cpp) exercise real readers, ownership
+moves and changes made before a first read. They are independent of socket I/O.
 
 <a name="drain-it-start-it-again"></a>
 <h2>
@@ -50,31 +53,38 @@ the first read.
   </a>
 </h2>
 
-The [operating policies](transport/server/operating_policies_tests.cpp),
-[flow closure](transport/server/flow_close_tests.cpp), and
-[policy audit](transport/server/policy_audit_tests.cpp) exercise real TCP/TLS
-listeners: admission and recovery, zero limits and configuration snapshots,
-receive/send progress, paused pipelines, slow readers, held async work,
-wakeups during receive, and TLS close notifications during resumption.
-TLS 1.2 and 1.3 handshakes also run with a 256-byte output BIO, forcing
-retries after output drains while HTTP input remains unpaused. Each
-connection must finish negotiation and serve an HTTP response.
-The [flow pressure tests](transport/server/flow_pressure_tests.cpp) verify immediate
-publication after enqueue, release after drain and safe queries after retirement.
-The [operating policy cases](transport/server/operating_policies_tests.cpp) and
-[policy audit](transport/server/policy_audit_tests.cpp) cover boundaries,
-inactivity, retained work and concurrent flow control. The
-[mutation campaign](../mutation/README.md) checks regression detection separately.
+[Linux cases](transport/server/tcpip_linux_tests.cpp) exercise independent
+workers, partitioned admission, half-close/source drain, slow peers, factory and
+notification failures, partial-start rollback, descriptors and restart. Stop
+cancels pending output after the current engine/reader call returns. The isolated
+[accept-error executable](transport/server/tcp_accept_error_linux.cpp) exhausts
+only its own descriptor limit, checks admission failure and explicit recovery,
+and restores resources. No global runner limits are changed.
 
-The [resilience cases](protocol/http/v11/server_resilience_tests.cpp) mix
-several TCP or TLS clients, tiny reads, abrupt resets, suspended handlers,
-and bodies that spill to disk. The server drains, restarts, and repeats
-the cycle.
+[Windows drain cases](transport/server/tcpip_drain_windows_tests.cpp) verify
+accepted output through stop/destruction, bounded readers, source failures,
+accept bursts, paired notifications and restart. [Policies](transport/server/operating_policies_windows_tests.cpp),
+[policy snapshots](transport/server/policy_audit_windows_tests.cpp) and
+[admission](transport/server/admission_windows_tests.cpp) cover real listeners.
+[Prefix/source](transport/server/tcp_prefix_source_windows_tests.cpp) checks
+reader release before new input; [serialization](transport/server/tcp_serialization_windows_tests.cpp)
+checks many synchronous output callbacks and progress on independent connections.
+[Execution isolation](transport/server/tcp_execution_windows_tests.cpp) verifies
+that TCP does not inject/replace an execution service or install flow hooks.
 
-The checks account for payload order, handler completion and destruction,
-and leftover temporary files. Handle or descriptor counts must not grow
-after draining. Memory use is recorded after warmup as well; that reading
-is evidence to inspect, rather than a fixed memory ceiling assertion.
+Two isolated Windows executables intercept APIs only inside their own tests:
+[IOCP publication](transport/server/tcp_iocp_completion_windows_probe.cpp) forces
+packet dequeue before the socket call returns; [lifecycle](transport/server/tcp_lifecycle_windows_probe.cpp)
+checks partial startup, socket ownership, failed submissions and restart.
+Production and benchmark sources have no hooks. CI lists both executables and
+repeats their cases; historical required-check labels containing TLS still
+configure TLS=OFF.
+
+The [Windows resilience fixture](protocol/http/v11/server_resilience_windows_tests.cpp)
+uses synchronous TCP, inline pipelines, slow clients, resets and body spill.
+It checks response order, cleanup, temporary files and handles across restart.
+Resource observations after warmup are evidence, not a universal RSS ceiling.
+Engine/common-task asynchronous lifecycle tests remain separate from sockets.
 
 <a name="when-a-test-goes-wrong"></a>
 <h2>
@@ -92,21 +102,18 @@ is evidence to inspect, rather than a fixed memory ceiling assertion.
   </a>
 </h2>
 
-The [integration runner metatests](helpers/test_helper_tests.cpp) check
-filters, failure reports, exceptions, deadlines, and cleanup using child
-processes. They include assertion failures with an active transport and
-suspended work, so the error path has to clean up too.
+The [runner metatests](helpers/test_helper_tests.cpp) check listing, exact and
+qualified filters, repeated exclusions, assertions, exceptions, timeouts and
+cleanup in child processes. An assertion during an active fixture must release
+its gates before joining workers. The watchdog identifies the blocked case even
+when cleanup cannot progress. Concurrent reports retain every failure.
 
-A timeout must identify the blocked test, including when its cleanup gets
-stuck. "Something hung somewhere" is not a useful test result.
+The [HTTP helper regressions](helpers/http_test_helper_tests.cpp) verify raw-wire
+rejection of mixed-case duplicate Content-Length, Transfer-Encoding and Date.
+Native TCP helpers use elapsed-time deadlines and retry interruptions; Linux
+uses poll for high descriptors. No TLS test client remains in this suite.
 
-Both runners apply every repeated `--exclude`; qualified exclusions use
-`tests/integration/path.cpp::test name` and accept either path separator.
-Concurrent assertion reports are checked by child-process metatests.
+Platform-specific files are selected by CMake; unsupported or absent scenarios
+are not counted as passing. Shared portable cases must appear in both native
+integration inventories. See the [policy coverage matrix](../../docs/reference/transport/server/tcp_policies.md#validation-coverage).
 
-The HTTP response oracle has independent raw-wire regressions for mixed-case
-duplicate Content-Length, Transfer-Encoding and Date fields. The TLS test client
-uses elapsed-time deadlines rather than iteration budgets and respects inbound
-BIO capacity. A response with more than 400 small TLS records exercises this
-boundary. TCP helper reads retry interrupted operations against the original
-deadline; Linux readiness uses `poll` to support high descriptors safely.

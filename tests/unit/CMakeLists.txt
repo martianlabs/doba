@@ -10,10 +10,6 @@ if(WIN32)
 else()
   list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_windows_tests\\.cpp$")
 endif()
-if(NOT DOBA_ENABLE_TLS)
-  list(REMOVE_ITEM UNIT_TEST_SOURCES
-       "${CMAKE_CURRENT_LIST_DIR}/transport/server/tls_session_tests.cpp")
-endif()
 list(
   REMOVE_ITEM
   UNIT_TEST_SOURCES

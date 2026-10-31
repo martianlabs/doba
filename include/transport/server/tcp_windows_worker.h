@@ -28,27 +28,24 @@
 #include <algorithm>
 #include <atomic>
 #include <charconv>
-#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
-#include <deque>
-#include <exception>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <new>
-#include <queue>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
-#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "network/environment.h"
 #include "platform.h"
+#include "transport/server/tcp_policies.h"
 #include "transport/server/tcp_windows_context.h"
 #include "transport/server/tcp_windows_overlapped_accept.h"
 
@@ -59,34 +56,29 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | This struct manages a pool of worker threads that handle TCP connections  |
 // | and data. It sets up a listener, accepts new connections, and creates     |
-// | a context for each one. It also lets you start, stop, or quiesce the      |
+// | a context for each one. It also lets you start and stop the      |
 // | workers and set callbacks for when connections are established or         |
 // | disconnected.                                                             |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   ENty - engine type being used.                                          |
 // |   FAty - engine factory type being used.                                  |
-// |   CNty - connection type being used.                                      |
-// |   POty - policies type being used.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
-          protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename POty>
+          protocol::contracts::engine_factory<ENty> FAty>
 struct worker {
  public:
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
-  using policies_type = POty;
+  using policies_type = tcp_policies;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit worker(policies_type configuration, FAty create_engine,
-                  typename CNty::shared_state shared_state)
+  explicit worker(policies_type configuration, FAty create_engine)
       : configuration_{configuration},
-        create_engine_{std::move(create_engine)},
-        shared_state_{std::move(shared_state)} {
+        create_engine_{std::move(create_engine)} {
     if (!configuration_.receive_buffer_capacity ||
         configuration_.receive_buffer_capacity >
             std::numeric_limits<ULONG>::max()) {
@@ -97,9 +89,6 @@ struct worker {
     }
     if (!configuration_.max_buffered_send_bytes) {
       throw std::runtime_error("Invalid send buffer size!");
-    }
-    if (configuration_.inactivity_period.count() < 0) {
-      throw std::runtime_error("Invalid inactivity period!");
     }
     if (configuration_.listen_backlog < 0) {
       throw std::runtime_error("Invalid listen backlog!");
@@ -116,83 +105,39 @@ struct worker {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Starts the workers and sets up the listener. If the worker is already   |
-  // | starting, stopping, or running, it returns without doing anything.      |
-  // | Otherwise, it parses the IP address and port, sets up the listener,     |
-  // | workers, and accept pipeline. If anything goes wrong, it stops the      |
-  // | worker and throws the error again.                                      |
-  // +-------------------------------------------------------------------------+
+  // Starts the listener and workers from the sequential owner.
   void start() {
+    if (current_worker_ == this) {
+      throw std::runtime_error("Transport cannot start from an I/O worker!");
+    }
     {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      if (starting_ || stopping_ || io_h_ != nullptr) return;
-      starting_ = true;
+      std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+      if (stopping_) {
+        throw std::runtime_error(
+            "Transport administration must be sequential!");
+      }
+      if (io_h_ != nullptr) return;
     }
     try {
       in_addr ip_address{};
-      if (::InetPtonA(AF_INET, configuration_.ip.c_str(), &ip_address) != 1) {
+      if (configuration_.ip.find('\0') != std::string::npos ||
+          ::InetPtonA(AF_INET, configuration_.ip.c_str(), &ip_address) != 1) {
         throw std::runtime_error("Invalid IPv4 address!");
       }
-      uint16_t port_num = parse_port(configuration_.port.c_str());
+      uint16_t port_num = parse_port(configuration_.port);
       std::size_t workers = setup_listener(ip_address, port_num);
       setup_workers(workers);
       setup_accept_pipeline(workers);
     } catch (...) {
-      stop_(true);
+      stop_();
       throw;
     }
-    {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      starting_ = false;
-    }
-    lifecycle_cv_.notify_all();
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Stops the worker. If already stopping or with no active workers, it     |
-  // | returns right away. Otherwise, it sets the stopping flag, closes the    |
-  // | listener, stops all contexts, and waits for them to finish. It then     |
-  // | cleans up and resets the state. If called from a worker thread, it      |
-  // | throws an exception.                                                    |
-  // +-------------------------------------------------------------------------+
-  void stop() { stop_(false); }
-  // +=========================================================================+
-  // | [>] quiesce                                                  ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Quiesces the worker. If already quiescing or with no workers, it        |
-  // | returns right away. Otherwise, it sets the quiescing flag, closes the   |
-  // | listener, and calls `quiesce()` on every context. If called from a      |
-  // | worker thread, it throws an exception. It doesn’t wait for quiescing    |
-  // | to finish; completion occurs during `stop()`.                           |
-  // +-------------------------------------------------------------------------+
-  void quiesce() {
-    if (current_worker_ == this) {
-      throw std::runtime_error("Transport cannot quiesce from a worker!");
-    }
-    SOCKET listener = INVALID_SOCKET;
-    std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
-    {
-      std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      lifecycle_cv_.wait(lifecycle_lock, [this]() { return !starting_; });
-      if (io_h_ == nullptr || stopping_) return;
-      if (!quiescing_) {
-        quiescing_ = true;
-        listener = accept_socket_;
-        accept_socket_ = INVALID_SOCKET;
-      }
-    }
-    if (listener != INVALID_SOCKET) closesocket(listener);
-    {
-      std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      lifecycle_cv_.wait(lifecycle_lock,
-                         [this]() { return pending_accepts_ == 0; });
-      if (stopping_) return;
-      contexts.reserve(contexts_.size());
-      for (const auto& item : contexts_) contexts.push_back(item.second);
-    }
-    for (const auto& ctx : contexts) ctx->quiesce();
-  }
+  // Stops admission and drains socket I/O from the sequential owner.
+  void stop() { stop_(); }
   // +=========================================================================+
   // | [>] set_on_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
@@ -214,90 +159,25 @@ struct worker {
 
  private:
   // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +-------------------------------------------------------------------------+
-  using work_entry =
-      std::pair<std::chrono::steady_clock::time_point, execution_work>;
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +-------------------------------------------------------------------------+
-  struct later_work {
-    bool operator()(const work_entry& left, const work_entry& right) const {
-      return left.first > right.first;
-    }
-  };
-  // +=========================================================================+
-  // | [>] USINGs                                                  ( private ) |
-  // +-------------------------------------------------------------------------+
-  using work_priority_queue =
-      std::priority_queue<work_entry, std::vector<work_entry>, later_work>;
-  // +=========================================================================+
-  // | [>] TYPEs                                                   ( private ) |
-  // +-------------------------------------------------------------------------+
-  struct work_state {
-    std::deque<execution_work> ready;
-    work_priority_queue timers;
-  };
-  static constexpr ULONG_PTR kWorkKey = 1;
-  // +=========================================================================+
-  // | [>] execution                                               ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Accepts opaque work from any thread for execution by an I/O worker.    |
-  // +-------------------------------------------------------------------------+
-  execution_capacity execution() {
-    return {this, [](void* owner, std::chrono::steady_clock::time_point due,
-                     execution_work work) {
-              auto* output = static_cast<worker*>(owner);
-              if (current_worker_ == output && current_work_) {
-                if (due == std::chrono::steady_clock::time_point::min()) {
-                  current_work_->ready.push_back(work);
-                } else {
-                  current_work_->timers.push({due, work});
-                }
-                return;
-              }
-              std::lock_guard<std::mutex> lock(output->work_mutex_);
-              output->incoming_.push_back({due, work});
-              if (!PostQueuedCompletionStatus(output->io_h_, 0, kWorkKey,
-                                              nullptr)) {
-                output->incoming_.pop_back();
-                throw std::runtime_error("Work could not be queued!");
-              }
-            }};
-  }
-  // +=========================================================================+
   // | [>] stop_                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Stops the worker. If already stopping or with no active workers, it     |
-  // | returns right away. Otherwise, it sets the stopping flag, closes the    |
-  // | listener, stops all contexts, and waits for them to finish. It then     |
-  // | cleans up and resets the state. If called from a worker thread, it      |
-  // | throws an exception.                                                    |
-  // +-------------------------------------------------------------------------+
-  void stop_(bool starting_failure) {
+  // Drains real accept/context completions; nested stop is rejected.
+  void stop_() {
     if (current_worker_ == this) {
       throw std::runtime_error("Transport cannot stop from an I/O worker!");
     }
     HANDLE ioh = nullptr;
     SOCKET listener = INVALID_SOCKET;
-    std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
+    std::vector<std::shared_ptr<context<ENty>>> contexts;
     {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      if (starting_failure) {
-        starting_ = false;
-        lifecycle_cv_.notify_all();
-      } else {
-        lifecycle_cv_.wait(lifecycle_lock, [this]() { return !starting_; });
-      }
       if (io_h_ == nullptr) return;
       if (stopping_) {
-        if (stopping_thread_ == std::this_thread::get_id()) return;
-        lifecycle_cv_.wait(lifecycle_lock, [this]() { return !stopping_; });
-        return;
+        throw std::runtime_error(
+            "Transport administration must be sequential!");
       }
       contexts.reserve(contexts_.size() + pending_accepts_);
       stopping_ = true;
-      stopping_thread_ = std::this_thread::get_id();
       ioh = io_h_;
       listener = accept_socket_;
       accept_socket_ = INVALID_SOCKET;
@@ -307,9 +187,11 @@ struct worker {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
       lifecycle_cv_.wait(lifecycle_lock,
                          [this]() { return pending_accepts_ == 0; });
-      for (const auto& item : contexts_) contexts.emplace_back(item.second);
+      for (const auto& ctx : contexts_) contexts.push_back(ctx);
     }
-    for (const auto& ctx : contexts) ctx->stop();
+    for (const auto& ctx : contexts) {
+      if (ctx->stop()) finish_context(ctx);
+    }
     {
       std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
       lifecycle_cv_.wait(lifecycle_lock, [this]() {
@@ -332,24 +214,21 @@ struct worker {
       accept_depth_ = 0;
       pending_accepts_ = 0;
       stopping_ = false;
-      quiescing_ = false;
-      stopping_thread_ = {};
     }
-    lifecycle_cv_.notify_all();
   }
   // +=========================================================================+
   // | [>] parse_port                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Converts a port number from a string to `uint16_t`.                     |
-  // | If the value is invalid or out of range, it throws a runtime error.     |
+  // | Converts a port number from a string to `uint16_t`.                    |
+  // | If the value is invalid or out of range, it throws a runtime error.    |
   // +-------------------------------------------------------------------------+
-  uint16_t parse_port(const char port[]) const {
-    if (!port || !*port) {
+  uint16_t parse_port(std::string_view port) const {
+    if (port.empty()) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
     }
     unsigned int port_num = 0;
-    const char* end = port + std::strlen(port);
-    auto result = std::from_chars(port, end, port_num);
+    const char* end = port.data() + port.size();
+    auto result = std::from_chars(port.data(), end, port_num);
     if (result.ec != std::errc() || result.ptr != end || port_num < 1 ||
         port_num > 65535) {
       throw std::runtime_error("Invalid port (range from 1 to 65535)!");
@@ -359,12 +238,12 @@ struct worker {
   // +=========================================================================+
   // | [>] ensure_stopped                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Checks that the worker isn’t starting, stopping, or running.            |
-  // | If it is, it throws a runtime error. This prevents changing the         |
-  // | transport callbacks while the worker is active.                         |
+  // | Checks that the worker is stopped before callbacks can change.         |
+  // | If it is, it throws a runtime error. This prevents changing the        |
+  // | transport callbacks while the worker is active.                        |
   // +-------------------------------------------------------------------------+
   void ensure_stopped() const {
-    if (starting_ || stopping_ || io_h_ != nullptr) {
+    if (stopping_ || io_h_ != nullptr) {
       throw std::runtime_error(
           "Transport callbacks cannot change while active!");
     }
@@ -372,12 +251,12 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_listener                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Sets up the listener socket and I/O completion port.                    |
-  // | It creates a socket, binds it to the given IP address and port,         |
-  // | and starts listening. It also gets the `AcceptEx` function pointer      |
-  // | and links the listener socket to the completion port.                   |
-  // | If anything goes wrong, it throws a runtime error.                      |
-  // | It returns the number of workers to start.                              |
+  // | Sets up the listener socket and I/O completion port.                   |
+  // | It creates a socket, binds it to the given IP address and port,        |
+  // | and starts listening. It also gets the `AcceptEx` function pointer     |
+  // | and links the listener socket to the completion port.                  |
+  // | If anything goes wrong, it throws a runtime error.                     |
+  // | It returns the number of workers to start.                             |
   // +-------------------------------------------------------------------------+
   std::size_t setup_listener(in_addr ip, uint16_t port_num) {
     std::size_t workers = configuration_.worker_count;
@@ -445,9 +324,9 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_accept_pipeline                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Sets up the accept pipeline by working out how many accepts to keep     |
-  // | pending and calling `replenish_accept_pipeline()`. If it can’t get the  |
-  // | pipeline ready, it throws a runtime error.                              |
+  // | Sets up the accept pipeline by working out how many accepts to keep    |
+  // | pending and calling `replenish_accept_pipeline()`. If it can’t get the |
+  // | pipeline ready, it throws a runtime error.                             |
   // +-------------------------------------------------------------------------+
   void setup_accept_pipeline(std::size_t workers) {
     {
@@ -462,104 +341,48 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_workers                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts `number_of_workers` threads to handle I/O. Each thread runs a    |
-  // | loop that waits for I/O completions and handles them as they come in.   |
-  // | If anything goes wrong, it throws a runtime error.                      |
+  // | Starts `number_of_workers` threads to handle I/O. Each thread runs a   |
+  // | loop that waits for I/O completions and handles them as they come in.  |
+  // | If anything goes wrong, it throws a runtime error.                     |
   // +-------------------------------------------------------------------------+
   std::size_t setup_workers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
       workers_.emplace_back([this]() {
         current_worker_ = this;
-        work_state work;
-        current_work_ = &work;
         bool stopping = false;
         while (!stopping) {
           ULONG_PTR key = NULL;
           LPOVERLAPPED lpo = NULL;
           DWORD bytes = 0;  // bytes transfered..
-          DWORD tout = INFINITE;
-          if (!work.ready.empty()) {
-            tout = 0;
-          } else if (!work.timers.empty()) {
-            auto remaining =
-                work.timers.top().first - std::chrono::steady_clock::now();
-            auto milliseconds =
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    remaining);
-            if (remaining <= std::chrono::steady_clock::duration::zero()) {
-              tout = 0;
-            } else if (milliseconds.count() >= INFINITE - 1) {
-              tout = INFINITE - 1;
-            } else {
-              tout = static_cast<DWORD>(milliseconds.count() + 1);
-            }
-          }
-          if (configuration_.inactivity_period.count() > 0) {
-            tout = std::min(tout, static_cast<DWORD>(std::min<std::int64_t>(
-                connection_progress::maintenance_interval.count(),
-                configuration_.inactivity_period.count())));
-          }
-          BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo, tout);
+          BOOL st = GetQueuedCompletionStatus(io_h_, &bytes, &key, &lpo,
+                                               INFINITE);
           overlapped_base* ovb = reinterpret_cast<overlapped_base*>(lpo);
-          if (st == FALSE && ovb == nullptr && GetLastError() == WAIT_TIMEOUT) {
-          } else if (st == TRUE && ovb == nullptr) {
-            if (key == kWorkKey) {
-              std::lock_guard<std::mutex> lock(work_mutex_);
-              while (!incoming_.empty()) {
-                auto entry = incoming_.front();
-                incoming_.pop_front();
-                if (entry.first ==
-                    std::chrono::steady_clock::time_point::min()) {
-                  work.ready.push_back(entry.second);
-                } else {
-                  work.timers.push(entry);
-                }
-              }
-            } else {
-              stopping = true;
-            }
-          } else if (st == TRUE) {
-            if (ovb->get_type() == io_type::kAccept) {
-              auto ova = (overlapped_accept*)ovb;
-              handle_accept(ova);
-            } else if (ovb->get_type() == io_type::kReceive) {
-              auto ovr = (overlapped_receive<ENty, CNty>*)ovb;
-              handle_receive(ovr->ctx, bytes);
-            } else if (ovb->get_type() == io_type::kSend ||
-                       ovb->get_type() == io_type::kOutput) {
-              auto ovs = (overlapped_send<ENty, CNty>*)ovb;
-              handle_send(ovs, bytes);
-            }
-          } else if (ovb != nullptr) {
-            // If the overlapped operation failed, we need to handle the error
-            // based on the type of operation.
-            handle_error(ovb);
-          } else {
-            // If lpo is NULL, it indicates that the completion port is being
-            // closed, so we should stop the worker thread.
+          if (!ovb) {
             stopping = true;
+            continue;
           }
-          if (ovb != nullptr) {
-            // After handling the overlapped operation, we need to clean up the
-            // overlapped structure if it was dynamically allocated.
-            handle_overlapped(ovb);
-          }
-          if (!work.timers.empty()) {
-            const auto now = std::chrono::steady_clock::now();
-            while (!work.timers.empty() && work.timers.top().first <= now) {
-              work.ready.push_back(work.timers.top().second);
-              work.timers.pop();
+          switch (ovb->get_type()) {
+            case io_type::kAccept: {
+              std::unique_ptr<overlapped_accept> op(
+                  static_cast<overlapped_accept*>(ovb));
+              if (st) handle_accept(op.get());
+              finish_accept();
+              break;
             }
-          }
-          expire_contexts();
-          std::size_t count = work.ready.size();
-          while (count--) {
-            auto entry = work.ready.front();
-            work.ready.pop_front();
-            entry.run(entry.context);
+            case io_type::kReceive: {
+              std::unique_ptr<overlapped_receive<ENty>> op(
+                  static_cast<overlapped_receive<ENty>*>(ovb));
+              handle_receive(op->ctx, bytes, st != FALSE);
+              break;
+            }
+            case io_type::kSend: {
+              std::unique_ptr<overlapped_send<ENty>> op(
+                  static_cast<overlapped_send<ENty>*>(ovb));
+              handle_send(op.get(), bytes, st != FALSE);
+              break;
+            }
           }
         }
-        current_work_ = nullptr;
         current_worker_ = nullptr;
       });
     }
@@ -568,28 +391,28 @@ struct worker {
   // +=========================================================================+
   // | [>] get_accept_socket                                       ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the accept socket while the worker is running.                  |
-  // | If it’s stopping or quiescing, it returns `INVALID_SOCKET`.             |
-  // | The returned socket may close after this call.                          |
+  // | Returns the accept socket while the worker is running.                 |
+  // | If it’s stopping, it returns `INVALID_SOCKET`.                         |
+  // | The returned socket may close after this call.                         |
   // +-------------------------------------------------------------------------+
   SOCKET get_accept_socket() {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_ || quiescing_) return INVALID_SOCKET;
+    if (stopping_) return INVALID_SOCKET;
     return accept_socket_;
   }
   // +=========================================================================+
   // | [>] finish_accept                                           ( private ) |
   // +-------------------------------------------------------------------------+
   // | Decreases the number of pending accepts and checks whether the pipeline |
-  // | needs topping up. If it does, it calls `replenish_accept_pipeline()`.   |
-  // | This method is thread-safe and can be called from any thread.           |
+  // | needs topping up. If it does, it calls `replenish_accept_pipeline()`.  |
+  // | This method is thread-safe and can be called from any thread.          |
   // +-------------------------------------------------------------------------+
   void finish_accept() {
     bool replenish = false;
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
       if (pending_accepts_) pending_accepts_--;
-      replenish = !stopping_ && !quiescing_ && accept_socket_ != INVALID_SOCKET;
+      replenish = !stopping_ && accept_socket_ != INVALID_SOCKET;
     }
     lifecycle_cv_.notify_all();
     if (replenish) replenish_accept_pipeline();
@@ -597,268 +420,119 @@ struct worker {
   // +=========================================================================+
   // | [>] register_context                                        ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a context to the worker’s context map. If the worker is stopping or|
-  // | quiescing, it returns false. Otherwise, it tries to add the context and |
-  // | returns true if it succeeds. If an exception occurs, it returns false.  |
-  // | This method is thread-safe and can be called from any thread.           |
+  // | Adds a context to the live set unless the worker is stopping.          |
+  // | It tries to add the context and                                        |
+  // | returns true if it succeeds. If an exception occurs, it returns false. |
+  // | This method is thread-safe and can be called from any thread.          |
   // +-------------------------------------------------------------------------+
-  bool register_context(const std::shared_ptr<context<ENty, CNty>>& ctx) {
+  bool register_context(const std::shared_ptr<context<ENty>>& ctx) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_ || quiescing_) return false;
+    if (stopping_) return false;
     try {
-      return contexts_.emplace(ctx.get(), ctx).second;
+      return contexts_.insert(ctx).second;
     } catch (...) {
       return false;
     }
   }
   // +=========================================================================+
-  // | [>] retire_context                                          ( private ) |
+  // | [>] finish_context                                         ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Removes a context from the worker’s context map. It locks the lifecycle |
-  // | mutex, removes the context, and notifies any waiting threads. Then it   |
-  // | calls `replenish_accept_pipeline()` to keep the accept pipeline topped  |
-  // | up. This method is thread-safe and can be called from any thread.       |
-  // +-------------------------------------------------------------------------+
-  void retire_context(context<ENty, CNty>* ctx) {
+  // Erasure is the unique claim for notification, including a stop/completion
+  // race. Keep the caller's shared owner through the callback and unlock first.
+  void finish_context(const std::shared_ptr<context<ENty>>& ctx) {
     {
-      std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-      contexts_.erase(ctx);
+      std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+      if (!contexts_.erase(ctx)) return;
     }
+    ctx->notify_disconnection();
     lifecycle_cv_.notify_all();
-    replenish_accept_pipeline();
   }
   // +=========================================================================+
   // | [>] handle_accept                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles a completed accept operation. It checks that the listener socket|
-  // | is valid, sets up the accepted socket, makes it non-blocking, and sets  |
-  // | `TCP_NODELAY`. Then it creates a context for the connection, links it   |
-  // | to the I/O completion port, and calls the connection callback. If       |
-  // | anything goes wrong, it closes the socket and finishes the accept.      |
-  // | Called on an I/O worker thread.                                         |
+  // | Checks a completed accept and the listener socket.                      |
+  // | is valid, sets up the accepted socket, makes it non-blocking, and sets |
+  // | `TCP_NODELAY`. Then it creates a context for the connection, links it  |
+  // | to the I/O completion port, and calls the connection callback. If      |
+  // | setup fails, the current owner closes the socket.     |
+  // | Called on an I/O worker thread.                                        |
   // +-------------------------------------------------------------------------+
-  void expire_contexts() {
-    if (!configuration_.inactivity_period.count()) return;
-    const auto now = std::chrono::steady_clock::now();
-    // The deadline is only a scheduling hint; context state stays protected by
-    // its existing locks. Avoid a shared mutex RMW on every IOCP completion.
-    if (now.time_since_epoch().count() <
-        next_expiry_ticks_.load(std::memory_order_relaxed)) return;
-    // Only one worker scans at a time, without holding lifecycle_mutex_ while
-    // entering a context (retirement takes these locks in the opposite order).
-    std::unique_lock<std::mutex> scan(expiry_mutex_, std::try_to_lock);
-    if (!scan.owns_lock()) return;
-    if (now < next_expiry_) return;
-    next_expiry_ = now + std::min(configuration_.inactivity_period,
-                                connection_progress::maintenance_interval);
-    next_expiry_ticks_.store(next_expiry_.time_since_epoch().count(),
-                             std::memory_order_relaxed);
-    std::vector<std::shared_ptr<context<ENty, CNty>>> contexts;
-    {
-      std::lock_guard<std::mutex> lock(lifecycle_mutex_);
-      contexts.reserve(contexts_.size());
-      for (const auto& item : contexts_) contexts.push_back(item.second);
-    }
-    for (const auto& ctx : contexts) ctx->expire(configuration_.inactivity_period);
-  }
   void handle_accept(overlapped_accept* ova) {
     SOCKET listener = get_accept_socket();
-    if (listener == INVALID_SOCKET) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
+    if (listener == INVALID_SOCKET) return;
     post_accept(true);
-    int result =
-        setsockopt(ova->socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
-                   reinterpret_cast<const char*>(&listener), sizeof(listener));
-    if (result == SOCKET_ERROR) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
-    ULONG i_mode_flag = 1;
-    result = ioctlsocket(ova->socket, FIONBIO, &i_mode_flag);
-    if (result != NO_ERROR) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
-    int ndf = 1;
-    result = setsockopt(ova->socket, IPPROTO_TCP, TCP_NODELAY,
-                        reinterpret_cast<const char*>(&ndf), sizeof(ndf));
-    if (result == SOCKET_ERROR) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
+    const SOCKET accepted = ova->socket;
+    if (setsockopt(accepted, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+                   reinterpret_cast<const char*>(&listener),
+                   sizeof(listener)) == SOCKET_ERROR) return;
+    ULONG mode = 1;
+    if (ioctlsocket(accepted, FIONBIO, &mode) != NO_ERROR) return;
+    int no_delay = 1;
+    if (setsockopt(accepted, IPPROTO_TCP, TCP_NODELAY,
+                   reinterpret_cast<const char*>(&no_delay),
+                   sizeof(no_delay)) == SOCKET_ERROR) return;
     auto reservation = connection_reservation::acquire(budget_);
-    if (!reservation) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
-    std::shared_ptr<context<ENty, CNty>> ctx;
+    if (!reservation) return;
+    std::shared_ptr<context<ENty>> ctx;
     try {
-      std::size_t encrypted_receive_buffer_capacity = 0;
-      std::size_t network_bio_buffer_capacity = 0;
-      if constexpr (requires(const POty& value) {
-                      value.encrypted_receive_buffer_capacity;
-                      value.network_bio_buffer_capacity;
-                    }) {
-        encrypted_receive_buffer_capacity =
-            configuration_.encrypted_receive_buffer_capacity;
-        network_bio_buffer_capacity =
-            configuration_.network_bio_buffer_capacity;
-      }
-      ctx = std::make_shared<context<ENty, CNty>>(
-          ova->socket, configuration_.receive_buffer_capacity,
+      ctx = std::make_shared<context<ENty>>(
+          accepted, configuration_.receive_buffer_capacity,
           configuration_.max_buffered_send_bytes, create_engine_, stopping_,
-          on_connection_, on_disconnection_,
-          [this](context<ENty, CNty>* context) { retire_context(context); },
-          shared_state_, encrypted_receive_buffer_capacity,
-          network_bio_buffer_capacity, configuration_.max_pending_sources,
-          std::move(*reservation));
-    } catch (...) {
-      closesocket(ova->socket);
-      finish_accept();
-      return;
-    }
-    if (!CreateIoCompletionPort((HANDLE)ova->socket, io_h_, 0, 0)) {
-      closesocket(ova->socket);
-      ova->socket = INVALID_SOCKET;
-      finish_accept();
-      return;
-    }
-    if (!register_context(ctx)) {
-      ctx->abort();
-      finish_accept();
-      return;
-    }
-    // Let's call user's callback to notify for new connection!
+          on_connection_, on_disconnection_, std::move(*reservation));
+    } catch (...) { return; }
+    // Before this transfer the accept operation owns the socket, even when
+    // the engine constructor throws. Afterwards the context owns it.
+    ova->socket = INVALID_SOCKET;
+    if (!CreateIoCompletionPort((HANDLE)accepted, io_h_, 0, 0)) return;
+    if (!register_context(ctx)) return;
     try {
-      ctx->connected(io_h_, execution());
+      ctx->connected();
       ctx->notify_connection();
-    } catch (const std::exception&) {
-      ctx->stop();
-      finish_accept();
+      if (ctx->start_io()) finish_context(ctx);
       return;
-    } catch (...) {
-      ctx->stop();
-      finish_accept();
-      return;
-    }
-    // Let's arm next receive operation!
-    if (!ctx->arm_next_receive_operation()) {
-      ctx->stop();
-      finish_accept();
-      return;
-    }
-    finish_accept();
+    } catch (...) {}
+    if (ctx->abort()) finish_context(ctx);
   }
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles a finished receive operation. It checks that the receive        |
-  // | succeeded, the connection is still open, and another receive can be     |
-  // | started. If any of these checks fail, it stops the context.             |
-  // | Called on an I/O worker thread.                                         |
+  // | Handles a finished receive operation. It checks that the receive       |
+  // | succeeded, the connection is still open, and another receive can be    |
+  // | started. If any of these checks fail, it stops the context.            |
+  // | Called on an I/O worker thread.                                        |
   // +-------------------------------------------------------------------------+
-  void handle_receive(std::shared_ptr<context<ENty, CNty>> ctx,
-                      DWORD bytes_received) {
+  void handle_receive(const std::shared_ptr<context<ENty>>& ctx,
+                      DWORD bytes_received, bool success) {
+    bool finished;
     try {
-      if (!ctx->receive_completed(bytes_received)) return;
-      if (!bytes_received) {
-        if (!ctx->eof()) ctx->abort();
-        ctx->stop();
-        return;
-      }
-      if (!ctx->arm_next_receive_operation()) ctx->stop();
-    } catch (...) {
-      ctx->abort();
-      ctx->stop();
-    }
+      finished = success ? ctx->receive_completed(bytes_received)
+                         : ctx->receive_failed();
+    } catch (...) { finished = ctx->abort(); }
+    if (finished) finish_context(ctx);
   }
   // +=========================================================================+
-  // | [>] handle_send                                             ( private ) |
+  // | [>] handle_send                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles a finished send operation. It checks that the send succeeded,   |
-  // | the connection is still open, and another send can be started.          |
-  // | If any of these checks fail, it stops the context.                      |
-  // +-------------------------------------------------------------------------+
-  void handle_send(overlapped_send<ENty, CNty>* ovs, DWORD bytes_sent) {
+  void handle_send(overlapped_send<ENty>* op, DWORD bytes, bool success) {
+    bool finished;
     try {
-      if (ovs->get_type() == io_type::kOutput)
-        ovs->ctx->output_ready();
-      else
-        ovs->ctx->send_completed(bytes_sent, ovs->submitted_size);
-    } catch (...) {
-      ovs->ctx->abort();
-      ovs->ctx->stop();
-    }
+      finished = success ? op->ctx->send_completed(bytes, op->buffer.len)
+                         : op->ctx->send_failed();
+    } catch (...) { finished = op->ctx->abort(); }
+    if (finished) finish_context(op->ctx);
   }
   // +=========================================================================+
-  // | [>] handle_error                                            ( private ) |
+  // | [>] replenish_accept_pipeline                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles an error from a failed overlapped operation. It checks what     |
-  // | kind of operation failed and calls the matching error handler on the    |
-  // | context. If it was an accept operation, it closes the socket and        |
-  // | finishes the accept.                                                    |
-  // +-------------------------------------------------------------------------+
-  void handle_error(overlapped_base* ovb) {
-    switch (ovb->get_type()) {
-      case io_type::kAccept: {
-        auto ova = reinterpret_cast<overlapped_accept*>(ovb);
-        closesocket(ova->socket);
-        finish_accept();
-        break;
-      }
-      case io_type::kReceive:
-        reinterpret_cast<overlapped_receive<ENty, CNty>*>(ovb)
-            ->ctx->receive_failed();
-        break;
-      case io_type::kSend:
-      case io_type::kOutput:
-        reinterpret_cast<overlapped_send<ENty, CNty>*>(ovb)->ctx->send_failed();
-        break;
-    }
-  }
-  // +=========================================================================+
-  // | [>] handle_overlapped                                       ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Cleans up the overlapped structure once it’s been handled. It checks    |
-  // | what kind of operation it was and deletes the matching structure.       |
-  // +-------------------------------------------------------------------------+
-  void handle_overlapped(overlapped_base* ovb) {
-    switch (ovb->get_type()) {
-      case io_type::kAccept:
-        delete reinterpret_cast<overlapped_accept*>(ovb);
-        break;
-      case io_type::kReceive:
-        reinterpret_cast<overlapped_receive<ENty, CNty>*>(ovb)
-            ->ctx->notify_disconnection();
-        delete reinterpret_cast<overlapped_receive<ENty, CNty>*>(ovb);
-        break;
-      case io_type::kSend:
-      case io_type::kOutput:
-        reinterpret_cast<overlapped_send<ENty, CNty>*>(ovb)
-            ->ctx->notify_disconnection();
-        delete reinterpret_cast<overlapped_send<ENty, CNty>*>(ovb);
-        break;
-    }
-  }
-  // +=========================================================================+
-  // | [>] replenish_accept_pipeline                              ( private )  |
-  // +-------------------------------------------------------------------------+
-  // | Posts new accept operations until the number waiting reaches the        |
-  // | accept depth. If the worker is stopping or quiescing, it returns        |
-  // | false. It returns true if it posts enough accepts.                      |
+  // | Posts new accept operations until the number waiting reaches the       |
+  // | accept depth. If the worker is stopping, it returns                    |
+  // | false. It returns true if it posts enough accepts.                     |
   // +-------------------------------------------------------------------------+
   bool replenish_accept_pipeline() {
     for (;;) {
       {
         std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
-        if (stopping_ || quiescing_ || accept_socket_ == INVALID_SOCKET) {
+        if (stopping_ || accept_socket_ == INVALID_SOCKET) {
           return false;
         }
         if (pending_accepts_ >= accept_depth_) return true;
@@ -869,68 +543,59 @@ struct worker {
   // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts a new accept operation by creating a socket and an overlapped    |
-  // | structure, then calling `AcceptEx`. If the worker is stopping or        |
-  // | quiescing, it closes the socket and returns false. If enough accepts    |
-  // | are already pending, it closes the socket and returns true.             |
-  // | If `AcceptEx` fails, it closes the socket and returns false.            |
-  // | Otherwise, it returns true.                                             |
+  // | Starts a new accept operation by creating a socket and an overlapped   |
+  // | structure, then calling `AcceptEx`. If the worker is stopping, it      |
+  // | closes the socket and returns false. If enough accepts are pending,    |
+  // | it closes the unused socket and returns true.                         |
+  // | If `AcceptEx` fails, it closes the socket and returns false.           |
+  // | Otherwise, it returns true.                                            |
   // +-------------------------------------------------------------------------+
   bool post_accept(bool replacement) {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,
                             WSA_FLAG_OVERLAPPED);
     if (soc == INVALID_SOCKET) return false;
-    overlapped_accept* ova = new (std::nothrow) overlapped_accept(soc);
+    std::unique_ptr<overlapped_accept> ova(
+        new (std::nothrow) overlapped_accept(soc));
     if (!ova) {
       closesocket(soc);
       return false;
     }
     DWORD received = 0;
     std::unique_lock<std::mutex> lifecycle_lock(lifecycle_mutex_);
-    if (stopping_ || quiescing_ || accept_socket_ == INVALID_SOCKET) {
+    if (stopping_ || accept_socket_ == INVALID_SOCKET) {
       lifecycle_lock.unlock();
-      closesocket(soc);
-      delete ova;
       return false;
     }
     if (!replacement && pending_accepts_ >= accept_depth_) {
       lifecycle_lock.unlock();
-      closesocket(soc);
-      delete ova;
       return true;
     }
     pending_accepts_++;
     BOOL accepted_connection =
         accept_ex_(accept_socket_, ova->socket, ova->addresses, 0,
-                   kAcceptAddressBytes, kAcceptAddressBytes, &received, ova);
+                   kAcceptAddressBytes, kAcceptAddressBytes,
+                   &received, ova.get());
     if (accepted_connection == FALSE && WSAGetLastError() != ERROR_IO_PENDING) {
       // ((error)) -> Could not post AcceptEx operation!
       pending_accepts_--;
       lifecycle_lock.unlock();
       lifecycle_cv_.notify_all();
-      closesocket(soc);
-      delete ova;
       return false;
     }
+    ova.release();
     return true;
   }
   // +=========================================================================+
   // | USINGs                                                      ( private ) |
   // +-------------------------------------------------------------------------+
-  using contexts_maps =
-      std::unordered_map<context<ENty, CNty>*,
-                         std::shared_ptr<context<ENty, CNty>>>;
+  using context_set = std::unordered_set<std::shared_ptr<context<ENty>>>;
   // +=========================================================================+
   // | ATTRIBUTEs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
   const policies_type configuration_;
   const std::shared_ptr<connection_budget> budget_{
       std::make_shared<connection_budget>(configuration_.max_connections)};
-  std::mutex expiry_mutex_;
-  std::chrono::steady_clock::time_point next_expiry_{};
-  std::atomic<std::chrono::steady_clock::rep> next_expiry_ticks_{0};
   const FAty create_engine_;
-  const typename CNty::shared_state shared_state_;
   network::detail::environment environment_;
   HANDLE io_h_ = nullptr;
   SOCKET accept_socket_ = INVALID_SOCKET;
@@ -939,16 +604,11 @@ struct worker {
   std::condition_variable lifecycle_cv_;
   std::size_t accept_depth_ = 0;
   std::size_t pending_accepts_ = 0;
-  bool starting_ = false;
+  // Written by the administrative owner; read by IOCP and context locks.
   std::atomic<bool> stopping_{false};
-  std::atomic<bool> quiescing_{false};
-  std::thread::id stopping_thread_{};
   std::vector<std::jthread> workers_;
   inline static thread_local const worker* current_worker_{nullptr};
-  inline static thread_local work_state* current_work_{nullptr};
-  std::deque<work_entry> incoming_;
-  std::mutex work_mutex_;
-  contexts_maps contexts_;
+  context_set contexts_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };

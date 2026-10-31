@@ -8,7 +8,11 @@
 
 **Header:** [include/protocol/http/v11/engine.h](../../../../../include/protocol/http/v11/engine.h)
 
-HTTP/1.1 protocol engine.
+HTTP/1.1 protocol engine. The bundled TCP server uses synchronous handlers.
+Execution and optional flow-control APIs remain available for independent
+embedding and tests; they are not supplied or driven by Linux or Windows TCP.
+An executor alone does not relax the
+[TCP runtime contract](../../../transport/server/tcp.md#runtime-contract).
 
 ### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
 
@@ -127,7 +131,10 @@ void set_execution_capacity(
       transport::server::execution_capacity execution) noexcept;
 ```
 
-Sets the execution capacity for the engine.
+Stores a capability supplied by an independent application execution service.
+Bundled TCP does not install this capability, run its jobs or manage their
+lifetime. Connecting coroutine execution to a TCP server remains separate work;
+the existing send/close callback contract still applies.
 
 **Parameters:**
 
@@ -149,7 +156,11 @@ Sets the execution capacity for the engine.
 bool stop(std::function<void()> completed);
 ```
 
-Stops the engine lifecycle.
+Stops engine input and asks the independent asynchronous engine state to finish.
+Returns true when no accepted asynchronous work remains; in that case completed
+is not called. A false return means completed is called once when that work ends.
+The embedding service owns this protocol lifecycle. Bundled TCP does not call
+engine.stop or wait for application tasks.
 
 **Parameters:**
 
@@ -186,10 +197,19 @@ Handles bytes received from the transport.
 **METHOD** · *protocol::http::v11::engine*
 
 ```cpp
-void set_input_flow_control(std::function<bool()> pressure, std::function<void()> ready);
+void set_input_flow_control(std::function<bool()> pressure,
+                            std::function<void()> ready);
 ```
 
-Optional generic transport integration, configured before receiving input. The pressure callback reports transport output pressure. The ready callback schedules an input-service opportunity when ordered-response credit can release paused input; ordinary unpressured completions do not request wakeups. Subscription rechecks credit to avoid a lost concurrent completion. The callback must not reenter the engine. Ready callbacks use weak context ownership; Linux pressure queries read separately owned published state. Engines without this optional integration retain hard-limit closure behavior.
+Optional engine flow control, configured before receiving input by an independent
+integration. The pressure query reports its output pressure. Ready requests an
+input-service opportunity when ordered-response credit can release deferred
+input; it is not an authorization for concurrent engine entry. Subscription
+rechecks credit to avoid a lost completion.
+
+Neither bundled TCP backend installs these hooks or supplies ready wakeups. A
+custom embedding owns callback lifetime and serializes input, resume and stop.
+Without this optional integration, engine budgets still reject excess work.
 
 **Source:** [include/protocol/http/v11/engine.h:130](../../../../../include/protocol/http/v11/engine.h#L130)
 
@@ -203,7 +223,8 @@ Optional generic transport integration, configured before receiving input. The p
 bool input_paused() const noexcept;
 ```
 
-Reports whether input processing stopped at a message boundary for output or pending-response credit. The transport must suspend further input delivery, the engine owns a copy of the deferred remainder of one bounded receive block. An in-progress message can finish before pausing so that an interim response does not prevent its body from arriving.
+Reports whether input processing stopped at a message boundary for output or pending-response credit. An embedding using the optional hooks suspends new input delivery; the engine
+owns the deferred remainder of one receive block. An in-progress message can finish before pausing so that an interim response does not prevent its body from arriving.
 
 Pressure is queried only when bytes are available to start a message. With no deferred bytes this can return false even while a budget is pressured; the next block is checked before decoding. Hard budgets are unchanged.
 
@@ -219,6 +240,10 @@ Pressure is queried only when bytes are available to start a message. With no de
 void resume_input();
 ```
 
-Services the deferred remainder of one receive block and reevaluates pressure when bytes remain. An empty resume does not poll pressure. Serialize with all receive callbacks and stop; invoke outside transport output locks. The bundled TCP and TLS transports resume input on their workers. The ready callback is a wakeup, not permission to invoke this method concurrently.
+Services the deferred remainder of one receive block and reevaluates pressure
+when bytes remain. An empty resume does not poll. An embedding using flow control
+serializes this method with all input calls and engine stop, without reentering
+from ready. Neither bundled TCP backend invokes resume_input. No TLS backend is
+provided by these methods.
 
 **Source:** [include/protocol/http/v11/engine.h:136](../../../../../include/protocol/http/v11/engine.h#L136)

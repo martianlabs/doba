@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
+if(DOBA_CI_REQUIRE_TLS)
+  message(FATAL_ERROR "TLS is outside the current transport scope")
+endif()
 
 if(NOT DEFINED DOBA_CI_BUILD_DIR)
   message(FATAL_ERROR "DOBA_CI_BUILD_DIR is required")
@@ -13,13 +16,17 @@ endif()
 set(evidence "${DOBA_CI_BUILD_DIR}/ci-evidence")
 file(MAKE_DIRECTORY "${evidence}")
 
-find_package(Git REQUIRED)
-execute_process(
-  COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_LIST_DIR}/.." rev-parse HEAD
-  OUTPUT_VARIABLE revision
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND_ERROR_IS_FATAL ANY
-)
+if(DEFINED DOBA_CI_SOURCE_DESCRIPTION)
+  set(revision "${DOBA_CI_SOURCE_DESCRIPTION}")
+else()
+  find_package(Git REQUIRED)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_LIST_DIR}/.." rev-parse HEAD
+    OUTPUT_VARIABLE revision
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+endif()
 file(STRINGS "${DOBA_CI_BUILD_DIR}/CMakeCache.txt" configuration
   REGEX "^(CMAKE_BUILD_TYPE|CMAKE_CXX_COMPILER|CMAKE_CXX_FLAGS[^:]*|CMAKE_EXE_LINKER_FLAGS[^:]*|DOBA_ENABLE_TLS|DOBA_ENABLE_STRICT_WARNINGS):")
 string(REPLACE ";" "\n" configuration "${configuration}")
@@ -34,7 +41,11 @@ if(WIN32)
 else()
   set(suffix "")
 endif()
-foreach(suite IN ITEMS unit integration resilience)
+set(suites unit integration)
+if(WIN32)
+  list(APPEND suites resilience)
+endif()
+foreach(suite IN LISTS suites)
   if(suite STREQUAL "resilience")
     set(directory integration)
   else()
@@ -79,18 +90,61 @@ foreach(suite IN ITEMS unit integration resilience)
     message(STATUS "Verified resilience inventory")
     continue()
   endif()
-  if(DOBA_CI_REQUIRE_TLS)
+  if(NOT WIN32)
     if(suite STREQUAL "unit")
-      set(required_files tls_session_tests.cpp)
+      set(native_file tcp_context_linux_tests.cpp)
     else()
-      set(required_files tls_tests.cpp tls_http_tests.cpp)
+      set(native_file tcpip_linux_tests.cpp)
     endif()
-    foreach(required_file IN LISTS required_files)
-      string(REPLACE "." "\\." pattern "${required_file}")
-      if(NOT inventory MATCHES "transport/server/${pattern}:[0-9]+ - ")
-        message(FATAL_ERROR "Missing TLS test family: ${suite}/${required_file}")
-      endif()
-      message(STATUS "Verified TLS inventory: ${suite}/${required_file}")
-    endforeach()
+    if(NOT inventory MATCHES "${native_file}:[0-9]+ - ")
+      message(FATAL_ERROR "Missing Linux core tests: ${native_file}")
+    endif()
   endif()
+
 endforeach()
+
+if(NOT WIN32)
+  execute_process(
+    COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${DOBA_CI_BUILD_DIR}" -N
+    OUTPUT_VARIABLE registered
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+  foreach(required IN ITEMS doba_unit_tests doba_integration_tests
+      doba_linux_transport_tests doba_linux_accept_error_tests)
+    if(NOT registered MATCHES "Test +#[0-9]+: ${required}(\n|$)")
+      message(FATAL_ERROR "Missing registered Linux test: ${required}")
+    endif()
+  endforeach()
+  file(WRITE "${evidence}/registered-tests.txt" "${registered}")
+endif()
+
+if(WIN32)
+  execute_process(
+    COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${DOBA_CI_BUILD_DIR}" -N
+    OUTPUT_VARIABLE registered
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+  if(NOT registered MATCHES "Test +#[0-9]+: doba_iocp_completion_tests(\n|$)")
+    message(FATAL_ERROR "Missing Windows IOCP completion interleaving test")
+  endif()
+  if(NOT registered MATCHES
+      "Test +#[0-9]+: doba_windows_lifecycle_tests(\n|$)")
+    message(FATAL_ERROR "Missing Windows socket lifecycle fault tests")
+  endif()
+  foreach(native IN ITEMS iocp_completion windows_lifecycle)
+    set(binary
+      "${DOBA_CI_BUILD_DIR}/tests/integration/doba_${native}_tests${suffix}")
+    execute_process(
+      COMMAND "${binary}" --list
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE inventory
+      ERROR_VARIABLE errors
+      TIMEOUT "${DOBA_CI_INVENTORY_TIMEOUT}"
+    )
+    if(NOT result STREQUAL "0" OR inventory STREQUAL "")
+      message(FATAL_ERROR "Cannot list Windows ${native}: ${result} ${errors}")
+    endif()
+    file(WRITE "${evidence}/${native}-inventory.txt" "${inventory}")
+  endforeach()
+  file(WRITE "${evidence}/registered-tests.txt" "${registered}")
+endif()

@@ -26,4 +26,16 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Internal owner of one SO_REUSEPORT listener, epoll set, stop event descriptor,
+thread and connection map. Socket events are processed only on that worker;
+there is no dispatcher, task queue or communication between workers. Engine
+and reader calls execute synchronously and may occupy the worker until return.
+
+Admission is the finite budget assigned at startup or unlimited when zero.
+EINTR retries and transient accept failures preserve admission. A resource/system
+accept failure closes that worker's listener until explicit stop/start; existing
+connections continue. There is no retry service or timer scan.
+
+The external sequential owner signals stop, joins the worker, then releases its
+descriptors. The worker releases pending contexts/readers rather than draining
+TX on administrative stop. See [transport](tcp_linux_transport.md).

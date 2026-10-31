@@ -40,58 +40,15 @@ std::unique_ptr<reader> byte_source() {
 }  // namespace
 
 DOBA_TEST(
-    "source pressure survives releasing byte pressure until the source low "
-    "watermark") {
-  send_state output(65536, 4);
-  DOBA_EXPECT(output.push({}, std::string(49152, 'b'), nullptr));
-  DOBA_EXPECT(output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.pressured());
-  DOBA_EXPECT(output.fill());
-  DOBA_EXPECT(output.consume(49152));
-  DOBA_EXPECT(output.pressured());  // No inline bytes, but three live sources.
-  DOBA_EXPECT(output.fill());
-  DOBA_EXPECT(output.consume(1));
-  DOBA_EXPECT(output.pressured());  // EOF has not retired the first reader yet.
-  DOBA_EXPECT(output.fill());
-  DOBA_EXPECT(!output.pressured());  // Two readers: low watermark reached.
-}
-
-DOBA_TEST(
-    "byte pressure survives releasing source pressure and partial active "
-    "sends") {
-  send_state output(65536, 4);
-  for (int i = 0; i < 3; ++i) DOBA_EXPECT(output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.push({}, std::string(40960, 'b'), nullptr));
-  DOBA_EXPECT(output.pressured());
-  for (int i = 0; i < 3; ++i) {
-    DOBA_EXPECT(output.fill());
-    DOBA_EXPECT(output.consume(1));
-    DOBA_EXPECT(output.pressured());
-  }
-  DOBA_EXPECT(output.fill());  // All readers retire; inline batch remains.
-  DOBA_EXPECT_EQUAL(output.buffer.size(), 40960);
-  DOBA_EXPECT(output.pressured());
-  DOBA_EXPECT(output.consume(8192));
-  DOBA_EXPECT(output.pressured());  // Full batch credit remains retained.
-  DOBA_EXPECT(output.consume(32768));
-  DOBA_EXPECT(!output.pressured());
-}
-
-DOBA_TEST(
-    "source limits include empty readers and release all credit after clear or "
+    "empty terminal readers release ownership after clear or "
     "failure") {
-  send_state output(16, 1);
+  send_state output(16);
   DOBA_EXPECT(output.push({}, {}, std::make_unique<reader>(
       reader::borrowed(std::span<const std::byte>{}))));
   DOBA_EXPECT(!output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.pressured());
   DOBA_EXPECT(output.fill());  // An empty reader retires without a socket send.
-  DOBA_EXPECT(!output.pressured());
   DOBA_EXPECT(output.push("0123456789abcdef", {}, nullptr));
   output.clear();
-  DOBA_EXPECT(!output.pressured());
   DOBA_EXPECT(output.push({}, {}, byte_source()));
   output.clear();
   DOBA_EXPECT(output.push("0123456789abcdef", {}, nullptr));

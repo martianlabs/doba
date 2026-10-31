@@ -35,8 +35,8 @@ somebody swore would never arrive gets its own test.
   </a>
 </h2>
 
-Real TCP and TLS connections, fragmented requests, pipelines, disconnects,
-and shutdown with work still pending. Clients aren't obliged to be polite.
+Real synchronous TCP connections, fragmented requests, inline pipelines,
+disconnects, prefix/source and shutdown with socket output pending. Clients aren't obliged to be polite.
 [Inside the integration suite](integration/README.md).
 
 <a name="resilience"></a>
@@ -92,8 +92,8 @@ check too. [The planted bugs](mutation/README.md).
   </a>
 </h2>
 
-Separate projects consume doba's CMake targets and construct public HTTP/TLS
-types. The library has to work outside its own backyard.
+Separate projects consume installed and source CMake targets and construct
+public HTTP/TCP types. Unsupported TLS selection is rejected explicitly. The library has to work outside its own backyard.
 [Package checks](package/README.md).
 
 <a name="runner-metatests"></a>
@@ -110,3 +110,18 @@ Filters, failure reports, exceptions, deadlines, and cleanup get tested too.
 A stuck test must leave something more useful than a spinning CI job.
 [Unit runner](unit/README.md#the-runner-gets-checked-too) and
 [integration runner](integration/README.md#when-a-test-goes-wrong).
+
+Native Linux and Windows transport coverage follows the
+[TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract).
+Protocol-only async and common::task tests use independently supplied execution
+services. They do not validate asynchronous socket handlers or a transport
+executor. No TLS negotiation or inactivity/pressure mechanism is claimed.
+
+CI preserves historical Release TLS required-check names for branch protection,
+but configures TLS=OFF. It validates TCP with the platform sanitizers and native
+cases listed in the suite documentation. Engine concurrency repeats 200 times;
+native Linux transport or Windows IOCP cases repeat 20 times in their jobs.
+Local inventory can be collected without Git by providing
+-DDOBA_CI_SOURCE_DESCRIPTION=working-tree to cmake/ci_test_inventory.cmake and
+preserving source hashes. These statements describe configured coverage, not a
+new remote CI run.

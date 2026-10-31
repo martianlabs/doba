@@ -26,7 +26,6 @@
 #define martianlabs_doba_transport_server_operating_state_h
 
 #include <atomic>
-#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -86,33 +85,5 @@ inline bool update_pressure(bool paused, std::size_t used,
   return paused ? used > maximum / 2 : used >= maximum - maximum / 4;
 }
 
-struct connection_progress {
-  using clock = std::chrono::steady_clock;
-  static constexpr auto maintenance_interval = std::chrono::milliseconds{250};
-  // Context I/O and maintenance already hold the same context lock. Neither
-  // construction nor positive I/O needs a timestamp or an additional atomic.
-  void transferred(std::size_t bytes) noexcept {
-    if (bytes)
-      active_ = true;
-  }
-  bool expired(std::chrono::milliseconds period,
-               clock::time_point now = clock::now()) noexcept {
-    if (period.count() <= 0) return false;
-    if (observed_ && now < last) return false;
-    if (!observed_ || active_) {
-      last = now;
-      observed_ = true;
-      active_ = false;
-      return false;
-    }
-    return now >= last &&
-           std::chrono::duration_cast<std::chrono::milliseconds>(now - last) >=
-               period;
-  }
-  clock::time_point last{};
- private:
-  bool observed_{false};
-  bool active_{false};
-};
 } // namespace martianlabs::doba::transport::server::detail
 #endif

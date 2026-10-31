@@ -48,6 +48,8 @@ struct execution_work {
 // | [>] execution_capacity                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // | While active, accepted work runs once, no earlier than its threshold.     |
+// | An independent execution service supplies this capability to the engine. |
+// | Bundled TCP does not implement or inject an application executor.        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct execution_capacity {
@@ -73,11 +75,15 @@ concept execution_receiver =
 // +---------------------------------------------------------------------------+
 // | [>] transport                                                 ( concept ) |
 // +---------------------------------------------------------------------------+
-// | This concept defines the requirements for a transport type. It requires   |
-// | that the transport type is constructible from its policies and an engine  |
-// | factory, and that it provides methods for setting callbacks for           |
-// | connection and disconnection events, as well as starting and              |
-// | stopping the transport.                                                   |
+// | Structural transport interface. Runtime rules for bundled TCP:           |
+// | configure and administer from one sequential external owner, outside     |
+// | worker callbacks. Notify connections outside transport locks.            |
+// | Serialize input per connection and copy accepted inline output before    |
+// | its synchronous send callback returns. Transfer reader ownership; allow  |
+// | only one terminal reader and keep socket buffers alive during I/O.       |
+// | Engine close drains accepted output. Linux administrative stop cancels   |
+// | pending output; Windows drains it before joining its IOCP workers.       |
+// | TLS and application execution are outside the bundled TCP contract.      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename TRty, typename ENty, typename FNty>

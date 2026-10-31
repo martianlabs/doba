@@ -25,18 +25,11 @@
 #ifndef martianlabs_doba_transport_server_tcp_connection_h
 #define martianlabs_doba_transport_server_tcp_connection_h
 
-#include <algorithm>
 #include <cstddef>
-#include <deque>
 #include <memory>
 #include <span>
 #include <stdexcept>
-#include <string>
-#include <string_view>
-#include <utility>
 
-#include "send_state.h"
-#include "common/reader.h"
 #include "protocol/contracts.h"
 
 namespace martianlabs::doba::transport::server::detail {
@@ -44,10 +37,8 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct keeps track of a TCP connection used by an engine.            |
-// | It stores the engine and an input buffer, and handles incoming data,      |
-// | and outgoing data. It also lets you check the connection status and     |
-// | manage the output buffers.                                               |
+// | Owns the engine and its fixed socket receive buffer. Fresh blocks are     |
+// | delivered synchronously; incomplete messages remain protocol-owned.       |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   ENty - engine type being used.                                          |
@@ -56,10 +47,6 @@ namespace martianlabs::doba::transport::server::detail {
 template <protocol::contracts::engine ENty>
 struct tcp_connection {
   // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  using shared_state = std::nullptr_t;
-  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> FAty>
@@ -67,10 +54,6 @@ struct tcp_connection {
       : engine{create_engine()},
         buffer{std::make_unique<char[]>(buffer_size)},
         capacity{buffer_size} {}
-  template <protocol::contracts::engine_factory<ENty> FAty>
-  tcp_connection(std::size_t buffer_size, std::size_t,
-                 const FAty& create_engine, shared_state)
-      : tcp_connection(buffer_size, create_engine) {}
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -86,83 +69,13 @@ struct tcp_connection {
     engine.on_bytes_received({buffer.get(), received});
   }
   // +=========================================================================+
-  // | [>] prepare_output                                           ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Gets the output buffer ready to send data.                              |
-  // | If it already contains unsent bytes, or the engine can add more data    |
-  // | to it, the method returns true. Otherwise, it returns false.            |
-  // +-------------------------------------------------------------------------+
-  bool prepare_output(send_state& output) {
-    return output.offset != output.buffer.size() || output.fill();
-  }
-  // +=========================================================================+
-  // | [>] output_bytes                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Returns a span of the unsent bytes in the output buffer.                |
-  // | If there are no unsent bytes, it returns an empty span.                 |
-  // +-------------------------------------------------------------------------+
-  std::span<char> output_bytes(send_state& output) {
-    return std::span(output.buffer).subspan(output.offset);
-  }
-  // +=========================================================================+
-  // | [>] output_buffers                                           ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Fills the provided array of buffers with the unsent bytes               |
-  // | in the output buffer.                                                   |
-  // +-------------------------------------------------------------------------+
-  std::size_t output_buffers(send_state& output,
-                             std::span<std::span<char>> buffers) {
-    if (buffers.empty()) return 0;
-    buffers[0] = output_bytes(output);
-    return buffers[0].empty() ? 0 : 1;
-  }
-  // +=========================================================================+
-  // | [>] output_sent                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Updates the output buffer after sending the specified number of bytes.  |
-  // +-------------------------------------------------------------------------+
-  bool output_sent(send_state& output, std::size_t sent) {
-    return output.consume(sent);
-  }
-  // +=========================================================================+
-  // | [>] output_pending                                           ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Checks if there are any unsent bytes in the output buffer.              |
-  // +-------------------------------------------------------------------------+
-  bool output_pending(const send_state& output) const {
-    return output.queued() || output.offset != output.buffer.size();
-  }
-  // +=========================================================================+
-  // | [>] established                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool established() const { return true; }
-  // +=========================================================================+
-  // | [>] peer_closed                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool peer_closed() const { return false; }
-  // +=========================================================================+
-  // | [>] eof                                                      ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool eof() const { return true; }
-  // +=========================================================================+
-  // | [>] close_output                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool close_output() { return true; }
-  // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  bool input_paused() const {
-    if constexpr (requires { engine.input_paused(); }) {
-      return engine.input_paused();
-    } else {
-      return false;
-    }
-  }
-  void resume_input() {
-    if constexpr (requires { engine.resume_input(); }) engine.resume_input();
-  }
+  // Protocol engine, invoked only by serialized receive processing.
   ENty engine;
+  // Fixed storage reused after each synchronous engine call returns.
   std::unique_ptr<char[]> buffer;
+  // Socket receive block capacity, independent of protocol message limits.
   const std::size_t capacity;
 };
 }  // namespace martianlabs::doba::transport::server::detail

@@ -219,9 +219,9 @@ class engine_async {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Initiates the stopping process for the engine. It sets the stopping     |
-  // | flag and, if there are no active asynchronous operations,               |
-  // | it calls the 'on_completed_' callback.                                  |
+  // | Stops protocol work for an independent embedding. Returns true with    |
+  // | no callback when no active work remains; otherwise the last completion |
+  // | invokes the callback once. Bundled TCP does not call this operation.   |
   // +-------------------------------------------------------------------------+
   bool stop(std::function<void()> completed) {
     std::lock_guard<std::mutex> lock(completion_mutex_);

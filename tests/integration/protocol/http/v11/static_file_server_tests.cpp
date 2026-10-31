@@ -42,6 +42,11 @@
 #include "test_helper.h"
 
 namespace {
+// +---------------------------------------------------------------------------+
+// | [>] socket workers                                          ( constant ) |
+// +---------------------------------------------------------------------------+
+// Exercise independent connection owners on both backends.
+constexpr std::size_t kSocketWorkers = 2;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
 using martianlabs::doba::common::filesystem_file;
@@ -341,7 +346,7 @@ DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
           .max_loads = 1, .ttl = std::chrono::milliseconds(1)});
   tcpip_client probe;
   const auto port = probe.find_available_port();
-  http_server<> server({.worker_count = 2, .ip = "127.0.0.1",
+  http_server<> server({.worker_count = kSocketWorkers, .ip = "127.0.0.1",
                         .port = std::to_string(port)});
   server.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});

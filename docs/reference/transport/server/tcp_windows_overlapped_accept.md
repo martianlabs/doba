@@ -27,3 +27,10 @@ Implementation support for doba. These declarations are internal and are not par
 **INTERNAL HEADER**
 
 Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+
+The operation owns the accepted socket until context construction succeeds.
+Its destructor closes any untransferred socket on failed completion, setup,
+engine construction or submission. Transfer invalidates this socket member;
+the context then closes the socket, including failed IOCP association. The
+worker destroys the operation only after its real AcceptEx completion, or
+immediately if submission failed without posting an operation.

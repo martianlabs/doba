@@ -25,19 +25,14 @@
 #ifndef martianlabs_doba_transport_server_tls_h
 #define martianlabs_doba_transport_server_tls_h
 
-#include <utility>
-
 #include "transport/server/tcp.h"
-#include "transport/server/tls_connection.h"
-
 namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls                                                         ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a TLS transport for an engine. It inherits from       |
-// | `basic_transport` and takes a `tls_policies` configuration and an engine  |
-// | factory when it is created.                                               |
+// | TLS is outside the current transport scope on Linux and Windows.         |
+// | Instantiation fails explicitly instead of selecting a legacy backend.    |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
 // |   ENty - engine type being used.                                          |
@@ -46,16 +41,9 @@ namespace martianlabs::doba::transport::server {
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
           protocol::contracts::engine_factory<ENty> FAty>
-class tls
-    : public detail::basic_transport<ENty, FAty, detail::tls_connection<ENty>, tls_policies> {
- public:
-  // +=========================================================================+
-  // | CONSTRUCTORs/DESTRUCTORs                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  explicit tls(tls_policies configuration, FAty create_engine)
-      : detail::basic_transport<ENty, FAty, detail::tls_connection<ENty>, tls_policies>(
-            configuration, std::move(create_engine),
-            detail::make_tls_context(configuration)) {}
+class tls {
+  static_assert(sizeof(ENty) == 0,
+                "TLS is outside the current transport scope");
 };
 }  // namespace martianlabs::doba::transport::server
 
