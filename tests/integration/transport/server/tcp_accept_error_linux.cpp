@@ -139,12 +139,22 @@ class descriptor_budget {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] make_engine                                              ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+// Use one factory type in both cases. The healthy exchange initializes UBSan's
+// thread type metadata before partial_start exhausts the descriptor table.
+// LLVM may need a descriptor when inspecting that type for the first time.
+echo_engine make_engine() { return {}; }
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] exercise                                                 ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool exercise() {
   using namespace std::chrono_literals;
-  auto factory = []() { return echo_engine{}; };
+  auto factory = make_engine;
   tcpip_client existing;
   const auto port = existing.find_available_port();
   if (!port) return false;
@@ -184,7 +194,7 @@ bool exercise() {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool partial_start() {
-  auto factory = []() { return echo_engine{}; };
+  auto factory = make_engine;
   tcpip_client probe;
   const auto port = probe.find_available_port();
   if (!port) return false;

@@ -78,7 +78,7 @@ cover boundaries, fragmentation, ownership, and memory/disk storage.
   </a>
 </h2>
 
-We plant twelve bugs in private header copies. The original tests must pass;
+We plant eight bugs in private header copies. The original tests must pass;
 each broken version must trip its intended assertion. Green needs a sanity
 check too. [The planted bugs](mutation/README.md).
 

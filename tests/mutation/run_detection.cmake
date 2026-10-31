@@ -18,9 +18,13 @@ foreach(path IN LISTS originals)
   list(APPEND hashes "${hash}")
   file(APPEND "${run}/source-sha256.txt" "${hash}  ${path}\n")
 endforeach()
-find_package(Git REQUIRED)
-execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
-  OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
+if(DEFINED DOBA_MUTATION_SOURCE_DESCRIPTION)
+  file(WRITE "${run}/revision.txt" "${DOBA_MUTATION_SOURCE_DESCRIPTION}\n")
+else()
+  find_package(Git REQUIRED)
+  execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
+    OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
+endif()
 execute_process(COMMAND "${DOBA_MUTATION_COMPILER}" --version
   OUTPUT_FILE "${run}/compiler.txt" COMMAND_ERROR_IS_FATAL ANY)
 if(WIN32)
@@ -125,9 +129,15 @@ foreach(index RANGE 0 ${last})
   endif()
 endforeach()
 message(STATUS "Three mutations detected; originals unchanged. Evidence: ${run}")
+set(mutation_source_args)
+if(DEFINED DOBA_MUTATION_SOURCE_DESCRIPTION)
+  list(APPEND mutation_source_args
+    "-DDOBA_MUTATION_SOURCE_DESCRIPTION=${DOBA_MUTATION_SOURCE_DESCRIPTION}")
+endif()
 execute_process(COMMAND "${CMAKE_COMMAND}"
   "-DDOBA_MUTATION_COMPILER=${DOBA_MUTATION_COMPILER}"
   "-DDOBA_MUTATION_OUTPUT=${DOBA_MUTATION_OUTPUT}/policies"
+  ${mutation_source_args}
   -P "${CMAKE_CURRENT_LIST_DIR}/run_policy_detection.cmake"
   RESULT_VARIABLE policy_result)
 if(NOT policy_result STREQUAL "0")

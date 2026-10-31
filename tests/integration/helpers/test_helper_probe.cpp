@@ -22,20 +22,18 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <atomic>
 #include <array>
 #include <atomic>
-#include <string>
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 #include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "../../helpers/concurrency.h"
-#include "common/task.h"
 
 // +===========================================================================+
 // | [>] probe passes                                            ( test-case ) |
@@ -87,26 +85,31 @@ DOBA_TEST("probe blocks") {
   } cleanup;
 }
 
-DOBA_TEST("probe failure releases suspended work and joins threads") {
+// +===========================================================================+
+// | [>] failure releases a blocked handler                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("probe failure releases a blocked handler and joins threads") {
   using namespace martianlabs::doba;
   tests::manual_event pending;
+  tests::manual_event entered;
   std::atomic<bool> completed{false};
   tests::integration::tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  http_server<> server(
+      {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
   tests::scope_exit release_on_failure([&] { pending.open(); });
   server.add_route("GET", "/", [&](const protocol::http::v11::request&,
-                                   protocol::http::v11::response& res)
-      -> common::task<void> {
-    co_await pending;
+                                   protocol::http::v11::response& res) {
+    entered.open();
+    pending.wait();
     completed = true;
     res.ok_200().set_body("done");
   });
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("GET / HTTP/1.1\r\nHost: a\r\n\r\n"));
-  DOBA_EXPECT(pending.wait_for_waiters(1));
+  DOBA_EXPECT(entered.wait_for());
   const auto exercise = [&]() {
     std::jthread waiter([&] {
       server.stop();
@@ -116,7 +119,7 @@ DOBA_TEST("probe failure releases suspended work and joins threads") {
   };
   exercise();
   DOBA_EXPECT(completed.load());
-  std::puts("probe suspended cleanup complete");
+  std::puts("probe blocked handler cleanup complete");
 }
 
 // +===========================================================================+
@@ -178,7 +181,8 @@ DOBA_TEST("probe concurrent assertions") {
     worker = std::jthread([&] {
       while (!ready.load()) std::this_thread::yield();
       for (int i = 0; i < 16; ++i) {
-        martianlabs::doba::tests::integration::test_helper::set_context("concurrent worker");
+        martianlabs::doba::tests::integration::test_helper::set_context(
+            "concurrent worker");
         (void)martianlabs::doba::tests::integration::test_helper::expect(
             false, "worker failure", __FILE__, __LINE__);
       }

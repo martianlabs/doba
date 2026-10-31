@@ -14,7 +14,7 @@
   </a>
 </h1>
 
-This bounded campaign checks that functional assertions detect twelve
+This bounded campaign checks that functional assertions detect eight
 specific regressions. It compiles the original tests first, then builds each mutant
 against an independent copy of the production headers. Your working headers
 are never edited.
@@ -40,14 +40,10 @@ is a failed campaign, never a successful detection.
 | response-order | Send a completed successor before its pending predecessor | No output is sent while the predecessor is suspended |
 | rejection-successor | Notify transport closure but omit the engine's terminal-state update | A later receive cannot dispatch a successor |
 | admission | Remove connection admission guard | Reservation above capacity fails |
-| zero-progress | Renew inactivity on zero bytes | Original deadline still expires |
-| activity-renewal | Ignore positive activity between samples | Observed activity postpones expiry |
-| activity-consumption | Never clear sampled activity | Silence still expires |
-| sources | Remove reader admission guard | Reader above capacity is rejected |
-| partial-batch | Release byte credit during a partial batch send | Byte pressure remains active |
+| sources | Remove the single-reader guard | A second terminal reader is rejected |
+| partial-batch | Exclude sent bytes from the active batch budget | Later output cannot exceed the hard TX limit |
 | http-bytes | Remove pending response byte guard | Overflow closes the connection |
 | requests | Remove ordered position guard | Position above capacity fails |
-| combined-pressure | Require both pressure sources simultaneously | One pressured budget still pauses input |
 
 The detector tests live in
 [regression_detection_tests.cpp](../unit/protocol/http/v11/regression_detection_tests.cpp)
@@ -60,5 +56,9 @@ The policy detectors also run in the ordinary unit suite; their sources
 are listed in [CMakeLists.txt](CMakeLists.txt).
 Run both campaigns with `cmake -P tests/mutation/run_detection.cmake` using a
 Clang compiler and Ninja (on Windows, use a developer shell).
-This checks twelve selected regressions; it is not a mutation score for the
+For a source tree without a Git lookup, pass
+`-DDOBA_MUTATION_SOURCE_DESCRIPTION=<description>` before `-P`. The campaign
+records that description together with the source hashes.
+
+This checks eight selected regressions; it is not a mutation score for the
 whole library.

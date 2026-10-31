@@ -93,7 +93,7 @@ The TCP backends do not install those hooks or perform inactivity sampling.
 [Policy construction](transport/server/tcp_transport_tests.cpp) covers defaults,
 platform ranges and zero meanings. [Regression detectors](protocol/http/v11/regression_detection_tests.cpp)
 check framing/body budgets, ordered responses and terminal rejection. The
-[configured mutation campaign](../mutation/README.md) challenges twelve selected
+[configured mutation campaign](../mutation/README.md) challenges eight selected
 regressions in private copies; it does not mutate the working source tree.
 
 <a name="the-runner-gets-checked-too"></a>
@@ -114,9 +114,10 @@ regressions in private copies; it does not mutate the working source tree.
 
 The [runner metatests](helpers/test_helper_tests.cpp) check listing,
 selection, assertion reports, exceptions, exit status, and timeouts.
-They also check that a failed assertion releases suspended work before
-joining threads, and that blocked cleanup leaves the test's identity in
-the diagnostics. A broken test shouldn't take the rest of the suite hostage.
+Blocked cleanup must leave the test's identity in the diagnostics. The
+[integration metatests](../integration/helpers/test_helper_tests.cpp) also check
+that a failed assertion releases a blocked synchronous handler before joining
+threads. A broken test shouldn't take the rest of the suite hostage.
 
 Failure counters and context diagnostics are synchronized across test workers.
 The metatests require all 128 failures from eight concurrent workers to be

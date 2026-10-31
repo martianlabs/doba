@@ -105,7 +105,8 @@ Engine/common-task asynchronous lifecycle tests remain separate from sockets.
 The [runner metatests](helpers/test_helper_tests.cpp) check listing, exact and
 qualified filters, repeated exclusions, assertions, exceptions, timeouts and
 cleanup in child processes. An assertion during an active fixture must release
-its gates before joining workers. The watchdog identifies the blocked case even
+its synchronous handler's gate before joining workers. The watchdog identifies
+the blocked case even
 when cleanup cannot progress. Concurrent reports retain every failure.
 
 The [HTTP helper regressions](helpers/http_test_helper_tests.cpp) verify raw-wire

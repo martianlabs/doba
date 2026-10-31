@@ -192,12 +192,12 @@ DOBA_TEST("watchdog rejects invalid timeout arguments") {
   }
 }
 
-DOBA_TEST("failed assertions release suspended work before joining") {
+DOBA_TEST("failed assertions release a blocked handler before joining") {
   const auto result = run_probe(
-      {"--name", "probe failure releases suspended work and joins threads"});
+      {"--name", "probe failure releases a blocked handler and joins threads"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
-  DOBA_EXPECT(result.output.find("probe suspended cleanup complete") !=
+  DOBA_EXPECT(result.output.find("probe blocked handler cleanup complete") !=
               std::string::npos);
   DOBA_EXPECT(result.output.find("Test timeout") == std::string::npos);
 }
@@ -223,7 +223,8 @@ DOBA_TEST("runner reports every concurrent assertion failure") {
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   std::size_t count = 0;
   std::size_t position = 0;
-  while ((position = result.output.find("assertion failed: worker failure", position)) !=
+  while ((position = result.output.find("assertion failed: worker failure",
+                                        position)) !=
          std::string::npos) {
     ++count;
     ++position;
@@ -236,7 +237,8 @@ DOBA_TEST("runner reports every concurrent assertion failure") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("integration runner applies every exclusion with normalized paths") {
   const auto result = run_probe({"--list", "--exclude", "probe assertion fails",
-      "--exclude", "tests\\integration\\helpers\\test_helper_probe.cpp::probe blocks"});
+      "--exclude",
+      "tests\\integration\\helpers\\test_helper_probe.cpp::probe blocks"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe passes") != std::string::npos);
