@@ -22,8 +22,9 @@ and collect the results.
   </a>
 </h2>
 
-The current Linux transport work measures baseline and pipelined requests
-over HTTP. TLS and asynchronous execution are outside this phase.
+The bundled HttpArena driver measures baseline and pipelined requests over
+plain HTTP. It has no TLS listener; the library offers TLS separately.
+Asynchronous application execution is outside this driver's scope.
 [HttpArena adapter](http/v11/httparena/README.md).
 
 <a name="web-frameworks"></a>

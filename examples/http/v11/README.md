@@ -2,7 +2,8 @@
 
 Build the project from the repository root as described in the
 [examples index](../../README.md). The TCP examples listen on
-`0.0.0.0:8080`. TLS is currently unsupported. Build the target
+`0.0.0.0:8080`. For optional TLS, see
+[https_hello_world](https_hello_world/README.md). Build the target
 named by its directory, run that executable, one server at a time, and stop it
 with Ctrl+C.
 
@@ -55,7 +56,8 @@ server.start();
 
 Engine policies are optional and follow the transport policies. The
 [request limits example](request_limits/README.md) configures one explicitly.
-`DOBA_ENABLE_TLS=ON` is explicitly rejected on both platforms.
+`DOBA_ENABLE_TLS=ON` adds the separate OpenSSL-backed TLS target and example.
+Existing TCP examples keep their dependencies and behavior.
 
 These are synchronous TCP examples on both platforms. Coroutine scheduling is
 not supplied by the transports. Inline-response pipelining is supported; an

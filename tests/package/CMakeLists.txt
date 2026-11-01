@@ -17,9 +17,8 @@ option(
   "Consume the doba TLS target"
   OFF
 )
-if(DOBA_PACKAGE_USE_TLS)
-  message(FATAL_ERROR
-    "TLS is outside the current transport scope; use DOBA_PACKAGE_USE_TLS=OFF")
+if(DOBA_PACKAGE_USE_TLS AND DOBA_PACKAGE_USE_SOURCE)
+  set(DOBA_ENABLE_TLS ON CACHE BOOL "Enable TLS support" FORCE)
 endif()
 
 if(
@@ -51,11 +50,16 @@ if(
     )
   endif()
 else()
-  find_package(
-    doba
-    CONFIG
-    REQUIRED
-  )
+  if(DOBA_PACKAGE_USE_TLS)
+    find_package(doba CONFIG REQUIRED COMPONENTS TLS)
+  else()
+    find_package(doba CONFIG REQUIRED)
+  endif()
+endif()
+
+if(NOT DOBA_PACKAGE_USE_TLS AND NOT DOBA_PACKAGE_USE_SOURCE AND
+    TARGET martianlabs::doba_tls)
+  message(FATAL_ERROR "Plain consumers must not import the TLS target")
 endif()
 
 add_executable(
@@ -67,3 +71,8 @@ target_link_libraries(
   PRIVATE
   martianlabs::doba
 )
+
+if(DOBA_PACKAGE_USE_TLS)
+  add_executable(doba_tls_consumer tls_consumer.cpp)
+  target_link_libraries(doba_tls_consumer PRIVATE martianlabs::doba_tls)
+endif()

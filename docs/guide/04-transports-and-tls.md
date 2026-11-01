@@ -9,8 +9,8 @@
 </h1>
 
 Your HTTP handlers deal with requests and responses. The transport deals with
-the socket underneath them. Use *http_server* for TCP. TLS is currently
-unsupported on both platforms.
+the socket underneath them. Use *http_server* for TCP and *https_server* for
+optional TLS on Linux or Windows.
 
 
 Both backends deliver RX bytes to one engine per connection and copy its
@@ -22,7 +22,7 @@ or cross-thread use. A blocking engine or reader occupies its I/O worker.
 Linux uses independent SO_REUSEPORT listeners and epoll workers. Windows uses
 IOCP, AcceptEx, WSARecv and WSASend, allowing kernel RX/TX overlap while engine
 calls stay serialized. Both support inline pipelining and one terminal reader.
-TLS, application scheduling, inactivity timers and pressure/resume integration
+Application scheduling, inactivity timers and pressure/resume integration
 are outside the current transport scope. The
 [TCP contract](../reference/transport/server/tcp.md#runtime-contract) defines
 the full boundary and the differences in admission and stop behavior.
@@ -127,10 +127,20 @@ There is no transport pressure/resume handshake; send limits are hard caps.
   </a>
 </h2>
 
-TLS is outside the current Linux and Windows transport scope.
-DOBA_ENABLE_TLS=ON fails CMake configuration explicitly. Public TLS declarations
-remain for diagnostics and reject direct instantiation. There is no TLS backend
-to enable in either platform; use the synchronous TCP examples for this version.
+Configure `DOBA_ENABLE_TLS=ON` with OpenSSL 3.0 or newer and link
+`martianlabs::doba_tls`. Installed consumers request the `TLS` component.
+`https_server<>` accepts `tls_policies`: set the bind address, port, PEM chain
+and matching unencrypted key. HTTPS selects `http/1.1` automatically and rejects
+other ALPN tokens; the generic TLS transport remains protocol-independent.
+
+TLS owns encryption/decryption buffers and reuses the unchanged TCP transport.
+It supports TLS 1.2/1.3, synchronous engines and bounded prefix/source output.
+A source is read completely during the send callback and counts toward the
+plaintext limit; this version does not stream arbitrarily large files.
+See the [complete contract](../reference/transport/server/tls.md),
+[policies](../reference/transport/server/tls_policies.md),
+[HTTPS example](../../examples/http/v11/https_hello_world/README.md) and
+[custom TLS protocol](../../examples/protocol/tls_echo/README.md).
 
 Configuration and start/stop belong to a sequential external owner. Engine close
 drains accepted valid output. Linux administrative stop cancels pending TX after

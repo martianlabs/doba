@@ -86,10 +86,6 @@ include(
   GNUInstallDirs
 )
 
-if(DOBA_ENABLE_TLS)
-  message(FATAL_ERROR
-    "TLS is outside the current transport scope; configure DOBA_ENABLE_TLS=OFF")
-endif()
 
 find_package(
   Threads
@@ -173,6 +169,17 @@ target_include_directories(
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+# TLS is opt-in. The plain target never acquires OpenSSL dependencies.
+if(DOBA_ENABLE_TLS)
+  find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
+  add_library(doba_tls INTERFACE)
+  add_library(martianlabs::doba_tls ALIAS doba_tls)
+  target_link_libraries(doba_tls INTERFACE doba_headers OpenSSL::SSL)
+  target_compile_definitions(doba_tls INTERFACE DOBA_ENABLE_TLS=1)
+  set_target_properties(doba_tls PROPERTIES EXPORT_NAME doba_tls)
+  install(TARGETS doba_tls EXPORT dobaTlsTargets)
+endif()
+
 if(DOBA_BUILD_FUZZERS)
   add_subdirectory(tests/fuzz)
 endif()
@@ -239,6 +246,11 @@ install(
   NAMESPACE martianlabs::
   DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
 )
+if(DOBA_ENABLE_TLS)
+  install(EXPORT dobaTlsTargets FILE dobaTlsTargets.cmake
+    NAMESPACE martianlabs:: DESTINATION "${DOBA_INSTALL_CMAKEDIR}")
+endif()
+
 install(
   FILES
   "${CMAKE_CURRENT_BINARY_DIR}/dobaConfig.cmake"
@@ -249,6 +261,10 @@ install(
 if(
   DOBA_BUILD_EXAMPLES
 )
+  if(DOBA_ENABLE_TLS)
+    add_subdirectory(examples/http/v11/https_hello_world)
+    add_subdirectory(examples/protocol/tls_echo)
+  endif()
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/protocol/custom_protocol
   )

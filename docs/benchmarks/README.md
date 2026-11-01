@@ -271,6 +271,7 @@ and [complete parsed data](../../resources/benchmarks/data.json).
 These include every measured server, revisions, failures, skipped profiles
 and measurement warnings. Only the current dataset is retained here.
 
-This campaign predates the simplified Linux TCP backend. It does not qualify
-TLS or asynchronous execution for that backend. The current Linux comparison
+This published campaign predates the current TCP and TLS implementations.
+Its charts are measurement history, not qualification of the current TLS class
+or asynchronous execution. The current Linux comparison
 uses only baseline and pipelined; see the [local driver](../../benchmarks/http/v11/httparena/README.md).

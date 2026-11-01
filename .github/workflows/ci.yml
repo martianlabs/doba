@@ -632,6 +632,173 @@ jobs:
             out/mutations/**/CMakeCache.txt
             out/mutations/**/*.log
 
+  tls:
+    name: ${{ matrix.os }} (TLS ${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: GCC Debug
+            compiler: g++
+            type: Debug
+          - os: ubuntu-latest
+            name: GCC Release
+            compiler: g++
+            type: Release
+          - os: ubuntu-latest
+            name: Clang Debug
+            compiler: clang++
+            type: Debug
+          - os: ubuntu-latest
+            name: Clang Release
+            compiler: clang++
+            type: Release
+          - os: ubuntu-latest
+            name: ASan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=address -fno-omit-frame-pointer -g
+          - os: ubuntu-latest
+            name: UBSan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined -g
+          - os: ubuntu-latest
+            name: TSan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=thread -g
+          - os: windows-latest
+            name: MSVC Debug
+            runtime: MultiThreadedDebugDLL
+            compiler: cl
+            type: Debug
+          - os: windows-latest
+            name: MSVC Release
+            runtime: MultiThreadedDLL
+            compiler: cl
+            type: Release
+          - os: windows-latest
+            name: ASan
+            runtime: MultiThreadedDLL
+            compiler: cl
+            type: Release
+            flags: >-
+              /fsanitize=address /Zi
+            linker: >-
+              /INCREMENTAL:NO /DEBUG
+          - os: windows-latest
+            name: UBSan
+            runtime: MultiThreaded
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined -g
+            linker: >-
+              -fsanitize=undefined -Xlinker /INCREMENTAL:NO
+    env:
+      ASAN_OPTIONS: halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      TSAN_OPTIONS: halt_on_error=1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Install OpenSSL (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install openssl:x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ssl = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          "OPENSSL_ROOT_DIR=$ssl" >> $env:GITHUB_ENV
+          $dll = if ('${{ matrix.type }}' -eq 'Debug') {
+            "$ssl/debug/bin"
+          } else { "$ssl/bin" }
+          $dll >> $env:GITHUB_PATH
+      - name: Configure TLS
+        shell: pwsh
+        run: |
+          $flags = '${{ matrix.flags }}'
+          if ('${{ matrix.compiler }}' -eq 'cl') { $flags = '/EHsc ' + $flags }
+          cmake -S . -B out/build/tls -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}" `
+            "-DCMAKE_CXX_FLAGS=$flags" `
+            "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker }}" `
+            "-DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}" `
+            "-DDOBA_ENABLE_TLS=ON" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+      - name: Build TLS tests and examples
+        run: >-
+          cmake --build out/build/tls --target
+          doba_tls_fixture doba_tls_core doba_tls_configuration
+          https_hello_world tls_echo
+      - name: Run native TLS tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS core tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_core_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS configuration tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_configuration_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS executable examples
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_examples_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Require explicit TLS target for HTTPS headers
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_header_guard_tests$'
+          --output-on-failure --no-tests=error
+      - name: Install and configure TLS package consumer
+        shell: pwsh
+        run: |
+          cmake --install out/build/tls --prefix out/install/tls
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake -S tests/package -B out/build/tls-consumer -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DDOBA_PACKAGE_USE_TLS=ON" `
+            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/tls"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/tls-consumer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $binary = 'out/build/tls-consumer/doba_tls_consumer'
+          if ($IsWindows) { $binary += '.exe' }
+          & $binary
+      - name: Build plain consumer from TLS installation without OpenSSL
+        shell: pwsh
+        run: |
+          cmake -S tests/package -B out/build/tls-plain-consumer -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE" `
+            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/tls"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/tls-plain-consumer
+      - name: Upload TLS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tls-${{ matrix.os }}-${{ matrix.name }}
+          path: |
+            out/build/tls/CMakeCache.txt
+            out/build/tls/Testing/Temporary/
+          retention-days: 14
+
   release:
     name: Create GitHub Release
     if: github.event_name == 'workflow_dispatch' && inputs.create_release
@@ -640,6 +807,7 @@ jobs:
       - windows
       - sanitizer
       - windows-asan
+      - tls
       - cmake-minimum
       - fuzz
       - mutation

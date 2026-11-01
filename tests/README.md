@@ -93,7 +93,9 @@ check too. [The planted bugs](mutation/README.md).
 </h2>
 
 Separate projects consume installed and source CMake targets and construct
-public HTTP/TCP types. Unsupported TLS selection is rejected explicitly. The library has to work outside its own backyard.
+public HTTP/TCP/HTTPS types. Plain consumers do not import TLS dependencies.
+The [TLS integration groups](integration/tls/README.md) exercise negotiation,
+BIO progress, KeyUpdate, source limits and HTTPS pipelining.
 [Package checks](package/README.md).
 
 <a name="runner-metatests"></a>
@@ -115,10 +117,12 @@ Native Linux and Windows transport coverage follows the
 [TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract).
 Protocol-only async and common::task tests use independently supplied execution
 services. They do not validate asynchronous socket handlers or a transport
-executor. No TLS negotiation or inactivity/pressure mechanism is claimed.
+executor. The separate [TLS groups](integration/tls/README.md) validate the
+TCP-based TLS class; inactivity and pressure/resume remain outside scope.
 
 CI preserves historical Release TLS required-check names for branch protection,
-but configures TLS=OFF. It validates TCP with the platform sanitizers and native
+and keeps those TCP jobs configured with TLS=OFF. Dedicated TLS jobs build and
+run the current TLS tests and examples with TLS=ON. TCP jobs validate the native
 cases listed in the suite documentation. Engine concurrency repeats 200 times;
 native Linux transport or Windows IOCP cases repeat 20 times in their jobs.
 Local inventory can be collected without Git by providing

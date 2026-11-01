@@ -30,8 +30,10 @@ Rejected input must not dispatch a later handler on that connection.
 The [native transport cases](transport/server) check Linux epoll/SO_REUSEPORT
 and Windows IOCP under the [TCP contract](../../docs/reference/transport/server/tcp.md#runtime-contract).
 They cover fresh RX blocks, engine-owned fragments, bounded/partial TX, one
-terminal reader, failure isolation, startup/stop and restart. TLS handshakes,
-transport-scheduled tasks and pressure/resume are outside this suite's scope.
+terminal reader, failure isolation, startup/stop and restart.
+The separate [TLS groups](tls/README.md) cover negotiation, encrypted traffic,
+configuration, limits and the two executable examples on the same backends.
+Transport-scheduled tasks and pressure/resume are outside scope.
 
 [Portable empty-send cases](transport/server/tcp_empty_source_tests.cpp) run in
 both binaries with one/four workers and an exact TX budget: reader or empty
@@ -112,7 +114,8 @@ when cleanup cannot progress. Concurrent reports retain every failure.
 The [HTTP helper regressions](helpers/http_test_helper_tests.cpp) verify raw-wire
 rejection of mixed-case duplicate Content-Length, Transfer-Encoding and Date.
 Native TCP helpers use elapsed-time deadlines and retry interruptions; Linux
-uses poll for high descriptors. No TLS test client remains in this suite.
+uses poll for high descriptors. The TLS groups use verified Python and
+OpenSSL clients; they do not restore the retired platform-specific TLS clients.
 
 Platform-specific files are selected by CMake; unsupported or absent scenarios
 are not counted as passing. Shared portable cases must appear in both native

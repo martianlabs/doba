@@ -12,7 +12,7 @@ request-body limit. The transport send-byte budget keeps its default **1 MiB**.
 
 Admission applies across one server's workers; HTTP queue limits
 apply per connection. TCP enforces hard send limits; an overflow closes the
-connection. TLS is outside the current scope.
+connection. TLS has separate documented plaintext and ciphertext budgets.
 Zero disables the connection and HTTP pending limits. The single terminal
 reader restriction is fixed. The transport send-byte budget
 must stay positive. See [limits and operation](../../../../docs/guide/06-limits-and-operation.md#bound-work-in-flight)
@@ -30,7 +30,8 @@ The first request returns `200 OK` with `accepted`. The second returns
 
 Linux supports independent SO_REUSEPORT workers; 0 selects one worker.
 The new transport supports synchronous callbacks and prefix/source;
-TLS and asynchronous routes are outside this phase.
+This example uses synchronous TCP. For TLS, use `https_server<>` and account
+for its finite source budget; asynchronous routes remain outside transport.
 
 Neither TCP backend provides inactivity expiry or a pressure/resume handshake.
 Use max_buffered_send_bytes and max_connections as hard transport limits.

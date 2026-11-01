@@ -28,8 +28,9 @@ workers; Windows uses IOCP. See the
 [TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
 and [policy limits](docs/reference/transport/server/tcp_policies.md).
 
-TCP needs no external libraries. TLS and coroutine execution are outside the
-current bundled transport scope; engine execution services remain independent.
+TCP needs no external libraries. Optional TLS is a separate class over TCP,
+using OpenSSL and its own buffers. Coroutine execution services remain
+independent of both transports.
 
 [Try the examples](examples/README.md)
 
@@ -156,8 +157,11 @@ find_package(doba CONFIG REQUIRED)
 target_link_libraries(application PRIVATE martianlabs::doba)
 ```
 
-TLS is outside the current transport scope. `DOBA_ENABLE_TLS=ON` fails
-configuration explicitly on Linux and Windows.
+For TLS, build with `DOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or newer. Consumers use
+`find_package(doba CONFIG REQUIRED COMPONENTS TLS)` and link
+`martianlabs::doba_tls`. The plain target retains no OpenSSL dependency.
+See [TLS contracts and source limits](docs/reference/transport/server/tls.md)
+and the [HTTPS example](examples/http/v11/https_hello_world/README.md).
 
 Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,

@@ -19,7 +19,8 @@ and contains this README. If the file is missing, the route returns `404`.
 
 Linux supports independent SO_REUSEPORT workers; 0 selects one worker.
 The new transport supports synchronous callbacks and prefix/source;
-TLS and asynchronous routes are outside this phase.
+This example uses synchronous TCP. For TLS, use `https_server<>` and account
+for its finite source budget; asynchronous routes remain outside transport.
 
 On Windows and Linux the output reader is terminal for its input call. Do not
 pipeline a later response behind a download reader in the same RX block.

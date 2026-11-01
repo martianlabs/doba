@@ -118,7 +118,8 @@ reference rather than overwrite it.
 
 Linux supports one or more independent SO_REUSEPORT workers.
 The new transport supports synchronous callbacks and prefix/source;
-TLS and asynchronous routes are outside this phase.
+This driver intentionally remains TCP-only. Library TLS support is provided
+by the separate `tls` class; asynchronous routes are outside the driver scope.
 
 The four-worker block-1 reference remains preserved. Block 2 reruns its
 original executable with one worker alongside the candidate and Spliffy;

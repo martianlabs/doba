@@ -265,7 +265,9 @@ http_server<> server(io, http);
 ```
 
 Zero disables the connection limit; the one-reader restriction is fixed. Transport receive
-and send capacities must remain positive. TLS is unsupported. The public
+and send capacities must remain positive. Optional TLS adds independent plaintext and ciphertext budgets; its sources
+are consumed synchronously and count toward the plaintext budget. See the
+[TLS policy reference](../reference/transport/server/tls_policies.md). The public
 HTTP server constructs its transport on first start; invalid transport
 settings fail before listening. Servers
 copy configuration: later changes to the original policy object do not update

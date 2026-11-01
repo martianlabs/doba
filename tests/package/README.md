@@ -52,10 +52,17 @@ and reader types, an HTTP server, a controller with a typed route parameter,
 and the static-file controller.
 
 The installed package exports the synchronous TCP interface and its thread
-and Windows socket dependencies. TLS is outside the current transport scope;
-`DOBA_PACKAGE_USE_TLS=ON` fails configuration explicitly. There is no OpenSSL
-package dependency or TLS consumer executable.
+and Windows socket dependencies. `DOBA_PACKAGE_USE_TLS=ON` additionally requests
+the installed `TLS` component and builds `doba_tls_consumer`, linked with
+`martianlabs::doba_tls`. Source consumers enable the same optional target.
+Plain package consumers do not discover OpenSSL, including from a TLS-enabled
+installation.
 
 These are consumption and construction checks. The consumer programs do
 not open listening sockets or exchange requests; those behaviors belong to
 the [integration suite](../integration/README.md).
+
+The [TLS header guard](tls_guard/CMakeLists.txt) is a negative compilation test.
+It requires the specific missing-TLS-target diagnostic, not just any compiler
+failure. TLS CI also consumes a TLS-enabled installation through the plain
+export while OpenSSL package discovery is explicitly disabled.

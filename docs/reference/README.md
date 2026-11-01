@@ -11,12 +11,10 @@
 Looking for a precise signature or a default? Start with the header that owns it. The index lists supported public headers; implementation-only headers retain short status pages. For a walkthrough, see the [guide](../guide/README.md).
 
 Implementation declarations live in *detail* namespaces and are not supported API.
-**Compatibility:** the handler factories and signature adapters, engine dispatch
-helpers, platform connection machinery, engine-factory helpers, TLS session
-construction, and hashing/date/temp-file helpers have moved out of their former
-public namespaces. Use route registration, public server/transport constructors,
-and the documented customization contracts. No compatibility aliases retain the
-old names; the processing behavior is unchanged.
+Use route registration, public server/transport constructors and documented
+customization contracts. Handler adapters, platform connection machinery,
+engine factories and TLS session/configuration helpers are implementation-only;
+there are no supported compatibility aliases for detail declarations.
 
 <a name="common"></a>
 <h2>
@@ -222,4 +220,6 @@ old names; the processing behavior is unchanged.
 - [transport/server/tcp.h](transport/server/tcp.md)
 - [transport/server/tcp_policies.h](transport/server/tcp_policies.md)
 - [transport/server/tls.h](transport/server/tls.md)
+- [transport/server/tls_engine.h](transport/server/tls_engine.md) (internal)
+- [transport/server/tls_configuration.h](transport/server/tls_configuration.md) (internal)
 - [transport/server/tls_policies.h](transport/server/tls_policies.md)

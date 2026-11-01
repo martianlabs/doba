@@ -73,6 +73,6 @@ strong tags; dates and weak tags get the full response. Index files, directory
 redirects, SPA fallback, MIME overrides and exclusions are separate policy options;
 navigation options are disabled by default and no directory listing is provided.
 
-For repeatable measurements, use the
-[HttpArena adapter](../../../../benchmarks/http/v11/httparena/README.md) and its
-static-tls profile.
+The current [HttpArena adapter](../../../../benchmarks/http/v11/httparena/README.md)
+measures baseline and pipelined TCP traffic. It does not provide a static-tls
+profile. Published benchmark campaigns are separate measurement records.

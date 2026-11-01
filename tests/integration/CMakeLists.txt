@@ -96,7 +96,7 @@ if(WIN32)
   set_tests_properties(doba_resilience_tests PROPERTIES TIMEOUT 120)
 else()
   message(STATUS
-    "Linux: legacy async, TLS and operating-policy integration tests excluded")
+    "Linux: legacy async and operating-policy integration tests excluded")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -137,4 +137,8 @@ if(WIN32)
   add_test(NAME doba_windows_lifecycle_tests
     COMMAND doba_windows_lifecycle_tests)
   set_tests_properties(doba_windows_lifecycle_tests PROPERTIES TIMEOUT 45)
+endif()
+
+if(DOBA_ENABLE_TLS)
+  add_subdirectory(tls)
 endif()

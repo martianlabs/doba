@@ -25,6 +25,10 @@
 #ifndef martianlabs_doba_https_server_h
 #define martianlabs_doba_https_server_h
 
+#include <stdexcept>
+#include <tuple>
+#include <utility>
+
 #include "http_server.h"
 #include "transport/server/tls.h"
 
@@ -45,12 +49,41 @@ template <typename RQty = protocol::http::v11::request,
 class https_server
     : public http_server<RQty, RSty, ROty, ENty, transport::server::tls,
                          AUty...> {
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  using base = http_server<RQty, RSty, ROty, ENty, transport::server::tls,
+                           AUty...>;
+
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  using http_server<RQty, RSty, ROty, ENty,
-                    transport::server::tls, AUty...>::http_server;
+  explicit https_server(transport::server::tls_policies configuration = {},
+                        typename ENty::policies_type engine_configuration = {})
+    requires(sizeof...(AUty) == 0)
+      : base(configure(std::move(configuration)),
+             std::move(engine_configuration)) {}
+  https_server(transport::server::tls_policies configuration,
+               typename ENty::policies_type engine_configuration,
+               std::tuple<AUty...> authentication)
+      : base(configure(std::move(configuration)),
+             std::move(engine_configuration), std::move(authentication)) {}
+
+ private:
+  // +=========================================================================+
+  // | [>] configure                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  // HTTP composition owns ALPN; the generic TLS transport remains agnostic.
+  static transport::server::tls_policies configure(
+      transport::server::tls_policies configuration) {
+    if (!configuration.alpn_protocol.empty() &&
+        configuration.alpn_protocol != "http/1.1") {
+      throw std::invalid_argument("HTTPS requires the http/1.1 ALPN token");
+    }
+    configuration.alpn_protocol = "http/1.1";
+    return configuration;
+  }
 };
 }  // namespace martianlabs::doba
 

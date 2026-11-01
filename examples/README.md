@@ -14,8 +14,9 @@ cmake -S . -B out/build/release -DCMAKE_BUILD_TYPE=Release
 cmake --build out/build/release
 ```
 
-Use `http_server<>` for HTTP/1.1 over TCP. TLS is currently unsupported on
-Linux and Windows. To change HTTP's
+Use `http_server<>` for HTTP/1.1 over TCP. Optional TLS on Linux and Windows is demonstrated by
+[HTTPS](http/v11/https_hello_world/README.md) and
+[a custom TLS protocol](protocol/tls_echo/README.md). To change HTTP's
 request, response, or router, follow the
 [custom request](http/v11/custom_http_request/README.md),
 [custom response](http/v11/custom_http_response/README.md), and
@@ -31,8 +32,9 @@ examples if you need to replace either side.
 you need their APIs.
 
 
-All network examples use synchronous TCP on Linux or Windows. Neither backend
-provides TLS, coroutine execution or pressure/resume hooks. The engine retains
+Network examples use synchronous TCP or the separate TCP-based TLS class on
+Linux and Windows. Neither transport supplies coroutine execution or
+pressure/resume hooks. The engine retains
 independent task/execution APIs for separate integrations and tests; configuring
 an executor alone does not change the transport contract.
 
