@@ -46,6 +46,11 @@ build directory is allowed. An existing output directory is rejected, avoiding
 accidental inclusion of stale profiles. Compiler/tool versions, commands,
 source hashes and individual test logs accompany every report.
 
+The coverage tool prints phase start/end times, progress for each executable
+and a heartbeat every fifteen seconds while a subprocess runs. Configure,
+build and CTest output is streamed to CI and written incrementally to logs.
+LLVM JSON/LCOV exports remain separate files and are not printed to the console.
+
 ### Aggregation and denominator
 
 This library is implemented in headers. Combining all executable mappings and

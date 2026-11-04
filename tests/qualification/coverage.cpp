@@ -23,6 +23,7 @@
 // permissions and limitations under the License.
 
 #include "coverage_union.h"
+#include "command_progress.h"
 #include "../helpers/tool_arguments.h"
 #include "../helpers/tool_process.h"
 #include "../helpers/tool_sha256.h"
@@ -43,16 +44,8 @@ static int logged_run(const std::vector<std::string>& command,
     environment.contains("DOBA_COVERAGE_IDENTIFY") ?
       std::vector<std::string>{} :
       std::vector<std::string>{"DOBA_COVERAGE_IDENTIFY"});
-  int code;
-  try { code = child.wait(timeout); }
-  catch (...) {
-    child.kill();
-    child.wait(5s);
-    write(output / (name + ".log"), child.output() + child.errors() +
-      "\nSubprocess deadline exceeded\n");
-    throw;
-  }
-  write(output / (name + ".log"), child.output() + child.errors());
+  command_progress progress(child, name, output / (name + ".log"));
+  int code = progress.wait(timeout);
   require(!check || code == 0, name + " failed: see " + output.string());
   return code;
 }
@@ -73,10 +66,12 @@ static void llvm(const std::string& tool,
   if (destination.empty()) {
     logged_run(command, output, name);
   } else {
-    auto result = run(command, 300s);
-    write(destination, result.output);
-    write(output / (name + ".log"), result.errors);
-    require(result.code == 0, name + " failed: " + result.errors);
+    process child(command);
+    command_progress progress(child, name);
+    int code = progress.wait(300s);
+    write(destination, read(child.output_path()));
+    write(output / (name + ".log"), read(child.error_path()));
+    require(code == 0, name + " failed: " + child.errors());
   }
 }
 
@@ -122,6 +117,8 @@ int main(int argc, char** argv) {
       {"release_only", true}, {"root", root.string()},
       {"build", build.string()}};
     try {
+      auto started = clock::now();
+      std::cout << "[coverage] build parallelism: " << parallel << std::endl;
       write(build / ".cmake/api/v1/query/codemodel-v2", "");
       auto flags = "-fprofile-instr-generate -fcoverage-mapping "
         "-fprofile-update=atomic -include \"" +
@@ -191,6 +188,8 @@ int main(int argc, char** argv) {
         auto binary = object["binary"].string();
         auto target = object["target"].string();
         auto directory = output / ("object-" + std::to_string(number++));
+        std::cout << "[coverage] executable " << number << '/' <<
+          objects.items().size() << ": " << target << std::endl;
         fs::create_directories(directory / "identity");
         process::environment probe{{"DOBA_COVERAGE_IDENTIFY", "1"},
           {"LLVM_PROFILE_FILE",
@@ -244,6 +243,7 @@ int main(int argc, char** argv) {
         "Raw profiles have no matching executable identity");
       write_json(output / "profile-identities.json", identities);
       auto summary = summarize(files, root);
+      std::cout << "[coverage] generating reports" << std::endl;
       write_json(output / "summary.json", summary);
       auto report = markdown_report(summary);
       write(output / "summary.md", report);
@@ -279,6 +279,10 @@ int main(int argc, char** argv) {
       }
       require(ctest == 0, "CTest failed; coverage is diagnostic only");
       status["status"] = "passed";
+      status["elapsed_seconds"] = std::chrono::duration<double>(
+        clock::now() - started).count();
+      std::cout << "[coverage] complete: " <<
+        status["elapsed_seconds"].number() << " seconds" << std::endl;
       std::cout << json(json::object{{"status", "passed"},
         {"modules", summary["modules"]}}).dump() << '\n';
     } catch (...) {

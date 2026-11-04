@@ -26,6 +26,7 @@
 #include "tool_process.h"
 #include "tool_response.h"
 #include "tool_sha256.h"
+#include "../qualification/command_progress.h"
 
 using namespace martianlabs::doba::tests::tools;
 
@@ -76,11 +77,55 @@ int main(int argc, char** argv) {
     std::cout << (value ? *value : "unset");
     return 0;
   }
+  if (argc == 2 && std::string(argv[1]) == "--progress") {
+    std::cout << "first\n" << std::flush;
+    std::this_thread::sleep_for(200ms);
+    std::cerr << "diagnostic\n" << std::flush;
+    std::cout << "last\n" << std::flush;
+    return 0;
+  }
+  if (argc == 2 && std::string(argv[1]) == "--suspend") {
+    std::cout << "before deadline\n" << std::flush;
+    std::this_thread::sleep_for(10s);
+    return 0;
+  }
   if (argc >= 3 && std::string(argv[1]) == "--diagnostic") {
     std::cerr << argv[2];
     return 0;
   }
   return guarded([&] {
+    require(process::text("") == "" &&
+      process::text("\r\n\n\rX\r\r\nend\r") == "\n\n\rX\r\nend\r",
+      "CRLF normalization changed non-CRLF bytes");
+    {
+      std::string value;
+      for (int index = 0; index < 100000; ++index) value += "row\r\n";
+      auto normalized = process::text(value);
+      require(normalized.size() == 400000 &&
+        normalized.find('\r') == std::string::npos,
+        "Large CRLF normalization lost bytes");
+    }
+    {
+      temporary_directory directory;
+      auto log = directory.path() / "progress.log";
+      process child({argv[0], "--progress"});
+      command_progress progress(child, "positive progress", log);
+      require(progress.wait(5s) == 0, "Progress child failed");
+      auto value = process::text(read(log));
+      require(value.find("first\n") != std::string::npos &&
+        value.find("last\n") != std::string::npos &&
+        value.find("diagnostic\n") != std::string::npos,
+        "Progress log lost stdout/stderr");
+    }
+    {
+      temporary_directory directory;
+      auto log = directory.path() / "deadline.log";
+      process child({argv[0], "--suspend"});
+      command_progress progress(child, "deadline control", log);
+      rejected([&] { progress.wait(200ms); });
+      require(child.poll() && read(log).find("deadline exceeded") !=
+        std::string::npos, "Progress timeout lost cleanup or diagnostic");
+    }
     auto root = fs::path(DOBA_TOOL_SOURCE_ROOT);
     for (auto directory : {"tests", "include", "examples", "benchmarks",
       "cmake", "compliance", ".github"}) {
