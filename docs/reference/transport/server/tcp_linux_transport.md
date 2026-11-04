@@ -26,4 +26,18 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Internal Linux TCP backend. It validates policies and the complete numeric
+endpoint, divides finite admission capacity across the effective worker count,
+and starts independent SO_REUSEPORT workers. Zero workers selects one. A full
+worker can reject while another has spare capacity; no redistribution is offered.
+
+Local unique owners release the partially started group on failure. Start,
+stop and notification registration belong to a sequential external owner.
+Stop rejects worker-owned calls and joins workers before releasing shared
+callbacks. Engine factories and notifications can run concurrently for different
+connections; their shared state belongs to the application.
+
+The backend supplies synchronous socket I/O, inline pipelining and one terminal
+reader. It does not schedule application tasks or implement TLS, inactivity
+scans, pressure/resume hooks or retained engine callbacks. See the
+[TCP contract](tcp.md#runtime-contract) and [policy reference](tcp_policies.md).

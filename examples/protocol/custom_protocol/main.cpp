@@ -27,12 +27,14 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "common/signaler.h"
 #include "protocol/contracts.h"
 #include "server.h"
 #include "transport/server/tcp.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] usings                                                     ( public ) |
@@ -60,31 +62,46 @@ struct custom_protocol {
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_close(std::function<void()>) {}
+  void set_on_close(std::function<void()> close) {
+    on_close_ = std::move(close);
+  }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
-    input_.append(input);
-    std::size_t consumed = 0;
-    for (;;) {
-      const std::string_view remaining(input_.data() + consumed,
-                                        input_.size() - consumed);
-      const auto end = remaining.find('\n');
-      if (end == std::string_view::npos) break;
-      const auto line = remaining.substr(0, end + 1);
-      on_send_("echo: ", line, nullptr);
-      consumed += line.size();
+  processing_result on_bytes_received(std::string_view input) {
+    while (!input.empty()) {
+      const auto end = input.find('\n');
+      const auto size = end == std::string_view::npos ? input.size() : end + 1;
+      if (size > kMaximumLineSize - input_.size()) {
+        on_close_();
+        return {};
+      }
+      input_.append(input.substr(0, size));
+      input.remove_prefix(size);
+      if (end != std::string_view::npos) {
+        on_send_("echo: ", input_, nullptr);
+        input_.clear();
+      }
     }
-    input_.erase(0, consumed);
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
+  // Protocol line limit, including the newline, independent of socket RX.
+  static constexpr std::size_t kMaximumLineSize = 4096;
+  // Incomplete line retained by the engine between input calls.
   std::string input_;
+  // Synchronous output and closure supplied by the transport.
   protocol::send_delegate on_send_;
+  std::function<void()> on_close_;
 };
 }  // namespace
 

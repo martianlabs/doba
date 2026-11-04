@@ -15,8 +15,8 @@ you came for.
 2. [Core model](02-core-model.md) - see how protocols and transports fit
    together.
 3. [HTTP/1.1](03-http-1-1.md) - work with routes, requests, and responses.
-4. [Transports and TLS](04-transports-and-tls.md) - use TCP, then add TLS
-   when you need it.
+4. [Transports and TLS](04-transports-and-tls.md) - use TCP or
+   the optional TLS class, with explicit source and lifecycle limits.
 5. [Extending doba](05-extending-doba.md) - bring your own protocol or
    transport.
 6. [Limits and operation](06-limits-and-operation.md) - set boundaries and

@@ -25,9 +25,8 @@
 #ifndef martianlabs_doba_transport_server_tcp_windows_overlapped_send_h
 #define martianlabs_doba_transport_server_tcp_windows_overlapped_send_h
 
-#include <array>
-#include <cstddef>
 #include <memory>
+#include <utility>
 
 #include "protocol/contracts.h"
 #include "transport/server/tcp_windows_overlapped_base.h"
@@ -38,7 +37,7 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] FORWARDs                                                   ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty, typename CNty>
+template <protocol::contracts::engine ENty>
 struct context;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -48,21 +47,20 @@ struct context;
 // | Windows overlapped send operation.                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty, typename CNty>
+template <protocol::contracts::engine ENty>
 struct overlapped_send : overlapped_base {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  overlapped_send(std::shared_ptr<context<ENty, CNty>> context,
-                  io_type type = io_type::kSend)
-      : overlapped_base(type), ctx{context} {}
+  overlapped_send(std::shared_ptr<context<ENty>> context)
+      : overlapped_base(io_type::kSend), ctx{std::move(context)} {}
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  std::shared_ptr<context<ENty, CNty>> ctx;
-  std::array<WSABUF, 1> buffers{};
-  DWORD buffer_count{0};
-  std::size_t submitted_size{0};
+  // Keeps the connection and its borrowed TX bytes alive until completion.
+  std::shared_ptr<context<ENty>> ctx;
+  // The kernel borrows these bytes until this operation completes.
+  WSABUF buffer{};
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

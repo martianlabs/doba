@@ -25,59 +25,26 @@
 #ifndef martianlabs_doba_transport_server_contracts_h
 #define martianlabs_doba_transport_server_contracts_h
 
-#include <chrono>
 #include <concepts>
 #include <functional>
 #include <utility>
 
 #include "protocol/contracts.h"
 
-namespace martianlabs::doba::transport::server {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] execution_work                                             ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct execution_work {
-  void* context{nullptr};
-  void (*run)(void*) noexcept{nullptr};
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] execution_capacity                                         ( struct ) |
-// +---------------------------------------------------------------------------+
-// | While active, accepted work runs once, no earlier than its threshold.     |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct execution_capacity {
-  void* owner{nullptr};
-  void (*submit)(void*, std::chrono::steady_clock::time_point,
-                 execution_work){nullptr};
-};
-}  // namespace martianlabs::doba::transport::server
-
 namespace martianlabs::doba::transport::server::contracts {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] execution_receiver                                      ( concept ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename ENty>
-concept execution_receiver =
-    requires(ENty& engine, execution_capacity execution) {
-      { engine.set_execution_capacity(execution) } -> std::same_as<void>;
-    };
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] transport                                                 ( concept ) |
 // +---------------------------------------------------------------------------+
-// | This concept defines the requirements for a transport type. It requires   |
-// | that the transport type is constructible from its policies and an engine  |
-// | factory, and that it provides methods for setting callbacks for           |
-// | connection and disconnection events, as well as starting and              |
-// | stopping the transport.                                                   |
+// | Structural transport interface. Runtime rules for bundled TCP:           |
+// | configure and administer from one sequential external owner, outside     |
+// | worker callbacks. Notify connections outside transport locks.            |
+// | Serialize input/turns per connection; copy accepted inline output before |
+// | the send callback returns. Transfer reader ownership; allow             |
+// | only one terminal reader and keep socket buffers alive during I/O.       |
+// | Engine close drains accepted output. Linux administrative stop cancels   |
+// | pending output; Windows drains it before joining its IOCP workers.       |
+// | Engines own coroutine frames and ordering; TCP delivers generic turns.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename TRty, typename ENty, typename FNty>

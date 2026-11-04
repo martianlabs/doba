@@ -35,7 +35,9 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] io_type                                                ( enum-class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-enum class io_type : uint8_t { kAccept, kSend, kReceive, kOutput };
+enum class io_type : uint8_t {
+  kAccept, kSend, kReceive, kProcessing, kProcessingTimer
+};
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

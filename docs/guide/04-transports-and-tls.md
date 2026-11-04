@@ -9,8 +9,23 @@
 </h1>
 
 Your HTTP handlers deal with requests and responses. The transport deals with
-the socket underneath them. Use *http_server* for TCP or *https_server* for
-TLS; both keep the same HTTP route API.
+the socket underneath them. Use *http_server* for TCP and *https_server* for
+optional TLS on Linux or Windows.
+
+
+Both backends deliver RX bytes to one engine per connection and copy its
+inline output before send returns. Input is serialized; the engine invokes
+send/close only within a serialized input or processing turn. It retains any
+incomplete protocol message after the call. No callback can escape for later
+or cross-thread use. A blocking engine or reader occupies its I/O worker.
+
+Linux uses independent SO_REUSEPORT listeners and epoll workers. Windows uses
+IOCP, AcceptEx, WSARecv and WSASend, allowing kernel RX/TX overlap while engine
+calls stay serialized. Both support inline pipelining and one terminal reader.
+Application scheduling, inactivity timers and pressure/resume integration
+are outside the current transport scope. The
+[TCP contract](../reference/transport/server/tcp.md#runtime-contract) defines
+the full boundary and the differences in admission and stop behavior.
 
 <a name="tcp-by-default"></a>
 <h2>
@@ -56,28 +71,35 @@ Linux, they use epoll. Your handlers do not need a platform-specific path.
 The first **http_server<>** constructor argument is a *tcp_policies* value. It
 sets up the listener and its workers. The
 [policy definition](../../include/transport/server/tcp_policies.h) has the
-full list; the settings you are most likely to touch are:
+full list. The [policy reference](../reference/transport/server/tcp_policies.md)
+records platform ranges and coverage; the common settings are:
 
 - **Address.** *ip* is the IPv4 bind address, and *port* is a string holding
-  a port from **1** to **65535**. Set both before starting the server.
-- **Workers.** *worker_count* chooses the worker count. **0** lets doba pick
-  one based on hardware concurrency.
+  a port from **1** to **65535**. Both are complete numeric strings: no hostnames,
+  NUL bytes or trailing data. Set both before starting the server.
+- **Workers.** On Windows, **0** selects from hardware concurrency. The
+  Linux backend uses one worker for **0**, or the explicit positive count.
 - **Queue.** *listen_backlog* requests the pending connection queue size.
-  **0** leaves that choice to the system.
+  **0** passes SOMAXCONN to the kernel, which can cap the queue.
 - **Buffers.** *receive_buffer_capacity* reserves a fixed receive buffer per
   connection. It controls the I/O block size, independently of HTTP head and
   body limits. Each callback receives only fresh bytes; TCP reuses the full
-  buffer before the next allowed receive. *max_buffered_send_bytes* caps queued send
-  reservations and the active batch without preallocating that amount.
-  Both must be positive.
+  buffer before the next allowed receive. On Linux,
+  *max_buffered_send_bytes* bounds TX without preallocating it. Windows also
+  bounds its active socket batch plus accumulated inline bytes.
+  Both must be positive. TX counts logical bytes, excluding allocator capacity
+  and reader backing storage.
 - **Admission.** *max_connections* defaults to **65535** across the server's
   workers. **0** removes the limit; excess sockets close before engine creation.
-- **Progress.** *inactivity_period* defaults to **60 seconds** without positive
-  socket reads or writes. **0** disables expiration; negative periods are invalid.
-  Activity is sampled periodically; recording it does not read the clock. See
-  [limits and operation](06-limits-and-operation.md#bound-work-in-flight) for timing.
-- **Readers.** *max_pending_sources* defaults to **32** retained output readers
-  per connection, including the active reader. **0** removes the limit.
+  Linux partitions a finite limit across workers without a shared counter.
+  It must cover every effective worker. A full worker rejects even if another
+  has unused capacity. Windows shares the budget across workers and retains a
+  slot until pending I/O and the context's final owner release it.
+- **Readers.** Both backends accept one terminal reader. There is no reader
+  queue or configurable reader count. Later nonempty output or a second reader
+  closes the connection; new input waits until it drains. A non-null empty
+  reader is still terminal. Empty sends without a reader are no-ops, including
+  after a reader. A pipeline batch cannot require multiple pending readers.
 
 You can pass a named policy value when a designated initializer starts to
 feel crowded:
@@ -86,103 +108,50 @@ feel crowded:
 martianlabs::doba::transport::server::tcp_policies configuration;
 configuration.ip = "127.0.0.1";
 configuration.port = "8080";
-configuration.worker_count = 2;
+configuration.worker_count = 4;
 martianlabs::doba::http_server<> http_server(configuration);
 ```
 
 Keep the default buffer sizes until you have a concrete reason to change
 them; the [limits chapter](06-limits-and-operation.md#bound-work-in-flight)
 covers resource boundaries, backpressure and zero values in more detail.
-TLS inherits these same limits.
+There is no transport pressure/resume handshake; send limits are hard caps.
 
 <a name="switch-on-tls"></a>
 <h2>
   <a href="../../resources/docs/guide/h2-switch-on-tls.svg#gh-light-mode-only">
-    <img src="../../resources/docs/guide/h2-switch-on-tls.svg" alt="Switch on TLS">
+    <img src="../../resources/docs/guide/h2-switch-on-tls.svg" alt="TLS">
   </a>
   <a href="../../resources/docs/guide/h2-switch-on-tls-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/guide/h2-switch-on-tls-dark.svg" alt="Switch on TLS">
+    <img src="../../resources/docs/guide/h2-switch-on-tls-dark.svg" alt="TLS">
   </a>
 </h2>
 
-TLS is an optional transport backed by OpenSSL. The
-[https_hello_world example](../../examples/http/v11/https_hello_world/README.md)
-uses the same HTTP/1.1 request, response, and route APIs as the TCP example.
-Its [main.cpp](../../examples/http/v11/https_hello_world/main.cpp) uses
-*https_server*, which selects the TLS transport:
+Configure `DOBA_ENABLE_TLS=ON` with OpenSSL 3.0 or newer and link
+`martianlabs::doba_tls`. Installed consumers request the `TLS` component.
+`https_server<>` accepts `tls_policies`: set the bind address, port, PEM chain
+and matching unencrypted key. HTTPS selects `http/1.1` automatically and rejects
+other ALPN tokens; the generic TLS transport remains protocol-independent.
 
-```cpp
-martianlabs::doba::transport::server::tls_policies configuration;
-configuration.ip = "0.0.0.0";
-configuration.port = "8443";
-configuration.certificate_file = argv[1];
-configuration.private_key_file = argv[2];
-https_server<> https_server(configuration);
-```
+TLS owns encryption/decryption buffers and reuses the unchanged TCP transport.
+It supports TLS 1.2/1.3, synchronous/cooperative handlers and bounded
+prefix/source output.
+A source is read completely during the send callback and counts toward the
+plaintext limit; this version does not stream arbitrarily large files.
+See the [complete contract](../reference/transport/server/tls.md),
+[policies](../reference/transport/server/tls_policies.md),
+[HTTPS example](../../examples/http/v11/https_hello_world/README.md) and
+[custom TLS protocol](../../examples/protocol/tls_echo/README.md).
 
-Both server classes accept custom request, response, and router types that
-satisfy the [HTTP/1.1 contracts](../../include/protocol/http/v11/contracts.h),
-even with a custom engine. *http_server* also accepts a custom transport;
-*https_server* uses TLS.
+Configuration and start/stop belong to a sequential external owner. Engine close
+drains accepted valid output. Linux administrative stop cancels pending TX after
+the active call returns; Windows drains accepted TX and real I/O completions.
+Neither backend waits for application tasks or supplies a shutdown deadline.
+See the [lifecycle contract](../reference/transport/server/tcp.md#runtime-contract).
 
-*tls_policies* includes the TCP settings plus paths to a PEM certificate
-chain and its matching PEM private key. doba checks that both files load and
-the key matches the certificate when it creates the TLS transport. A bad
-pair makes the first *start* fail instead of waiting for the first request.
-TLS delivers each newly decrypted plaintext block to the engine and reuses
-its plaintext buffer immediately afterwards. Only TLS keeps pending encrypted
-input; incomplete application messages belong to the protocol decoder.
-
-The TLS receive buffer and network BIO use the fixed capacities
-*encrypted_receive_buffer_capacity* and *network_bio_buffer_capacity*. Both
-default to **17 KiB** per connection.
-
-<a name="try-https"></a>
-<h2>
-  <a href="../../resources/docs/guide/h2-try-https.svg#gh-light-mode-only">
-    <img src="../../resources/docs/guide/h2-try-https.svg" alt="Try HTTPS">
-  </a>
-  <a href="../../resources/docs/guide/h2-try-https-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/docs/guide/h2-try-https-dark.svg" alt="Try HTTPS">
-  </a>
-</h2>
-
-From the repository root, enable TLS and build the example:
-
-```sh
-cmake -S . -B out/build/tls -DDOBA_ENABLE_TLS=ON
-cmake --build out/build/tls --config Release --target https_hello_world
-```
-
-CMake needs the OpenSSL development headers and libraries. On Windows with
-vcpkg, pass its *CMAKE_TOOLCHAIN_FILE* path to the configure command. If you
-consume an installed doba package, link *martianlabs::doba_tls* for this
-transport.
-
-Have a PEM certificate chain and matching key ready. On Linux with a
-single-configuration generator, start the example like this:
-
-```sh
-./out/build/tls/examples/http/v11/https_hello_world/https_hello_world \
-  server.crt server.key
-```
-
-With Visual Studio on Windows, the Release executable is normally here:
-
-```powershell
-$build = '.\out\build\tls\examples\http\v11\https_hello_world\Release'
-& "$build\https_hello_world.exe" server.crt server.key
-```
-
-In another terminal, request the route:
-
-```sh
-curl -i https://localhost:8443/hello
-```
-
-You should get **200 OK** and **hello from doba**. For a self-signed
-certificate used in local testing, add *--insecure* to that **curl** command.
-Stop the server with Ctrl+C when you are done.
-
-The HTTP code stays familiar whether the bytes arrive over TCP or TLS. Head
-back to the [guide index](README.md) when you are ready to extend doba.
+The shared [processing contract](../reference/protocol/processing_result.md)
+defines both returned results. Linux and Windows TCP deliver native turns;
+TLS forwards them through the same serialized connection entries. The engine
+owns coroutine frames and response ordering. Ciphertext still in flight does
+not prevent a due handler from advancing. TLS control records preserve the
+engine's outstanding scheduling snapshot.

@@ -10,7 +10,7 @@
 
 [Back to doba](../../README.md#okay-how-fast)
 
-**The current run, in full.** The README shows the highlights. Here are the
+**The archived Scaleway run, in full.** The README shows the highlights. Here are the
 ranking, every measured workload, and the context behind the numbers.
 
 [Overall](#overall) / [Baseline](#baseline) / [Pipelined](#pipelined) /
@@ -270,3 +270,10 @@ All source values are preserved in the complete parsed data linked below.
 and [complete parsed data](../../resources/benchmarks/data.json).
 These include every measured server, revisions, failures, skipped profiles
 and measurement warnings. Only the current dataset is retained here.
+
+This published campaign predates the current TCP and TLS implementations.
+Its charts are measurement history, not qualification of the current TLS class
+or asynchronous execution. The frozen pre-async reference covers baseline and
+pipelined; the [current driver](../../benchmarks/http/v11/httparena/README.md)
+now also supports real async. New throughput comparisons are qualified
+separately and do not replace this published historical dataset.

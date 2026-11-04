@@ -8,6 +8,11 @@
 
 **Header:** [include/http_server.h](../../include/http_server.h)
 
+The bundled TCP server supports synchronous handlers and one terminal
+prefix/source reader. Use [https_server](https_server.md) for TLS; coroutine execution remains
+outside the transport.
+See the [TCP runtime contract](transport/server/tcp.md#runtime-contract).
+
 Combines an HTTP/1.1 router and protocol engine with a server transport. TCP is
 the default transport.
 

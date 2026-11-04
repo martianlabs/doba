@@ -18,6 +18,20 @@ valid pipelines, incomplete messages, conflicting framing, overflow,
 extensions, trailers, query limits, and body/head limits. Generated valid
 messages provide known answers alongside arbitrary input.
 
+There are also **12 engine-model seeds**. `fuzz_engine` shares an independent
+state model with `doba_security_model_tests` (144 deterministic configurations).
+It generates mixed synchronous/asynchronous pipelines, fragments and poisons
+RX, delays source consumption and checks exact ordered binary output, terminal
+rejection/close and coroutine/source ownership after engine destruction.
+Its control input is capped at 512 bytes, with at most twelve requests and
+128-byte bodies. It is not a raw HTTP or native transport/TLS fuzzer.
+
+Existing decoder CI jobs additionally replay and fuzz the engine model for
+60 seconds normally and 600 seconds nightly on Linux and Windows under
+ASan/UBSan. This preserves required-check names. Evolving engine corpora are
+cached separately; corpora and reproducers accompany the harness/build details.
+See the [security audit](../security-audit.md) for remaining coverage limits.
+
 <a name="properties"></a>
 <h2>
   <a href="../../resources/tests/fuzz/h2-properties.svg#gh-light-mode-only">

@@ -73,6 +73,9 @@ struct router_handler_signature_base {
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   static constexpr std::size_t parameter_count = sizeof...(Args);
+  // Handler results are identical for every callable with this signature.
+  static constexpr bool valid_return =
+      std::same_as<LOty, void> || std::same_as<LOty, common::task<void>>;
   // +=========================================================================+
   // | [>] bind                                                     ( public ) |
   // +-------------------------------------------------------------------------+
@@ -130,8 +133,7 @@ struct router_handler_signature_base {
   template <typename RQty, typename RSty>
   static void check() {
     static_assert(
-        std::same_as<LOty, void> || std::same_as<LOty, common::task<void>>,
-        "The route handler must return void or task<void>");
+        valid_return, "The route handler must return void or task<void>");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
@@ -188,8 +190,8 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) noexcept>
 // +---------------------------------------------------------------------------+
 // | This concept checks if a given handler type Hty is a valid router handler |
 // | lambda. It requires that the handler has a request_type defined in its    |
-// | signature and returns void. If these conditions are met,                  |
-// | the concept evaluates to true; otherwise, it evaluates to false.          |
+// | signature, takes const request and mutable response references, and      |
+// | returns void or task<void>. Invalid signatures evaluate to false.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty>
@@ -201,14 +203,8 @@ concept router_handler_lambda = requires {
   requires std::is_const_v<
       std::remove_reference_t<typename router_handler_signature<
           decltype(&std::decay_t<Hty>::operator())>::request_type>>;
-  requires std::same_as<
-               typename router_handler_signature<
-                   decltype(&std::decay_t<Hty>::operator())>::return_type,
-               void> ||
-               std::same_as<
-                   typename router_handler_signature<
-                       decltype(&std::decay_t<Hty>::operator())>::return_type,
-                   common::task<void>>;
+  requires router_handler_signature<
+      decltype(&std::decay_t<Hty>::operator())>::valid_return;
   requires std::is_lvalue_reference_v<typename router_handler_signature<
       decltype(&std::decay_t<Hty>::operator())>::response_type>;
   requires !std::is_const_v<

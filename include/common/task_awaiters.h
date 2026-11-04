@@ -87,8 +87,12 @@ struct sleep_awaiter {
   void await_suspend(std::coroutine_handle<Pty> handle) const {
     const auto scheduler = handle.promise().scheduler;
     if (!scheduler.schedule) throw std::runtime_error("No task scheduler");
-    scheduler.schedule(scheduler.owner,
-                       std::chrono::steady_clock::now() + duration, handle);
+    using clock = std::chrono::steady_clock;
+    const auto now = clock::now();
+    const auto due = now > clock::time_point::max() - duration
+                         ? clock::time_point::max()
+                         : now + duration;
+    scheduler.schedule(scheduler.owner, due, handle);
   }
   // +=========================================================================+
   // | [>] await_resume                                             ( public ) |

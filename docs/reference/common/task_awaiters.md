@@ -228,7 +228,7 @@ Implements the coroutine await_resume hook.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task_awaiters.h:96](../../../include/common/task_awaiters.h#L96)
+**Source:** [include/common/task_awaiters.h:100](../../../include/common/task_awaiters.h#L100)
 
 <a id="function-sleep-for"></a>
 
@@ -251,4 +251,13 @@ Suspends for the requested duration.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task_awaiters.h:104](../../../include/common/task_awaiters.h#L104)
+**Source:** [include/common/task_awaiters.h:108](../../../include/common/task_awaiters.h#L108)
+
+## Controlled execution and deadline bounds
+
+[task_execution](task_execution.md) uses these same awaiters with local
+scheduler callbacks. Yield records readiness; positive sleep records a real
+steady-clock deadline. Neither callback resumes or publishes a handle outside
+the owner. Nonpositive sleeps are immediately ready. A positive sleep that
+would overflow the clock saturates at `steady_clock::time_point::max()` in
+both controlled and standalone tasks. No timer thread is created here.

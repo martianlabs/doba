@@ -1,224 +1,92 @@
-<a id="engine"></a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/title.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/title.svg" alt="engine">
-</a>
-<a href="../../../../../resources/docs/reference/protocol/http/v11/engine/title-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/protocol/http/v11/engine/title-dark.svg" alt="engine">
-</a>
+# HTTP/1.1 engine
 
-**Header:** [include/protocol/http/v11/engine.h](../../../../../include/protocol/http/v11/engine.h)
+Header: [engine.h](../../../../../include/protocol/http/v11/engine.h).
 
-HTTP/1.1 protocol engine.
+One `engine<RQty, RSty, ROty>` handles both synchronous and asynchronous routes
+without an activation flag, executor injection or alternative engine type.
+The router must outlive its engines. All input, processing turns, callbacks
+and destruction for one instance must be serialized and nonreentrant.
 
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11
-
-[engine](#type-engine)
-
-### <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::engine
-
-[policies_type](#alias-policies-type) ·
-[set_on_send](#method-set-on-send) ·
-[set_on_close](#method-set-on-close) ·
-[set_execution_capacity](#method-set-execution-capacity) ·
-[stop](#method-stop) ·
-[on_bytes_received](#method-on-bytes-received)
-
-[set_input_flow_control](#method-set-input-flow-control)
-
-[input_paused](#method-input-paused)
-
-[resume_input](#method-resume-input)
-
-<a id="api"></a>
-<a href="../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
-<a id="type-engine"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> engine
-
-**TYPE** · *protocol::http::v11*
-
-**Declaration synopsis:**
+## Public interface
 
 ```cpp
-template <contracts::request RQty, contracts::response RSty,
-          typename ROty = router<RQty, RSty>>
-  requires contracts::router<ROty, RQty, RSty>
-class engine { ... };
-```
-
-HTTP/1.1 protocol engine.
-
-**Template parameters:**
-
-- **RQty:** `contracts::request RQty`.
-- **RSty:** `contracts::response RSty`.
-- **ROty:** `typename ROty = router<RQty, RSty>`.
-
-**Source:** [include/protocol/http/v11/engine.h:64](../../../../../include/protocol/http/v11/engine.h#L64)
-
-<a id="alias-policies-type"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> policies_type
-
-**ALIAS** · *protocol::http::v11::engine*
-
-```cpp
-using policies_type = v11::policies;
-```
-
-Alias for `v11::policies`.
-
-**Source:** [include/protocol/http/v11/engine.h:69](../../../../../include/protocol/http/v11/engine.h#L69)
-
-<a id="method-set-on-send"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_send
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
+engine(policies configuration, const ROty& router);
 void set_on_send(protocol::send_delegate output);
-```
-
-Let's set the 'on_send' callback to send data to the transport.
-
-**Parameters:**
-
-- **output:** Destination or output callback, as specified by its type. Declaration: `protocol::send_delegate output`.
-
-**Returns:** No value (`void`).
-
-**Source:** [include/protocol/http/v11/engine.h:94](../../../../../include/protocol/http/v11/engine.h#L94)
-
-<a id="method-set-on-close"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_on_close
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
 void set_on_close(std::function<void()> close);
+processing_result on_bytes_received(std::string_view input);
+processing_result on_processing_turn(bool output_idle);
 ```
 
-Let's set the 'on_close' callback to close the transport.
+RX is borrowed for the whole call and may be overwritten when it returns.
+The decoder owns incomplete messages. Requests for suspended handlers own
+headers, body and route parameters before first invocation. Unadmitted bytes
+are retained by the engine under a finite limit. There is no consumed-byte
+return, input pause/resume interface or application execution service.
 
-**Parameters:**
+## Concurrent execution, ordered output
 
-- **close:** Callback that closes the connection. Declaration: `std::function<void()> close`.
+The engine admits requests in wire order. Several async handlers on the same
+connection may be suspended simultaneously; later sync and async handlers can
+execute while predecessors wait. Each coroutine's absolute steady-clock sleep
+starts at its own suspension and is never restarted by RX or other work.
+A fresh clock snapshot is used for each resume, so deadlines that expire while
+another handler runs can become eligible in the same processing turn.
 
-**Returns:** No value (`void`).
+The earliest pending future deadline and immediate runnable work are reported
+independently through [processing_result](../../processing_result.md).
+A bounded round-robin scan progresses eligible tasks. The per-entry budget
+covers async starts/resumes and buffered admissions; excess work requests a
+later turn. A full window waiting only for timers does not busy-poll.
 
-**Source:** [include/protocol/http/v11/engine.h:103](../../../../../include/protocol/http/v11/engine.h#L103)
+Only the completed prefix of request order may be emitted. Later completed
+responses retain owned serialized bytes/readers in engine records. A terminal
+source gates later sends until output_idle, but does not gate eligible handler
+execution or their clocks. Pending interim 100 Continue output and final output
+share one request record. Exceptions, authentication rejection and HEAD retain
+the ordinary HTTP serialization rules.
 
-<a id="method-set-execution-capacity"></a>
+An ordered close at request K preserves predecessors, discards successors and
+calls close at its output frontier. Fatal byte-limit/delivery failures close
+and cancel pending work immediately, without an out-of-order error response.
+Accepted source ownership is retained through drain or engine destruction.
 
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_execution_capacity
+## Synchronous path and ownership
 
-**METHOD** · *protocol::http::v11::engine*
+Uncontended synchronous inline responses use reusable engine storage and emit
+directly. They do not allocate or scan async records. Pending-state allocation
+is lazy, used when ordering or a terminal source requires it. The engine adds
+no cross-thread completion callbacks, mutexes or shared application execution
+state. Transports schedule generic connection turns, not application tasks.
+Windows retains the existing context serialization required by IOCP.
 
-```cpp
-void set_execution_capacity(
-      transport::server::execution_capacity execution) noexcept;
-```
+The synchronous handler logic lives in
+[request_processor_sync](request_processor_sync.md); coroutine ownership lives
+in [request_processor_async](request_processor_async.md). Common routing,
+authentication, response serialization and ordered delivery stay in engine.h.
+[pending_response](pending_response.md) describes the ordered record.
 
-Sets the execution capacity for the engine.
+Only `common::yield()` and `common::sleep_for()` awaiters are supported by the
+controlled task owner. Arbitrary foreign resumption is rejected. Handlers are
+cooperative: blocking or non-suspending computation occupies their worker.
+There is no preemption or background application pool.
 
-**Parameters:**
+## Limits and current integration status
 
-- **execution:** Execution state for this operation. Declaration: `transport::server::execution_capacity execution`.
+The [policies](policies.md) require positive finite limits: 128 pending request
+positions, 1 MiB deferred raw input, 1 MiB pending serialized head/inline body
+bytes and 64 processing steps per entry by default. A full position window
+retains raw input until capacity is released; byte overflow closes before
+copying excess data. Request/body/source policies remain independent.
 
-**Returns:** No value (`void`).
+Linux and Windows TCP supply immediate/deadline/output-drain turns through
+transport workers, so cooperative HTTP handlers and reader continuation work
+over plain TCP. No application executor or mode switch is required.
+TLS forwards the same snapshots and engine turns over both TCP backends.
+Its existing finite plaintext and ciphertext batch limits apply to each
+input/processing entry. See the [TLS contract](../../../transport/server/tls.md).
 
-**Errors:** Declared `noexcept`.
+See [the compiled example](../../../../../examples/http/v11/processing_turns/README.md)
+and [the plan](../../../../../ASYNC.md).
 
-**Source:** [include/protocol/http/v11/engine.h:112](../../../../../include/protocol/http/v11/engine.h#L112)
-
-<a id="method-stop"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
-bool stop(std::function<void()> completed);
-```
-
-Stops the engine lifecycle.
-
-**Parameters:**
-
-- **completed:** Completion state to store or report. Declaration: `std::function<void()> completed`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/v11/engine.h:119](../../../../../include/protocol/http/v11/engine.h#L119)
-
-<a id="method-on-bytes-received"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> on_bytes_received
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
-void on_bytes_received(std::string_view input);
-```
-
-Handles bytes received from the transport.
-
-**Parameters:**
-
-- **input:** A borrowed view of the newly received bytes. Declaration: `std::string_view input`. The transport keeps these bytes immutable and valid throughout the call.
-
-**Returns:** No value (`void`).
-
-**Source:** [include/protocol/http/v11/engine.h:141](../../../../../include/protocol/http/v11/engine.h#L141)
-
-<a id="method-set-input-flow-control"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> set_input_flow_control
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
-void set_input_flow_control(std::function<bool()> pressure, std::function<void()> ready);
-```
-
-Optional generic transport integration, configured before receiving input. The pressure callback reports transport output pressure. The ready callback schedules an input-service opportunity when ordered-response credit can release paused input; ordinary unpressured completions do not request wakeups. Subscription rechecks credit to avoid a lost concurrent completion. The callback must not reenter the engine. Ready callbacks use weak context ownership; Linux pressure queries read separately owned published state. Engines without this optional integration retain hard-limit closure behavior.
-
-**Source:** [include/protocol/http/v11/engine.h:130](../../../../../include/protocol/http/v11/engine.h#L130)
-
-<a id="method-input-paused"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> input_paused
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
-bool input_paused() const noexcept;
-```
-
-Reports whether input processing stopped at a message boundary for output or pending-response credit. The transport must suspend further input delivery, the engine owns a copy of the deferred remainder of one bounded receive block. An in-progress message can finish before pausing so that an interim response does not prevent its body from arriving.
-
-Pressure is queried only when bytes are available to start a message. With no deferred bytes this can return false even while a budget is pressured; the next block is checked before decoding. Hard budgets are unchanged.
-
-**Source:** [include/protocol/http/v11/engine.h:135](../../../../../include/protocol/http/v11/engine.h#L135)
-
-<a id="method-resume-input"></a>
-
-## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> resume_input
-
-**METHOD** · *protocol::http::v11::engine*
-
-```cpp
-void resume_input();
-```
-
-Services the deferred remainder of one receive block and reevaluates pressure when bytes remain. An empty resume does not poll pressure. Serialize with all receive callbacks and stop; invoke outside transport output locks. The bundled TCP and TLS transports resume input on their workers. The ready callback is a wakeup, not permission to invoke this method concurrently.
-
-**Source:** [include/protocol/http/v11/engine.h:136](../../../../../include/protocol/http/v11/engine.h#L136)
+See the [retirement inventory](async-retirement.md) for removed legacy
+mechanisms, preserved ownership and coverage mapping.

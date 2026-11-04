@@ -23,8 +23,7 @@ small examples that put them to work.
   </a>
 </h2>
 
-From the repository root, build both demos. They use plain TCP or memory,
-so OpenSSL is not needed:
+From the repository root, build both demos. They use synchronous TCP or memory:
 
 ```sh
 cmake -S . -B out/build/guide
@@ -65,7 +64,7 @@ The input method appends each new block to engine-owned storage and sends
 complete lines:
 
 ```cpp
-void on_bytes_received(std::string_view input) {
+protocol::processing_result on_bytes_received(std::string_view input) {
   input_.append(input);
   std::size_t consumed = 0;
   for (;;) {
@@ -78,6 +77,11 @@ void on_bytes_received(std::string_view input) {
     consumed += line.size();
   }
   input_.erase(0, consumed);
+  return {};
+}
+
+protocol::processing_result on_processing_turn(bool) {
+  return {};
 }
 ```
 
@@ -214,49 +218,32 @@ The examples are small on purpose. When you move beyond them, keep three
 runtime rules from the [contracts](02-core-model.md#protocol-contract) in
 view:
 
-- **Input.** Deliver only newly received bytes, with their pointer and size.
-  The engine processes or copies them before returning. Incomplete protocol
-  messages belong to the engine; the transport may immediately reuse its buffer.
-- **Output.** The two views passed to *send_delegate* do not own their bytes.
-  If a transport sends later, it must preserve that data; it takes ownership
-  of an optional body reader.
-- **Threads and closure.** Input calls for one connection are serialized.
-  Output can arrive from different threads, and a close request must stop
-  further input for that connection.
+- **Input.** Deliver fresh immutable RX bytes for one connection at a time.
+  The engine retains incomplete messages; the transport reuses its RX buffer.
+- **Output.** Copy accepted head/body bytes before send returns and take ownership
+  of the optional reader. Its backing storage must remain valid until release.
+  One reader is terminal; later nonempty output or another reader is rejected.
+  Empty sends without a reader are no-ops and consume no TX budget.
+- **Threads and close.** The engine invokes send/close only inside its current
+  input call, on that calling thread. Registered callbacks must not escape for
+  delayed or cross-thread invocation. Close ends new input and drains accepted
+  output; errors and output-limit violations may abort it. Administration belongs
+  to a sequential external owner outside worker callbacks.
 
-HTTP also exposes an optional flow-control extension. The bundled TCP and TLS
-transports recognize these engine methods:
+The [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+specifies buffers, reader lifetime, platform limits and stop behavior. A C++
+concept checks signatures; implementing it alone does not prove these guarantees.
 
-```cpp
-void set_input_flow_control(std::function<bool()> pressure,
-                            std::function<void()> ready);
-bool input_paused() const noexcept;
-void resume_input();
-```
-
-Install the hooks before delivering input. The pressure query reports transport
-output pressure. Once *input_paused()* is true, suspend further input delivery;
-the HTTP engine owns a copy of the unprocessed remainder of one receive block.
-It pauses between messages, allowing a message already in progress to finish.
-
-The *ready* callback is requested for pressured ordered-response credit, rather
-than every ordinary completion, and may run on any completing thread. Schedule and coalesce a
-wakeup onto the connection's serialized worker, retaining wakeups that arrive
-during a receive call. Invoke *resume_input()* outside output locks and serialize
-it with receive and stop calls. A wakeup can be spurious: recheck every budget,
-and service deferred input even when no new network bytes arrive. Honor close
-requests and TLS control records processed during resumption too.
-
-Keep callbacks lifetime-safe through accepted asynchronous work; weak context
-ownership avoids cycles in the bundled transports. Linux pressure queries read
-a separately owned flag published under the existing output lock; querying it
-does not lock or retain the connection. A custom transport owns its
-admission, inactivity and output budgets. Without these optional hooks, HTTP
-still enforces hard limits, but cannot cooperatively pause that transport.
-HTTP checks pressure before starting a message with available input. Empty
-receive or resume calls do not poll. With no deferred bytes, *input_paused()*
-can be false even while a budget is pressured: the next block is checked before
-decoding and can be retained within the same one-block bound.
+HTTP now reports immediate/deadline/output-drain needs through the returned
+processing_result. The engine retains bounded unadmitted input itself and
+supports several cooperative async handlers per connection, while preserving
+response order. It has no input pause/resume hook, external execution service
+or completion observer. All engine calls and destruction remain serialized.
+See [the current engine contract](../reference/protocol/http/v11/engine.md).
+Linux and Windows TCP supply serialized processing turns with monotonic
+deadlines. TLS forwards the same results through its serialized adapter.
+An in-memory adapter can also supply turns as shown by
+[processing_turns](../../examples/http/v11/processing_turns/README.md).
 
 Custom HTTP requests accept a final `borrow_bytes` argument in `from(...)`.
 The decoder supplies true so fields can reference its immutable input;
@@ -290,3 +277,10 @@ The in-memory demo handles one fixed request synchronously. It shows where
 the pieces meet; a real network transport also needs connection management,
 buffering, and safe output delivery. Head back to the [guide index](README.md)
 when you're ready for the final chapter.
+
+
+Both engine entry points return processing_result directly. An empty result
+requests no additional turns. It never acknowledges a subset of received
+bytes: the full input block can be reused once the call returns. See the
+[processing contract](../reference/protocol/processing_result.md), including
+native immediate/deadline/output-drain semantics on both TCP backends and TLS.

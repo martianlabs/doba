@@ -70,7 +70,7 @@ and TCP moves the bytes.
 
 A protocol engine understands the bytes for one connection. The
 [engine contract](../../include/protocol/contracts.h) is a C++ concept that
-checks four pieces:
+checks five pieces:
 
 - **Policies.** *policies_type* names the engine's policy type. It can be
   empty when the engine needs no options.
@@ -79,16 +79,23 @@ checks four pieces:
 - **Closure.** *set_on_close* receives a callback the engine can use to ask
   the transport to close the connection.
 - **Input.** *on_bytes_received* gets a *std::string_view* of the newly
-  received bytes, immutable throughout the call. It returns void. The engine
+  received bytes, immutable throughout the call. It returns processing_result.
+  The engine
   must process or copy those bytes before returning; the transport reuses
   the buffer on the next read.
 
-Here are the three calls as the concept checks them:
+- **Processing.** *on_processing_turn(output_idle)* runs eligible work on a
+  serialized transport turn and returns the next processing_result snapshot.
+
+The concept checks these four operations:
 
 ```cpp
 { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
 { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-{ engine.on_bytes_received(input) } -> std::same_as<void>;
+{ engine.on_bytes_received(input) } ->
+    std::same_as<protocol::processing_result>;
+{ engine.on_processing_turn(output_idle) } ->
+    std::same_as<protocol::processing_result>;
 ```
 
 The [send delegate](../../include/protocol/contracts.h) is that output
@@ -105,9 +112,11 @@ using send_delegate = std::function<void(std::string_view, std::string_view,
                                          std::unique_ptr<common::reader>)>;
 ```
 
-The transport owns and drains submitted output. The two views do not own
-their bytes, so the transport must preserve their contents if it sends them
-later.
+Bundled TCP copies accepted head/body bytes before send returns and owns the
+transferred reader. The two views can then be reused; borrowed reader backing
+must remain valid until its reader is released. One terminal reader is allowed;
+a second reader or later nonempty output while it is pending closes the
+connection. Empty submissions without a reader are no-ops.
 
 The transport needs a fresh engine for each connection. An **engine factory**
 is the callable you give it to create that engine. TCP calls the factory when
@@ -116,9 +125,14 @@ that setup in TCP. The [factory contract](../../include/protocol/contracts.h)
 requires a move-constructible callable that takes no arguments even when const
 and returns the engine type.
 
-Input calls for a connection are serialized and stop when closing begins.
-Output may be submitted from different threads, so the transport must accept
-it safely.
+Input and processing turns are serialized per connection and stop when closing
+begins. The engine stores its registered callbacks but invokes send/close only
+inside the current input or processing turn, on that calling thread. They must not escape for delayed or
+cross-thread use. Windows may use another IOCP worker for the next serialized
+input call; serialization does not imply fixed thread affinity.
+
+See the [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+for ownership, close and deliberate Linux/Windows differences.
 
 <a name="transport-contract"></a>
 <h2>
@@ -150,9 +164,11 @@ These are the callback and lifecycle calls the concept checks:
 { tr.stop() } -> std::same_as<void>;
 ```
 
-The optional [input flow-control hooks](05-extending-doba.md#keep-the-boundary-safe)
-let a transport cooperate with protocol backpressure without changing the
-minimal protocol contract.
+The engine owns managed task frames and HTTP response order. It returns
+processing needs directly instead of installing execution, completion or flow
+hooks. Native workers deliver those turns; they never receive application jobs.
+Configuration and start/stop belong to a sequential external owner, outside
+worker callbacks.
 
 A working transport creates an engine for each connection, wires up its send
 and close callbacks, feeds it input, and handles its output. The concept
@@ -183,7 +199,8 @@ martianlabs::doba::server<custom_protocol, transport_type> server(
 ```
 
 The engine reads complete lines and submits an **echo:** response. TCP still
-accepts clients, buffers incomplete input, and sends the output. The engine
+accepts clients, supplies fresh RX blocks, and sends the output. The engine
+retains incomplete lines between input calls and
 only implements the protocol contract; it does not need socket code.
 
 <a name="bring-a-transport"></a>
@@ -223,3 +240,8 @@ them.** The two examples show you can change either side without rebuilding
 the other.
 
 Head back to the [guide index](README.md) when you're ready for more.
+
+The result describes future processing needs, never RX consumption or read
+policy. See [processing turns](../reference/protocol/processing_result.md) for
+the full contract and implementation status. Current native backends accept
+empty results; nonempty turn requests are rejected until native integration.

@@ -41,12 +41,14 @@ int main() {
   limits.max_request_body_size = 5;
   limits.max_pending_requests = 128;
   limits.max_pending_response_bytes = 1024 * 1024;
+  limits.max_deferred_input_size = 1024 * 1024;
+  limits.max_task_steps_per_turn = 64;
   martianlabs::doba::transport::server::tcp_policies io;
   io.ip = "0.0.0.0";
   io.port = "8080";
   io.max_connections = 65535;
-  io.inactivity_period = std::chrono::seconds{60};
-  io.max_pending_sources = 32;
+#ifdef _WIN32
+#endif
   http_server<> http_server(io, limits);
   http_server.add_route("POST", "/upload",
                         [](const request&, response& res) {

@@ -15,7 +15,7 @@ add_executable(
 target_link_libraries(
   https_hello_world
   PRIVATE
-  doba_tls
+  martianlabs::doba_tls
 )
 
 source_group(

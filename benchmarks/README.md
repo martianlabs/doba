@@ -22,9 +22,10 @@ and collect the results.
   </a>
 </h2>
 
-Baseline requests, delayed responses, JSON generation and compression,
-static files, and body echo, with HTTP and TLS routes. A few more things to
-do than saying hello very quickly.
+The bundled HttpArena driver supports baseline, pipelined and real async delay
+requests over plain HTTP. It registers both handler types by default and has
+no TLS listener; the library offers TLS separately. A dynamic correctness group
+checks the driver in root test builds; throughput measurement is separate.
 [HttpArena adapter](http/v11/httparena/README.md).
 
 <a name="web-frameworks"></a>
@@ -41,9 +42,6 @@ A small adapter for the Web Frameworks benchmark: a root route, a route that
 returns a user identifier, and a user POST route. Simple handlers, plenty
 of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
 
-For the static-file controller, use the static-tls profile through the
-[HttpArena adapter](http/v11/httparena/README.md).
-
-For engine and input-flow overhead, use the
-[operating-policy microbenchmark](http/v11/operating-policies/README.md).
-Its CPU measurements complement the TCP/TLS comparisons.
+Current transport comparisons use the HttpArena adapter above. Removed
+activity/flow-control simulations are not measurements of the current engine
+or its native processing turns.

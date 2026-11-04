@@ -76,11 +76,14 @@ struct policies {
   // server to ignore Upgrade); false rejects the request outright. Honouring
   // an upgrade is deferred to a future release.
   bool allow_upgrade = true;
-  // Maximum requests awaiting ordered response delivery (0 means unlimited).
+  // Admitted requests and completed responses awaiting emission (positive).
   std::size_t max_pending_requests = 128;
-  // Serialized head/body bytes waiting for ordered delivery (0 unlimited).
-  // Storage owned by response sources and handlers is outside this budget.
+  // Serialized head/inline body bytes awaiting acceptance (positive).
   std::size_t max_pending_response_bytes = 1024 * 1024;
+  // Async starts/resumes and buffered admissions per entry (positive).
+  std::size_t max_task_steps_per_turn = 64;
+  // Raw input retained behind a suspended handler/output source (positive).
+  std::size_t max_deferred_input_size = 1024 * 1024;
   // Maximum query parameter pairs (0 means unlimited).
   std::size_t max_query_parameters = kDefaultMaxQueryParameters;
   // Maximum chunk extension bytes (0 means unlimited).

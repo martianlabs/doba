@@ -10,10 +10,6 @@ if(WIN32)
 else()
   list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_windows_tests\\.cpp$")
 endif()
-if(NOT DOBA_ENABLE_TLS)
-  list(REMOVE_ITEM UNIT_TEST_SOURCES
-       "${CMAKE_CURRENT_LIST_DIR}/transport/server/tls_session_tests.cpp")
-endif()
 list(
   REMOVE_ITEM
   UNIT_TEST_SOURCES
@@ -84,3 +80,26 @@ set_tests_properties(
   PROPERTIES
   TIMEOUT 120
 )
+
+# Run the same model in ordinary tests and coverage-guided fuzzing.
+add_executable(doba_security_model_tests
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/engine_security_state_tests.cpp")
+target_include_directories(doba_security_model_tests PRIVATE
+  "${CMAKE_CURRENT_LIST_DIR}/helpers")
+target_link_libraries(doba_security_model_tests PRIVATE doba_headers)
+add_test(NAME doba_security_model_tests COMMAND doba_security_model_tests)
+set_tests_properties(doba_security_model_tests PROPERTIES TIMEOUT 60)
+
+if(WIN32)
+  # Isolate native API substitution from the ordinary unit binary.
+  set(qualification "${CMAKE_CURRENT_LIST_DIR}/../qualification")
+  add_executable(doba_network_fault_tests
+    "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+    "${qualification}/network_environment_windows_probe.cpp")
+  target_include_directories(doba_network_fault_tests PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/helpers")
+  target_link_libraries(doba_network_fault_tests PRIVATE doba_headers)
+  add_test(NAME doba_network_fault_tests COMMAND doba_network_fault_tests)
+  set_tests_properties(doba_network_fault_tests PROPERTIES TIMEOUT 30)
+endif()

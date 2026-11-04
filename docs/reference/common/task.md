@@ -48,7 +48,7 @@ Provides the task type.
 
 - **Tty:** `typename Tty = void`.
 
-**Source:** [include/common/task.h:44](../../../include/common/task.h#L44)
+**Source:** [include/common/task.h:46](../../../include/common/task.h#L46)
 
 <a id="alias-handle-type"></a>
 
@@ -62,7 +62,7 @@ using handle_type = std::coroutine_handle<promise_type>;
 
 Alias for `std::coroutine_handle<promise_type>`.
 
-**Source:** [include/common/task.h:79](../../../include/common/task.h#L79)
+**Source:** [include/common/task.h:91](../../../include/common/task.h#L91)
 
 <a id="method-start"></a>
 
@@ -82,7 +82,7 @@ Starts the task lifecycle.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/common/task.h:102](../../../include/common/task.h#L102)
+**Source:** [include/common/task.h:114](../../../include/common/task.h#L114)
 
 <a id="method-start-2"></a>
 
@@ -104,4 +104,20 @@ Starts the task lifecycle.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/common/task.h:108](../../../include/common/task.h#L108)
+**Source:** [include/common/task.h:120](../../../include/common/task.h#L120)
+
+## Ownership models
+
+A newly created task is lazy and owns its frame until moved, destroyed or
+transferred. `start` transfers ownership to the detached coroutine: completion
+runs once and the frame then destroys itself. A custom scheduler or awaiter
+must keep every published handle valid and resume it exactly once. Destruction
+of the moved-from task does not cancel detached work. Starting an empty or
+already-transferred task throws `std::logic_error` instead of dereferencing an
+empty handle. Exceptions from the completion callback remain suppressed.
+
+For caller-controlled resumption and cancellation, transfer the unstarted task
+to [task_execution](task_execution.md). It retains the frame at final
+suspension, exposes the exception without a callback and only accepts
+`yield()`/`sleep_for()`. The ownership choice is not an HTTP async-mode flag;
+the engine will select controlled ownership automatically for async handlers.

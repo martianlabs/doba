@@ -21,7 +21,18 @@ mind their own business. HTTP/1.1 comes first; the architecture leaves room
 for more.
 
 **Native IOCP on Windows. Native epoll on Linux.**
-The TCP transport needs no external libraries; optional TLS uses OpenSSL.
+
+Both backends support TCP with cooperative engine turns, inline pipelining
+and one terminal
+prefix/source reader per connection. Linux uses independent SO_REUSEPORT
+workers; Windows uses IOCP. See the
+[TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
+and [policy limits](docs/reference/transport/server/tcp_policies.md).
+
+TCP needs no external libraries. Optional TLS is a separate class over TCP,
+using OpenSSL and its own buffers. One HTTP engine handles sync and coroutine
+routes automatically; transports deliver serialized turns and the engine owns
+frames, bounded concurrency and response order.
 
 [Try the examples](examples/README.md)
 
@@ -148,9 +159,11 @@ find_package(doba CONFIG REQUIRED)
 target_link_libraries(application PRIVATE martianlabs::doba)
 ```
 
-For TLS, configure with `-DDOBA_ENABLE_TLS=ON` and link
-`martianlabs::doba_tls`. OpenSSL is required for this optional transport.
-See the [HTTPS example](examples/http/v11/https_hello_world/README.md).
+For TLS, build with `DOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or newer. Consumers use
+`find_package(doba CONFIG REQUIRED COMPONENTS TLS)` and link
+`martianlabs::doba_tls`. The plain target retains no OpenSSL dependency.
+See [TLS contracts and source limits](docs/reference/transport/server/tls.md)
+and the [HTTPS example](examples/http/v11/https_hello_world/README.md).
 
 Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
 standard system location. The exported target provides the include directory,
@@ -177,24 +190,38 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 220+ integration cases; 200 concurrency repetitions in CI; ten deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
 
+**Measured coverage for 0.1.0 (2026-11-04):** Linux **95.15% of executable
+lines / 88.58% of condition outcomes**; Windows **94.64% / 88.50%**.
+These are local Release measurements of emitted production mappings;
+unmapped headers are inventoried separately.
+[See coverage by module, validation results and release history](docs/coverage/README.md).
+
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
 **GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
-Linux runs **ASan, UBSan, and TSan with TLS**; Windows runs **ASan and UBSan
-with TLS**, including a Clang build alongside MSVC. Both platforms repeat
-the critical concurrency cases **200 times**; TSan checks for races on Linux.
-And yes, **the tests run in Release, optimizations and all**. That's the code
-we care about running. Debug gets a compile check. The test tooling uses
-C++ and CMake; building doba is quite enough setup for testing doba.
+Linux validates synchronous TCP with **ASan, UBSan, and TSan**; Windows runs
+**ASan and UBSan**, including a Clang build alongside MSVC. Independent engine concurrency cases
+repeat **200 times** in CI; Windows
+also repeats its native IOCP lifecycle cases **20 times**. TSan checks Linux
+races. Per-module coverage gates and reproducible fault campaigns accompany
+longer nightly fuzzing. These are configured CI jobs, not a new remote run
+for this document.
+The illustrated counts describe source declarations across the tree, not cases
+executed on one platform.
+And yes, **the normal suite runs in Release, optimizations and all**. That's
+the code we care about running. Debug gets a compile check. Test tooling uses
+C++ and CMake; source-coverage builds additionally use Clang/LLVM.
+All project test and tooling logic is implemented in C++; interpreters are
+not required. CMake and workflow YAML describe the build and CI orchestration.
 
 Fancy a second opinion? There are also adapters for manual protocol checks
 with [h1spec](compliance/http/v11/h1spec/README.md) and
@@ -206,3 +233,4 @@ and the tests; letting somebody else's tools have a go seems only fair.
 ---
 
 [Apache 2.0](LICENSE)
+

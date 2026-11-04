@@ -8,160 +8,14 @@
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
 
-Provides the execution work transport component.
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
-
-[execution_work](#type-execution-work) ·
-[execution_capacity](#type-execution-capacity)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_work
-
-[context](#field-context) ·
-[run](#field-run)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_capacity
-
-[owner](#field-owner) ·
-[submit](#field-submit)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::contracts
-
-[execution_receiver](#concept-execution-receiver) ·
-[transport](#concept-transport)
-
-<a id="api"></a>
-<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
-<a id="type-execution-work"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_work
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct execution_work { ... };
-```
-
-Provides the execution work transport component.
-
-**Source:** [include/transport/server/contracts.h:41](../../../../include/transport/server/contracts.h#L41)
-
-<a id="field-context"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
-
-**FIELD** · *transport::server::execution_work*
-
-```cpp
-void* context{nullptr};
-```
-
-Stores the context value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:42](../../../../include/transport/server/contracts.h#L42)
-
-<a id="field-run"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> run
-
-**FIELD** · *transport::server::execution_work*
-
-```cpp
-void (*run)(void*) noexcept{nullptr};
-```
-
-Stores the run value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:43](../../../../include/transport/server/contracts.h#L43)
-
-<a id="type-execution-capacity"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_capacity
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct execution_capacity { ... };
-```
-
-While active, accepted work runs once, no earlier than its threshold.
-
-**Source:** [include/transport/server/contracts.h:53](../../../../include/transport/server/contracts.h#L53)
-
-<a id="field-owner"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> owner
-
-**FIELD** · *transport::server::execution_capacity*
-
-```cpp
-void* owner{nullptr};
-```
-
-Stores the owner value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:54](../../../../include/transport/server/contracts.h#L54)
-
-<a id="field-submit"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> submit
-
-**FIELD** · *transport::server::execution_capacity*
-
-```cpp
-void (*submit)(void*, std::chrono::steady_clock::time_point,
-                 execution_work){nullptr};
-```
-
-Stores the submit value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:55](../../../../include/transport/server/contracts.h#L55)
-
-<a id="concept-execution-receiver"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_receiver
-
-**CONCEPT** · *transport::server::contracts*
-
-```cpp
-template <typename ENty>
-concept execution_receiver =
-    requires(ENty& engine, execution_capacity execution) {
-      { engine.set_execution_capacity(execution) } -> std::same_as<void>;
-    };
-```
-
-Checks the compile-time requirements for execution receiver.
-
-**Template parameters:**
-
-- **ENty:** `typename ENty`.
-
-**Source:** [include/transport/server/contracts.h:67](../../../../include/transport/server/contracts.h#L67)
+Declares the structural transport interface. Protocols describe future
+processing through [processing_result](../../protocol/processing_result.md),
+returned directly by both engine entry points. No application work/executor
+capability is supplied or injected by this contract.
 
 <a id="concept-transport"></a>
 
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport
-
-**CONCEPT** · *transport::server::contracts*
+## transport
 
 ```cpp
 template <typename TRty, typename ENty, typename FNty>
@@ -181,12 +35,23 @@ concept transport =
     };
 ```
 
-This concept defines the requirements for a transport type. It requires that the transport type is constructible from its policies and an engine factory, and that it provides methods for setting callbacks for connection and disconnection events, as well as starting and stopping the transport.
+The concept checks construction, notifications, start and stop. It cannot prove
+runtime ownership or synchronization. The bundled backends additionally require:
 
-**Template parameters:**
+- A sequential external owner configures, starts and stops the transport.
+  Administrative calls cannot originate inside worker callbacks.
+- RX and processing turns are serialized per connection. Send/close callbacks
+  run only inside those entries; inline bytes are copied before return and
+  terminal reader ownership transfers to the transport.
+- Native operations retain their buffers and exact connection until completion.
+- Close withdraws processing interests while accepted output drains. Linux
+  administrative stop cancels pending output; Windows drains it and real IOCP
+  operations before workers join.
+- The engine owns coroutine frames, cooperative scheduling and response order.
+  TCP delivers generic immediate/deadline/output-drain turns. TLS adapts those
+  same entries without changing native TCP ownership.
 
-- **TRty:** `typename TRty`.
-- **ENty:** `typename ENty`.
-- **FNty:** `typename FNty`.
-
-**Source:** [include/transport/server/contracts.h:84](../../../../include/transport/server/contracts.h#L84)
+See the [TCP runtime contract](tcp.md#runtime-contract),
+[Linux turns](tcp_linux_processing.md) and
+[Windows turns](tcp_windows_processing.md). These are behavioral requirements,
+not additional executor, pressure or quiescence interfaces.

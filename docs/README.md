@@ -15,3 +15,6 @@ New to doba? Pick a path:
 - [Reference](reference/README.md) - exact API and behavior details.
 - [Benchmarks](benchmarks/README.md) - the current ranking, every workload,
   and the machine behind the numbers.
+
+- [Coverage](coverage/README.md) - release measurements, module breakdowns,
+  test families and reproducible qualification.

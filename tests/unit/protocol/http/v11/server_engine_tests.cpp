@@ -29,6 +29,7 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "http_server.h"
 #include "protocol/http/common/auth/basic.h"
 #include "protocol/http/common/auth/bearer.h"
@@ -39,6 +40,7 @@
 #endif
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] usings                                                     ( public ) |
@@ -213,9 +215,14 @@ struct custom_engine {
   custom_engine(const policies_type&, const ROty&) {}
   void set_on_send(protocol::send_delegate) {}
   void set_on_close(std::function<void()>) {}
-  void on_bytes_received(std::string_view) {
-    return;
+  processing_result on_bytes_received(std::string_view) {
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -264,9 +271,6 @@ concept accepts_custom_http_server = requires {
 // /////////////////////////////////////////////////////////////////////////////
 static_assert(
     protocol::contracts::engine<http::engine<http::request, http::response>>);
-static_assert(protocol::contracts::completion_engine<
-              http::engine<http::request, http::response>>);
-static_assert(!protocol::contracts::completion_engine<custom_engine>);
 static_assert(!std::constructible_from<
               http::engine<http::request, http::response>, http::policies>);
 static_assert(accepts_server<http::engine<http::request, http::response>,

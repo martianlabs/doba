@@ -22,126 +22,122 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
+#include <chrono>
 #include <memory>
 #include <span>
+#include <stdexcept>
 #include <string>
-#include "protocol/http/v11/engine_async.h"
+#include <thread>
+#include <vector>
+
+#include "engine_probe.h"
 #include "test_helper.h"
 
 namespace {
-using namespace martianlabs::doba::protocol::http::v11;
-using martianlabs::doba::common::reader;
+using namespace martianlabs::doba;
+using probe = tests::unit::engine_probe;
+using request = probe::request;
+using response = probe::response;
+using router = probe::router;
+using policies = probe::policies;
+using clock_type = probe::clock;
+using common::task;
+using common::yield;
+using common::sleep_for;
+using namespace std::chrono_literals;
 }  // namespace
 
-DOBA_TEST("pending request credit uses exact limits and its own hysteresis") {
-  for (std::size_t maximum : {0u, 1u, 2u, 3u, 4u, 128u}) {
-    detail::engine_async pending(maximum, {}, {}, 0);
-    int closes = 0;
-    pending.set_on_close([&] { ++closes; });
-    pending.set_on_send([](auto, auto, std::unique_ptr<reader>) {});
-    const auto count = maximum ? maximum : 256;
-    for (std::size_t i = 0; i < count; ++i) {
-      DOBA_EXPECT(pending.reserve().has_value());
-      if (maximum && i + 1 < maximum - maximum / 4)
-        DOBA_EXPECT(!pending.pressured());
-    }
-    if (maximum) {
-      DOBA_EXPECT(pending.pressured());
-      for (std::size_t i = 0; i < count - maximum / 2; ++i)
-        pending.submit(i, {{}, {}, nullptr}, true, false);
-      DOBA_EXPECT(!pending.pressured());
-      for (std::size_t i = 0; i < count - maximum / 2; ++i)
-        DOBA_EXPECT(pending.reserve().has_value());
-      DOBA_EXPECT(!pending.reserve().has_value());
-      DOBA_EXPECT_EQUAL(closes, 1);
-    } else {
-      DOBA_EXPECT(!pending.pressured());
-      DOBA_EXPECT_EQUAL(closes, 0);
-    }
+DOBA_TEST("pending request credit uses exact limits and resumes admission") {
+  for (std::size_t maximum : {1U, 2U, 3U, 4U}) {
+    router routes;
+    int calls = 0;
+    routes.add("GET", "/", [&](const request&, response& res) -> task<> {
+      ++calls;
+      co_await yield();
+      res.ok_200().set_body("ok");
+    });
+    policies limits;
+    limits.max_pending_requests = maximum;
+    probe current(routes, limits);
+    std::string batch;
+    for (std::size_t i = 0; i < maximum + 1; ++i) batch += probe::get("/");
+    current.receive(batch);
+    DOBA_EXPECT_EQUAL(calls, static_cast<int>(maximum));
+    DOBA_EXPECT_EQUAL(current.closes, 0);
+    current.turn();
+    DOBA_EXPECT_EQUAL(calls, static_cast<int>(maximum + 1));
+    DOBA_EXPECT_EQUAL(current.outputs.size(), maximum);
+    current.turn();
+    DOBA_EXPECT_EQUAL(current.outputs.size(), maximum + 1);
+    DOBA_EXPECT_EQUAL(current.closes, 0);
   }
 }
 
-DOBA_TEST(
-    "pending response bytes use hysteresis independently of request "
-    "positions") {
-  detail::engine_async pending(128, {}, {}, 16);
-  int closes = 0;
-  std::string wire;
-  pending.set_on_close([&] { ++closes; });
-  pending.set_on_send([&](auto h, auto b, std::unique_ptr<reader>) {
-    wire += h;
-    wire += b;
+DOBA_TEST("pending sources use request slots without charging logical body size") {
+  router routes;
+  auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
+  routes.add("GET", "/source", [&](const request&, response& res) {
+    res.ok_200().set_body(common::reader::shared(
+        bytes, std::as_bytes(std::span(*bytes))), bytes->size());
   });
-  for (int i = 0; i < 4; ++i) DOBA_EXPECT(pending.reserve().has_value());
-  pending.submit(1, {"abc", {}, nullptr}, false, false);
-  pending.submit(2, {"D", {}, nullptr}, false, false);
-  DOBA_EXPECT(!pending.pressured());
-  pending.submit(3, {"12345678", {}, nullptr}, false, false);
-  DOBA_EXPECT(pending.pressured());  // 12 bytes, not four request positions.
-  pending.submit(0, {"zero", {}, nullptr}, true, false);
-  DOBA_EXPECT(pending.pressured());  // 9 bytes: below high but still above low.
-  pending.submit(1, {{}, {}, nullptr}, true, false);
-  DOBA_EXPECT(!pending.pressured());  // Exactly 8 bytes: low watermark.
-  pending.submit(3, {"z", {}, nullptr}, false, false);
-  DOBA_EXPECT(!pending.pressured());  // 9 bytes do not reenter pressure.
-  pending.submit(3, {"yyy", {}, nullptr}, false, false);
-  DOBA_EXPECT(pending.pressured());  // 12 bytes reenter pressure.
-  pending.submit(2, {{}, {}, nullptr}, true, false);
-  DOBA_EXPECT(!pending.pressured());
-  pending.submit(3, {{}, {}, nullptr}, true, false);
-  DOBA_EXPECT_EQUAL(wire, "zeroabcD12345678zyyy");
-  DOBA_EXPECT_EQUAL(closes, 0);
+  policies limits;
+  limits.max_pending_requests = 1;
+  limits.max_pending_response_bytes = 1;
+  probe current(routes, limits);
+  current.hold_source = true;
+  current.receive(probe::get("/source") + probe::get("/source"));
+  DOBA_EXPECT_EQUAL(current.sources, 1);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+  current.drain();
+  DOBA_EXPECT_EQUAL(current.sources, 2);
+  current.drain();
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+  DOBA_EXPECT(!current.needs.turn_after_output_drained);
 }
 
-DOBA_TEST(
-    "pending sources are counted by positions and never by logical file "
-    "length") {
-  detail::engine_async pending(4, {}, {}, 1);
-  int closes = 0, sources = 0;
-  auto owner = std::make_shared<const std::string>(4096, 'x');
-  std::weak_ptr<const std::string> retained = owner;
-  pending.set_on_close([&] { ++closes; });
-  pending.set_on_send([&](auto, auto, std::unique_ptr<reader> source) {
-    if (source) ++sources;
+// +===========================================================================+
+// | [>] queued source headers retain the pending byte limit     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("queued source headers retain the pending byte limit") {
+  router routes;
+  auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
+  routes.add("GET", "/source", [&](const request&, response& res) {
+    res.ok_200().set_body(common::reader::shared(
+        bytes, std::as_bytes(std::span(*bytes))), bytes->size());
   });
-  pending.reserve();
-  pending.reserve();
-  auto source = std::make_unique<reader>(
-      reader::shared(owner, std::as_bytes(std::span(*owner))));
-  pending.submit(1, {{}, {}, std::move(source)}, true, false);
-  owner.reset();
-  DOBA_EXPECT(!retained.expired());
-  DOBA_EXPECT(!pending.pressured());
-  pending.submit(0, {{}, {}, nullptr}, true, false);
-  DOBA_EXPECT_EQUAL(sources, 1);
-  DOBA_EXPECT(retained.expired());
-  DOBA_EXPECT_EQUAL(closes, 0);
+  policies limits;
+  limits.max_pending_requests = 2;
+  limits.max_pending_response_bytes = 1;
+  probe current(routes, limits);
+  current.hold_source = true;
+  current.receive(probe::get("/source") + probe::get("/source"));
+  DOBA_EXPECT_EQUAL(current.sources, 1);
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  current.drain();
+  DOBA_EXPECT_EQUAL(current.sources, 1);
+  DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 
-DOBA_TEST(
-    "pending overflow discards readers and closes once while later submissions "
-    "are ignored") {
-  detail::engine_async pending(0, {}, {}, 4);
-  int closes = 0, sends = 0;
-  pending.set_on_close([&] { ++closes; });
-  pending.set_on_send([&](auto, auto, std::unique_ptr<reader>) { ++sends; });
-  pending.reserve();
-  pending.reserve();
-  pending.reserve();
-  auto owner = std::make_shared<const std::string>("source");
-  std::weak_ptr<const std::string> retained = owner;
-  pending.submit(2,
-                 {"1234",
-                  {},
-                  std::make_unique<reader>(
-                      reader::shared(owner, std::as_bytes(std::span(*owner))))},
-                 true, false);
-  owner.reset();
-  DOBA_EXPECT(!retained.expired());
-  pending.submit(1, {"5", {}, nullptr}, true, false);
-  DOBA_EXPECT(retained.expired());
-  pending.submit(0, {"ignored", {}, nullptr}, true, false);
-  pending.close_now();
-  DOBA_EXPECT_EQUAL(closes, 1);
-  DOBA_EXPECT_EQUAL(sends, 0);
+DOBA_TEST("pending byte overflow cancels all yielded frames without extra sends") {
+  router routes;
+  auto token = std::make_shared<int>(0);
+  routes.add("GET", "/wait", [&](const request&, response&) -> task<> {
+    auto retained = token;
+    co_await yield();
+  });
+  routes.add("GET", "/large", [](const request&, response& res) {
+    res.ok_200().set_body("larger than the pending byte cap");
+  });
+  policies limits;
+  limits.max_pending_response_bytes = 1;
+  probe current(routes, limits);
+  current.receive(probe::get("/wait") + probe::get("/large"));
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT(current.outputs.empty());
+  DOBA_EXPECT_EQUAL(token.use_count(), 1);
+  current.turn();
+  current.receive(probe::get("/large"));
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT(current.outputs.empty());
 }

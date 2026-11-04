@@ -81,6 +81,32 @@ struct http_test_response {
   }
 };
 
+// +---------------------------------------------------------------------------+
+// | [>] valid_response_field_name                                ( function ) |
+// +---------------------------------------------------------------------------+
+// Independent test oracle: do not use the production header parser here.
+inline bool valid_response_field_name(std::string_view value) {
+  if (value.empty()) return false;
+  constexpr std::string_view symbols = "!#$%&'*+-.^_`|~";
+  for (const unsigned char byte : value) {
+    if ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+        (byte >= '0' && byte <= '9') ||
+        symbols.find(char(byte)) != std::string_view::npos) continue;
+    return false;
+  }
+  return true;
+}
+
+// +---------------------------------------------------------------------------+
+// | [>] valid_response_field_value                               ( function ) |
+// +---------------------------------------------------------------------------+
+inline bool valid_response_field_value(std::string_view value) {
+  for (const unsigned char byte : value) {
+    if ((byte < 32 && byte != 9) || byte == 127) return false;
+  }
+  return true;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] receive_http_line                                        ( function ) |
@@ -148,7 +174,8 @@ inline std::optional<http_test_response> receive_http_response(
   const auto parsed_status = std::from_chars(result.status.data() + 9,
                                              result.status.data() + 12, status);
   if (parsed_status.ec != std::errc{} ||
-      parsed_status.ptr != result.status.data() + 12)
+      parsed_status.ptr != result.status.data() + 12 || status < 100 ||
+      status > 599 || !valid_response_field_value(result.status.substr(13)))
     return std::nullopt;
   position += 2;
   while (position + 2 < wire.size()) {
@@ -169,7 +196,12 @@ inline std::optional<http_test_response> receive_http_response(
         result.header(name).has_value()) {
       return std::nullopt;
     }
-    result.headers.emplace_back(name, wire.substr(begin, end - begin));
+    auto value = std::string_view(wire).substr(begin, end - begin);
+    while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+      value.remove_suffix(1);
+    if (!valid_response_field_name(name) || !valid_response_field_value(value))
+      return std::nullopt;
+    result.headers.emplace_back(name, value);
     position = end + 2;
   }
   if (status >= 200) {
@@ -205,6 +237,9 @@ inline std::optional<http_test_response> receive_http_response(
     for (;;) {
       const auto line = receive_http_line(client, deadline, 4096);
       if (!line.has_value() || line->empty()) return std::nullopt;
+      constexpr std::size_t max_wire = 8 * 1024 * 1024;
+      if (line->size() + 2 > max_wire - result.wire_body.size())
+        return std::nullopt;
       result.wire_body += *line + "\r\n";
       const std::size_t extension = line->find(';');
       const std::string_view digits(*line);
@@ -217,9 +252,14 @@ inline std::optional<http_test_response> receive_http_response(
         return std::nullopt;
       }
       if (chunk == 0) {
+        std::size_t trailer_bytes = 0;
         for (;;) {
           const auto trailer = receive_http_line(client, deadline);
           if (!trailer.has_value()) return std::nullopt;
+          if (trailer->size() + 2 > 16384 - trailer_bytes ||
+              trailer->size() + 2 > max_wire - result.wire_body.size())
+            return std::nullopt;
+          trailer_bytes += trailer->size() + 2;
           result.wire_body += *trailer + "\r\n";
           if (trailer->empty()) return result;
           const std::size_t colon = trailer->find(':');
@@ -229,8 +269,11 @@ inline std::optional<http_test_response> receive_http_response(
                  ((*trailer)[begin] == ' ' || (*trailer)[begin] == '\t')) {
             begin++;
           }
-          result.trailers.emplace_back(trailer->substr(0, colon),
-                                       trailer->substr(begin));
+          const auto name = std::string_view(*trailer).substr(0, colon);
+          const auto value = std::string_view(*trailer).substr(begin);
+          if (!valid_response_field_name(name) ||
+              !valid_response_field_value(value)) return std::nullopt;
+          result.trailers.emplace_back(name, value);
         }
       }
       if (chunk > 1024 * 1024 - result.body.size()) return std::nullopt;
@@ -242,6 +285,8 @@ inline std::optional<http_test_response> receive_http_response(
       if (!bytes.has_value() || !bytes->ends_with("\r\n")) {
         return std::nullopt;
       }
+      if (bytes->size() > max_wire - result.wire_body.size())
+        return std::nullopt;
       result.wire_body += *bytes;
       result.body.append(bytes->data(), chunk);
     }

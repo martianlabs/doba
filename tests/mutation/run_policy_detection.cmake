@@ -11,9 +11,13 @@ string(TIMESTAMP stamp "%Y%m%d-%H%M%S" UTC)
 string(RANDOM LENGTH 8 ALPHABET 0123456789abcdef nonce)
 set(run "${DOBA_MUTATION_OUTPUT}/${stamp}-${nonce}")
 file(MAKE_DIRECTORY "${run}")
+if(DEFINED DOBA_MUTATION_SOURCE_DESCRIPTION)
+  file(WRITE "${run}/revision.txt" "${DOBA_MUTATION_SOURCE_DESCRIPTION}\n")
+else()
 find_package(Git REQUIRED)
 execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
   OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
+endif()
 execute_process(COMMAND "${DOBA_MUTATION_COMPILER}" --version
   OUTPUT_FILE "${run}/compiler.txt" COMMAND_ERROR_IS_FATAL ANY)
 file(GLOB_RECURSE originals RELATIVE "${root}" "${root}/include/*.h")
@@ -34,42 +38,35 @@ if(WIN32)
   set(suffix ".exe")
   set(ENV{ASAN_OPTIONS} "halt_on_error=1:detect_leaks=0")
 endif()
-set(ids admission zero-progress sources partial-batch http-bytes requests combined-pressure activity-renewal activity-consumption)
-set(headers transport/server/operating_state.h transport/server/operating_state.h
-  transport/server/send_state.h transport/server/send_state.h
-  protocol/http/v11/engine_async.h protocol/http/v11/engine_async.h transport/server/send_state.h
-  transport/server/operating_state.h transport/server/operating_state.h)
+set(ids admission sources partial-batch http-bytes requests)
+set(headers
+  transport/server/connection_reservation.h
+  transport/server/send_state.h
+  transport/server/send_state.h
+  protocol/http/v11/engine.h
+  protocol/http/v11/engine.h)
 set(before_0 "if (budget->maximum && used >= budget->maximum)")
-set(before_1 "if (bytes)")
-set(before_2 "if (source && max_sources_ && sources_.size() >= max_sources_)")
-set(before_3 "offset += sent;")
-set(before_4 "if (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size())")
-set(before_5 "if (max_pending_requests_ &&")
-set(before_6 "return byte_pressure_ || source_pressure_;")
-set(before_7 "active_ = true;")
-set(before_8 "active_ = false;")
+set(before_1 "if (source_)")
+set(before_2 "offset += sent;")
+set(before_3 "if (head > capacity - used || body > capacity - used - head)")
+set(before_4 "pending_->size() < decoder_.configuration().max_pending_requests")
 set(after_0 "if (false && budget->maximum && used >= budget->maximum)")
-set(after_1 "if (bytes || bytes == 0)")
-set(after_2 "if (false && source && max_sources_ && sources_.size() >= max_sources_)")
-set(after_3 "offset += sent;\n    if (!active_from_source_ && offset < buffer.size()) inline_bytes_ -= sent;")
-set(after_4 "if (false && (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size()))")
-set(after_5 "if (false && max_pending_requests_ &&")
-set(after_6 "return byte_pressure_ && source_pressure_;")
-set(after_7 "active_ = false;")
-set(after_8 "active_ = true;")
+set(after_1 "if (false && source_)")
+set(after_2 "offset += sent;\n    if (offset < buffer.size()) { buffer.erase(0, offset); offset = 0; }")
+set(after_3 "if (false && (head > capacity - used || body > capacity - used - head))")
+set(after_4 "pending_->size() <= decoder_.configuration().max_pending_requests")
 set(names
   "connection reservations move release and unwind exactly once"
-  "sampled inactivity renews only on positive bytes at maintenance"
-  "source budget counts active empty readers and releases their owners"
-  "byte pressure survives releasing source pressure and partial active sends"
+  "one terminal source retains ownership until its last send drains"
+  "partial sends retain the active batch in the hard send limit"
   "pending HTTP bytes enforce exact boundaries before copying"
-  "pending request credit uses exact limits and its own hysteresis"
-  "source pressure survives releasing byte pressure until the source low watermark"
-  "sampled inactivity renews only on positive bytes at maintenance"
-  "sampled inactivity renews only on positive bytes at maintenance")
-set(assertions "!connection_reservation::acquire(budget)" "progress.expired(60s, start + 60s)"
-  "!output.push({}, {}, source())" "output.pressured()" "(closes) ==" "!pending.reserve().has_value()" "output.pressured()"
-  "!progress.expired(60s, start + 60s)" "progress.expired(60s, start + 60s)")
+  "pending request credit uses exact limits and resumes admission")
+set(assertions
+  "!connection_reservation::acquire(budget)"
+  "!output.push({}, {}, source())"
+  "!output.push(\"x\", {}, nullptr)"
+  "(current.closes) =="
+  "(calls) == (static_cast<int>(maximum))")
 
 function(build_variant id)
   set(directory "${run}/${id}")

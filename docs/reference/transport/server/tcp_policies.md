@@ -8,31 +8,29 @@
 
 **Header:** [include/transport/server/tcp_policies.h](../../../../include/transport/server/tcp_policies.h)
 
-TCP operating policies.
+Policies are copied when a transport instance is constructed and remain fixed
+for its lifetime. The constructor validates capacities, backlog and worker/
+admission combinations. Start validates the complete numeric endpoint before
+creating its listener. See the [TCP runtime contract](tcp.md#runtime-contract)
+for callback ownership, terminal readers, errors and administrative stop.
 
-The new fields `max_connections`, `inactivity_period` and `max_pending_sources`
-are declared after `max_buffered_send_bytes` and before `ip` and `port`.
-C++ designated initializers must follow that declaration order.
+The declaration order is RX, workers, backlog, TX, admission, IP and port.
+C++ designated initializers must follow that order.
 
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
+| Policy | Default | Linux | Windows |
+|---|---:|---|---|
+| receive_buffer_capacity | 4096 bytes | 1..SSIZE_MAX | 1..ULONG_MAX |
+| worker_count | 0 | Zero selects one; positive selects that many | Zero selects hardware concurrency, at least one; explicit counts fit DWORD |
+| listen_backlog | 0 | Nonnegative, zero requests SOMAXCONN; kernel may cap | Same |
+| max_buffered_send_bytes | 1 MiB | 1..SSIZE_MAX logical TX bytes | Any positive size_t budget; kernel submissions are ULONG-sized |
+| max_connections | 65535 | Zero unlimited; finite budget partitioned across workers | Zero unlimited; shared reservations across workers |
+| ip | Empty | Complete numeric IPv4 text required at start | Same |
+| port | Empty | Complete decimal text in 1..65535 required at start | Same |
 
-[tcp_policies](#type-tcp-policies)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::tcp_policies
-
-[kDefaultReceiveBufferCapacity](#constant-kdefaultreceivebuffercapacity) ·
-[receive_buffer_capacity](#field-receive-buffer-capacity) ·
-[worker_count](#field-worker-count) ·
-[listen_backlog](#field-listen-backlog) ·
-[max_buffered_send_bytes](#field-max-buffered-send-bytes) ·
-[ip](#field-ip) ·
-[port](#field-port)
-
-[max_connections](#field-max-connections)
-
-[inactivity_period](#field-inactivity-period)
-
-[max_pending_sources](#field-max-pending-sources)
+Kernel queues, allocator capacity, protocol message limits and reader backing
+storage are independent of these logical transport bounds. A successfully
+constructed configuration does not preallocate its buffers or guarantee that
+start or a later connection can obtain the requested resources.
 
 <a id="api"></a>
 <a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -48,15 +46,16 @@ C++ designated initializers must follow that declaration order.
 
 **TYPE** · *transport::server*
 
-**Declaration synopsis:**
-
 ```cpp
 struct tcp_policies { ... };
 ```
 
-TCP operating policies.
-
-**Source:** [include/transport/server/tcp_policies.h:40](../../../../include/transport/server/tcp_policies.h#L40)
+[kDefaultReceiveBufferCapacity](#constant-kdefaultreceivebuffercapacity) ·
+[receive_buffer_capacity](#field-receive-buffer-capacity) ·
+[worker_count](#field-worker-count) ·
+[listen_backlog](#field-listen-backlog) ·
+[max_buffered_send_bytes](#field-max-buffered-send-bytes) ·
+[max_connections](#field-max-connections) · [ip](#field-ip) · [port](#field-port)
 
 <a id="constant-kdefaultreceivebuffercapacity"></a>
 
@@ -68,11 +67,9 @@ TCP operating policies.
 static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
 ```
 
-Default receive buffer capacity, in bytes.
+Default RX block capacity, in bytes. It does not limit protocol message size.
 
-**Value:** `4 * 1024`
-
-**Source:** [include/transport/server/tcp_policies.h:42](../../../../include/transport/server/tcp_policies.h#L42)
+**Source:** [include/transport/server/tcp_policies.h:41](../../../../include/transport/server/tcp_policies.h#L41)
 
 <a id="field-receive-buffer-capacity"></a>
 
@@ -84,11 +81,11 @@ Default receive buffer capacity, in bytes.
 std::size_t receive_buffer_capacity = kDefaultReceiveBufferCapacity;
 ```
 
-Receive I/O block size per connection, in bytes (must be positive). Engines receive only fresh bytes and own incomplete protocol messages. This capacity is independent of protocol head and body limits.
+Maximum bytes in one socket receive block. The engine receives only fresh
+borrowed bytes and retains incomplete messages itself. Zero and values beyond
+the platform receive API range are rejected before listening.
 
-**Value:** `kDefaultReceiveBufferCapacity`
-
-**Source:** [include/transport/server/tcp_policies.h:46](../../../../include/transport/server/tcp_policies.h#L46)
+**Source:** [include/transport/server/tcp_policies.h:45](../../../../include/transport/server/tcp_policies.h#L45)
 
 <a id="field-worker-count"></a>
 
@@ -100,9 +97,11 @@ Receive I/O block size per connection, in bytes (must be positive). Engines rece
 std::size_t worker_count = 0;
 ```
 
-Number of workers (0 selects automatically).
-
-**Value:** `0`
+Zero selects one worker on Linux and hardware concurrency, at least one,
+on Windows. A positive value selects that many workers. Linux workers own
+independent SO_REUSEPORT listeners and contexts; Windows shares an IOCP.
+Different connection engines may execute concurrently. Resource exhaustion can
+still make startup fail; representability does not promise unlimited threads.
 
 **Source:** [include/transport/server/tcp_policies.h:48](../../../../include/transport/server/tcp_policies.h#L48)
 
@@ -116,11 +115,12 @@ Number of workers (0 selects automatically).
 int listen_backlog = 0;
 ```
 
-Requested pending connection queue size (0 uses the system default).
+A nonnegative request passed to listen. Zero passes SOMAXCONN; the kernel
+may cap the queue according to its own limits. This does not cap established
+contexts. Negative values are rejected. INT_MAX is a valid request, not a
+promise that the kernel can queue that many connections.
 
-**Value:** `0`
-
-**Source:** [include/transport/server/tcp_policies.h:50](../../../../include/transport/server/tcp_policies.h#L50)
+**Source:** [include/transport/server/tcp_policies.h:51](../../../../include/transport/server/tcp_policies.h#L51)
 
 <a id="field-max-buffered-send-bytes"></a>
 
@@ -132,11 +132,42 @@ Requested pending connection queue size (0 uses the system default).
 std::size_t max_buffered_send_bytes = 1024 * 1024;
 ```
 
-Queued send reservations plus the entire active batch, per connection. Also bounds each accumulated batch; source-owned storage is excluded. Must be positive; exceeding it closes the connection. No preallocation. Partial sends retain the entire batch reservation until its final byte is consumed; this is a logical byte budget, not a bound on allocator capacity or process memory.
+Positive logical buffered TX bytes per connection. The entire active batch
+remains charged during a partial send; Windows also counts inline bytes
+accumulating behind that batch. Reader chunks are bounded by this budget.
+Exceeding it closes the connection. Zero never means unlimited.
 
-**Value:** `1024 * 1024`
+No storage is preallocated by this value. String allocator capacity, process
+RSS and storage owned by a reader are outside this cap. The fixed one-reader
+restriction is independent of the byte budget. Linux requires a representable
+ssize_t budget; Windows divides larger transfers into ULONG-sized submissions.
 
-**Source:** [include/transport/server/tcp_policies.h:54](../../../../include/transport/server/tcp_policies.h#L54)
+**Source:** [include/transport/server/tcp_policies.h:57](../../../../include/transport/server/tcp_policies.h#L57)
+
+<a id="field-max-connections"></a>
+
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_connections
+
+**FIELD** · *transport::server::tcp_policies*
+
+```cpp
+std::size_t max_connections = 65535;
+```
+
+Zero disables admission limiting. Each transport instance has an independent
+budget; engines are allocated only after admission succeeds.
+
+Linux divides a finite budget by worker count, with one extra slot for the
+first remainder workers. The finite budget must cover every effective worker.
+A full worker can reject while another has unused capacity; there is no shared
+counter or redistribution. A slot is released with that worker's context.
+
+Windows shares reservations across workers. The budget may be smaller than the
+worker count. A reservation remains held after socket closure while real I/O
+or another context owner still retains the context. The value does not
+preallocate contexts or bound the kernel's pending handshakes.
+
+**Source:** [include/transport/server/tcp_policies.h:61](../../../../include/transport/server/tcp_policies.h#L61)
 
 <a id="field-ip"></a>
 
@@ -148,9 +179,10 @@ Queued send reservations plus the entire active batch, per connection. Also boun
 std::string ip;
 ```
 
-IPv4 bind address and port (1-65535); both must be set.
-
-**Value:** No explicit initializer appears in this declaration.
+Numeric IPv4 bind address, empty by default and required at start. Hostnames,
+IPv6, trailing data and embedded or trailing NUL bytes are rejected. No name
+resolution is performed. Binding can fail even for valid text if the address
+is unavailable locally.
 
 **Source:** [include/transport/server/tcp_policies.h:63](../../../../include/transport/server/tcp_policies.h#L63)
 
@@ -164,50 +196,28 @@ IPv4 bind address and port (1-65535); both must be set.
 std::string port;
 ```
 
-Stores the port value.
+Complete unsigned decimal port text in [1, 65535], empty by default and
+required at start. Signs, whitespace, trailing data, NUL bytes, overflow and
+port zero are rejected. Leading decimal zeros are accepted. A valid port may
+still fail to bind because of availability or operating-system permissions.
 
-**Value:** No explicit initializer appears in this declaration.
+**Source:** [include/transport/server/tcp_policies.h:65](../../../../include/transport/server/tcp_policies.h#L65)
 
-**Source:** [include/transport/server/tcp_policies.h:64](../../../../include/transport/server/tcp_policies.h#L64)
+<a id="validation-coverage"></a>
 
-<a id="field-max-connections"></a>
+## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Validation and coverage
 
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_connections
+| Obligation | Evidence |
+|---|---|
+| Defaults, zero meanings, representable RX/TX and backlog extremes, worker/admission combinations | [Constructor tests](../../../../tests/unit/transport/server/tcp_transport_tests.cpp) |
+| Complete endpoint text including NUL rejection, copied policies, RX bounds, automatic workers, kernel backlog requests, unlimited and finite admission, exact TX and overflow recovery | [Portable policy tests](../../../../tests/integration/transport/server/tcp_policy_limits_tests.cpp) |
+| Partial TX budgets, reader bounds and ownership | [TX state tests](../../../../tests/unit/transport/server/send_state_tests.cpp), [Linux context tests](../../../../tests/unit/transport/server/tcp_context_linux_tests.cpp) |
+| Partitioned Linux admission and factory/EOF recovery | [Linux integration](../../../../tests/integration/transport/server/tcpip_linux_tests.cpp) |
+| Shared Windows admission, factory failure and restart | [Windows integration](../../../../tests/integration/transport/server/operating_policies_windows_tests.cpp) |
 
-**FIELD** · *transport::server::tcp_policies*
-
-```cpp
-std::size_t max_connections = 65535;
-```
-
-Maximum live context reservations per transport instance, shared by all workers. Zero means unlimited. Reserve before constructing protocol or TLS state; excess sockets close without an HTTP response. A reservation survives socket closure until accepted asynchronous work has completed and its context is retired. No contexts are preallocated.
-
-**Source:** [include/transport/server/tcp_policies.h:57](../../../../include/transport/server/tcp_policies.h#L57)
-
-<a id="field-inactivity-period"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> inactivity_period
-
-**FIELD** · *transport::server::tcp_policies*
-
-```cpp
-std::chrono::milliseconds inactivity_period = std::chrono::seconds{60};
-```
-
-Sampled period without positive socket I/O, including TLS negotiation and graceful close. Zero disables expiration; negative periods are rejected during transport construction (the first `start()` for the public HTTP/HTTPS server). Queueing work does not renew the period. Recording a context's activity needs no clock read; workers query time for maintenance scheduling and sampling. They sample activity every min(period, 250 ms); the first sample starts the clock and a sample observing activity renews it. Expiration is never earlier than the configured period and normally occurs within two additional sample intervals (at most 500 ms), plus scheduling and scan delay. It aborts the socket without forcibly cancelling handlers. This is not an absolute request deadline or a minimum transfer rate.
-
-**Source:** [include/transport/server/tcp_policies.h:59](../../../../include/transport/server/tcp_policies.h#L59)
-
-<a id="field-max-pending-sources"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_pending_sources
-
-**FIELD** · *transport::server::tcp_policies*
-
-```cpp
-std::size_t max_pending_sources = 32;
-```
-
-Maximum retained output readers per connection, including the active reader. Zero means unlimited. Sources with empty prefixes still count. Credit is released on retirement or destruction, including errors and connection closure. Source-owned memory and files are outside the inline byte budget.
-
-**Source:** [include/transport/server/tcp_policies.h:61](../../../../include/transport/server/tcp_policies.h#L61)
+Representable maxima are checked at construction without allocating gigantic
+buffers or worker groups. Real socket tests use available loopback ports.
+Backlog tests verify that accepted requests work with the kernel; they do not
+assert an exact kernel queue length. Port 1 and 65535 are parser bounds reviewed
+in both backends; tests reject 0 and 65536 without requiring privileged or
+potentially occupied boundary ports.

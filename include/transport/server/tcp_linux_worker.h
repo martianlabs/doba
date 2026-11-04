@@ -27,638 +27,414 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
-#include <cerrno>
 #include <chrono>
-#include <climits>
+#include <arpa/inet.h>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
+#include <functional>
 #include <limits>
 #include <memory>
-#include <mutex>
-#include <queue>
+#include <optional>
+#include <netinet/tcp.h>
 #include <stdexcept>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <thread>
+#include <unistd.h>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
-#include "platform.h"
 #include "transport/server/tcp_linux_context.h"
+#include "transport/server/tcp_linux_processing_queue.h"
+#include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] CONSTANTs                                                  ( public ) |
+// | [>] linux_worker                                               ( class ) |
 // +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-static constexpr uint64_t kStopEventId = 0;
-static constexpr uint64_t kWorkEventId = 1;
-static constexpr uint64_t kLstnrEventId = std::numeric_limits<uint64_t>::max();
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] worker                                                     ( struct ) |
-// +---------------------------------------------------------------------------+
-// | This struct represents a worker thread that handles TCP connections for   |
-// | an engine. It manages the `epoll` instance, listener socket, and          |
-// | event file descriptors. It also sets up, starts, and stops the worker,    |
-// | runs its thread, checks whether the current thread is that worker, and    |
-// | handles connection events.                                                |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
-// |   FAty - engine factory type being used.                                  |
-// |   CNty - connection type being used.                                      |
-// |   POty - policies type being used.                                        |
+// | Owns socket I/O and connection contexts on one thread.                    |
+// | The event descriptor carries only a stop signal, never application work. |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
-          protocol::contracts::engine_factory<ENty> FAty, typename CNty,
-          typename POty>
-struct worker {
+          protocol::contracts::engine_factory<ENty> FAty>
+class linux_worker {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  worker(POty configuration, const FAty& create_engine,
-         types::on_client_connected_delegate on_connection,
-         types::on_client_disconnected_delegate on_disconnection,
-         typename CNty::shared_state shared_state,
-         std::shared_ptr<connection_budget> budget)
-      : budget_{std::move(budget)}, configuration_{configuration},
-        create_engine_{create_engine},
-        shared_state_{std::move(shared_state)},
-        on_connection_{std::move(on_connection)},
-        on_disconnection_{std::move(on_disconnection)} {}
-  worker(const worker&) = delete;
-  worker(worker&&) noexcept = delete;
-  ~worker() { stop(); }
+  linux_worker(tcp_policies configuration, const FAty& factory,
+               const std::function<void()>& connected,
+               const std::function<void()>& disconnected)
+      : configuration_(std::move(configuration)), factory_(factory),
+        connected_(connected), disconnected_(disconnected) {}
+  linux_worker(const linux_worker&) = delete;
+  ~linux_worker() { stop(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  worker& operator=(const worker&) = delete;
-  worker& operator=(worker&&) noexcept = delete;
+  linux_worker& operator=(const linux_worker&) = delete;
   // +=========================================================================+
-  // | [>] setup                                                    ( public ) |
+  // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Sets up the worker by creating the `epoll` instance, event file         |
-  // | descriptors, and listener socket. It configures the listener, binds it  |
-  // | to the given IP address and port, and registers its events with         |
-  // | `epoll`. If anything goes wrong, it cleans up the resources and         |
-  // | throws a runtime error.                                                 |
-  // +-------------------------------------------------------------------------+
-  void setup(in_addr ip, uint16_t port) {
-    epoll_fd_ = ::epoll_create1(EPOLL_CLOEXEC);
-    if (epoll_fd_ == -1) {
-      throw std::runtime_error("Epoll instance could not be created!");
+  void start(in_addr ip, std::uint16_t port) {
+    epoll_ = ::epoll_create1(EPOLL_CLOEXEC);
+    stop_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    listener_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
+                         IPPROTO_TCP);
+    if (epoll_ < 0 || stop_ < 0 || listener_ < 0) {
+      throw std::runtime_error("Cannot create Linux transport descriptors");
     }
-    stop_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (stop_fd_ == -1) {
-      close_resources();
-      throw std::runtime_error("Stop event could not be created!");
-    }
-    work_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (work_fd_ == -1) {
-      close_resources();
-      throw std::runtime_error("Work event could not be created!");
-    }
-    listener_fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC,
-                            IPPROTO_TCP);
-    if (listener_fd_ == -1) {
-      close_resources();
-      throw std::runtime_error("Socket could not be created!");
-    }
-    int reuse_address = 1;
-    if (::setsockopt(listener_fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_address,
-                     sizeof(reuse_address)) == -1 ||
-        ::setsockopt(listener_fd_, SOL_SOCKET, SO_REUSEPORT, &reuse_address,
-                     sizeof(reuse_address)) == -1) {
-      close_resources();
-      throw std::runtime_error("Listener socket could not be configured!");
+    const int enabled = 1;
+    if (::setsockopt(listener_, SOL_SOCKET, SO_REUSEADDR, &enabled,
+                     sizeof(enabled)) < 0 ||
+        ::setsockopt(listener_, SOL_SOCKET, SO_REUSEPORT, &enabled,
+                     sizeof(enabled)) < 0) {
+      throw std::runtime_error("Cannot configure Linux listener");
     }
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr = ip;
     address.sin_port = htons(port);
-    if (::bind(listener_fd_, reinterpret_cast<const sockaddr*>(&address),
-               sizeof(address)) == -1 ||
-        ::listen(listener_fd_, configuration_.listen_backlog
-                                   ? configuration_.listen_backlog
-                                   : SOMAXCONN) == -1) {
-      close_resources();
-      throw std::runtime_error("Listener socket could not be started!");
+    const int backlog = configuration_.listen_backlog;
+    if (::bind(listener_, reinterpret_cast<sockaddr*>(&address),
+               sizeof(address)) < 0 ||
+        ::listen(listener_, backlog ? backlog : SOMAXCONN) < 0 ||
+        !watch(stop_, EPOLL_CTL_ADD, EPOLLIN, kStop) ||
+        !watch(listener_, EPOLL_CTL_ADD, EPOLLIN, kListener)) {
+      throw std::runtime_error("Cannot start Linux listener");
     }
-    epoll_event stop_event{};
-    stop_event.events = EPOLLIN;
-    stop_event.data.u64 = kStopEventId;
-    epoll_event work_event{};
-    work_event.events = EPOLLIN;
-    work_event.data.u64 = kWorkEventId;
-    epoll_event lsn_event{};
-    lsn_event.events = EPOLLIN;
-    lsn_event.data.u64 = kLstnrEventId;
-    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_event) == -1 ||
-        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, work_fd_, &work_event) == -1 ||
-        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listener_fd_, &lsn_event) == -1) {
-      close_resources();
-      throw std::runtime_error("Listener could not be registered!");
-    }
-  }
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void start() {
-    thread_ = std::jthread([this]() {
-      current_worker_ = this;
-      run();
-      current_worker_ = nullptr;
-    });
-  }
-  // +=========================================================================+
-  // | [>] is_current_thread                                        ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool is_current_thread() const { return current_worker_ == this; }
-  // +=========================================================================+
-  // | [>] is_current_thread                                        ( public ) |
-  // +-------------------------------------------------------------------------+
-  static bool is_current_thread(const FAty& cr_engine) {
-    return current_worker_ && &current_worker_->create_engine_ == &cr_engine;
+    thread_ = std::thread([this]() { run(); });
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // Only the external owner calls stop; descriptors stay open until join.
   void stop() {
-    if (is_current_thread()) {
-      throw std::runtime_error("Worker cannot be stopped from itself!");
+    if (thread_.joinable()) {
+      const std::uint64_t signal = 1;
+      ssize_t size;
+      do {
+        size = ::write(stop_, &signal, sizeof(signal));
+      } while (size < 0 && errno == EINTR);
+      thread_.join();
     }
-    if (epoll_fd_ == -1) return;
-    request_stop();
-    if (thread_.joinable()) thread_.join();
-    close_contexts();
-    close_resources();
+    close_descriptor(listener_);
+    close_descriptor(stop_);
+    close_descriptor(timer_);
+    close_descriptor(epoll_);
   }
   // +=========================================================================+
-  // | [>] request_stop                                             ( public ) |
+  // | [>] is_current_thread                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Asks the worker to stop by setting the `stopping_` flag and writing to  |
-  // | the stop event file descriptor. If it’s already stopping, it returns    |
-  // | right away. The method is thread-safe and can be called from any        |
-  // | thread.                                                                 |
-  // +-------------------------------------------------------------------------+
-  void request_stop() {
-    if (stopping_.exchange(true)) return;
-    uint64_t stop = 1;
-    ssize_t written = 0;
-    do {
-      written = ::write(stop_fd_, &stop, sizeof(stop));
-    } while (written == -1 && errno == EINTR);
-  }
-  // +=========================================================================+
-  // | [>] request_quiesce                                          ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Requests quiescence and signals the worker's stop event descriptor.     |
-  // | Call while the worker is active and coordinate with `stop()`.           |
-  // | Use `wait_quiesced()` to wait for the request to be handled.            |
-  // +-------------------------------------------------------------------------+
-  void request_quiesce() {
-    quiescing_.store(true);
-    uint64_t sgn = 1;
-    while (::write(stop_fd_, &sgn, sizeof(sgn)) == -1 && errno == EINTR) {
-    }
-  }
-  // +=========================================================================+
-  // | [>] wait_quiesced                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Waits on `quiesced_` until the worker handles the request.              |
-  // | Call `request_quiesce()` first.                                         |
-  // +-------------------------------------------------------------------------+
-  void wait_quiesced() const {
-    while (!quiesced_.load()) quiesced_.wait(false);
+  bool is_current_thread() const noexcept {
+    return thread_.get_id() == std::this_thread::get_id();
   }
 
  private:
   // +=========================================================================+
+  // | [>] close_descriptor                                        ( private ) |
+  // +-------------------------------------------------------------------------+
+  static void close_descriptor(int& descriptor) noexcept {
+    if (descriptor >= 0) ::close(descriptor);
+    descriptor = -1;
+  }
+  // +=========================================================================+
+  // | [>] watch                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool watch(int socket, int operation, std::uint32_t events,
+             std::uint64_t identity) noexcept {
+    epoll_event event{};
+    event.events = events;
+    event.data.u64 = identity;
+    return ::epoll_ctl(epoll_, operation, socket, &event) == 0;
+  }
+  // +=========================================================================+
+  // | [>] accept                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  void accept() {
+    for (std::size_t count = 0; count < 64; ++count) {
+      const int socket = ::accept4(listener_, nullptr, nullptr,
+                                    SOCK_NONBLOCK | SOCK_CLOEXEC);
+      if (socket < 0) {
+        if (errno == EINTR) continue;
+        // Resource/system failures end admission until an explicit restart.
+        // Keeping a readable listener here would spin without making progress.
+        if (errno != EAGAIN && errno != EWOULDBLOCK &&
+            errno != ECONNABORTED && errno != EPROTO) {
+          close_descriptor(listener_);
+        }
+        return;
+      }
+      if (configuration_.max_connections &&
+          contexts_.size() >= configuration_.max_connections) {
+        ::close(socket);
+        continue;
+      }
+      if (next_identity_ == std::numeric_limits<std::uint64_t>::max()) {
+        ::close(socket);
+        close_descriptor(listener_);
+        return;
+      }
+      const auto identity = next_identity_++;
+      try {
+        const int enabled = 1;
+        if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &enabled,
+                         sizeof(enabled)) < 0) {
+          throw std::runtime_error("Cannot configure accepted socket");
+        }
+        auto context = std::make_unique<linux_context<ENty>>(
+            socket, configuration_.receive_buffer_capacity,
+            configuration_.max_buffered_send_bytes, factory_);
+        if (!watch(socket, EPOLL_CTL_ADD, EPOLLIN | EPOLLRDHUP, identity)) {
+          throw std::runtime_error("Cannot register accepted socket");
+        }
+        contexts_.emplace(identity, std::move(context));
+        if (connected_) connected_();
+      } catch (...) {
+        if (contexts_.contains(identity)) close(identity);
+        else ::close(socket);
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] close                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  void close(std::uint64_t identity) noexcept {
+    auto found = contexts_.find(identity);
+    if (found == contexts_.end()) return;
+    if (processing_) processing_->cancel(identity);
+    const auto socket = found->second->socket();
+    ::epoll_ctl(epoll_, EPOLL_CTL_DEL, socket, nullptr);
+    ::close(socket);
+    contexts_.erase(found);
+    if (disconnected_) {
+      try { disconnected_(); } catch (...) {}
+    }
+  }
+  // +=========================================================================+
+  // | [>] reconcile                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  void reconcile(std::uint64_t identity, const linux_context<ENty>& context) {
+    const auto& progress = context.progress();
+    if (!progress.turn_requested && !progress.turn_at &&
+        !(progress.turn_after_output_drained && !context.pending())) {
+      if (processing_) processing_->cancel(identity);
+      return;
+    }
+    if (!processing_) processing_ = std::make_unique<linux_processing_queue>();
+    processing_->reconcile(identity, progress, !context.pending(),
+        progress.turn_at ? clock::now() : clock::time_point{});
+  }
+  // +=========================================================================+
+  // | [>] service                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  void service(std::uint64_t identity, linux_context<ENty>& context,
+               bool was_pending) {
+    if (!context.flush()) {
+      close(identity);
+      return;
+    }
+    const bool pending = context.pending();
+    if (pending != was_pending &&
+        !watch(context.socket(), EPOLL_CTL_MOD,
+               pending ? EPOLLOUT : EPOLLIN | EPOLLRDHUP, identity)) {
+      close(identity);
+      return;
+    }
+    reconcile(identity, context);
+  }
+  // +=========================================================================+
+  // | [>] handle                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  void handle(std::uint64_t identity, std::uint32_t events) {
+    auto found = contexts_.find(identity);
+    if (found == contexts_.end()) return;
+    auto& context = *found->second;
+    try {
+      if (events & (EPOLLERR | EPOLLHUP)) {
+        close(identity);
+        return;
+      }
+      const bool was_pending = context.pending();
+      if (!was_pending && !context.receive()) {
+        close(identity);
+        return;
+      }
+      service(identity, context, was_pending);
+    } catch (...) {
+      close(identity);
+    }
+  }
+  // +=========================================================================+
+  // | [>] process                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  void process(std::uint64_t identity) {
+    auto found = contexts_.find(identity);
+    if (found == contexts_.end()) return;
+    auto& context = *found->second;
+    try {
+      const bool was_pending = context.pending();
+      if (!context.process()) {
+        close(identity);
+        return;
+      }
+      service(identity, context, was_pending);
+    } catch (...) {
+      close(identity);
+    }
+  }
+  // +=========================================================================+
+  // | [>] read_timer                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool read_timer() noexcept {
+    std::uint64_t expirations;
+    ssize_t size;
+    do {
+      size = ::read(timer_, &expirations, sizeof(expirations));
+    } while (size < 0 && errno == EINTR);
+    if (size == static_cast<ssize_t>(sizeof(expirations))) {
+      armed_.reset();
+      return true;
+    }
+    return size < 0 && errno == EAGAIN;
+  }
+  // +=========================================================================+
+  // | [>] arm_timer                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool arm_timer() noexcept {
+    if (!processing_) return true;
+    const auto next = processing_->next_deadline();
+    // A bounded promotion may leave due identities for the next poll turn.
+    if (next && *next <= clock::now()) return true;
+    if (next == armed_) return true;
+    if (next && timer_ < 0) {
+      timer_ = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+      if (timer_ < 0 || !watch(timer_, EPOLL_CTL_ADD, EPOLLIN, kTimer)) {
+        return false;
+      }
+    }
+    itimerspec setting{};
+    if (next) {
+      auto remaining = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          *next - clock::now());
+      if (remaining.count() <= 0) remaining = std::chrono::nanoseconds(1);
+      const auto seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(remaining);
+      setting.it_value.tv_sec = static_cast<time_t>(std::min<std::int64_t>(
+          seconds.count(), std::numeric_limits<time_t>::max()));
+      setting.it_value.tv_nsec = static_cast<long>(
+          (remaining - seconds).count());
+    }
+    if (timer_ >= 0 && ::timerfd_settime(timer_, 0, &setting, nullptr) < 0) {
+      return false;
+    }
+    armed_ = next;
+    return true;
+  }
+  // +=========================================================================+
   // | [>] run                                                     ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Runs the worker thread’s main loop. It waits for events from `epoll`    |
-  // | and handles stop, work, listener, and context events as they come in.   |
-  // | It also manages timed and ready work, and cleans up contexts            |
-  // | when needed. The loop keeps running until the worker is stopping and    |
-  // | all its contexts are closed.                                            |
-  // +-------------------------------------------------------------------------+
-  void run() {
+  void run() noexcept {
     std::array<epoll_event, 64> events{};
     for (;;) {
-      int tout = -1;
-      if (!ready_.empty()) {
-        tout = 0;
-      } else if (!timers_.empty()) {
-        auto remaining = timers_.top().first - std::chrono::steady_clock::now();
-        auto milliseconds =
-            std::chrono::duration_cast<std::chrono::milliseconds>(remaining);
-        if (remaining <= std::chrono::steady_clock::duration::zero()) {
-          tout = 0;
-        } else if (milliseconds.count() >= INT_MAX) {
-          tout = INT_MAX;
-        } else {
-          tout = static_cast<int>(milliseconds.count() + 1);
+      int timeout = -1;
+      if (processing_) {
+        const auto due = processing_->next_deadline();
+        if (processing_->ready_count() || (due && *due <= clock::now())) {
+          timeout = 0;
         }
       }
-      if (configuration_.inactivity_period.count() > 0) {
-        const auto tick = std::min<std::int64_t>(
-            connection_progress::maintenance_interval.count(),
-            configuration_.inactivity_period.count());
-        if (tout < 0 || tout > tick) tout = static_cast<int>(tick);
-      }
-      int ready = ::epoll_wait(epoll_fd_, events.data(), events.size(), tout);
-      if (ready == -1) {
+      const int ready =
+          ::epoll_wait(epoll_, events.data(), events.size(), timeout);
+      if (ready < 0) {
         if (errno == EINTR) continue;
         break;
       }
-      for (std::size_t i = 0; i < static_cast<std::size_t>(ready); i++) {
-        if (events[i].data.u64 == kStopEventId) {
-          handle_stop();
-        } else if (events[i].data.u64 == kWorkEventId) {
-          handle_work();
-        } else if (events[i].data.u64 == kLstnrEventId) {
-          if (!quiescing_.load() && !stopping_.load()) handle_listener();
-        } else {
-          auto ctx = static_cast<context<ENty, CNty>*>(events[i].data.ptr);
-          if (!ctx->is_closed()) {
-            try {
-              handle_context(ctx, events[i].events);
-            } catch (...) {
-              close_context(ctx);
-            }
-          }
-        }
+      bool stopping = false;
+      for (int i = 0; i < ready; ++i) {
+        if (events[i].data.u64 == kStop) stopping = true;
       }
-      if (!timers_.empty()) {
-        const auto now = std::chrono::steady_clock::now();
-        while (!timers_.empty() && timers_.top().first <= now) {
-          ready_.push_back(timers_.top().second);
-          timers_.pop();
-        }
-      }
-      std::size_t count = ready_.size();
-      while (count--) {
-        auto work = ready_.front();
-        ready_.pop_front();
-        work.run(work.context);
-      }
-      if (configuration_.inactivity_period.count() > 0) {
-        const auto now = std::chrono::steady_clock::now();
-        if (now >= next_expiry_) {
-          for (const auto& item : contexts_) {
-            if (item.second->expire(configuration_.inactivity_period))
-              close_context(item.first);
-          }
-          next_expiry_ = now + std::min(configuration_.inactivity_period,
-                                      connection_progress::maintenance_interval);
-        }
-      }
-      retire_contexts();
-      if (stopping_.load() && contexts_.empty()) break;
-    }
-    close_contexts();
-  }
-  // +=========================================================================+
-  // | [>] handle_stop                                             ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Handles a stop event by reading from the stop event file descriptor and |
-  // | checking whether the worker is stopping or quiescing. If it is, the     |
-  // | method removes the listener from `epoll`, closes it, and stops all      |
-  // | contexts. It then sets the `quiesced_` flag and notifies any waiting    |
-  // | threads. This runs on the worker thread when it receives a stop event.  |
-  // +-------------------------------------------------------------------------+
-  void handle_stop() {
-    uint64_t stop = 0;
-    ssize_t received = 0;
-    do {
-      received = ::read(stop_fd_, &stop, sizeof(stop));
-    } while (received == -1 && errno == EINTR);
-    if (!stopping_.load() && !quiescing_.load()) return;
-    if (listener_fd_ != -1) {
-      ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, listener_fd_, nullptr);
-      ::close(listener_fd_);
-      listener_fd_ = -1;
-    }
-    for (const auto& item : contexts_) {
-      auto ctx = item.first;
-      if (ctx->is_closed()) continue;
-      ctx->stop(true);
+      if (stopping) break;
       try {
-        if (!ctx->send_pending()) close_context(ctx);
-      } catch (...) {
-        close_context(ctx);
-      }
-    }
-    quiesced_.store(true);
-    quiesced_.notify_all();
-  }
-  // +=========================================================================+
-  // | [>] handle_work                                             ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Moves work submitted by other threads to the worker's queues.          |
-  // +-------------------------------------------------------------------------+
-  void handle_work() {
-    uint64_t sig = 0;
-    while (::read(work_fd_, &sig, sizeof(sig)) == -1 && errno == EINTR) {
-    }
-    std::lock_guard<std::mutex> lock(work_mutex_);
-    while (!incoming_.empty()) {
-      auto item = incoming_.front();
-      incoming_.pop_front();
-      if (item.first == std::chrono::steady_clock::time_point::min()) {
-        ready_.push_back(item.second);
-      } else {
-        timers_.push(item);
-      }
-    }
-  }
-  // +=========================================================================+
-  // | [>] execution                                               ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Returns this worker's capacity for executing opaque work.              |
-  // +-------------------------------------------------------------------------+
-  execution_capacity execution() {
-    return {this, [](void* owner, std::chrono::steady_clock::time_point due,
-                     execution_work work) {
-              static_cast<worker*>(owner)->enqueue(due, work);
-            }};
-  }
-  // +=========================================================================+
-  // | [>] enqueue                                                 ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Adds work to this worker's queue and wakes it when needed.             |
-  // +-------------------------------------------------------------------------+
-  void enqueue(std::chrono::steady_clock::time_point due, execution_work work) {
-    if (is_current_thread()) {
-      if (due == std::chrono::steady_clock::time_point::min()) {
-        ready_.push_back(work);
-      } else {
-        timers_.push({due, work});
-      }
-      return;
-    }
-    std::lock_guard<std::mutex> lock(work_mutex_);
-    incoming_.push_back({due, work});
-    uint64_t sig = 1;
-    ssize_t written;
-    do {
-      written = ::write(work_fd_, &sig, sizeof(sig));
-    } while (written == -1 && errno == EINTR);
-    if (written != static_cast<ssize_t>(sizeof(sig)) &&
-        !(written == -1 && errno == EAGAIN)) {
-      incoming_.pop_back();
-      throw std::runtime_error("Work could not be queued!");
-    }
-  }
-  // +=========================================================================+
-  // | [>] handle_listener                                         ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Handles a listener event by accepting a new connection. If the worker   |
-  // | is stopping or quiescing, it skips the connection. Otherwise, it        |
-  // | accepts it, sets `TCP_NODELAY`, and creates a context for it. If        |
-  // | anything goes wrong, it closes the socket. This runs on the worker      |
-  // | thread when a listener event comes in.                                  |
-  // +-------------------------------------------------------------------------+
-  void handle_listener() {
-    if (stopping_.load() || quiescing_.load()) return;
-    int socket =
-        ::accept4(listener_fd_, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
-    if (socket == -1) return;
-    if (stopping_.load() || quiescing_.load()) {
-      ::close(socket);
-      return;
-    }
-    try {
-      register_context(socket);
-    } catch (...) {
-      ::close(socket);
-    }
-  }
-  // +=========================================================================+
-  // | [>] register_context                                        ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Sets up a new context for the socket. It adds the context to the        |
-  // | `contexts_` map, registers it with `epoll`, then calls `connected()`    |
-  // | and `notify_connection()`. If anything goes wrong, it closes the        |
-  // | socket and cleans up. This runs on the worker thread when a new         |
-  // | connection is accepted.                                                 |
-  // +-------------------------------------------------------------------------+
-  void register_context(int socket) {
-    auto reservation = connection_reservation::acquire(budget_);
-    if (!reservation) { ::close(socket); return; }
-    int no_delay = 1;
-    if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &no_delay,
-                     sizeof(no_delay)) == -1)
-      throw std::runtime_error("Accepted socket could not be configured!");
-    std::size_t encrypted_receive_buffer_capacity = 0;
-    std::size_t network_bio_buffer_capacity = 0;
-    if constexpr (requires(const POty& value) {
-                    value.encrypted_receive_buffer_capacity;
-                    value.network_bio_buffer_capacity;
-                  }) {
-      encrypted_receive_buffer_capacity =
-          configuration_.encrypted_receive_buffer_capacity;
-      network_bio_buffer_capacity = configuration_.network_bio_buffer_capacity;
-    }
-    auto ctx = std::make_shared<context<ENty, CNty>>(
-        socket, configuration_.receive_buffer_capacity,
-        configuration_.max_buffered_send_bytes, create_engine_, on_connection_,
-        on_disconnection_, shared_state_, encrypted_receive_buffer_capacity,
-        network_bio_buffer_capacity, configuration_.max_pending_sources,
-        std::move(*reservation));
-    auto ctx_ptr = ctx.get();
-    if (!contexts_.emplace(ctx_ptr, std::move(ctx)).second) {
-      throw std::runtime_error("Context could not be registered!");
-    }
-    epoll_event event{};
-    event.events = EPOLLIN | EPOLLRDHUP;
-    event.data.ptr = ctx_ptr;
-    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket, &event) == -1) {
-      close_context(ctx_ptr);
-      return;
-    }
-    try {
-      ctx_ptr->connected(epoll_fd_, execution());
-      ctx_ptr->notify_connection();
-    } catch (...) {
-      close_context(ctx_ptr);
-      return;
-    }
-  }
-  // +=========================================================================+
-  // | [>] handle_context                                          ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Handles a context event by checking its flags and calling the           |
-  // | appropriate methods. If the worker is stopping or quiescing, it stops   |
-  // | the context. If the context can receive data, it calls `receive()`.     |
-  // | If it can send or has data waiting, it calls `send_pending()`. If       |
-  // | anything goes wrong, it closes the context. This runs on the worker     |
-  // | thread when a context event comes in.                                   |
-  // +-------------------------------------------------------------------------+
-  void handle_context(context<ENty, CNty>* ctx, uint32_t events) {
-    if (events & EPOLLERR) {
-      close_context(ctx);
-      return;
-    }
-    if (stopping_.load() || quiescing_.load()) ctx->stop(true);
-    bool should_send = (events & EPOLLOUT) != 0;
-    if (ctx->can_receive() && (events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP))) {
-      if (stopping_.load() || quiescing_.load()) {
-        ctx->stop(true);
-      } else {
-        const ssize_t received = ctx->receive();
-        if (received > 0) {
-          should_send = true;
-        } else if (received == 0) {
-          if (!ctx->eof()) {
-            close_context(ctx);
-            return;
+        bool healthy = true;
+        for (int i = 0; i < ready; ++i) {
+          const auto& event = events[i];
+          if (event.data.u64 == kListener) {
+            if (listener_ >= 0) accept();
+          } else if (event.data.u64 == kTimer) {
+            healthy = read_timer();
+            if (!healthy) break;
+          } else {
+            handle(event.data.u64, event.events);
           }
-          ctx->stop();
-        } else if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
-          close_context(ctx);
-          return;
         }
-      }
-    }
-    if (should_send || !ctx->can_receive()) {
-      if (!ctx->send_pending()) close_context(ctx);
-      else ctx->resume_input();
-    }
-  }
-  // +=========================================================================+
-  // | [>] close_context                                           ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Closes a context by retiring its socket, removing it from `epoll`, and  |
-  // | moving it to the `retired_contexts_` list. It also calls                |
-  // | `notify_disconnection()` to let the owner know. This runs on the        |
-  // | worker thread when a context needs to be closed.                        |
-  // +-------------------------------------------------------------------------+
-  void close_context(context<ENty, CNty>* ctx) {
-    int socket = ctx->retire_socket();
-    if (socket == -1) return;
-    ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket, nullptr);
-    ::close(socket);
-    if (ctx->stop_engine([ctx, this]() {
-          std::lock_guard<std::mutex> lock(work_mutex_);
-          ctx->mark_engine_complete();
-          uint64_t signal = 1;
-          while (::write(work_fd_, &signal, sizeof(signal)) == -1 &&
-                 errno == EINTR) {
+        if (!healthy) break;
+        if (processing_) {
+          if (processing_->next_deadline()) {
+            processing_->promote(clock::now());
           }
-        })) {
-      ctx->mark_engine_complete();
-    }
-    ctx->retirement_next = retired_contexts_;
-    retired_contexts_ = ctx;
-    ctx->notify_disconnection();
-  }
-  // +=========================================================================+
-  // | [>] retire_contexts                                         ( private ) |
-  // +-------------------------------------------------------------------------+
-  // | Cleans up all contexts in `retired_contexts_` by removing them from     |
-  // | the `contexts_` map and deleting them. This runs on the worker thread   |
-  // | after the contexts have been closed.                                    |
-  // +-------------------------------------------------------------------------+
-  void retire_contexts() {
-    context<ENty, CNty>* pending = nullptr;
-    while (retired_contexts_) {
-      context<ENty, CNty>* ctx = retired_contexts_;
-      retired_contexts_ = ctx->retirement_next;
-      bool complete;
-      {
-        std::lock_guard<std::mutex> lock(work_mutex_);
-        complete = ctx->engine_complete();
-      }
-      if (complete) {
-        contexts_.erase(ctx);
-      } else {
-        ctx->retirement_next = pending;
-        pending = ctx;
+          const auto count = std::min<std::size_t>(
+              64, processing_->ready_count());
+          for (std::size_t i = 0; i < count; ++i) {
+            const auto identity = processing_->take_ready();
+            if (!identity) break;
+            process(*identity);
+          }
+        }
+        if (!arm_timer()) break;
+      } catch (...) {
+        break;
       }
     }
-    retired_contexts_ = pending;
+    if (processing_) processing_->clear();
+    close_descriptor(listener_);
+    close_descriptor(timer_);
+    armed_.reset();
+    while (!contexts_.empty()) close(contexts_.begin()->first);
   }
   // +=========================================================================+
-  // | [>] close_contexts                                          ( private ) |
+  // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Closes all contexts by iterating through the `contexts_` map and        |
-  // | calling `close_context()` on each one. This runs on the worker thread.  |
-  // +-------------------------------------------------------------------------+
-  void close_contexts() {
-    for (auto& item : contexts_) {
-      context<ENty, CNty>* ctx = item.first;
-      if (ctx->is_closed()) continue;
-      close_context(ctx);
-    }
-    retire_contexts();
-  }
+  using clock = linux_processing_queue::clock;
   // +=========================================================================+
-  // | [>] close_resources                                         ( private ) |
+  // | [>] CONSTANTs                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Closes the listener, stop, work, and epoll descriptors.                 |
-  // +-------------------------------------------------------------------------+
-  void close_resources() {
-    if (listener_fd_ != -1) ::close(listener_fd_);
-    if (stop_fd_ != -1) ::close(stop_fd_);
-    if (work_fd_ != -1) ::close(work_fd_);
-    if (epoll_fd_ != -1) ::close(epoll_fd_);
-    listener_fd_ = -1;
-    stop_fd_ = -1;
-    work_fd_ = -1;
-    epoll_fd_ = -1;
-  }
+  static constexpr std::uint64_t kStop = 0;
+  static constexpr std::uint64_t kListener = 1;
+  static constexpr std::uint64_t kTimer = 2;
   // +=========================================================================+
-  // | USINGs                                                      ( private ) |
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  using work_entry =
-      std::pair<std::chrono::steady_clock::time_point, execution_work>;
-  // +=========================================================================+
-  // | TYPEs                                                       ( private ) |
-  // +-------------------------------------------------------------------------+
-  struct later_work {
-    bool operator()(const work_entry& left, const work_entry& right) const {
-      return left.first > right.first;
-    }
-  };
-  // +=========================================================================+
-  // | USINGs                                                      ( private ) |
-  // +-------------------------------------------------------------------------+
-  using internal_queue =
-      std::priority_queue<work_entry, std::vector<work_entry>, later_work>;
-  using contexts_map = std::unordered_map<context<ENty, CNty>*,
-                                          std::shared_ptr<context<ENty, CNty>>>;
-  // +=========================================================================+
-  // | ATTRIBUTEs                                                  ( private ) |
-  // +-------------------------------------------------------------------------+
-  const std::shared_ptr<connection_budget> budget_;
-  std::chrono::steady_clock::time_point next_expiry_{};
-  const POty configuration_;
-  const FAty& create_engine_;
-  const typename CNty::shared_state shared_state_;
-  int epoll_fd_{-1};
-  int stop_fd_{-1};
-  int work_fd_{-1};
-  int listener_fd_{-1};
-  std::atomic<bool> stopping_{false};
-  std::atomic<bool> quiescing_{false};
-  std::atomic<bool> quiesced_{false};
-  std::deque<execution_work> ready_;
-  internal_queue timers_;
-  std::deque<work_entry> incoming_;
-  std::mutex work_mutex_;
-  std::jthread thread_;
-  inline static thread_local const worker* current_worker_{nullptr};
-  contexts_map contexts_;
-  context<ENty, CNty>* retired_contexts_{nullptr};
-  types::on_client_connected_delegate on_connection_;
-  types::on_client_disconnected_delegate on_disconnection_;
+  // Immutable worker configuration, including its admission capacity.
+  const tcp_policies configuration_;
+  // Engine factory, alive until the worker has joined.
+  const FAty& factory_;
+  // Optional connection notification executed by this worker.
+  const std::function<void()>& connected_;
+  // Optional notification after context destruction.
+  const std::function<void()>& disconnected_;
+  // Readiness set, kept open until the worker has joined.
+  int epoll_{-1};
+  // External owner writes here to wake and stop the worker.
+  int stop_{-1};
+  // Nonblocking listening socket.
+  int listener_{-1};
+  // The sole owner of connection processing.
+  std::thread thread_;
+  // Lifetime identities prevent stale epoll events from following FD reuse.
+  std::uint64_t next_identity_{3};
+  std::unordered_map<std::uint64_t,
+                     std::unique_ptr<linux_context<ENty>>> contexts_;
+  // Allocated only when a connection requests runnable work or a deadline.
+  std::unique_ptr<linux_processing_queue> processing_;
+  // One monotonic timer descriptor, created only for future deadlines.
+  int timer_{-1};
+  std::optional<clock::time_point> armed_;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

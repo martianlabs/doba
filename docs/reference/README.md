@@ -11,12 +11,10 @@
 Looking for a precise signature or a default? Start with the header that owns it. The index lists supported public headers; implementation-only headers retain short status pages. For a walkthrough, see the [guide](../guide/README.md).
 
 Implementation declarations live in *detail* namespaces and are not supported API.
-**Compatibility:** the handler factories and signature adapters, engine dispatch
-helpers, platform connection machinery, engine-factory helpers, TLS session
-construction, and hashing/date/temp-file helpers have moved out of their former
-public namespaces. Use route registration, public server/transport constructors,
-and the documented customization contracts. No compatibility aliases retain the
-old names; the processing behavior is unchanged.
+Use route registration, public server/transport constructors and documented
+customization contracts. Handler adapters, platform connection machinery,
+engine factories and TLS session/configuration helpers are implementation-only;
+there are no supported compatibility aliases for detail declarations.
 
 <a name="common"></a>
 <h2>
@@ -48,6 +46,7 @@ old names; the processing behavior is unchanged.
 - [common/signaler_linux.h](common/signaler_linux.md)
 - [common/signaler_windows.h](common/signaler_windows.md)
 - [common/task.h](common/task.md)
+- [common/task_execution.h](common/task_execution.md)
   - [task::promise_type](common/promise_type.md)
     - [task::promise_type::final_awaiter](common/final_awaiter.md)
 - [common/task_awaiters.h](common/task_awaiters.md)
@@ -93,6 +92,7 @@ old names; the processing behavior is unchanged.
 </h2>
 
 - [protocol/contracts.h](protocol/contracts.md)
+- [protocol/processing_result.h](protocol/processing_result.md)
 - [protocol/deserialization.h](protocol/deserialization.md)
 - [protocol/http/common/auth/authentication_result.h](protocol/http/common/auth/authentication_result.md)
 - [protocol/http/common/auth/basic.h](protocol/http/common/auth/basic.md)
@@ -179,6 +179,9 @@ old names; the processing behavior is unchanged.
 - [protocol/http/v11/contracts.h](protocol/http/v11/contracts.md)
 - [protocol/http/v11/decoder.h](protocol/http/v11/decoder.md)
 - [protocol/http/v11/engine.h](protocol/http/v11/engine.md)
+- [request_processor_sync](protocol/http/v11/request_processor_sync.md)
+- [request_processor_async](protocol/http/v11/request_processor_async.md)
+- [pending_response](protocol/http/v11/pending_response.md)
 - [protocol/http/v11/headers/connection.h](protocol/http/v11/headers/connection.md)
 - [protocol/http/v11/headers/content_length.h](protocol/http/v11/headers/content_length.md)
 - [protocol/http/v11/headers/expect.h](protocol/http/v11/headers/expect.md)
@@ -219,7 +222,12 @@ old names; the processing behavior is unchanged.
 </h2>
 
 - [transport/server/contracts.h](transport/server/contracts.md)
+- [Connection admission](transport/server/connection_admission.md)
 - [transport/server/tcp.h](transport/server/tcp.md)
+- [Linux processing turns](transport/server/tcp_linux_processing.md)
+- [Windows processing turns](transport/server/tcp_windows_processing.md)
 - [transport/server/tcp_policies.h](transport/server/tcp_policies.md)
 - [transport/server/tls.h](transport/server/tls.md)
+- [transport/server/tls_engine.h](transport/server/tls_engine.md) (internal)
+- [transport/server/tls_configuration.h](transport/server/tls_configuration.md) (internal)
 - [transport/server/tls_policies.h](transport/server/tls_policies.md)

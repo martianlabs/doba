@@ -105,6 +105,7 @@ DOBA_TEST("noexcept handlers retain invalid signature rejection") {
   };
   DOBA_EXPECT(!router_handler_lambda<decltype(mutable_request)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(value_request)>);
+  static_assert(!router_handler_lambda<decltype(no_result)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(no_result)>);
 }
 
@@ -122,6 +123,7 @@ DOBA_TEST("sync signatures reject mutable and value requests") {
   DOBA_EXPECT(!router_handler_lambda<decltype(mutable_request)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(value_request)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(rvalue_request)>);
+  static_assert(!router_handler_lambda<decltype(no_result)>);
   DOBA_EXPECT(!router_handler_lambda<decltype(no_result)>);
 }
 

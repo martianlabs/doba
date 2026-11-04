@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/LICENSE-2.0
+//                     http://www.apache.org/licenses/
 //
 // Copyright 2025 martianLabs
 //
@@ -22,400 +22,378 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <atomic>
-#include <barrier>
-#include <functional>
+#include <array>
+#include <chrono>
+#include <coroutine>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
-#include "../../../../helpers/concurrency.h"
-#include "common/task.h"
-#include "protocol/http/v11/engine.h"
-#include "protocol/http/v11/request.h"
-#include "protocol/http/v11/response.h"
+#include "engine_probe.h"
 #include "test_helper.h"
 
 namespace {
-// +---------------------------------------------------------------------------+
-// | [>] general                                                    ( usings ) |
-// +---------------------------------------------------------------------------+
 using namespace martianlabs::doba;
-using namespace martianlabs::doba::protocol::http::v11;
-using protocol::http::router;
-using protocol::http::v11::detail::engine_async;
-using tests::manual_event;
-using tests::scope_exit;
-
-constexpr std::string_view slow = "GET /slow HTTP/1.1\r\nHost: a\r\n\r\n";
-constexpr std::string_view fast = "GET /fast HTTP/1.1\r\nHost: a\r\n\r\n";
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] output_state                                               ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct output_state {
-  std::mutex mutex;
-  std::string wire;
-  std::atomic<int> sends{0};
-  std::atomic<int> closes{0};
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] fixture                                                    ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct fixture {
-  std::shared_ptr<output_state> output = std::make_shared<output_state>();
-  engine<request, response> value;
-  explicit fixture(const router<request, response>& routes,
-                   policies config = {})
-      : value(config, routes) {
-    value.set_on_send([state = output](std::string_view head,
-                                       std::string_view body,
-                                       std::unique_ptr<common::reader>) {
-      std::lock_guard lock(state->mutex);
-      state->wire.append(head).append(body);
-      ++state->sends;
-    });
-    value.set_on_close([state = output] { ++state->closes; });
-  }
-  void receive(std::string_view wire) { value.on_bytes_received(wire); }
-};
-
-// +---------------------------------------------------------------------------+
-// | [>] respond                                                  ( function ) |
-// +---------------------------------------------------------------------------+
-void respond(response& res, std::string_view text) {
-  res.ok_200().set_header("Date", "fixed").set_body(text);
-}
+using probe = tests::unit::engine_probe;
+using request = probe::request;
+using response = probe::response;
+using router = probe::router;
+using policies = probe::policies;
+using clock_type = probe::clock;
+using common::task;
+using common::yield;
+using common::sleep_for;
+using namespace std::chrono_literals;
 }  // namespace
 
-// +===========================================================================+
-// | [>] completion contract covers both controlled stop orders  ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("completion contract covers both controlled stop orders") {
-  for (bool finish_first : {false, true}) {
-    engine_async state(32, {}, {});
-    int callbacks = 0;
-    state.begin();
-    if (finish_first) state.end();
-    const bool immediate = state.stop([&] { ++callbacks; });
-    DOBA_EXPECT_EQUAL(immediate, finish_first);
-    DOBA_EXPECT_EQUAL(callbacks, 0);
-    if (!finish_first) state.end();
-    DOBA_EXPECT_EQUAL(callbacks, finish_first ? 0 : 1);
-    DOBA_EXPECT(state.stop([&] { ++callbacks; }));
-    DOBA_EXPECT_EQUAL(callbacks, finish_first ? 0 : 1);
-  }
-}
-
-// +===========================================================================+
-// | [>] last completion races stop without losing or            ( test-case ) |
-// |     duplicating callbacks                                                 |
-// +---------------------------------------------------------------------------+
 DOBA_TEST(
-    "last completion races stop without losing or duplicating callbacks") {
-  for (int iteration = 0; iteration < 8; ++iteration) {
-    engine_async state(32, {}, {});
-    std::barrier start(3);
-    std::atomic<int> callbacks{0};
-    bool immediate = false;
-    state.begin();
-    std::jthread stopping([&] {
-      start.arrive_and_wait();
-      immediate = state.stop([&] { ++callbacks; });
-    });
-    std::jthread finishing([&] {
-      start.arrive_and_wait();
-      state.end();
-    });
-    start.arrive_and_wait();
-    stopping.join();
-    finishing.join();
-    DOBA_EXPECT_EQUAL(callbacks.load(), immediate ? 0 : 1);
+    "same connection starts several independent waits before completion") {
+  router routes;
+  int started = 0, completed = 0;
+  routes.add("GET", "/wait", [&](const request&, response& res) -> task<> {
+    ++started;
+    co_await sleep_for(5ms);
+    ++completed;
+    res.ok_200().set_body("done");
+  });
+  probe current(routes);
+  current.receive(probe::get("/wait") + probe::get("/wait") +
+                  probe::get("/wait"));
+  const auto admitted = clock_type::now();
+  DOBA_EXPECT_EQUAL(started, 3);
+  DOBA_EXPECT_EQUAL(completed, 0);
+  DOBA_EXPECT(current.outputs.empty());
+  DOBA_EXPECT(current.needs.turn_at.has_value());
+  const auto due = current.needs.turn_at;
+  current.receive({});
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+  // Every sleep was registered before this bound; no sequential-wait timing
+  // assertion is needed to prove all three can finish in one eligible turn.
+  std::this_thread::sleep_until(admitted + 5ms);
+  current.turn();
+  DOBA_EXPECT_EQUAL(completed, 3);
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 3U);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+}
+
+DOBA_TEST(
+    "later completions wait for earlier wire order without stalling sync") {
+  router routes;
+  std::vector<int> execution;
+  routes.add("GET", "/first", [&](const request&, response& res) -> task<> {
+    execution.push_back(1);
+    co_await yield();
+    co_await yield();
+    execution.push_back(4);
+    res.ok_200().set_body("first");
+  });
+  routes.add("GET", "/second", [&](const request&, response& res) -> task<> {
+    execution.push_back(2);
+    co_await yield();
+    execution.push_back(3);
+    res.ok_200().set_body("second");
+  });
+  int synchronous = 0;
+  routes.add("GET", "/sync", [&](const request&, response& res) {
+    ++synchronous;
+    res.ok_200().set_body("sync");
+  });
+  probe current(routes);
+  current.receive(probe::get("/first") + probe::get("/second") +
+                  probe::get("/sync"));
+  DOBA_EXPECT_EQUAL(synchronous, 1);
+  DOBA_EXPECT_EQUAL(execution, (std::vector<int>{1, 2}));
+  current.turn();
+  DOBA_EXPECT_EQUAL(execution, (std::vector<int>{1, 2, 3}));
+  DOBA_EXPECT(current.outputs.empty());
+  current.turn();
+  DOBA_EXPECT_EQUAL(execution, (std::vector<int>{1, 2, 3, 4}));
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 3U);
+  DOBA_EXPECT(current.outputs[0].ends_with("first"));
+  DOBA_EXPECT(current.outputs[1].ends_with("second"));
+  DOBA_EXPECT(current.outputs[2].ends_with("sync"));
+}
+
+DOBA_TEST("yielded work preserves sibling deadline and other connections") {
+  router routes;
+  int sleepers = 0, fast = 0;
+  routes.add("GET", "/sleep", [&](const request&, response&) -> task<> {
+    ++sleepers;
+    co_await sleep_for(1h);
+  });
+  routes.add("GET", "/yield", [](const request&, response& res) -> task<> {
+    co_await yield();
+    res.ok_200().set_body("yielded");
+  });
+  routes.add("GET", "/fast", [&](const request&, response& res) {
+    ++fast;
+    res.ok_200().set_body("fast");
+  });
+  probe current(routes), other(routes);
+  current.receive(probe::get("/sleep"));
+  const auto due = current.needs.turn_at;
+  DOBA_EXPECT(due.has_value());
+  current.receive(probe::get("/yield"));
+  DOBA_EXPECT(current.needs.turn_requested);
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+  current.turn();
+  DOBA_EXPECT(!current.needs.turn_requested);
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+  current.receive(probe::get("/fast"));
+  other.receive(probe::get("/fast"));
+  DOBA_EXPECT_EQUAL(fast, 2);
+  DOBA_EXPECT_EQUAL(sleepers, 1);
+  DOBA_EXPECT(current.outputs.empty());
+  DOBA_EXPECT_EQUAL(other.outputs.size(), 1U);
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+}
+
+DOBA_TEST(
+    "busy terminal source gates emission but allows eligible task progress") {
+  router routes;
+  const std::string large(32768, 's');
+  int completed = 0;
+  routes.add("GET", "/source", [&](const request&, response& res) {
+    res.ok_200().set_body(large);
+  });
+  routes.add("GET", "/later", [&](const request&, response& res) -> task<> {
+    co_await yield();
+    ++completed;
+    res.ok_200().set_body("later");
+  });
+  probe current(routes);
+  current.hold_source = true;
+  current.receive(probe::get("/source") + probe::get("/later"));
+  DOBA_EXPECT(current.held != nullptr);
+  DOBA_EXPECT(current.needs.turn_after_output_drained);
+  DOBA_EXPECT(current.needs.turn_requested);
+  current.turn(false);
+  DOBA_EXPECT_EQUAL(completed, 1);
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 1U);
+  DOBA_EXPECT(!current.needs.turn_requested);
+  DOBA_EXPECT(current.needs.turn_after_output_drained);
+  current.drain();
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 2U);
+  DOBA_EXPECT(current.wire.ends_with(large + current.outputs[1]));
+  DOBA_EXPECT(current.outputs[1].ends_with("later"));
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+}
+
+DOBA_TEST("busy output preserves both runnable work and future deadlines") {
+  router routes;
+  routes.add("GET", "/source", [](const request&, response& res) {
+    res.ok_200().set_body(std::string(32768, 'x'));
+  });
+  routes.add("GET", "/sleep", [](const request&, response&) -> task<> {
+    co_await sleep_for(1h);
+  });
+  routes.add("GET", "/yield", [](const request&, response& res) -> task<> {
+    co_await yield();
+    res.ok_200().set_body("done");
+  });
+  probe current(routes);
+  current.hold_source = true;
+  current.receive(probe::get("/source") + probe::get("/sleep") +
+                  probe::get("/yield"));
+  DOBA_EXPECT(current.needs.turn_requested);
+  DOBA_EXPECT(current.needs.turn_after_output_drained);
+  DOBA_EXPECT(current.needs.turn_at.has_value());
+  const auto due = current.needs.turn_at;
+  current.turn(false);
+  DOBA_EXPECT(!current.needs.turn_requested);
+  DOBA_EXPECT(current.needs.turn_after_output_drained);
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+  current.drain();
+  DOBA_EXPECT(!current.needs.turn_after_output_drained);
+  DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+}
+
+DOBA_TEST("turn budget bounds starts and fairly resumes all yielded siblings") {
+  for (std::size_t budget : {1U, 2U, 3U}) {
+    router routes;
+    std::array<int, 3> steps{};
+    for (int i = 0; i < 3; ++i) {
+      routes.add("GET", "/" + std::to_string(i),
+                 [&, i](const request&, response& res) -> task<> {
+        for (int j = 0; j < 4; ++j) {
+          ++steps[i];
+          co_await yield();
+        }
+        res.ok_200().set_body(std::to_string(i));
+      });
+    }
+    policies limits;
+    limits.max_task_steps_per_turn = budget;
+    probe current(routes, limits);
+    current.receive(probe::get("/0") + probe::get("/1") + probe::get("/2"));
+    DOBA_EXPECT_EQUAL(steps[0] + steps[1] + steps[2],
+                      static_cast<int>(budget));
+    for (int turn = 0; turn < 32 && current.needs.turn_requested; ++turn) {
+      const auto before = steps[0] + steps[1] + steps[2];
+      current.turn();
+      const auto advanced = steps[0] + steps[1] + steps[2] - before;
+      DOBA_EXPECT(advanced <= static_cast<int>(budget));
+    }
+    DOBA_EXPECT_EQUAL(steps, (std::array<int, 3>{4, 4, 4}));
+    DOBA_EXPECT_EQUAL(current.outputs.size(), 3U);
+    for (int i = 0; i < 3; ++i) {
+      DOBA_EXPECT(current.outputs[i].ends_with(std::to_string(i)));
+    }
+    DOBA_EXPECT(!current.needs.turn_requested);
   }
 }
 
-DOBA_TEST("completion publication survives repeated stop races on persistent threads") {
-  constexpr int rounds = 2048;
-  std::unique_ptr<engine_async> current;
-  std::barrier phase(3);
-  std::atomic<int> callbacks{0};
-  bool immediate = false;
-  int mismatches = 0;
-  std::jthread stopping([&] {
-    for (int i = 0; i < rounds; ++i) {
-      phase.arrive_and_wait();
-      immediate = current->stop([&] { ++callbacks; });
-      phase.arrive_and_wait();
-    }
+DOBA_TEST("ordered close cancels already started successors exactly once") {
+  router routes;
+  auto token = std::make_shared<int>(0);
+  routes.add("GET", "/first", [](const request&, response& res) -> task<> {
+    co_await yield();
+    co_await yield();
+    res.ok_200().set_body("first");
   });
-  std::jthread finishing([&] {
-    for (int i = 0; i < rounds; ++i) {
-      phase.arrive_and_wait();
-      current->end();
-      phase.arrive_and_wait();
-    }
+  routes.add("GET", "/fail", [](const request&, response&) -> task<> {
+    co_await yield();
+    throw std::runtime_error("failure");
   });
-  for (int i = 0; i < rounds; ++i) {
-    current = std::make_unique<engine_async>(32, std::function<void()>{},
-                                           std::function<void()>{});
-    callbacks = 0;
-    current->begin();
-    phase.arrive_and_wait();
-    phase.arrive_and_wait();
-    if (callbacks.load() != (immediate ? 0 : 1)) ++mismatches;
+  int started = 0, finished = 0;
+  routes.add("GET", "/last", [&](const request&, response& res) -> task<> {
+    auto retained = token;
+    ++started;
+    co_await yield();
+    ++finished;
+    res.ok_200().set_body("last");
+  });
+  probe current(routes);
+  current.receive(probe::get("/first") + probe::get("/fail") +
+                  probe::get("/last"));
+  DOBA_EXPECT_EQUAL(started, 1);
+  DOBA_EXPECT_EQUAL(token.use_count(), 2);
+  current.turn();
+  DOBA_EXPECT_EQUAL(finished, 0);
+  DOBA_EXPECT_EQUAL(token.use_count(), 1);
+  DOBA_EXPECT_EQUAL(current.closes, 0);
+  DOBA_EXPECT(current.outputs.empty());
+  current.turn();
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 2U);
+  DOBA_EXPECT(current.outputs[0].ends_with("first"));
+  DOBA_EXPECT(current.outputs[1].starts_with("HTTP/1.1 500"));
+}
+
+DOBA_TEST("engine destruction cancels all pending frames and late turns stop") {
+  router routes;
+  auto token = std::make_shared<int>(0);
+  int starts = 0, ends = 0;
+  routes.add("GET", "/", [&](const request&, response&) -> task<> {
+    auto retained = token;
+    ++starts;
+    co_await sleep_for(1h);
+    ++ends;
+  });
+  {
+    probe current(routes);
+    current.receive(probe::get("/") + probe::get("/") + probe::get("/"));
+    DOBA_EXPECT_EQUAL(starts, 3);
+    DOBA_EXPECT_EQUAL(token.use_count(), 4);
   }
-  stopping.join();
-  finishing.join();
-  DOBA_EXPECT_EQUAL(mismatches, 0);
+  DOBA_EXPECT_EQUAL(token.use_count(), 1);
+  DOBA_EXPECT_EQUAL(ends, 0);
 }
 
-// +===========================================================================+
-// | [>] completion sends while a successor is inside receive    ( test-case ) |
-// |     dispatch                                                              |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("completion sends while a successor is inside receive dispatch") {
-  router<request, response> routes;
-  manual_event pending, entered, release;
-  std::atomic<bool> parsing{false};
-  routes.add("GET", "/slow",
-             [&](const request&, response& res) -> common::task<void> {
-               co_await pending;
-               respond(res, "slow");
-             });
-  routes.add("GET", "/fast", [&](const request&, response& res) {
-    parsing = true;
-    entered.open();
-    release.wait();
-    respond(res, "fast");
-    parsing = false;
+DOBA_TEST(
+    "interim and final responses retain the same ordered request record") {
+  router routes;
+  routes.add("GET", "/first", [](const request&, response& res) -> task<> {
+    co_await yield();
+    co_await yield();
+    res.ok_200().set_body("first");
   });
-  fixture current(routes);
-  scope_exit resume([&] { pending.open(); });
-  current.receive(slow);
-  DOBA_EXPECT(pending.wait_for_waiters(1));
-  std::jthread receiver([&] { current.receive(fast); });
-  scope_exit unblock([&] { release.open(); });
-  DOBA_EXPECT(entered.wait_for());
-  pending.open();
-  DOBA_EXPECT(parsing.load());
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 1);
-  release.open();
-  receiver.join();
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 2);
-  const auto first = current.output->wire.find("\r\n\r\nslow");
-  const auto second = current.output->wire.find("\r\n\r\nfast");
-  DOBA_EXPECT(first != std::string::npos);
-  DOBA_EXPECT(second != std::string::npos && first < second);
-  DOBA_EXPECT_EQUAL(current.output->closes.load(), 0);
+  routes.add("POST", "/upload", [](const request&, response& res) {
+    res.ok_200().set_body("uploaded");
+  });
+  probe current(routes);
+  current.receive(probe::get("/first") +
+      "POST /upload HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\n"
+      "Content-Length: 4\r\n\r\n");
+  current.receive("data");
+  DOBA_EXPECT(current.outputs.empty());
+  current.turn();
+  DOBA_EXPECT(current.outputs.empty());
+  current.turn();
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 3U);
+  DOBA_EXPECT(current.outputs[0].ends_with("first"));
+  DOBA_EXPECT(current.outputs[1].starts_with("HTTP/1.1 100 Continue"));
+  DOBA_EXPECT(current.outputs[2].ends_with("uploaded"));
 }
 
-// +===========================================================================+
-// | [>] async error closes during receive and suppresses later  ( test-case ) |
-// |     dispatch                                                              |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("async error closes during receive and suppresses later dispatch") {
-  router<request, response> routes;
-  manual_event pending, entered, release;
-  std::atomic<int> later{0};
-  routes.add("GET", "/slow",
-             [&](const request&, response&) -> common::task<void> {
-               co_await pending;
-               throw std::runtime_error("after suspension");
-             });
-  routes.add("GET", "/fast", [&](const request&, response& res) {
-    entered.open();
-    release.wait();
-    respond(res, "fast");
+DOBA_TEST("sibling deadlines keep advancing during another handler resume") {
+  router routes;
+  clock_type::time_point release_at;
+  int completed = 0;
+  routes.add("GET", "/work", [&](const request&, response& res) -> task<> {
+    co_await yield();
+    // Simulate ordinary non-suspending handler work while a sibling sleeps.
+    std::this_thread::sleep_until(release_at);
+    res.ok_200().set_body("work");
   });
+  routes.add("GET", "/sleep", [&](const request&, response& res) -> task<> {
+    co_await sleep_for(1ms);
+    ++completed;
+    res.ok_200().set_body("sleep");
+  });
+  probe current(routes);
+  current.receive(probe::get("/work") + probe::get("/sleep"));
+  DOBA_EXPECT_EQUAL(completed, 0);
+  release_at = clock_type::now() + 2ms;
+  current.turn();
+  DOBA_EXPECT_EQUAL(completed, 1);
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 2U);
+  DOBA_EXPECT(!current.needs.turn_requested);
+  DOBA_EXPECT(!current.needs.turn_at);
+}
+
+DOBA_TEST(
+    "concurrent typed route arguments outlive RX reuse and sibling starts") {
+  router routes;
+  int started = 0;
+  routes.add("GET", "/name/:name",
+             [&](const request& req, response& res,
+                 const std::string& name) -> task<> {
+    ++started;
+    const auto host = req.get_host();
+    co_await yield();
+    res.ok_200().set_body(name + ":" + std::string(host));
+  });
+  probe current(routes);
+  auto bytes = probe::get("/name/alpha") + probe::get("/name/beta");
+  current.receive(bytes);
+  DOBA_EXPECT_EQUAL(started, 2);
+  bytes.assign(bytes.size(), 'x');
+  current.turn();
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 2U);
+  DOBA_EXPECT(current.outputs[0].ends_with("alpha:local"));
+  DOBA_EXPECT(current.outputs[1].ends_with("beta:local"));
+}
+
+DOBA_TEST("engine rejects unsupported suspension before publishing a handle") {
+  router routes;
+  routes.add("GET", "/bad", [](const request&, response&) -> task<> {
+    co_await std::suspend_always{};
+  });
+  int later = 0;
   routes.add("GET", "/later", [&](const request&, response& res) {
     ++later;
-    respond(res, "unexpected");
+    res.ok_200().set_body("later");
   });
-  fixture current(routes);
-  scope_exit resume([&] { pending.open(); });
-  current.receive(slow);
-  DOBA_EXPECT(pending.wait_for_waiters(1));
-  std::jthread receiver([&] {
-    current.receive(std::string(fast) +
-                    "GET /later HTTP/1.1\r\nHost: a\r\n\r\n");
-  });
-  scope_exit unblock([&] { release.open(); });
-  DOBA_EXPECT(entered.wait_for());
-  pending.open();
-  DOBA_EXPECT_EQUAL(current.output->closes.load(), 1);
-  release.open();
-  receiver.join();
-  DOBA_EXPECT_EQUAL(later.load(), 0);
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 1);
-  DOBA_EXPECT(current.output->wire.starts_with("HTTP/1.1 500 "));
-  DOBA_EXPECT_EQUAL(current.output->closes.load(), 1);
-}
-
-// +===========================================================================+
-// | [>] pending limit retains frames until late completion then ( test-case ) |
-// |     releases                                                              |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("pending limit retains frames until late completion then releases") {
-  router<request, response> routes;
-  manual_event pending;
-  std::weak_ptr<int> frame;
-  routes.add("GET", "/slow",
-             [&](const request&, response& res) -> common::task<void> {
-               auto lifetime = std::make_shared<int>(1);
-               frame = lifetime;
-               co_await pending;
-               respond(res, "late");
-             });
-  routes.add("GET", "/fast",
-             [](const request&, response& res) { respond(res, "fast"); });
-  policies config;
-  config.max_pending_requests = 2;
-  fixture current(routes, config);
-  int completions = 0;
-  scope_exit resume([&] { pending.open(); });
-  current.receive(slow);
-  DOBA_EXPECT(pending.wait_for_waiters(1));
-  DOBA_EXPECT(!frame.expired());
-  current.receive(fast);
-  current.receive(fast);
-  DOBA_EXPECT_EQUAL(current.output->closes.load(), 1);
-  DOBA_EXPECT(!current.value.stop([&] { ++completions; }));
-  pending.open();
-  DOBA_EXPECT(frame.expired());
-  DOBA_EXPECT_EQUAL(completions, 1);
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 0);
-}
-
-// +===========================================================================+
-// | [>] owned callbacks and frames survive facade destruction   ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("owned callbacks and frames survive facade destruction") {
-  router<request, response> routes;
-  manual_event pending;
-  std::weak_ptr<int> frame;
-  routes.add("GET", "/slow",
-             [&](const request&, response& res) -> common::task<void> {
-               auto lifetime = std::make_shared<int>(1);
-               frame = lifetime;
-               co_await pending;
-               respond(res, "owned");
-             });
-  auto current = std::make_unique<fixture>(routes);
-  auto output = current->output;
-  scope_exit resume([&] { pending.open(); });
-  current->receive(slow);
-  DOBA_EXPECT(pending.wait_for_waiters(1));
-  current.reset();
-  DOBA_EXPECT(!frame.expired());
-  pending.open();
-  DOBA_EXPECT(frame.expired());
-  DOBA_EXPECT_EQUAL(output->sends.load(), 1);
-  DOBA_EXPECT(output->wire.ends_with("\r\n\r\nowned"));
-}
-
-// +===========================================================================+
-// | [>] reverse completion keeps queued responses and releases  ( test-case ) |
-// |     both frames                                                           |
-// +---------------------------------------------------------------------------+
-DOBA_TEST(
-    "reverse completion keeps queued responses and releases both frames") {
-  router<request, response> routes;
-  manual_event first, second;
-  std::weak_ptr<int> first_frame, second_frame;
-  routes.add("GET", "/slow",
-             [&](const request&, response& res) -> common::task<void> {
-               auto lifetime = std::make_shared<int>(1);
-               first_frame = lifetime;
-               co_await first;
-               respond(res, "first");
-             });
-  routes.add("GET", "/fast",
-             [&](const request&, response& res) -> common::task<void> {
-               auto lifetime = std::make_shared<int>(2);
-               second_frame = lifetime;
-               co_await second;
-               respond(res, "second");
-             });
-  fixture current(routes);
-  scope_exit resume([&] {
-    second.open();
-    first.open();
-  });
-  current.receive(std::string(slow) + std::string(fast));
-  DOBA_EXPECT(first.wait_for_waiters(1));
-  DOBA_EXPECT(second.wait_for_waiters(1));
-  second.open();
-  DOBA_EXPECT(second_frame.expired());
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 0);
-  first.open();
-  DOBA_EXPECT(first_frame.expired());
-  DOBA_EXPECT_EQUAL(current.output->sends.load(), 2);
-  const auto one = current.output->wire.find("\r\n\r\nfirst");
-  const auto two = current.output->wire.find("\r\n\r\nsecond");
-  DOBA_EXPECT(one != std::string::npos && two != std::string::npos &&
-              one < two);
-}
-
-// +===========================================================================+
-// | [>] engine serializes concurrent asynchronous sends         ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("engine serializes concurrent asynchronous sends") {
-  router<request, response> routes;
-  using martianlabs::doba::tests::manual_event;
-  manual_event first, second, entered, release, second_ready;
-  routes.add("GET", "/first",
-             [&first](const request&, response& res) -> common::task<void> {
-               co_await first;
-               respond(res, "first");
-             });
-  routes.add("GET", "/second",
-             [&](const request&, response& res) -> common::task<void> {
-               co_await second;
-               respond(res, "second");
-               second_ready.open();
-             });
-  fixture current(routes);
-  std::atomic<int> sending{0};
-  std::atomic<bool> overlap{false};
-  current.value.set_on_send([&](std::string_view head, std::string_view body,
-                                std::unique_ptr<common::reader>) {
-    if (sending.fetch_add(1) != 0) overlap = true;
-    if (body == "first") {
-      entered.open();
-      release.wait();
-    }
-    {
-      std::lock_guard lock(current.output->mutex);
-      current.output->wire.append(head).append(body);
-    }
-    sending--;
-  });
-  current.receive(
-      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
-      "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  std::jthread first_thread, second_thread;
-  martianlabs::doba::tests::scope_exit unblock([&] {
-    release.open();
-    first.open();
-    second.open();
-  });
-  first_thread = std::jthread([&]() { first.open(); });
-  DOBA_EXPECT(entered.wait_for());
-  second_thread = std::jthread([&]() { second.open(); });
-  DOBA_EXPECT(second_ready.wait_for());
-  release.open();
-  first_thread.join();
-  second_thread.join();
-  DOBA_EXPECT(!overlap.load());
-  const auto next = current.output->wire.find("HTTP/1.1", 1);
-  DOBA_EXPECT(next != std::string::npos);
-  DOBA_EXPECT(current.output->wire.substr(0, next).ends_with("\r\n\r\nfirst"));
-  DOBA_EXPECT(current.output->wire.substr(next).ends_with("\r\n\r\nsecond"));
+  probe current(routes);
+  current.receive(probe::get("/bad") + probe::get("/later"));
+  DOBA_EXPECT_EQUAL(current.closes, 1);
+  DOBA_EXPECT_EQUAL(later, 0);
+  DOBA_EXPECT_EQUAL(current.outputs.size(), 1U);
+  DOBA_EXPECT(current.outputs[0].starts_with("HTTP/1.1 500"));
+  DOBA_EXPECT(!current.needs.turn_requested);
+  current.turn();
+  DOBA_EXPECT_EQUAL(current.closes, 1);
 }

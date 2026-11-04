@@ -35,9 +35,11 @@
 #include <thread>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
 
 namespace martianlabs::doba::tests::integration {
+using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
@@ -85,7 +87,7 @@ struct drain_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     const auto* bytes = input.data();
     state_->entered++;
     const auto deadline = std::chrono::steady_clock::now() + 5s;
@@ -99,8 +101,13 @@ struct drain_engine {
       output_(std::string(1024 * 1024, bytes[0]), {}, nullptr);
     }
     state_->queued++;
-    return;
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

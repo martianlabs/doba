@@ -22,29 +22,48 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <charconv>
 #include <chrono>
+#include <string_view>
+#include <system_error>
+#include <iostream>
+#include <string>
 
-#include "common/signaler.h"
-#include "common/task.h"
 #include "http_server.h"
 
-using namespace martianlabs::doba::common;
-using martianlabs::doba::http_server;
-using namespace martianlabs::doba::protocol::http::v11;
+using namespace martianlabs::doba;
+using protocol::http::v11::request;
+using protocol::http::v11::response;
 
-int main() {
-  http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route("GET", "/slow",
-                        [](const request&, response& res) -> task<void> {
-                          co_await yield();
-                          co_await sleep_for(std::chrono::milliseconds(50));
-                          res.ok_200().set_body("slow");
-                        });
-  http_server.add_route("GET", "/fast", [](const request&, response& res) {
-    res.ok_200().set_body("fast");
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] main                                                  ( entry-point ) |
+// +---------------------------------------------------------------------------+
+// | TCP workers supply serialized turns; handlers own their waits.           |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+int main(int count, char** args) {
+  if (count > 2) return 1;
+  unsigned port = 8080;
+  if (count == 2) {
+    const std::string_view value(args[1]);
+    const auto [end, error] = std::from_chars(
+        value.data(), value.data() + value.size(), port);
+    if (error != std::errc{} || end != value.data() + value.size() ||
+        !port || port > 65535) return 1;
+  }
+  http_server<> server({.worker_count = 1, .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  server.add_route("GET", "/wait/:id",
+                   [](const request&, response& res, int id) -> common::task<> {
+    co_await common::sleep_for(std::chrono::milliseconds(10));
+    res.ok_200().set_body(std::to_string(id));
   });
-  http_server.start();
-  signaler::wait();
-  http_server.stop();
-  return 0;
+  server.add_route("GET", "/sync", [](const request&, response& res) {
+    res.ok_200().set_body("sync");
+  });
+  server.start();
+  std::cout << "TCP: /wait/:id and /sync; press Enter to stop.\n";
+  std::cin.get();
+  server.stop();
 }

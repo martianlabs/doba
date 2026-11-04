@@ -50,15 +50,22 @@ shared loading and invalidation races independently of HTTP. The
 containers, and coroutine helpers. Storage cases exercise memory buffers,
 disk spill, moves, cleanup, and failed operations.
 
+[Controlled task tests](common/task_execution_tests.cpp) verify exclusive
+frame ownership, final suspension, cancellation, exception inspection and
+rejection of foreign awaiters. Deadline boundaries are checked without real
+time delays. Serialized worker migration is tested with explicit joins.
+The existing standalone task tests remain enabled.
+
 Decoder cases also reuse or overwrite caller buffers and inspect owned
 requests after the decoder has gone away. A view that happens to point at
 something readable today isn't much of an ownership guarantee.
 
 [Transport tests](transport/server) check connection behavior and invalid
-policies. TLS session cases cover credentials, fragmented negotiation,
-application data, buffer limits, and close notifications. TLS 1.2 and 1.3
-cases drain a full 256-byte BIO and verify that handshake output remains
-pending until OpenSSL retries the suspended operation.
+policies. [Linux context tests](transport/server/tcp_context_linux_tests.cpp)
+cover bounded RX/TX, partial sends, EAGAIN, sources, empty sends and closure.
+The [Windows TX state](transport/server/send_state_tests.cpp) and
+[RX adapter](transport/server/tcp_connection_tests.cpp) are tested independently.
+These helper tests do not assert that Linux uses those Windows components.
 
 <a name="bad-timing-on-purpose"></a>
 <h2>
@@ -76,30 +83,24 @@ pending until OpenSSL retries the suspended operation.
   </a>
 </h2>
 
-The [concurrency tests](protocol/http/v11/engine_concurrency_tests.cpp)
-suspend handlers and control completion, receive, and shutdown overlaps.
-They check response ordering, callback counts, and object
-lifetimes instead of hoping the scheduler produces an interesting race.
-A separate stress case reuses two threads for 2,048 last-completion/stop
-races and checks that each stop either completes immediately or invokes
-its callback exactly once.
+The [engine concurrency cases](protocol/http/v11/engine_concurrency_tests.cpp)
+use serialized processing turns, controlled eligibility times and explicit
+handler gates. They verify concurrent progress, ordered output, owned frames,
+callback counts and cancellation. Common task helpers are independently tested;
+no injected application executor is needed.
 
-The operating-policy tests cover admission leases, clocks, exact boundaries,
-zero values, reader lifetimes, partial batches and combined pressure. The
-[transport budget audit](transport/server/policy_budget_audit_tests.cpp) and
-[HTTP budget audit](protocol/http/v11/policy_budget_audit_tests.cpp) isolate
-hysteresis for each credit source. The [flow wakeup tests](protocol/http/v11/flow_wakeup_tests.cpp)
-check selective notifications and race subscription against 2048 position completions and 2048 byte-credit
-releases. Sampled inactivity tests check 50–500 ms maintenance, small periods,
-bounded expiry delay, zero-byte completions and preservation of recent activity.
-Nine policy mutations are challenged by the
-[mutation campaign](../mutation/README.md).
-Demand-driven flow tests also verify that empty input does not poll pressure
-and that incoming bytes subscribe and resume correctly behind an async request.
+[Operating helpers](transport/server/operating_policies_tests.cpp) test shared
+Windows admission reservations and current TX limits/reader ownership.
+[HTTP budgets](protocol/http/v11/policy_budget_audit_tests.cpp) and
+[processing turns](protocol/http/v11/processing_turn_tests.cpp) exercise finite
+protocol credit, deferred input, ready deadlines and cooperative completion.
+Native turn delivery is covered by the integration suites on both backends.
 
-The [regression detectors](protocol/http/v11/regression_detection_tests.cpp)
-check body limits, queued responses, and terminal rejection. Those same
-assertions are challenged by the [mutation checks](../mutation/README.md).
+[Policy construction](transport/server/tcp_transport_tests.cpp) covers defaults,
+platform ranges and zero meanings. [Regression detectors](protocol/http/v11/regression_detection_tests.cpp)
+check framing/body budgets, ordered responses and terminal rejection. The
+[configured mutation campaign](../mutation/README.md) challenges eight selected
+regressions in private copies; it does not mutate the working source tree.
 
 <a name="the-runner-gets-checked-too"></a>
 <h2>
@@ -119,9 +120,10 @@ assertions are challenged by the [mutation checks](../mutation/README.md).
 
 The [runner metatests](helpers/test_helper_tests.cpp) check listing,
 selection, assertion reports, exceptions, exit status, and timeouts.
-They also check that a failed assertion releases suspended work before
-joining threads, and that blocked cleanup leaves the test's identity in
-the diagnostics. A broken test shouldn't take the rest of the suite hostage.
+Blocked cleanup must leave the test's identity in the diagnostics. The
+[integration metatests](../integration/helpers/test_helper_tests.cpp) also check
+that a failed assertion releases a blocked synchronous handler before joining
+threads. A broken test shouldn't take the rest of the suite hostage.
 
 Failure counters and context diagnostics are synchronized across test workers.
 The metatests require all 128 failures from eight concurrent workers to be
@@ -129,8 +131,10 @@ reported. Temporary directory overrides restore the prior environment during
 unwinding; decoder spill checks use private directories and propagate directory
 inspection errors instead of treating them as empty results.
 
-The TLS connection regression drives both peers entirely in memory, including
-a request queued immediately after TLS 1.3 negotiation with a 64-byte output
-BIO. Draining handshake output must retain a plaintext wakeup even when the
-protocol engine has never paused input. The TLS headers also compile together
-in their standalone include order on Windows.
+
+The current HTTP engine tests use serialized processing turns. Same-connection
+cases cover overlapping waits, out-of-order completion with ordered output,
+progress during source drain, per-turn fairness, bounded admission and byte
+limits, interim responses and cancellation. Old cross-thread completion,
+observer and pressure-hysteresis tests were replaced with the current contracts;
+see the block-4 removal/coverage ledger in out/async-processing/block-4.

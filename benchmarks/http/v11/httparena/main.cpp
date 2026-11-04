@@ -34,6 +34,7 @@
 #include <future>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
@@ -47,18 +48,24 @@
 #include <sched.h>
 #endif
 
+#ifndef DOBA_HTTPARENA_FULL
+#define DOBA_HTTPARENA_FULL 1
+#endif
+
+#if DOBA_HTTPARENA_FULL
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zlib.h>
+#include "https_server.h"
+#include "protocol/http/v11/static_file_server.h"
+#include "transport/server/tls.h"
+#endif
 
 #include "common/reader.h"
 #include "common/task.h"
 #include "http_server.h"
-#include "https_server.h"
 #include "protocol/http/common/helpers.h"
-#include "protocol/http/v11/static_file_server.h"
-#include "transport/server/tls.h"
 
 using martianlabs::doba::http_server;
 using namespace martianlabs::doba::protocol::http::v11;
@@ -67,6 +74,7 @@ namespace {
 namespace common = martianlabs::doba::common;
 using martianlabs::doba::protocol::http::helpers;
 
+#if DOBA_HTTPARENA_FULL
 // Each worker reuses zlib's allocations; reset starts an independent gzip
 // member for every response. No JSON or compressed response is cached.
 struct gzip_context {
@@ -131,12 +139,25 @@ bool encoding_weights(std::string_view value, std::array<int, 4>& quality) {
 // | [>] parse_integer                                            ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+#endif
 bool parse_integer(std::string_view source, std::int64_t& value) {
   if (source.empty()) return false;
   const char* first = source.data();
   const char* last = first + source.size();
   const auto [end, error] = std::from_chars(first, last, value);
   return error == std::errc() && end == last;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] checked_add                                              ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+bool checked_add(std::int64_t a, std::int64_t b, std::int64_t& result) {
+  if ((b > 0 && a > std::numeric_limits<std::int64_t>::max() - b) ||
+      (b < 0 && a < std::numeric_limits<std::int64_t>::min() - b)) return false;
+  result = a + b;
+  return true;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -153,8 +174,7 @@ bool read_query_sum(const request& req, std::int64_t& value) {
       !parse_integer(b->second, b_value)) {
     return false;
   }
-  value = a_value + b_value;
-  return true;
+  return checked_add(a_value, b_value, value);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -174,7 +194,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
     if (state.has_error) return false;
     used += state.produced;
     if (state.complete) break;
-    if (used == buffer.size()) return false;
+    if (!state.produced || used == buffer.size()) return false;
   }
   return parse_integer(
       std::string_view(reinterpret_cast<const char*>(buffer.data()), used),
@@ -186,7 +206,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the HttpArena benchmark routes on TCP and TLS.                       |
+// | Runs the HttpArena benchmark routes on TCP and TLS.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -236,6 +256,29 @@ int main() {
     break;
   }
 #endif
+  if (const char* configured = std::getenv("WORKERS")) {
+    const std::string_view text(configured);
+    std::size_t requested = 0;
+    const auto [end, error] = std::from_chars(
+        text.data(), text.data() + text.size(), requested);
+    if (error != std::errc() || end != text.data() + text.size() ||
+        requested == 0) {
+      std::cerr << "WORKERS must be a positive integer\n";
+      return 1;
+    }
+    workers = requested;
+  }
+  std::string port = "8080";
+  if (const char* configured = std::getenv("PORT")) {
+    std::int64_t requested = 0;
+    if (!parse_integer(configured, requested) || requested < 1 ||
+        requested > 65535) {
+      std::cerr << "PORT must be an integer from 1 to 65535\n";
+      return 1;
+    }
+    port = std::to_string(requested);
+  }
+#if DOBA_HTTPARENA_FULL
   const char* dataset_path = std::getenv("DATASET_PATH");
   std::ifstream dataset_file(dataset_path ? dataset_path
                                           : "/data/dataset.json");
@@ -251,22 +294,11 @@ int main() {
     std::cerr << "invalid dataset\n";
     return 1;
   }
+#endif
   policies http_configuration;
   http_server<> http_server(
-      {.worker_count = workers, .ip = "0.0.0.0", .port = "8080"},
+      {.worker_count = workers, .ip = "0.0.0.0", .port = port},
       http_configuration);
-  http_server.add_route(
-      "GET", "/delay/:ms",
-      [](const request&, response& res, std::uint32_t ms)
-          -> martianlabs::doba::common::task<void> {
-        if (ms != 0) {
-          co_await martianlabs::doba::common::sleep_for(
-              std::chrono::milliseconds(ms));
-        }
-        res.ok_200();
-        res.add_header("Content-Type", "text/plain")
-            .set_body(std::to_string(ms));
-      });
   http_server.add_route(
       "GET", "/pipeline",
       [](const request&, response& res) {
@@ -294,14 +326,30 @@ int main() {
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
-            !read_body_integer(req, body_value)) {
+            !read_body_integer(req, body_value) ||
+            !checked_add(value, body_value, value)) {
           res.bad_request_400();
           res.set_body("invalid request");
           return;
         }
         res.add_header("Content-Type", "text/plain")
-            .set_body(std::to_string(value + body_value));
+            .set_body(std::to_string(value));
       });
+  http_server.add_route(
+      "GET", "/delay/:ms",
+      [](const request&, response& res, std::string_view milliseconds)
+          -> martianlabs::doba::common::task<> {
+        std::int64_t delay = 0;
+        if (!parse_integer(milliseconds, delay) || delay < 0 || delay > 60000) {
+          res.bad_request_400().set_body("invalid delay");
+          co_return;
+        }
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(delay));
+        res.ok_200().add_header("Content-Type", "text/plain")
+            .set_body(std::to_string(delay));
+      });
+#if DOBA_HTTPARENA_FULL
   auto json_handler =
       [&dataset](const request& req, response& res,
                  std::uint64_t requested_count) {
@@ -388,6 +436,14 @@ int main() {
   tls_configuration.worker_count = workers;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";
+  if (const char* configured = std::getenv("TLS_PORT")) {
+    std::int64_t requested = 0;
+    if (!parse_integer(configured, requested) || requested < 1 || requested > 65535) {
+      std::cerr << "TLS_PORT must be an integer from 1 to 65535\n";
+      return 1;
+    }
+    tls_configuration.port = std::to_string(requested);
+  }
   const char* certificate = std::getenv("TLS_CERT");
   const char* private_key = std::getenv("TLS_KEY");
   tls_configuration.certificate_file = certificate ? certificate : "/certs/server.crt";
@@ -413,14 +469,17 @@ int main() {
         res.add_header("Content-Type", "application/octet-stream")
             .set_body(req.get_body_reader());
       });
+#endif
   http_server.start();
+#if DOBA_HTTPARENA_FULL
   tls_server.start();
-  std::cerr << "workers per listener: " << workers << '\n';
-  std::cerr << "static root: " << static_root << "; cache entries: "
-            << cache_configuration.max_entries << "; shared cache budget: "
-            << cache_configuration.max_cost << "; max cacheable file: "
-            << static_configuration.max_cached_file_size << '\n';
-  // Docker owns process shutdown; wait after the server starts.
+  std::cerr << "workers per listener: " << workers << "; HTTP port: " << port
+            << "; TLS port: " << tls_configuration.port << '\n';
+#else
+  std::cerr << "workers per listener: " << workers << "; HTTP port: " << port
+            << "; TCP qualification build (not the full HttpArena image)\n";
+#endif
+  // The benchmark harness owns process shutdown.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

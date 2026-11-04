@@ -1,36 +1,27 @@
-# Asynchronous routes
+# Cooperative HTTP handlers on TCP
 
-This example registers a coroutine route and a synchronous route on the same
-HTTP/1.1 server. `GET /slow` yields to its transport worker, sleeps for about
-50 ms, and returns `slow`. `GET /fast` returns `fast` synchronously.
+Linux and Windows. Build `http_async_routes` with examples enabled, run it and press
+Enter to stop. It listens on `127.0.0.1:8080` with one transport worker.
+An optional first argument selects another port, for example
+`http_async_routes 18080`. The executable-example test uses an isolated port.
 
-```text
-curl -i http://localhost:8080/slow
-curl -i http://localhost:8080/fast
-```
+- `GET /wait/:id` waits ten milliseconds and returns the integer route value.
+- `GET /sync` returns `sync` through the normal direct handler path.
 
-To check response order on one connection, run this while the example is
-listening:
+Several `/wait/:id` requests on one pipelined connection start independent
+waits. Responses are emitted in request order; waiting does not occupy the
+worker. Other connections can progress during those sleeps. The engine chooses
+the handler path automatically; there is no executor injection or mode flag.
 
-```python
-import socket
+[Executable-example checks](../../../../tests/integration/helpers/processing_examples.cpp)
+also run the standalone task owner and in-memory concurrent engine examples.
 
-with socket.create_connection(("localhost", 8080), timeout=3) as connection:
-    connection.sendall(
-        b"GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        b"GET /fast HTTP/1.1\r\nHost: localhost\r\n"
-        b"Connection: close\r\n\r\n"
-    )
-    wire = bytearray()
-    while chunk := connection.recv(4096):
-        wire.extend(chunk)
+Only `common::yield()` and `common::sleep_for()` are supported managed awaiters.
+A blocking handler still occupies its worker. TCP owns generic connection turn
+notifications and socket bytes; the engine owns frames, deadlines and response
+ordering. Inline bytes and a terminal reader share the existing output contract.
 
-assert wire.count(b"HTTP/1.1 200 OK") == 2
-assert b"\r\n\r\nslow" in wire
-assert b"\r\n\r\nfast" in wire
-assert wire.index(b"\r\n\r\nslow") < wire.index(b"\r\n\r\nfast")
-print("slow, fast")
-```
-
-The responses keep request order even though `/fast` finishes first.
-`server.stop()` waits for pending coroutines before stopping the workers.
+This example uses plain TCP. For TLS see the coroutine route in
+[https_hello_world](../https_hello_world/README.md). The portable
+[processing_turns](../processing_turns/README.md) example uses an in-memory
+adapter instead. See [the engine contract](../../../../docs/reference/protocol/http/v11/engine.md).

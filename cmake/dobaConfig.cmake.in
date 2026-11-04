@@ -6,17 +6,19 @@ include(
 find_dependency(
   Threads
 )
-if(
-  @DOBA_ENABLE_TLS@
-)
-  find_dependency(
-    OpenSSL
-    COMPONENTS SSL
-  )
-endif()
 include(
   "${CMAKE_CURRENT_LIST_DIR}/dobaTargets.cmake"
 )
+if("TLS" IN_LIST doba_FIND_COMPONENTS)
+  if(@DOBA_ENABLE_TLS@ AND
+      EXISTS "${CMAKE_CURRENT_LIST_DIR}/dobaTlsTargets.cmake")
+    find_dependency(OpenSSL 3.0 COMPONENTS SSL Crypto)
+    include("${CMAKE_CURRENT_LIST_DIR}/dobaTlsTargets.cmake")
+    set(doba_TLS_FOUND TRUE)
+  else()
+    set(doba_TLS_FOUND FALSE)
+  endif()
+endif()
 check_required_components(
   doba
 )

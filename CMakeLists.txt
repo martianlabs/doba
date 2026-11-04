@@ -86,19 +86,11 @@ include(
   GNUInstallDirs
 )
 
+
 find_package(
   Threads
   REQUIRED
 )
-if(
-  DOBA_ENABLE_TLS
-)
-  find_package(
-    OpenSSL
-    REQUIRED
-    COMPONENTS SSL
-  )
-endif()
 
 option(
   DOBA_ENABLE_STRICT_WARNINGS
@@ -177,43 +169,21 @@ target_include_directories(
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+# TLS is opt-in. The plain target never acquires OpenSSL dependencies.
+if(DOBA_ENABLE_TLS)
+  find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
+  add_library(doba_tls INTERFACE)
+  add_library(martianlabs::doba_tls ALIAS doba_tls)
+  target_link_libraries(doba_tls INTERFACE doba_headers OpenSSL::SSL)
+  target_compile_definitions(doba_tls INTERFACE DOBA_ENABLE_TLS=1)
+  set_target_properties(doba_tls PROPERTIES EXPORT_NAME doba_tls)
+  install(TARGETS doba_tls EXPORT dobaTlsTargets)
+endif()
+
 if(DOBA_BUILD_FUZZERS)
   add_subdirectory(tests/fuzz)
 endif()
 
-if(
-  DOBA_ENABLE_TLS
-)
-  add_library(
-    doba_tls
-    INTERFACE
-  )
-  add_library(
-    martianlabs::doba_tls
-    ALIAS
-    doba_tls
-  )
-  set_target_properties(
-    doba_tls
-    PROPERTIES
-    EXPORT_NAME doba_tls
-  )
-  target_link_libraries(
-    doba_tls
-    INTERFACE
-    doba_headers
-    OpenSSL::SSL
-  )
-  target_compile_definitions(
-    doba_tls
-    INTERFACE
-    DOBA_ENABLE_TLS
-  )
-  install(
-    TARGETS doba_tls
-    EXPORT dobaTargets
-  )
-endif()
 
 file(
   GLOB_RECURSE
@@ -276,6 +246,11 @@ install(
   NAMESPACE martianlabs::
   DESTINATION "${DOBA_INSTALL_CMAKEDIR}"
 )
+if(DOBA_ENABLE_TLS)
+  install(EXPORT dobaTlsTargets FILE dobaTlsTargets.cmake
+    NAMESPACE martianlabs:: DESTINATION "${DOBA_INSTALL_CMAKEDIR}")
+endif()
+
 install(
   FILES
   "${CMAKE_CURRENT_BINARY_DIR}/dobaConfig.cmake"
@@ -286,6 +261,10 @@ install(
 if(
   DOBA_BUILD_EXAMPLES
 )
+  if(DOBA_ENABLE_TLS)
+    add_subdirectory(examples/http/v11/https_hello_world)
+    add_subdirectory(examples/protocol/tls_echo)
+  endif()
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/protocol/custom_protocol
   )
@@ -300,6 +279,9 @@ if(
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/task_execution
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/filesystem
@@ -317,6 +299,12 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/processing_turns
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_request
   )
   add_subdirectory(
@@ -325,16 +313,6 @@ if(
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_router
   )
-  add_subdirectory(
-    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
-  )
-  if(
-    DOBA_ENABLE_TLS
-  )
-    add_subdirectory(
-      ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/https_hello_world
-    )
-  endif()
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/static_routes
   )
@@ -409,20 +387,15 @@ if(
   if(
     BUILD_TESTING
   )
+    add_subdirectory(tests/qualification)
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/unit
     )
-    if(
-      DOBA_ENABLE_TLS
-    )
-      target_link_libraries(
-        doba_unit_tests
-        PRIVATE
-        doba_tls
-      )
-    endif()
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/integration
+    )
+    add_subdirectory(
+      ${CMAKE_CURRENT_LIST_DIR}/benchmarks/http/v11/httparena
     )
   endif()
 endif()

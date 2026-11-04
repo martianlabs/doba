@@ -8,22 +8,17 @@
 
 **Header:** [include/transport/server/send_state.h](../../../../include/transport/server/send_state.h)
 
-Implementation support for doba. These declarations are internal and are not part of the supported public API.
+Internal Windows TX storage: an active socket batch, accumulated inline bytes
+and one terminal reader. The whole active batch remains charged to the logical
+TX budget until its last byte completes. Allocator capacity and reader backing
+storage are excluded from that budget.
 
-[Internal implementation](#implementation)
+push copies head/body and transfers the reader. An empty submission without a
+reader changes nothing, including at exact capacity or with a pending reader.
+A second reader or later nonempty output is rejected; the context then closes.
+A non-null empty reader is still terminal.
 
-<a id="api"></a>
-<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
-<a id="implementation"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Internal implementation
-
-**INTERNAL HEADER**
-
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+fill never moves or resizes a batch still borrowed by the socket. It drains the
+prefix before reading bounded source chunks. clear requires no outstanding I/O.
+The context owns synchronization and I/O publication. See
+[context](tcp_windows_context.md) and the [TCP contract](tcp.md#runtime-contract).

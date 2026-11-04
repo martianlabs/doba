@@ -26,4 +26,10 @@ Implementation support for doba. These declarations are internal and are not par
 
 **INTERNAL HEADER**
 
-Use the public server, protocol, storage or transport interfaces instead. Direct dependencies on this header's implementation declarations are unsupported.
+Internal WSARecv operation. It retains its context until the one outstanding
+receive completion is handled, including cancellation after socket close.
+The context supplies a fixed RX block and processes the completed fresh bytes
+under its connection lock. The engine owns any incomplete protocol message.
+
+The operation is destroyed after completion, or immediately if submission failed
+without posting I/O. See [context](tcp_windows_context.md).

@@ -20,6 +20,7 @@ COPY CMakeLists.txt main.cpp ./
 
 RUN cmake -S . -B /build \
       -DCMAKE_BUILD_TYPE=Release \
+      -DDOBA_HTTPARENA_FULL=ON \
       -DDOBA_INCLUDE_DIR=/doba/include \
     && cmake --build /build --config Release --parallel
 

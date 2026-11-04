@@ -31,10 +31,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "server.h"
 #include "test_helper.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::common::reader;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -48,10 +50,15 @@ struct line_engine {
     on_send = std::move(output);
   }
   void set_on_close(std::function<void()>) {}
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     on_send("echo: ", input, nullptr);
-    return;
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 
   martianlabs::doba::protocol::send_delegate on_send;
 };

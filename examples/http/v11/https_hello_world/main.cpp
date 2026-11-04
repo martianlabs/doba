@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -22,47 +22,42 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <iostream>
+#include <chrono>
+#include <string>
 
 #include "common/signaler.h"
 #include "https_server.h"
-#include "transport/server/tls.h"
-
-using namespace martianlabs::doba::common;
-using martianlabs::doba::https_server;
-using namespace martianlabs::doba::protocol::http::v11;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTPS server    |
-// | that listens on all interfaces (0.0.0.0) and port 8443.                   |
-// | It defines a resource handler for the "/hello" endpoint that responds to  |
-// | GET requests with a simple "hello from doba" message. The server is       |
-// | started, and the application waits for termination signals.               |
-// | This example requires a certificate and private key to be provided as     |
-// | command-line arguments.                                                   |
+// | Supply a PEM certificate chain and an unencrypted PEM private key.        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    std::cerr << "Usage: https_hello_world <certificate> <private-key>\n";
-    return 1;
-  }
-  martianlabs::doba::transport::server::tls_policies configuration;
-  configuration.ip = "0.0.0.0";
-  configuration.port = "8443";
-  configuration.certificate_file = argv[1];
-  configuration.private_key_file = argv[2];
-  https_server<> https_server(configuration);
-  https_server.add_route("GET", "/hello", [](const request&, response& res) {
-    res.ok_200();
-    res.set_body("hello from doba");
-    return;
+int main(int count, char** arguments) {
+  if (count < 3 || count > 4) return 1;
+  martianlabs::doba::transport::server::tls_policies policies;
+  policies.ip = "0.0.0.0";
+  policies.port = count == 4 ? arguments[3] : "8443";
+  policies.certificate_file = arguments[1];
+  policies.private_key_file = arguments[2];
+  policies.alpn_protocol = "http/1.1";
+  martianlabs::doba::https_server<> server(std::move(policies));
+  server.add_route("GET", "/hello",
+      [](const martianlabs::doba::protocol::http::v11::request&,
+             martianlabs::doba::protocol::http::v11::response& response) {
+    response.ok_200().set_body("hello over TLS");
   });
-  https_server.start();
-  signaler::wait();
-  https_server.stop();
-  return 0;
+  server.add_route("GET", "/wait/:id",
+      [](const martianlabs::doba::protocol::http::v11::request&,
+         martianlabs::doba::protocol::http::v11::response& response,
+         int id) -> martianlabs::doba::common::task<> {
+    co_await martianlabs::doba::common::sleep_for(
+        std::chrono::milliseconds(10));
+    response.ok_200().set_body(std::to_string(id));
+  });
+  server.start();
+  martianlabs::doba::common::signaler::wait();
+  server.stop();
 }

@@ -47,8 +47,12 @@ a selected value are marked "Not set".
 </h2>
 
 The planned first delivery is `0.1.0-beta1`, a beta for controlled
-deployments. There is currently no release candidate. Operational hardening
-C1-C3 and C7 is implemented and verified on Windows and Linux with TCP and TLS.
+deployments. There is currently no release candidate. The current Linux and
+Windows transports provide TCP, prefix/source and generic processing turns.
+The optional TLS class reuses TCP with its own encryption buffers, finite source
+budget and forwarding of cooperative engine turns.
+Application execution, inactivity timers and pressure/resume are outside the
+transport contract. Use the current contracts and qualification evidence.
 RE1 is the remaining open release gate. GZIP is future product work.
 
 **Next release work.** Qualify the exact publication revision and complete RE1
@@ -57,7 +61,7 @@ optional product features do not delay that qualification.
 
 **Exit criteria.**
 
-- Verify C1/C2/C3/C7 with focused unit and real-socket tests on
+- Verify C2/C3/C7 with focused unit and real-socket tests on
   Windows and Linux where applicable. Include slow clients, ordering,
   resource release, and cancellation where relevant.
 - Pass the compiler/configuration matrix, strict warnings, sanitizers,
@@ -80,9 +84,8 @@ an explicit scope decision supported by evidence.
   </a>
 </h2>
 
-18 open items across six active categories: one release gate and seventeen
-future items. The four completed operational items remain below with their
-verification evidence. Previously closed and archived identifiers remain in
+19 open items across seven active categories: one release gate and eighteen
+future items. Three operational items describe the current contracts below. Previously closed and archived identifiers remain in
 Git history. "Verification pending" requires a run on the relevant revision.
 
 QA2's initial fuzzing delivery is complete: HTTP and chunked harnesses,
@@ -91,23 +94,24 @@ corpus, sanitizers, CI budgets and reproduction evidence are in
 campaigns need separate scope. P3 is archived until a concrete middleware
 composition use case is selected.
 
-Test tooling uses repository C++ and CMake. Corpus generation and mutation
-campaigns must not require Python or another scripting runtime.
+Native runners use repository C++ and CMake; TLS interoperability and example
+checks use independent C++ clients. All test, corpus, mutation, coverage and
+campaign logic must be C++; no scripting runtime is a project dependency.
 
 | Category | Identifiers | Release | Future work | Complete | Total |
 | --- | --- | --- | --- | --- | --- |
-| Operational hardening | C1-C3, C7 | 0 | 0 | 4 | 4 |
+| Operational hardening | C1-C3, C7 | 0 | 1 | 3 | 4 |
 | Bugs | B13 | 0 | 1 | 0 | 1 |
 | Product and convenience | F2, P2, P4-P8 | 0 | 7 | 0 | 7 |
 | Quality and validation | QA1, QA6 | 0 | 2 | 0 | 2 |
 | Release engineering | RE1 | 1 | 0 | 0 | 1 |
 | C++ maintainability | DT1-DT3 | 0 | 3 | 0 | 3 |
 | Beyond the first release | F3-F5, F7 | 0 | 4 | 0 | 4 |
-| **Total** | | **1** | **17** | **4** | **22** |
+| **Total** | | **1** | **18** | **3** | **22** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
-| [C1](#c1-single-inactivity-timeout) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
+| [C1](#c1-single-inactivity-timeout) | Hardening | Not implemented | Not set | Future work |
 | [C2](#c2-effective-per-request-limits) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
@@ -146,10 +150,9 @@ campaigns must not require Python or another scripting runtime.
   </a>
 </h2>
 
-C1, C2, C3 and C7 are complete for the beta's operational scope. The
-[implementation plan and validation results](../plans/operational-policies.md)
-record the agreed budgets, regressions and compiler matrix. The exact release
-qualification remains part of RE1.
+These entries refer only to the current [TCP contract](reference/transport/server/tcp.md#runtime-contract)
+and separate [TLS contract](reference/transport/server/tls.md). Future features
+require an explicit scope decision. Exact release qualification remains in RE1.
 
 <a name="c1-single-inactivity-timeout"></a>
 <h3>
@@ -167,19 +170,11 @@ qualification remains part of RE1.
   </a>
 </h3>
 
-**Status.** Complete. Verified on IOCP and epoll, TCP and TLS.
+**Status.** Not implemented; future scope only.
 
-`inactivity_period` defaults to 60 seconds; zero disables it and negative
-periods are rejected. Positive socket reads or writes renew the period,
-including TLS negotiation and discarded input during graceful close. Expiration
-aborts the socket even when no I/O completion is pending. Worker checks use
-intervals up to min(period, one second), plus scheduling delay.
-
-Unit tests control time at exact boundaries. Real sockets cover idle peers,
-partial messages, incomplete handshakes, progressing fragments, non-reading
-peers, paused input, single disconnect notification and retained async work.
-Absolute phase deadlines, minimum rates, forced handler cancellation and
-automatic 408 responses remain outside this item.
+TCP and TLS do not impose inactivity, handshake or shutdown deadlines. TLS
+handshakes consume the ordinary connection admission allowance. Adding a timer
+service requires a separate design decision and is not a release gate.
 
 <a name="c2-effective-per-request-limits"></a>
 <h3>
@@ -231,19 +226,17 @@ future granularity, outside this beta gate.
   </a>
 </h3>
 
-**Status.** Complete. Verified on IOCP and epoll, TCP and TLS.
+**Status.** Implemented through the current TCP admission contract.
 
-`max_connections` defaults to 65535 per transport instance, shared by every
-worker; zero means unlimited. Capacity is reserved before constructing engines,
-receive buffers or per-connection TLS state. Excess sockets close without
-interrupting admitted connections or inventing HTTP rejection responses.
+`max_connections` defaults to 65535; zero disables admission limiting. Linux
+partitions a finite allowance among independent SO_REUSEPORT workers. Windows
+shares reservations through real I/O completion and context release. Each
+platform keeps its documented startup, rejection, stop and recovery semantics.
 
-A reservation follows the context through construction failures, close and
-retirement. Closing a socket with accepted asynchronous work does not release
-its credit prematurely. Concurrent reservation tests, connection bursts,
-independent instances, failed factories, incomplete handshakes, expiration and
-restart verify release and subsequent admission. Per-worker quotas and dynamic
-reconfiguration remain outside this item.
+TLS reuses these rules unchanged, including admission during negotiation.
+Tests cover native TCP reservations and a TLS connection held at the limit,
+followed by rejection and recovery. No application work credit is retained by
+these transports, and admission does not provide an RSS bound.
 
 <a name="c7-pending-response-and-work-budget"></a>
 <h3>
@@ -261,29 +254,22 @@ reconfiguration remain outside this item.
   </a>
 </h3>
 
-**Status.** Complete for the beta's operational scope.
+**Status.** Implemented for the current synchronous transport scope.
 
-The transport bounds inline output and active-batch reservations with
-`max_buffered_send_bytes` (1 MiB) and retained readers with
-`max_pending_sources` (32, including the active reader). HTTP bounds ordered
-response positions with `max_pending_requests` (128) and serialized bytes
-waiting behind earlier replies with `max_pending_response_bytes` (1 MiB).
-New count/HTTP byte limits accept zero as unlimited; the transport byte budget
-remains positive.
+TCP bounds active and accumulated inline bytes with `max_buffered_send_bytes`
+and permits one terminal reader. TLS consumes that reader synchronously and
+counts its bytes, prefix and body toward a plaintext batch budget. TLS has a
+separate ciphertext budget including record and handshake overhead.
 
-Bundled transports pause at the ceiling of 75% and resume at the floor of 50%,
-including a pipeline already in a receive block. Outstanding completions may
-still hit a hard limit and close the connection. Partial sends retain active
-batch credit, and growing reader batches reserve their full capacity. The
-optional flow hook preserves custom engine compatibility and response order.
+HTTP's independent `max_pending_requests` and `max_pending_response_bytes`
+remain engine policies. They do not create a transport executor or a
+pressure/resume service. There are no configurable queues of readers or
+transport work items.
 
-Real sockets verify a blocked 16 MiB delivery, service to another client,
-ordered resumption, delayed first handlers, terminal overflows, expiration and
-stop. Separate close regressions disable expiration and verify shutdown after
-resumed work produces no bytes. TSan repetitions and mutation detection cover
-the critical transitions. Source-owned memory/files, TLS BIO capacities, cache
-snapshots and arbitrary handler allocations remain distinct budgets; these
-limits do not promise a universal RSS or temporary-disk quota.
+Tests cover exact and excessive output, partial sends, source ownership,
+failed sources, slow peers, connection isolation and teardown. String capacity,
+source-owned storage and OpenSSL allocations are separate from logical byte
+budgets. See the TCP and TLS policy references for platform-specific semantics.
 
 <a name="bugs"></a>
 <h2>
@@ -848,17 +834,18 @@ messages, simultaneous closure, errors, and slow clients on both platforms.
   </a>
 </h3>
 
-**Status.** Deferred future feature. Current `stop()` does not offer a
-bounded server-wide drain and waits for externally suspended handlers
-without a cancellation deadline.
+**Status.** Deferred future feature; no bounded drain service is provided.
 
-**Existing behavior.** Quiesce, queued-output drain and waiting for pending
-handlers are implemented and tested. The remaining feature is a bounded
-shutdown deadline and cancellation policy, not the introduction of draining.
+Current Linux stop cancels pending output after active synchronous calls
+return. Windows retains its accepted-send and real-I/O drain behavior. Neither
+transport executes application tasks or waits for independently suspended
+handlers. TLS preserves those administrative semantics and does not promise a
+negotiated TLS close_notify exchange during stop.
 
-**Scope to decide.** Define when acceptance and request admission stop,
-how active work drains, and what happens at a deadline without silently
-changing existing `stop()` semantics.
+**Scope to decide.** A future deadline/cancellation policy must define when
+acceptance stops and how already accepted I/O is handled, without changing the
+current TCP contract implicitly or adding an application executor.
 
-**Close when selected.** Test active sends, idle keep-alive, pipelining,
-pending output, expiry, repeated stop, and single cleanup on both backends.
+**Close when selected.** Qualify active sends, idle peers, repeated stop and
+single cleanup on both backends. Until then, use the current TCP and TLS
+lifecycle contracts; there is no separate quiescence or output-credit service.

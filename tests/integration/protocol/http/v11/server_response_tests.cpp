@@ -38,6 +38,11 @@
 #include "test_helper.h"
 
 namespace {
+// +---------------------------------------------------------------------------+
+// | [>] socket workers                                          ( constant ) |
+// +---------------------------------------------------------------------------+
+// Exercise independent connection owners on both backends.
+constexpr std::size_t kSocketWorkers = 2;
 using martianlabs::doba::tests::file_directory;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -428,7 +433,8 @@ DOBA_TEST("HTTP/1.1 response close drains each body representation") {
       return;
     };
     http_server<> http_server(
-        {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)});
+        {.worker_count = kSocketWorkers, .ip = "127.0.0.1",
+         .port = std::to_string(port)});
     http_server.add_route("GET", "/before", [](const request&, response& res) {
       res.ok_200();
       res.set_body("before");

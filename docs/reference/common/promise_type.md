@@ -50,7 +50,7 @@ struct promise_type { ... };
 
 Provides the promise type type.
 
-**Source:** [include/common/task.h:51](../../../include/common/task.h#L51)
+**Source:** [include/common/task.h:53](../../../include/common/task.h#L53)
 
 <a id="method-get-return-object"></a>
 
@@ -68,7 +68,7 @@ Returns return object.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:52](../../../include/common/task.h#L52)
+**Source:** [include/common/task.h:54](../../../include/common/task.h#L54)
 
 <a id="method-initial-suspend"></a>
 
@@ -86,7 +86,7 @@ Controls whether a new coroutine suspends initially.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:55](../../../include/common/task.h#L55)
+**Source:** [include/common/task.h:57](../../../include/common/task.h#L57)
 
 <a id="method-final-suspend"></a>
 
@@ -104,7 +104,7 @@ Controls whether a coroutine suspends at completion.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:69](../../../include/common/task.h#L69)
+**Source:** [include/common/task.h:72](../../../include/common/task.h#L72)
 
 <a id="method-return-void"></a>
 
@@ -122,7 +122,7 @@ Completes a coroutine without a result value.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:70](../../../include/common/task.h#L70)
+**Source:** [include/common/task.h:73](../../../include/common/task.h#L73)
 
 <a id="method-unhandled-exception"></a>
 
@@ -140,7 +140,7 @@ Records an uncaught coroutine exception.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:71](../../../include/common/task.h#L71)
+**Source:** [include/common/task.h:74](../../../include/common/task.h#L74)
 
 <a id="field-completion"></a>
 
@@ -156,7 +156,7 @@ Stores the completion value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/common/task.h:72](../../../include/common/task.h#L72)
+**Source:** [include/common/task.h:83](../../../include/common/task.h#L83)
 
 <a id="field-error"></a>
 
@@ -172,7 +172,7 @@ Stores the error value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/common/task.h:73](../../../include/common/task.h#L73)
+**Source:** [include/common/task.h:84](../../../include/common/task.h#L84)
 
 <a id="field-scheduler"></a>
 
@@ -188,4 +188,18 @@ Stores the scheduler value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/common/task.h:74](../../../include/common/task.h#L74)
+**Source:** [include/common/task.h:85](../../../include/common/task.h#L85)
+
+## Controlled ownership
+
+The promise also has `bool controlled{false}`. It is an internal lifetime flag:
+`task_execution` sets it when adopting the unstarted frame. Callers must not
+modify promise fields directly. `completion` is unused under controlled
+ownership; `error` remains available at final suspension. `scheduler` points
+to the stable owner and only records local readiness/deadline state.
+
+`await_transform(Aty&&)` forwards ordinary await expressions unchanged for
+standalone tasks. Under controlled ownership it throws `std::logic_error` for
+all types except `yield_awaiter` and `sleep_awaiter`, before their awaiter hooks
+can publish a handle. The coroutine's normal exception handling applies.
+See [the ownership contract](task_execution.md).
