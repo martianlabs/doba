@@ -121,6 +121,55 @@ def coverage_controls(root):
 
 
 # +---------------------------------------------------------------------------+
+# | [>] path_controls                                            ( function ) |
+# +---------------------------------------------------------------------------+
+def path_controls(root):
+  source = root / 'source tree'
+  header = source / 'include/common/probe.h'
+  header.parent.mkdir(parents=True)
+  header.touch()
+  outside = root / 'neighbor/include/common/outside.h'
+  outside.parent.mkdir(parents=True)
+  outside.touch()
+  aliases = [source, source / 'include/..']
+  if sys.platform == 'win32':
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    short_path = kernel.GetShortPathNameW
+    short_path.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+    short_path.restype = wintypes.DWORD
+    buffer = ctypes.create_unicode_buffer(32768)
+    size = short_path(str(source), buffer, len(buffer))
+    if not size or size >= len(buffer):
+      raise ctypes.WinError(ctypes.get_last_error())
+    # Windows may preserve long names when 8.3 names are disabled. The dot
+    # alias above always exercises noncanonical roots on both platforms.
+    aliases.append(Path(buffer.value))
+  for index, alias in enumerate(aliases):
+    for filename in (str(header), header.as_posix()):
+      excluded = source / 'tests/probe.h'
+      sources = [filename, str(outside), str(excluded)]
+      document = {'data': [{'files': [{'filename': name}
+                                     for name in sources]}]}
+      lcov = ''.join(f'SF:{name}\nDA:1,1\nend_of_record\n'
+                     for name in sources)
+      files = {}
+      coverage_union.merge(files, document, lcov, alias)
+      if set(files) != {'include/common/probe.h'}:
+        raise AssertionError('Canonical containment lost or admitted files')
+      summary = coverage_union.summarize(files, alias, coverage.module)
+      if summary['modules']['common']['lines'] != \
+          {'count': 1, 'covered': 1, 'percent': 100.0}:
+        raise AssertionError('JSON/LCOV paths lost their production mapping')
+    # Replay the complete failing CI fixture, including inventory and HTML,
+    # with an unresolved root instead of normalizing the test input away.
+    fixture = alias / f'full fixture {index}'
+    fixture.mkdir()
+    coverage_controls(fixture)
+
+
+# +---------------------------------------------------------------------------+
 # | [>] campaign_controls                                        ( function ) |
 # +---------------------------------------------------------------------------+
 def campaign_controls(root):
@@ -166,5 +215,6 @@ if __name__ == '__main__':
   with tempfile.TemporaryDirectory(prefix='doba-qualification-') as directory:
     path = Path(directory)
     coverage_controls(path)
+    path_controls(path)
     campaign_controls(path)
   print('Coverage and campaign negative controls: PASS')

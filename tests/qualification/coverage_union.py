@@ -41,6 +41,8 @@ def production_name(filename, root):
 # | [>] merge                                                    ( function ) |
 # +---------------------------------------------------------------------------+
 def merge(files, document, lcov, root):
+  # Canonicalize the root once, including Windows 8.3 temporary aliases.
+  root = root.resolve()
   # Coverage is a union of source locations, not an average of executables or
   # instantiations. Every object was exported with only its own raw profiles.
   for data in document['data']:

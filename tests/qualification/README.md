@@ -150,6 +150,11 @@ coverage, missing modules/headers, malformed inventory, CRLF exact-name
 selection, sanitizer reports from exit-zero children, failed/empty selection,
 timeouts and HTML escaping. The CTest group is mandatory in CI inventory.
 
+Source filenames and source roots are both resolved before containment checks.
+Regression fixtures replay JSON/LCOV collection, inventory and HTML generation
+with noncanonical roots, including Windows 8.3 temporary-directory aliases.
+Neighboring trees and test-only paths must remain excluded.
+
 These campaigns extend the existing probes; they do not yet provide arbitrary
 allocation-failure sweeps, complete native/TLS stateful fuzzing, exhaustive
 schedules or a security certification. Remaining work is tracked in the
