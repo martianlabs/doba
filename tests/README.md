@@ -19,6 +19,11 @@ certify the absence of races or vulnerabilities.
 [Release qualification](qualification/README.md) explains measured production
 coverage, per-module regression gates and reproducible sanitizer/fuzz campaigns.
 
+All test runners and project tools must be implemented in C++20. They must not
+require Python or another interpreter. CMake and workflow YAML configure builds
+and CI steps. Native tool controls enforce the source policy and exercise child
+diagnostics, argument quoting, deadlines, stdin and large captured output.
+
 <a name="unit-tests"></a>
 <h2>
   <a href="../resources/tests/overview/h2-unit-tests.svg#gh-light-mode-only">

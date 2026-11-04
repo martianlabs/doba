@@ -7,7 +7,7 @@ transport mechanisms are excluded. TCP and common::reader retain their contracts
 
 | Supported contract | Direct evidence |
 | --- | --- |
-| TLS 1.2/1.3 and certificate/hostname verification | [wire tests](../../../../tests/integration/tls/exercise.py), [OpenSSL peer](../../../../tests/integration/tls/core.cpp) |
+| TLS 1.2/1.3 and certificate/hostname verification | [wire tests](../../../../tests/integration/tls/exercise.cpp), [OpenSSL peer](../../../../tests/integration/tls/core.cpp) |
 | Fragmented records, RX capacity, multi-record input | one-byte ciphertext writes, 33 KiB input, core RX capacity seven bytes |
 | Bounded BIO progress and KeyUpdate | core BIO capacities 1/127/17408 in both versions; TLS 1.3 KeyUpdate |
 | Prefix/body/source order, empty sends and empty source | wire source, empty-source and empty-source/close cases |
@@ -22,10 +22,10 @@ transport mechanisms are excluded. TCP and common::reader retain their contracts
 | Admission during TLS negotiation and restart | one held connection at the admission limit; rejection/recovery; request before and after explicit restart |
 | Processing snapshot, control-only RX and output-idle | [processing peer](../../../../tests/integration/tls/processing.cpp): all interest combinations, retained KeyUpdate deadline, busy ciphertext, close precedence |
 | Prefix/source and failures from processing turns | exact/overflow/cumulative plain budgets, encoded budget, failed reader, second reader, handler exception after encoding; 90 cases across two TLS versions and three BIO capacities |
-| Concurrent ordered HTTPS, cancellation and stop | [native processing tests](../../../../tests/integration/tls/processing.py): later sync request releases a waiting predecessor on the same connection; mixed reader output, failure, close, separate-connection progress, timed-frame cancellation and stop |
+| Concurrent ordered HTTPS, cancellation and stop | [native processing tests](../../../../tests/integration/tls/processing_wire.cpp): later sync request releases a waiting predecessor on the same connection; mixed reader output, failure, close, separate-connection progress, timed-frame cancellation and stop |
 | HTTPS constructor with authentication providers | authenticated tuple construction; 401 rejection and authorized 200 response over TLS |
 | Optional compilation and dependency isolation | [negative header consumer](../../../../tests/package/tls_guard/CMakeLists.txt), package consumers; CI builds plain consumer from TLS installation with OpenSSL discovery disabled |
-| HTTPS and non-HTTP usage examples | [example runner](../../../../tests/integration/tls/examples.py) executes both built examples with verified clients, validates output and the echo line limit |
+| HTTPS and non-HTTP usage examples | [example runner](../../../../tests/integration/tls/examples_wire.cpp) executes both built examples with verified clients, validates output and the echo line limit |
 
 The [test inventory](../../../../tests/integration/tls/README.md) lists CTest
 entry points and prerequisites. The [public TLS contract](tls.md) and

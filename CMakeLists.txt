@@ -387,6 +387,7 @@ if(
   if(
     BUILD_TESTING
   )
+    add_subdirectory(tests/qualification)
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/unit
     )

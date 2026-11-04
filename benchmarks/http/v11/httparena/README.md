@@ -79,12 +79,12 @@ Set DOBA_HTTPARENA_FULL=ON in a root build to qualify the full adapter too.
 
 Linux workers use independent SO_REUSEPORT listeners; a connection stays on its
 accepting worker. Root test builds also build this driver and register
-`doba_httparena_tests`, using Python 3.9+ (and the openssl CLI for temporary
+`doba_httparena_tests`, using an independent C++ client (and the openssl CLI for temporary
 certificates in full builds). That is a correctness test, not a
 throughput run: dynamic GET/POST, chunked/fragmented input, sixteen-response
 pipelines, invalid arithmetic, random delays, 32 different overlapping waits,
-zero delay and mixed same-connection response order. The script reports batch
-elapsed time but asserts no concurrency throughput ceiling. On Linux it also
+zero delay and mixed same-connection response order. The test asserts no
+concurrency throughput ceiling. On Linux it also
 checks automatic worker selection under restricted CPU affinity. The official
 HttpArena validate.sh covers JSON, gzip, TLS echo and static-file behavior.
 
@@ -153,15 +153,9 @@ process RSS can count shared pages more than once. Resource figures and
 throughput from different platforms are not directly comparable.
 
 The runners, request templates, patches, manifests, binaries and raw output
-are preserved in `out/async-processing/block-2/`. From the repository root:
-
-```sh
-python3 out/async-processing/block-2/linux/compare.py
-```
-
-```powershell
-pwsh -NoProfile -File out/async-processing/block-2/windows/compare.ps1
-```
+are preserved as historical evidence in `out/async-processing/block-2/`.
+Those archived runners predate the C++-only tooling policy and are not current
+project tooling or dependencies. Do not use them as the CI entry point.
 
 The runners intentionally refuse to overwrite results. Linux runtime paths
 and Windows dependency paths are recorded in the archived runners and

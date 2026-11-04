@@ -76,14 +76,19 @@ source_group(
 if(TARGET doba_headers)
   target_link_libraries(doba_httparena_http_v11 PRIVATE doba_headers)
 endif()
-if(DOBA_BUILD_TESTS AND BUILD_TESTING)
-  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+if(DOBA_BUILD_TESTS AND BUILD_TESTING AND TARGET doba_native_tools)
+  add_executable(doba_httparena_checks
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../tests/integration/benchmarks/httparena.cpp")
+  target_link_libraries(doba_httparena_checks PRIVATE doba_native_tools)
+  add_dependencies(doba_httparena_checks doba_httparena_http_v11)
+  if(WIN32)
+    target_link_libraries(doba_httparena_checks PRIVATE ws2_32)
+  endif()
   set(_httparena_test_args)
   if(NOT DOBA_HTTPARENA_FULL)
     list(APPEND _httparena_test_args --plain)
   endif()
-  add_test(NAME doba_httparena_tests COMMAND "${Python3_EXECUTABLE}"
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../tests/integration/benchmarks/httparena.py"
+  add_test(NAME doba_httparena_tests COMMAND doba_httparena_checks
     "$<TARGET_FILE:doba_httparena_http_v11>" "${CMAKE_CURRENT_LIST_DIR}/meta.json" ${_httparena_test_args})
   set_tests_properties(doba_httparena_tests PROPERTIES TIMEOUT 90)
 endif()

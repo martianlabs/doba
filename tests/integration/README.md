@@ -120,7 +120,7 @@ when cleanup cannot progress. Concurrent reports retain every failure.
 The [HTTP helper regressions](helpers/http_test_helper_tests.cpp) verify raw-wire
 rejection of mixed-case duplicate Content-Length, Transfer-Encoding and Date.
 Native TCP helpers use elapsed-time deadlines and retry interruptions; Linux
-uses poll for high descriptors. The TLS groups use verified Python and
+uses poll for high descriptors. The TLS groups use independent, verified C++
 OpenSSL clients; they do not restore the retired platform-specific TLS clients.
 
 Platform-specific files are selected by CMake; unsupported or absent scenarios
@@ -128,8 +128,8 @@ are not counted as passing. Shared portable cases must appear in both native
 integration inventories. See the [policy coverage matrix](../../docs/reference/transport/server/tcp_policies.md#validation-coverage).
 
 
-The [HttpArena correctness group](benchmarks/httparena.py) exercises the actual
+The [HttpArena correctness group](benchmarks/httparena.cpp) exercises the actual
 standalone driver with all three selected profiles.
-[Processing example checks](helpers/processing_examples.py) execute the built
+[Processing example checks](helpers/processing_examples.cpp) execute the built
 common, in-memory engine and TCP demos when examples are enabled. Neither group
 substitutes for the final throughput comparison. See [CI coverage](../ci-inventory.md).

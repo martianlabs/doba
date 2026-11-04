@@ -58,16 +58,15 @@ a generic process failure cannot count as a successful negative check.
 
 ## Measurement and reliability boundaries
 
-The [driver check](integration/benchmarks/httparena.py) draws path values after
+The [driver check](integration/benchmarks/httparena.cpp) draws path values after
 server startup and verifies their bodies, text/plain and minimum waits. It also
 checks zero, different overlapping delays, mixed same-connection order, dynamic
 GET/POST, chunked/fragmented bodies and sixteen-response pipelines. It reports
 batch elapsed time without asserting a throughput target.
 
-Minimum-delay checks use perf_counter_ns. Python <=3.12 on Windows can expose a
-15.6 ms GetTickCount64 monotonic clock; using that clock to judge a 17 ms delay
-can falsely report 16 ms. The high-resolution monotonic performance counter
-avoids that problem without allowing an early response. Socket/process waits
+Minimum-delay checks use C++ `std::chrono::steady_clock`, require monotonicity
+and verify its resolution. This preserves strict minimum waits with the native
+high-resolution monotonic performance counter on Windows. Socket/process waits
 remain bounded. Driver stderr is checked for sanitizer diagnostics even when
 the harness terminates the benchmark-owned process; a reported race must not
 be lost merely because that process did not exit normally. No tight concurrent

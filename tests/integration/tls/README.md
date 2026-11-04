@@ -1,8 +1,8 @@
 # TLS integration
 
-Enable `DOBA_ENABLE_TLS=ON`. Production consumers need OpenSSL 3.0 or newer;
-these tests additionally require Python 3.9 or newer with TLS 1.3 in its ssl
-module. No third-party Python package or OpenSSL executable is required.
+Enable `DOBA_ENABLE_TLS=ON`. Production consumers and independent native test
+clients need OpenSSL 3.0 or newer. No interpreter or OpenSSL executable is
+required by the TLS test groups.
 
 | CTest group | Responsibility |
 | --- | --- |
@@ -17,7 +17,7 @@ module. No third-party Python package or OpenSSL executable is required.
 Every group has an external CTest deadline. Wire operations and child processes
 also have bounded waits. Configuration checks require the intended exception or
 diagnostic, so an unrelated listener failure cannot satisfy the rejection test.
-Assertions remain enabled in Release; Python optimization is rejected explicitly.
+Native checks throw or fail explicitly and remain active in Release.
 
 The core executable now checks all eight processing-interest combinations for
 both TLS versions and BIO capacities 1/127/17408 (48 invocations). Each corrupts
@@ -26,7 +26,7 @@ scheduling. Native wire coverage also holds incomplete handshakes while a
 healthy connection progresses. This does not introduce a handshake timeout.
 
 The processing wire parser has independent malformed-response negative controls
-and strict bounded Content-Length framing. Python child wrappers reject captured
+and strict bounded Content-Length framing. Native child runners reject captured
 sanitizer reports even when their server is intentionally terminated. See the
 [security audit](../../security-audit.md) for properties and assurance limits.
 

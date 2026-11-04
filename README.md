@@ -219,7 +219,9 @@ The illustrated counts describe source declarations across the tree, not cases
 executed on one platform.
 And yes, **the normal suite runs in Release, optimizations and all**. That's
 the code we care about running. Debug gets a compile check. Test tooling uses
-C++, CMake and Python; source-coverage builds additionally use Clang/LLVM.
+C++ and CMake; source-coverage builds additionally use Clang/LLVM.
+All project test and tooling logic is implemented in C++; interpreters are
+not required. CMake and workflow YAML describe the build and CI orchestration.
 
 Fancy a second opinion? There are also adapters for manual protocol checks
 with [h1spec](compliance/http/v11/h1spec/README.md) and

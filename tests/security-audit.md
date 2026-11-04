@@ -28,15 +28,16 @@ are recorded locally in `out/security-audit/2026-11-04`.
 Normal test execution in **Release is intentional and correct**. Compilation
 in Debug without normal-suite execution is not a finding. `DOBA_EXPECT` is
 independent of `assert`/`NDEBUG`; fuzz properties abort explicitly. Existing
-Python suites reject optimization when they depend on assertions. The new
-standalone oracle controls use explicit failures even under `python -O`.
+All current test tooling is C++; checks fail explicitly in Release. The
+historical interpreter-based wrappers described below have been migrated,
+including their positive and negative controls.
 
 ## Threat and coverage matrix
 
 | Boundary | Existing evidence and additions | Remaining assurance limit |
 | --- | --- | --- |
 | HTTP framing / request smuggling | Decoder and header-rule cases cover conflicting CL/TE, duplicate fields, malformed targets, control bytes, fragmentation and exact budgets. Native hostile-request cases append a sentinel and verify it is never dispatched. Decoder/chunked fuzzers compare segmentation and storage with known valid messages. The new engine model follows rejection through dispatch and output. | No systematic differential campaign against independent servers or complete request-smuggling grammar campaign. A policy difference alone would not prove a bug. |
-| Response integrity / splitting | Serialization and header-injection cases, independent native response parser and actual wire tests. New negative controls reject invalid field bytes, status ranges and malformed trailers; Python TLS parsing rejects conflicting framing. | Helpers deliberately implement their fixture's subset, not all HTTP response semantics. The Python oracle accepts final Content-Length responses only. |
+| Response integrity / splitting | Serialization and header-injection cases, independent native response parser and actual wire tests. New negative controls reject invalid field bytes, status ranges and malformed trailers; the independent C++ TLS oracle rejects conflicting framing. | Helpers deliberately implement their fixture's subset, not all HTTP response semantics. The independent oracle accepts final Content-Length responses only. |
 | Ownership / use after free | RX poisoning, owned requests inspected after decoder destruction, task ownership/cancellation and reader lifetime tests. New model checks suspended parameter/header views and retired coroutine/readers. New native binary pipelines use default admission limits. | Finite schedules and payload bounds; no exhaustive allocator-failure campaign or general lifetime proof. |
 | TCP / IOCP / epoll races | Native publication, completion, cancellation, restart, partial sends, EAGAIN, reader bounds and kernel-call fault probes. Linux TSan and Windows ASan/UBSan jobs; controlled barriers and repeated concurrency groups. | Windows ASan is not a race detector. Repetition is sampling, not exhaustive schedule exploration. |
 | TLS authenticity / progress | Verified TLS 1.2/1.3 peers, tiny BIOs, KeyUpdate, source budgets, disconnect/cancellation and mixed processing. Added corrupted real authenticated records: zero plaintext delivered, terminal scheduling stays empty. Added incomplete-handshake clients alongside a healthy client. | OpenSSL itself is not audited here. No stateful TLS/transport fuzzer or proof against connection-cap exhaustion. |
@@ -58,7 +59,7 @@ functional assertions, not a compilation error or unrelated process crash.
 
 The independent native parser now validates token field names, control bytes,
 status ranges, trailer syntax and bounded chunked wire/trailer collection.
-The Python parser has explicit head/body bounds, strict framing, duplicate
+The independent C++ Content-Length oracle has head/body bounds, strict framing, duplicate
 singleton checks and bounded decimal parsing. Positive controls preserve
 legal whitespace, opaque bytes, repeatable fields and pipeline boundaries.
 These findings concern test reliability; they are not evidence that production
@@ -68,7 +69,7 @@ doba emitted the malformed responses.
 
 Some example/probe wrappers discarded captured stderr when terminating the
 server. A successful exchange or an exit code alone cannot qualify that child.
-All affected Python wrappers now use one diagnostic checker. Its metatests
+All affected native runners now use one diagnostic checker. Its metatests
 launch exit-zero children emitting ASan, LSan, MSan, TSan and UBSan reports and
 require rejection. Harmless sanitizer initialization text remains accepted.
 Existing C++ runner process checks remain in place.
@@ -153,7 +154,7 @@ results mean no findings in the executions performed, not proof of safety.
 
 The total group counts are not individual case counts. Local sanitizer
 selection is the affected subset, not a new complete remote CI matrix run.
-The new standalone Python negative controls also pass under optimization.
+The standalone native negative controls remain active under optimization.
 
 No Git operation, publication or remote CI run is part of this audit.
 

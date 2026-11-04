@@ -95,8 +95,8 @@ campaigns need separate scope. P3 is archived until a concrete middleware
 composition use case is selected.
 
 Native runners use repository C++ and CMake; TLS interoperability and example
-checks use the Python standard library. Corpus generation and mutation
-campaigns must not require Python or another scripting runtime.
+checks use independent C++ clients. All test, corpus, mutation, coverage and
+campaign logic must be C++; no scripting runtime is a project dependency.
 
 | Category | Identifiers | Release | Future work | Complete | Total |
 | --- | --- | --- | --- | --- | --- |

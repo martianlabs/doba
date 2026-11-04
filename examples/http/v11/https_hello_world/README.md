@@ -21,5 +21,5 @@ must fit the finite plaintext budget for that input or processing call;
 see the [TLS contract](../../../../docs/reference/transport/server/tls.md).
 
 An optional final argument selects the listening port instead of 8443. The
-[TLS example test](../../../../tests/integration/tls/examples.py) runs the built
+[TLS example test](../../../../tests/integration/tls/examples_wire.cpp) runs the built
 executable with an isolated port and a verified client.

@@ -13,7 +13,7 @@ waits. Responses are emitted in request order; waiting does not occupy the
 worker. Other connections can progress during those sleeps. The engine chooses
 the handler path automatically; there is no executor injection or mode flag.
 
-[Executable-example checks](../../../../tests/integration/helpers/processing_examples.py)
+[Executable-example checks](../../../../tests/integration/helpers/processing_examples.cpp)
 also run the standalone task owner and in-memory concurrent engine examples.
 
 Only `common::yield()` and `common::sleep_for()` are supported managed awaiters.

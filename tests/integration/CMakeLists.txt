@@ -160,23 +160,18 @@ if(WIN32)
 endif()
 
 if(DOBA_BUILD_EXAMPLES)
-  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME doba_processing_examples_tests COMMAND "${Python3_EXECUTABLE}"
-    "${CMAKE_CURRENT_LIST_DIR}/helpers/processing_examples.py"
+  add_executable(doba_processing_examples helpers/processing_examples.cpp)
+  target_link_libraries(doba_processing_examples PRIVATE doba_native_tools)
+  add_dependencies(doba_processing_examples common_task_execution
+    http_processing_turns http_async_routes)
+  if(WIN32)
+    target_link_libraries(doba_processing_examples PRIVATE ws2_32)
+  endif()
+  add_test(NAME doba_processing_examples_tests COMMAND doba_processing_examples
     "$<TARGET_FILE:common_task_execution>"
     "$<TARGET_FILE:http_processing_turns>" "$<TARGET_FILE:http_async_routes>")
   set_tests_properties(doba_processing_examples_tests PROPERTIES TIMEOUT 30)
 endif()
-
-# Independent negative controls remain active in Release verification.
-find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
-add_test(NAME doba_test_diagnostics_tests COMMAND "${Python3_EXECUTABLE}"
-  "${CMAKE_CURRENT_LIST_DIR}/../helpers/sanitizer_diagnostics_tests.py")
-set_tests_properties(doba_test_diagnostics_tests PROPERTIES TIMEOUT 30)
-
-add_test(NAME doba_qualification_tests COMMAND "${Python3_EXECUTABLE}"
-  "${CMAKE_CURRENT_LIST_DIR}/../qualification/qualification_tests.py")
-set_tests_properties(doba_qualification_tests PROPERTIES TIMEOUT 30)
 
 # A focused sanitizer/repetition target with independent wire oracles.
 add_executable(doba_stream_integrity_tests

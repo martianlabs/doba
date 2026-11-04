@@ -9,7 +9,7 @@ that produced additional fault tests. Remote CI results remain separate.
 
 ## Source coverage
 
-`coverage.py` configures an isolated Clang **Release** build with TLS and
+`doba_coverage` configures an isolated Clang **Release** build with TLS and
 examples, builds it and runs the complete registered CTest suite. Normal
 Release test policy is unchanged. Instrumentation is private to this build;
 it does not add flags to the installed targets or production headers.
@@ -20,8 +20,21 @@ The compiler uses LLVM source coverage and atomic counter updates. Matching
 uses LLVM 18; Windows pins LLVM 22.1.8 and verifies its installer SHA-256.
 Windows also requires a developer environment, Ninja and OpenSSL on PATH.
 
+All project test and qualification logic is C++20. Python is not required.
+CMake and workflow YAML declare builds and CI steps; they do not replace the
+native coverage or campaign implementation. Bootstrap the uninstrumented tools:
+
 ```text
-python -B tests/qualification/coverage.py --build out/build/coverage
+cmake -S tests/qualification -B out/build/qualification -G Ninja
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build out/build/qualification --parallel 2
+```
+
+Use one command line for the configure command. On Windows append `.exe` to
+tool paths. Root test builds also build both tools in `tests/qualification/`.
+
+```text
+out/build/qualification/doba_coverage --build out/build/coverage
   --output out/coverage --compiler clang++ --llvm-cov llvm-cov
   --llvm-profdata llvm-profdata
   --baseline tests/qualification/baselines/linux.json
@@ -101,7 +114,7 @@ assertion that the remaining uncovered code is safe.
 
 ## Systematic campaigns
 
-`campaign.py` requires a Release build and validates its registered inventory.
+`doba_campaign` requires a Release build and validates its registered inventory.
 It executes each selected case in an isolated process and records every
 command, result and log. Default coverage includes:
 
@@ -116,7 +129,7 @@ command, result and log. Default coverage includes:
 | Optional TLS | Authenticated-record rejection, processing state combinations, native wire concurrency, incomplete handshakes and recovery. |
 
 ```text
-python -B tests/qualification/campaign.py --build out/build/asan
+out/build/asan/tests/qualification/doba_campaign --build out/build/asan
   --output out/campaign --rounds 2 --seed 104729 --tls
 ```
 
@@ -144,11 +157,14 @@ coverage checks must be selected separately in repository rules if they are
 to block merging. Release creation also depends on the coverage job. This
 change does not modify repository permissions or branch rules.
 
-`qualification_tests.py` checks the tools themselves: complementary branches,
+`qualification_controls.cpp` checks the tools themselves: complementary branches,
 order-independent union, duplicate source counting, unmapped headers, dropped
 coverage, missing modules/headers, malformed inventory, CRLF exact-name
 selection, sanitizer reports from exit-zero children, failed/empty selection,
 timeouts and HTML escaping. The CTest group is mandatory in CI inventory.
+The diagnostic group also validates native process argument quoting, large
+stdout/stderr capture, stdin and environment isolation, SHA-256 known answers,
+strict JSON parsing and malformed independent HTTP response controls.
 
 Source filenames and source roots are both resolved before containment checks.
 Regression fixtures replay JSON/LCOV collection, inventory and HTML generation
@@ -159,6 +175,36 @@ These campaigns extend the existing probes; they do not yet provide arbitrary
 allocation-failure sweeps, complete native/TLS stateful fuzzing, exhaustive
 schedules or a security certification. Remaining work is tracked in the
 [security audit](../security-audit.md).
+
+## Native tooling qualification, 2026-11-04
+
+The thirteen former interpreter-based scripts have been replaced with C++.
+CTest group names, Release execution, campaign selection controls and coverage
+floors remain unchanged. TCP-only builds do not acquire an OpenSSL dependency
+from these tools. The native TLS peers use OpenSSL independently of doba.
+
+Local qualification, with TLS and examples enabled:
+
+| Check | Linux | Windows |
+| --- | --- | --- |
+| Complete Release CTest suite | 21/21 groups | 23/23 groups |
+| Two-round native fault campaign | 148 actions | 116 actions |
+| Affected native runner groups, ASan | 7/7 | 7/7 |
+| Affected native runner groups, UBSan | 7/7 | Not rerun for this migration |
+| Fresh instrumented Release coverage gates | Passed | Passed |
+| Replay of published LLVM exports with the C++ union | Identical | Identical |
+
+The replay compares module counts, measured/unmapped inventories and uncovered
+outcomes against the published baseline's exports. Fresh runs measure
+8,169/8,585 lines and 4,730/5,340 outcomes on Linux; Windows measures
+8,436/8,914 lines and 4,786/5,410 outcomes. The published release snapshot
+retains its original measurement. Coverage floors were not lowered.
+
+The native process checks include large stdout/stderr, exact quoted arguments,
+stdin, environment isolation and exit-zero sanitizer reports. Linux example
+shutdown preserves SIGTERM handling; Windows signal-based examples retain
+their hidden private console. All 189 production header hashes are unchanged.
+These are local results, not a new remote CI run.
 
 ## Reliability finding during qualification
 

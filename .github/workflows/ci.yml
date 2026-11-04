@@ -330,7 +330,7 @@ jobs:
 
       - name: Run reproducible fault and ownership campaign
         run: >-
-          python3 -B tests/qualification/campaign.py
+          ${{ matrix.build_dir }}/tests/qualification/doba_campaign
           --build ${{ matrix.build_dir }} --output out/campaign
           --rounds ${{ github.event_name == 'schedule' && 12 || 2 }}
 
@@ -423,7 +423,7 @@ jobs:
 
       - name: Run reproducible fault and ownership campaign
         run: >-
-          python -B tests/qualification/campaign.py
+          out/build/msvc-asan/tests/qualification/doba_campaign.exe
           --build out/build/msvc-asan --output out/campaign
           --rounds ${{ github.event_name == 'schedule' && 12 || 2 }}
 
@@ -794,7 +794,8 @@ jobs:
         run: >-
           cmake --build out/build/tls --target
           doba_tls_fixture doba_tls_core doba_tls_configuration
-          doba_tls_processing https_hello_world tls_echo
+          doba_tls_processing doba_tls_exercise doba_tls_processing_wire
+          doba_tls_examples_wire https_hello_world tls_echo
       - name: Run native TLS tests
         run: >-
           ctest --test-dir out/build/tls -R '^doba_tls_tests$'
@@ -880,9 +881,6 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
       - name: Install instrumented build tools
         if: runner.os == 'Linux'
         run: >-
@@ -917,12 +915,23 @@ jobs:
           $process = Start-Process -FilePath $installer -Wait -PassThru `
             -WindowStyle Hidden -ArgumentList '/S', '/D=C:\Program Files\LLVM'
           if ($process.ExitCode -ne 0) { throw 'LLVM installation failed' }
+      - name: Build native qualification tools
+        shell: pwsh
+        run: |
+          cmake -S tests/qualification -B out/build/qualification -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            '-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/qualification --parallel 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Measure and gate production coverage
         shell: pwsh
         run: |
           $options = @()
           if ($IsWindows) { $options += @('--openssl-root', $env:OPENSSL_ROOT_DIR) }
-          python -B tests/qualification/coverage.py `
+          $tool = './out/build/qualification/doba_coverage'
+          if ($IsWindows) { $tool += '.exe' }
+          & $tool `
             --build out/build/coverage --output out/coverage `
             --compiler '${{ matrix.compiler }}' --llvm-cov '${{ matrix.cov }}' `
             --llvm-profdata '${{ matrix.profdata }}' `
