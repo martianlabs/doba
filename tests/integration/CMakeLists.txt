@@ -174,6 +174,10 @@ add_test(NAME doba_test_diagnostics_tests COMMAND "${Python3_EXECUTABLE}"
   "${CMAKE_CURRENT_LIST_DIR}/../helpers/sanitizer_diagnostics_tests.py")
 set_tests_properties(doba_test_diagnostics_tests PROPERTIES TIMEOUT 30)
 
+add_test(NAME doba_qualification_tests COMMAND "${Python3_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/../qualification/qualification_tests.py")
+set_tests_properties(doba_qualification_tests PROPERTIES TIMEOUT 30)
+
 # A focused sanitizer/repetition target with independent wire oracles.
 add_executable(doba_stream_integrity_tests
   "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"

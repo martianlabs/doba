@@ -1,8 +1,10 @@
 # HttpArena HTTP/1.1 benchmark adapter
 
-This adapter supports **baseline**, **pipelined** and **async** over plain TCP
-on Linux and Windows. All handlers are registered in the same executable with
-the normal single HTTP engine; there is no async mode switch or executor.
+This adapter supports the suite's eleven HTTP/1.1 profiles: **baseline**,
+**pipelined**, **limited-conn**, **latency-10k**, **latency-1m**,
+**latency-500k-8cpu**, **async**, **json-comp**, **json-tls**, **8gbit** and
+**static-tls**. The normal HTTP engine serves plaintext on 8080 and TLS on 8081.
+Only the delay handler is a coroutine; all other handlers remain synchronous.
 
 ## Routes and scope
 
@@ -12,6 +14,9 @@ the normal single HTTP engine; there is no async mode switch or executor.
 | POST | `/baseline11?a=13&b=42` | Query sum plus decoded integer body. |
 | GET | `/pipeline` | Plain text `ok`, including pipelined batches. |
 | GET | `/delay/:ms` | Wait the parsed path value in milliseconds; plain text echo of that value. |
+| GET | `/json/:count?m=...` | Copy the first N dataset objects, calculate total per request, serialize with RapidJSON; negotiate gzip with zlib. Available on TCP and TLS. |
+| POST | `/echo` (TLS) | Echo the decoded request body through doba's body reader. |
+| GET/HEAD | `/static/*` (TLS) | Built-in static_file_server with shared framework cache and precompressed file selection. |
 
 Baseline parses each request and checks signed addition for overflow. POST
 accepts Content-Length and chunked bodies through the engine's body reader.
@@ -33,38 +38,65 @@ validation varies it. Library qualification additionally checks mixed ordered
 requests on one connection. Supporting a single request per measured connection
 does not qualify that same-connection behavior by itself.
 
-Only HTTP on port 8080 is started by default. There are no TLS, JSON, static-file
-or echo profiles and no datasets, certificate mounts or response caches.
-meta.json declares exactly baseline, pipelined and async. PORT optionally chooses
-another listening port for local tests; WORKERS selects a positive worker count
-(default 1). Both are driver-only settings, not engine configuration switches.
+The worker count is automatic: hardware concurrency, restricted on Linux by
+CPU affinity and the container's cgroup CPU quota (v1 or v2), with a minimum of
+one worker. An integer quota of 8 yields at most 8 workers per listener; the
+official 64-CPU affinity yields 64 on a matching host. No WORKERS variable is
+required from HttpArena. WORKERS remains an explicit positive override for
+local qualification. PORT and TLS_PORT optionally override 8080 and 8081.
+
+HTTP and transport memory/buffering policies retain doba's defaults. Only
+workers and listener addresses/ports/certificate paths are configured. Static
+serving enables the library's shared cache with its default limits and the
+precompressed-file feature; there is no handler-owned file or response cache.
+The dataset is loaded once, but JSON serialization, calculated totals and gzip
+compression happen for each request. All unrelated source fields are retained.
+Compression honors Accept-Encoding and sends Vary: Accept-Encoding.
+
+The official harness supplies /data/dataset.json, /data/static and
+/certs/server.crt plus /certs/server.key. Local qualification can select them
+with DATASET_PATH, STATIC_DIR, TLS_CERT and TLS_KEY. Both listeners start in the
+normal executable; missing data or certificates are startup errors.
 
 ## Build and run
 
-Use C++20, CMake 3.20+ and platform thread support. Standalone builds require no
-Python, RapidJSON, zlib or OpenSSL:
+Use C++20, CMake 3.20+, platform thread support, OpenSSL 3, zlib and RapidJSON.
+TLS is enabled on the driver target without changing the library's plain HTTP
+target or policy defaults:
 
 ```sh
 cmake -S benchmarks/http/v11/httparena -B out/httparena \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build out/httparena --config Release --parallel
-WORKERS=1 ./out/httparena/doba_httparena_http_v11
+./out/httparena/doba_httparena_http_v11
 ```
+
+The standalone default is DOBA_HTTPARENA_FULL=ON, also explicitly enforced by
+the Dockerfile. The library's root test build retains a TCP-only qualification
+target by default to keep portable CI free of benchmark JSON/TLS dependencies.
+It prints that scope at startup and is not the image submitted to HttpArena.
+Set DOBA_HTTPARENA_FULL=ON in a root build to qualify the full adapter too.
 
 Linux workers use independent SO_REUSEPORT listeners; a connection stays on its
 accepting worker. Root test builds also build this driver and register
-`doba_httparena_tests`, using Python 3.9+. That is a correctness test, not a
+`doba_httparena_tests`, using Python 3.9+ (and the openssl CLI for temporary
+certificates in full builds). That is a correctness test, not a
 throughput run: dynamic GET/POST, chunked/fragmented input, sixteen-response
 pipelines, invalid arithmetic, random delays, 32 different overlapping waits,
 zero delay and mixed same-connection response order. The script reports batch
-elapsed time but asserts no concurrency throughput ceiling.
+elapsed time but asserts no concurrency throughput ceiling. On Linux it also
+checks automatic worker selection under restricted CPU affinity. The official
+HttpArena validate.sh covers JSON, gzip, TLS echo and static-file behavior.
 
-The container still exposes port 8080 without data volumes:
+The container exposes 8080 and 8081. Build it against the matching Doba revision
+and run it with the official data/certificate mounts:
 
 ```sh
-docker build --tag doba-httparena-http-v11 \
+docker build --build-arg DOBA_REF=feature/async --tag doba-httparena-http-v11 \
   benchmarks/http/v11/httparena
-docker run --rm --publish 8080:8080 --env WORKERS=1 doba-httparena-http-v11
+docker run --rm --publish 8080:8080 --publish 8081:8081 \
+  --mount type=bind,src="$PWD/data",dst=/data,readonly \
+  --mount type=bind,src="$PWD/certs",dst=/certs,readonly doba-httparena-http-v11
 ```
 
 The Dockerfile fetches DOBA_REF (default main). That ref must contain the
@@ -72,7 +104,13 @@ cooperative engine/native processing implementation; it does not include local
 uncommitted library changes. Use the local build above to qualify this source
 tree. Select a remote ref containing the matching implementation.
 
-## Local reference against Spliffy
+## Historical local reference against Spliffy
+
+The following describes archived qualification campaigns, not the official
+HttpArena launcher. For official scores use HttpArena's profiles, repetitions
+and selected-result rules. The current full driver also requires the dataset,
+static files and certificates described above; old archived runners may target
+the earlier three-profile executable.
 
 Use the same worker count and server CPU affinity for both servers, and a
 separate CPU affinity for the load generator. Run servers sequentially.

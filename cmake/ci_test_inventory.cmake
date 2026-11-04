@@ -126,6 +126,7 @@ if(NOT WIN32)
   )
   foreach(required IN ITEMS doba_unit_tests doba_integration_tests
       doba_test_diagnostics_tests doba_stream_integrity_tests
+      doba_qualification_tests
       doba_security_model_tests
       doba_linux_transport_tests doba_linux_accept_error_tests
       doba_linux_processing_tests doba_httparena_tests)
@@ -150,7 +151,9 @@ if(WIN32)
     message(FATAL_ERROR "Missing Windows socket lifecycle fault tests")
   endif()
   foreach(required IN ITEMS doba_windows_processing_tests doba_httparena_tests
+      doba_network_fault_tests
       doba_test_diagnostics_tests doba_stream_integrity_tests
+      doba_qualification_tests
       doba_security_model_tests)
     if(NOT registered MATCHES "Test +#[0-9]+: ${required}(\n|$)")
       message(FATAL_ERROR "Missing registered Windows test: ${required}")

@@ -27,8 +27,9 @@ Its control input is capped at 512 bytes, with at most twelve requests and
 128-byte bodies. It is not a raw HTTP or native transport/TLS fuzzer.
 
 Existing decoder CI jobs additionally replay and fuzz the engine model for
-60 seconds on Linux and Windows under ASan/UBSan. This preserves required-check
-names. Corpora and reproducers are uploaded with the harness and build details.
+60 seconds normally and 600 seconds nightly on Linux and Windows under
+ASan/UBSan. This preserves required-check names. Evolving engine corpora are
+cached separately; corpora and reproducers accompany the harness/build details.
 See the [security audit](../security-audit.md) for remaining coverage limits.
 
 <a name="properties"></a>

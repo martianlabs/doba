@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -43,7 +44,8 @@ using martianlabs::doba::transport::server::detail::overlapped_base;
 std::atomic<unsigned> timer_creations{0}, timer_arms{0};
 std::atomic<bool> watch{false}, immediate_seen{false}, timer_seen{false};
 std::atomic<bool> timed_out{false};
-std::atomic<bool> fail_immediate{false}, fail_timer_post{false};
+std::atomic<bool> fail_immediate{false};
+std::atomic<unsigned> fail_timer_posts{0}, timer_posts{0};
 std::atomic<bool> fail_timer_create{false}, hold_timer{false};
 martianlabs::doba::tests::manual_event release_timer;
 
@@ -75,7 +77,23 @@ PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
 void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
                          DWORD window) {
   if (due) ++timer_arms;
-  ::SetThreadpoolTimer(timer, due, period, window);
+  // Force a queued wake for the cancellation test without assuming that a
+  // one-millisecond logical deadline survives context reconciliation.
+  FILETIME forced{0xffffffffU, 0xffffffffU};
+  ::SetThreadpoolTimer(timer, due && hold_timer ? &forced : due,
+                       period, window);
+}
+
+// +=========================================================================+
+// | [>] reject_timer_post                                       ( function ) |
+// +-------------------------------------------------------------------------+
+bool reject_timer_post() {
+  auto remaining = fail_timer_posts.load();
+  while (remaining) {
+    if (fail_timer_posts.compare_exchange_strong(remaining, remaining - 1))
+      return true;
+  }
+  return false;
 }
 
 // +=========================================================================+
@@ -85,8 +103,9 @@ BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
                           LPOVERLAPPED packet) {
   const auto type = packet ? static_cast<overlapped_base*>(packet)->get_type()
                            : io_type::kAccept;
+  if (type == io_type::kProcessingTimer) ++timer_posts;
   if ((type == io_type::kProcessing && fail_immediate.exchange(false)) ||
-      (type == io_type::kProcessingTimer && fail_timer_post.exchange(false))) {
+      (type == io_type::kProcessingTimer && reject_timer_post())) {
     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
     return FALSE;
   }
@@ -185,70 +204,111 @@ struct publication_engine {
 }  // namespace
 
 DOBA_TEST("Windows IOCP processing can dequeue before publication returns") {
-  immediate_seen = false;
+  for (const bool already_due : {false, true}) {
+    immediate_seen = false;
+    timer_seen = false;
+    timed_out = false;
+    watch = true;
+    tests::scope_exit unwatch([] { watch = false; });
+    const auto created = timer_creations.load();
+    auto factory = [already_due] {
+      publication_engine engine;
+      engine.input = [](auto&, auto) {
+        return processing_result{true, {}, false};
+      };
+      engine.turn = [already_due](auto& current, bool) {
+        if (current.step++ == 0) {
+          current.due = clock_type::now() + (already_due ? -1ms : 1ms);
+          current.send("A", {}, nullptr);
+          return processing_result{false, current.due, false};
+        }
+        current.send("B", {}, nullptr);
+        current.close();
+        return processing_result{};
+      };
+      return engine;
+    };
+    tcpip_client peer;
+    const auto port = peer.find_available_port();
+    tr::tcp<publication_engine, decltype(factory)> server(
+        {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
+        factory);
+    server.start();
+    DOBA_EXPECT(peer.connect(port));
+    DOBA_EXPECT(peer.send_all("x"));
+    const auto reply = peer.receive(2);
+    DOBA_EXPECT(reply && *reply == "AB");
+    DOBA_EXPECT(peer.wait_for_close(3s));
+    server.stop();
+    DOBA_EXPECT(immediate_seen.load());
+    DOBA_EXPECT(!timed_out.load());
+    if (already_due) DOBA_EXPECT_EQUAL(timer_creations.load(), created);
+  }
+}
+
+DOBA_TEST("Windows timer wake can dequeue before publication returns") {
+  namespace detail = tr::detail;
   timer_seen = false;
   timed_out = false;
   watch = true;
   tests::scope_exit unwatch([] { watch = false; });
-  auto factory = [] {
-    publication_engine engine;
-    engine.input = [](auto&, auto) {
-      return processing_result{true, {}, false};
-    };
-    engine.turn = [](auto& current, bool) {
-      if (current.step++ == 0) {
-        current.due = clock_type::now() + 1ms;
-        current.send("A", {}, nullptr);
-        return processing_result{false, current.due, false};
-      }
-      current.send("B", {}, nullptr);
-      current.close();
-      return processing_result{};
-    };
-    return engine;
-  };
-  tcpip_client peer;
-  const auto port = peer.find_available_port();
-  tr::tcp<publication_engine, decltype(factory)> server(
-      {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
-      factory);
-  server.start();
-  DOBA_EXPECT(peer.connect(port));
-  DOBA_EXPECT(peer.send_all("x"));
-  const auto reply = peer.receive(2);
-  DOBA_EXPECT(reply && *reply == "AB");
-  DOBA_EXPECT(peer.wait_for_close(3s));
-  server.stop();
-  DOBA_EXPECT(immediate_seen && timer_seen && !timed_out);
+  HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
+  DOBA_EXPECT(port != nullptr);
+  tests::scope_exit close_port([&] { CloseHandle(port); });
+  std::atomic<bool> stopping{false};
+  detail::windows_processing_timer<publication_engine> timer;
+  timer.start(port);
+  auto factory = [] { return publication_engine{}; };
+  auto ctx = std::make_shared<detail::context<publication_engine>>(
+      INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
+  std::array<decltype(timer)::entry, 64> ready{};
+  bool dequeued = false;
+  // The consumer observes the embedded packet before taking the timer lock.
+  // Its bounded wait and lifetime surround every producer/publication path.
+  std::jthread consumer([&] {
+    DWORD bytes = 0;
+    ULONG_PTR key = 0;
+    LPOVERLAPPED packet = nullptr;
+    dequeued = tracked_completion(port, &bytes, &key, &packet, 5000) && packet;
+    if (dequeued) ready = timer.take_due();
+  });
+  const bool published = timer.replace(ctx, clock_type::now() - 1ms, 17);
+  consumer.join();
+  timer.stop();
+  DOBA_EXPECT(published && dequeued);
+  DOBA_EXPECT(timer_seen.load());
+  DOBA_EXPECT(!timed_out.load());
+  DOBA_EXPECT(ready[0].first == ctx && ready[0].second == 17);
+  DOBA_EXPECT(!ready[1].first);
 }
 
 DOBA_TEST("Windows keeps deadlines after a failed timer wake publication") {
-  fail_timer_post = true;
-  auto factory = [] {
-    publication_engine engine;
-    engine.input = [](auto&, auto) {
-      return processing_result{false, clock_type::now() + 1ms, false};
-    };
-    engine.turn = [](auto& current, bool) {
-      current.send("ok", {}, nullptr);
-      current.close();
-      return processing_result{};
-    };
-    return engine;
-  };
-  tcpip_client peer;
-  const auto port = peer.find_available_port();
-  tr::tcp<publication_engine, decltype(factory)> server(
-      {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
-      factory);
-  server.start();
-  DOBA_EXPECT(peer.connect(port));
-  DOBA_EXPECT(peer.send_all("x"));
-  const auto reply = peer.receive(2);
-  DOBA_EXPECT(reply && *reply == "ok");
-  DOBA_EXPECT(peer.wait_for_close(3s));
-  server.stop();
-  DOBA_EXPECT(!fail_timer_post);
+  namespace detail = tr::detail;
+  fail_timer_posts = 2;
+  tests::scope_exit clear_fault([] { fail_timer_posts = 0; });
+  HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
+  DOBA_EXPECT(port != nullptr);
+  tests::scope_exit close_port([&] { CloseHandle(port); });
+  std::atomic<bool> stopping{false};
+  detail::windows_processing_timer<publication_engine> timer;
+  timer.start(port);
+  auto factory = [] { return publication_engine{}; };
+  auto ctx = std::make_shared<detail::context<publication_engine>>(
+      INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
+  const auto previous = timer_posts.load();
+  // Fail the initial overdue post and then the native callback's retry.
+  DOBA_EXPECT(timer.replace(ctx, clock_type::now() - 1ms, 19));
+  DWORD bytes = 0;
+  ULONG_PTR key = 0;
+  LPOVERLAPPED packet = nullptr;
+  DOBA_EXPECT(tracked_completion(port, &bytes, &key, &packet, 5000));
+  DOBA_EXPECT(packet != nullptr);
+  const auto ready = timer.take_due();
+  timer.stop();
+  DOBA_EXPECT_EQUAL(fail_timer_posts.load(), 0U);
+  DOBA_EXPECT_EQUAL(timer_posts.load(), previous + 3);
+  DOBA_EXPECT(ready[0].first == ctx && ready[0].second == 19);
+  DOBA_EXPECT(!ready[1].first);
 }
 
 DOBA_TEST(
@@ -326,9 +386,10 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
   HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
   DOBA_EXPECT(port != nullptr);
   tests::scope_exit close_port([&] { CloseHandle(port); });
+  std::atomic<bool> stopping{false};
   detail::windows_processing_timer<publication_engine> timer;
   timer.start(port);
-  std::atomic<bool> stopping{false};
+  tests::scope_exit stop_timer([&] { timer.stop(); });
   auto factory = [] { return publication_engine{}; };
   const auto previous_arms = timer_arms.load();
   for (unsigned i = 0; i < 65; ++i) {
@@ -339,7 +400,6 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
   std::size_t total = 0;
   // Drain notifications after producer stop as well, keeping embedded storage
   // and the IOCP alive for every packet, including early callback publication.
-  tests::scope_exit stop_timer([&] { timer.stop(); });
   for (const auto expected : {64U, 1U}) {
     DWORD bytes = 0;
     ULONG_PTR key = 0;
@@ -372,7 +432,7 @@ DOBA_TEST("Windows discards a queued timer wake after its connection closes") {
     engine.input = [](auto& current, auto bytes) {
       current.send("ok", {}, nullptr);
       return bytes == "a"
-          ? processing_result{false, clock_type::now() + 1ms, false}
+          ? processing_result{false, clock_type::time_point::max(), false}
           : processing_result{};
     };
     engine.turn = [&](auto&, bool) { ++turns; return processing_result{}; };

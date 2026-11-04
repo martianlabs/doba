@@ -30,6 +30,7 @@ import random
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 
@@ -43,6 +44,7 @@ if not __debug__:
   raise RuntimeError('HttpArena checks require Python assertions enabled')
 
 BINARY, METADATA = sys.argv[1:3]
+FULL = '--plain' not in sys.argv[3:]
 RANDOM = random.SystemRandom()
 
 
@@ -52,13 +54,31 @@ RANDOM = random.SystemRandom()
 # +---------------------------------------------------------------------------+
 # /////////////////////////////////////////////////////////////////////////////
 @contextlib.contextmanager
-def running():
+def running(workers='1', cpus=None):
   with socket.socket() as probe:
     probe.bind(('127.0.0.1', 0))
     port = probe.getsockname()[1]
-  env = dict(os.environ, WORKERS='1', PORT=str(port))
+  with socket.socket() as probe:
+    probe.bind(('127.0.0.1', 0))
+    tls_port = probe.getsockname()[1]
+  fixture = tempfile.TemporaryDirectory(prefix='doba-httparena-test-')
+  folder = Path(fixture.name)
+  (folder / 'dataset.json').write_text('[]')
+  (folder / 'static').mkdir()
+  if FULL:
+    subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
+                    '-keyout', str(folder / 'server.key'), '-out', str(folder / 'server.crt'),
+                    '-days', '1', '-subj', '/CN=localhost'],
+                   check=True, capture_output=True, timeout=20)
+  env = dict(os.environ, PORT=str(port), TLS_PORT=str(tls_port),
+             DATASET_PATH=str(folder / 'dataset.json'), STATIC_DIR=str(folder / 'static'),
+             TLS_CERT=str(folder / 'server.crt'), TLS_KEY=str(folder / 'server.key'))
+  env.pop('WORKERS', None)
+  if workers is not None:
+    env['WORKERS'] = workers
+  options = {} if cpus is None else {'preexec_fn': lambda: os.sched_setaffinity(0, cpus)}
   child = subprocess.Popen([BINARY], env=env, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+                           stderr=subprocess.PIPE, **options)
   try:
     deadline = time.perf_counter() + 10
     while True:
@@ -78,10 +98,14 @@ def running():
     try:
       _, errors = child.communicate(timeout=5)
       require_clean_diagnostics(errors)
+      expected = int(workers) if workers is not None else len(cpus)
+      assert f'workers per listener: {expected};'.encode() in errors, errors
     except subprocess.TimeoutExpired:
       child.kill()
       child.communicate(timeout=5)
       raise AssertionError('Driver process did not terminate')
+    finally:
+      fixture.cleanup()
 
 
 # /////////////////////////////////////////////////////////////////////////////
@@ -219,7 +243,9 @@ def main():
   clock = time.get_clock_info('perf_counter')
   assert clock.monotonic and clock.resolution <= .0001, clock
   with open(METADATA, encoding='utf-8') as source:
-    assert json.load(source)['tests'] == ['baseline', 'pipelined', 'async']
+    assert set(json.load(source)['tests']) == {
+        'baseline', 'pipelined', 'limited-conn', 'async', 'latency-10k',
+        'latency-1m', 'latency-500k-8cpu', 'json-comp', 'json-tls', '8gbit', 'static-tls'}
   for key, value in (('WORKERS', '0'), ('WORKERS', '-1'), ('WORKERS', 'x'),
                      ('PORT', '0'), ('PORT', '65536'), ('PORT', 'x')):
     env = dict(os.environ, WORKERS='1', PORT='8080')
@@ -229,6 +255,11 @@ def main():
         key, value, result.returncode, result.stderr.decode(errors='replace'))
   with running() as port:
     verify(port)
+  if hasattr(os, 'sched_getaffinity'):
+    cpus = set(sorted(os.sched_getaffinity(0))[:2])
+    with running(workers=None, cpus=cpus) as port:
+      verify(port)
+    print(f'Automatic worker count under affinity {sorted(cpus)}: PASS')
   print('HttpArena baseline, pipelined and dynamic async correctness: PASS')
 
 

@@ -159,15 +159,21 @@ No Git operation, publication or remote CI run is part of this audit.
 
 ## Prioritized remaining work
 
+The [Release qualification follow-up](qualification/README.md) now measures
+per-platform source coverage, gates module/header regressions and runs seeded
+fault/ownership campaigns. Its baseline report distinguishes measured code from
+unmapped headers. The earlier validation table above predates the additional
+qualification and Winsock fault groups.
+
 | Priority | Work | Acceptance evidence |
 | --- | --- | --- |
-| P1 | Measure source/branch coverage for parser, engine, native contexts and TLS adapter in Release instrumented builds. | Versioned per-platform reports, uncovered security branches mapped to cases; do not invent a global threshold before the baseline exists. |
+| Measured locally; CI configured | Release line and condition-outcome coverage for parser, engine, native contexts and TLS adapter. | Per-platform LLVM exports, source-union reports, measured floors and explicit unmapped inventories; first remote run remains pending. |
 | P1 | Expand stateful fuzzing to native transport/TLS lifecycle and filesystem/cache operations. | Persistent corpora, source revision/hashes, bounded operation models, fault schedules and minimal regression cases for every finding. |
 | P1 | Sweep deterministic allocation, spill, short-read/write and kernel failures through lifecycle boundaries. | Exact failure diagnostics, no successor dispatch, owner/frame/handle cleanup and successful recovery where the contract permits it. |
 | P1 | Add targeted synchronization mutations and controlled schedules. | Tests detect removed publication ordering, double completion, late timer and stale context events by the intended assertion, independently on both ports. |
 | P2 | Isolate helper deadline arithmetic from scheduler-sensitive wire timing. | Fake-clock/readiness tests distinguish deadline reset errors; retain bounded real-wire smoke tests. Existing 600/850 ms helper timing checks remain sensitive to severe runner stalls. |
 | P2 | Extend malformed grammar and numeric/policy extremes with generated valid controls. | Replayable cases around zero, limit, limit+1 and overflow, with bounded test allocations and independent expected results. |
-| P2 | Run longer scheduled fuzz/soak campaigns and retain evolving engine corpora. | Reproducible seeds, artifacts and historical sanitizer results; a budget chosen for routine CI must not be presented as exhaustive testing. |
+| Configured; remote execution pending | Nightly twelve-round campaigns, 600-second fuzz budgets and persisted engine corpora. | Reproducible order/inputs and artifacts; the configured budget must not be presented as an exhaustive campaign. Longer soak testing remains separate. |
 
 These are assurance gaps, not confirmed production vulnerabilities. The highest
 priority is to measure what remains uncovered and force meaningful failure

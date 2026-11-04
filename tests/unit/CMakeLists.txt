@@ -90,3 +90,16 @@ target_include_directories(doba_security_model_tests PRIVATE
 target_link_libraries(doba_security_model_tests PRIVATE doba_headers)
 add_test(NAME doba_security_model_tests COMMAND doba_security_model_tests)
 set_tests_properties(doba_security_model_tests PROPERTIES TIMEOUT 60)
+
+if(WIN32)
+  # Isolate native API substitution from the ordinary unit binary.
+  set(qualification "${CMAKE_CURRENT_LIST_DIR}/../qualification")
+  add_executable(doba_network_fault_tests
+    "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+    "${qualification}/network_environment_windows_probe.cpp")
+  target_include_directories(doba_network_fault_tests PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/helpers")
+  target_link_libraries(doba_network_fault_tests PRIVATE doba_headers)
+  add_test(NAME doba_network_fault_tests COMMAND doba_network_fault_tests)
+  set_tests_properties(doba_network_fault_tests PROPERTIES TIMEOUT 30)
+endif()

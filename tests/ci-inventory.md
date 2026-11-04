@@ -77,3 +77,20 @@ These checks do not activate an async mode in the library and do not configure
 an injected executor. Both route kinds are registered in the driver and examples
 by default. Published benchmark data and the frozen pre-async reference remain
 unchanged; final throughput comparisons are a separate campaign.
+
+## Release coverage and systematic qualification
+
+[Qualification](qualification/README.md) adds separate Linux/Windows Release
+source-coverage jobs, reviewed module floors and explicit mapped/unmapped
+header inventories. Previously measured headers cannot disappear, and new
+unmapped headers require review. Per-target profiles prevent cross-executable
+counter contamination. The release job also depends on coverage; repository
+rules must select the two new coverage checks separately after their first run.
+
+The diagnostic qualification group is mandatory on both platforms; Windows
+also requires isolated Winsock failure/cleanup tests. Existing sanitizer jobs
+run seeded case-order campaigns (two rounds normally, twelve nightly).
+Fuzzers retain 60-second normal budgets and use 600 seconds nightly, with a
+separate persisted engine corpus. Dedicated TLS repetitions retain their scope.
+See the [measured reference](qualification/BASELINE.md) for actual local results
+and the distinction between emitted mappings, condition outcomes and safety.

@@ -190,15 +190,21 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; eight deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test cases; 190+ integration cases; 200 concurrency repetitions in CI; eight deliberately planted bugs checked by mutation tests. Fuzzing, ASan and UBSan on Linux and Windows; TSan on Linux. Release builds. Counts describe source test declarations, not results of a newly executed test run." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
+
+**Measured coverage for 0.1.0 (2026-11-04):** Linux **95.15% of executable
+lines / 88.58% of condition outcomes**; Windows **94.64% / 88.50%**.
+These are local Release measurements of emitted production mappings;
+unmapped headers are inventoried separately.
+[See coverage by module, validation results and release history](docs/coverage/README.md).
 
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
 **GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
@@ -206,12 +212,14 @@ Linux validates synchronous TCP with **ASan, UBSan, and TSan**; Windows runs
 **ASan and UBSan**, including a Clang build alongside MSVC. Independent engine concurrency cases
 repeat **200 times** in CI; Windows
 also repeats its native IOCP lifecycle cases **20 times**. TSan checks Linux
-races. These are the configured CI jobs, not a new remote run for this document.
+races. Per-module coverage gates and reproducible fault campaigns accompany
+longer nightly fuzzing. These are configured CI jobs, not a new remote run
+for this document.
 The illustrated counts describe source declarations across the tree, not cases
 executed on one platform.
-And yes, **the tests run in Release, optimizations and all**. That's the code
-we care about running. Debug gets a compile check. The test tooling uses
-C++ and CMake; building doba is quite enough setup for testing doba.
+And yes, **the normal suite runs in Release, optimizations and all**. That's
+the code we care about running. Debug gets a compile check. Test tooling uses
+C++, CMake and Python; source-coverage builds additionally use Clang/LLVM.
 
 Fancy a second opinion? There are also adapters for manual protocol checks
 with [h1spec](compliance/http/v11/h1spec/README.md) and

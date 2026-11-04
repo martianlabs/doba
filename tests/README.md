@@ -16,6 +16,9 @@ weaknesses, strengthened oracles, the coverage matrix and remaining assurance
 gaps. Normal suite execution in Release is intentional. Passing tests do not
 certify the absence of races or vulnerabilities.
 
+[Release qualification](qualification/README.md) explains measured production
+coverage, per-module regression gates and reproducible sanitizer/fuzz campaigns.
+
 <a name="unit-tests"></a>
 <h2>
   <a href="../resources/tests/overview/h2-unit-tests.svg#gh-light-mode-only">
