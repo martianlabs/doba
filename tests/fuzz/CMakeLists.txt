@@ -11,7 +11,7 @@ add_executable(doba_fuzz_seed_corpus seed_corpus.cpp)
 target_compile_features(doba_fuzz_seed_corpus PRIVATE cxx_std_20)
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/clang_windows_test_runtime.cmake")
 
-foreach(harness decoder chunked)
+foreach(harness decoder chunked engine)
   add_executable(fuzz_${harness} ${harness}_fuzz.cpp)
   target_link_libraries(fuzz_${harness} PRIVATE doba_headers)
   target_compile_options(fuzz_${harness} PRIVATE

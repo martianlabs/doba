@@ -40,33 +40,33 @@ if(WIN32)
 endif()
 set(ids admission sources partial-batch http-bytes requests)
 set(headers
-  transport/server/operating_state.h
+  transport/server/connection_reservation.h
   transport/server/send_state.h
   transport/server/send_state.h
-  protocol/http/v11/engine_async.h
-  protocol/http/v11/engine_async.h)
+  protocol/http/v11/engine.h
+  protocol/http/v11/engine.h)
 set(before_0 "if (budget->maximum && used >= budget->maximum)")
 set(before_1 "if (source_)")
 set(before_2 "offset += sent;")
-set(before_3 "if (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size())")
-set(before_4 "if (max_pending_requests_ &&")
+set(before_3 "if (head > capacity - used || body > capacity - used - head)")
+set(before_4 "pending_->size() < decoder_.configuration().max_pending_requests")
 set(after_0 "if (false && budget->maximum && used >= budget->maximum)")
 set(after_1 "if (false && source_)")
 set(after_2 "offset += sent;\n    if (offset < buffer.size()) { buffer.erase(0, offset); offset = 0; }")
-set(after_3 "if (false && (result.head.size() > capacity - used ||\n          result.body.size() > capacity - used - result.head.size()))")
-set(after_4 "if (false && max_pending_requests_ &&")
+set(after_3 "if (false && (head > capacity - used || body > capacity - used - head))")
+set(after_4 "pending_->size() <= decoder_.configuration().max_pending_requests")
 set(names
   "connection reservations move release and unwind exactly once"
   "one terminal source retains ownership until its last send drains"
   "partial sends retain the active batch in the hard send limit"
   "pending HTTP bytes enforce exact boundaries before copying"
-  "pending request credit uses exact limits and its own hysteresis")
+  "pending request credit uses exact limits and resumes admission")
 set(assertions
   "!connection_reservation::acquire(budget)"
   "!output.push({}, {}, source())"
   "!output.push(\"x\", {}, nullptr)"
-  "(closes) =="
-  "!pending.reserve().has_value()")
+  "(current.closes) =="
+  "(calls) == (static_cast<int>(maximum))")
 
 function(build_variant id)
   set(directory "${run}/${id}")

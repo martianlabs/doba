@@ -23,11 +23,11 @@ of head-scratching.
   </a>
 </h2>
 
-Both TCP backends use synchronous engine callbacks and one terminal reader per
-connection. They do not schedule application work or implement inactivity scans
-or pressure/resume hooks. Engine features discussed below for asynchronous
-work require an independent embedding and execution service; they do not describe
-capabilities of http_server over the bundled TCP transports.
+Both TCP backends serialize engine input/processing callbacks and support one
+terminal reader per connection. They deliver generic turns without an
+application executor, inactivity scans or pressure/resume hooks. The single HTTP
+engine supports concurrent cooperative handlers over TCP and TLS by default;
+it owns frames, finite pending state and response order.
 
 The first **http_server<>** argument configures the transport. The second
 configures the HTTP engine. The
@@ -135,8 +135,7 @@ not remain in the residual vector. Transport capacity controls the I/O block
 size independently of HTTP limits. Percent-encoded paths need a writable
 copy of the path; other field bytes remain borrowed during synchronous work.
 
-In an independent asynchronous engine embedding, before a handler is invoked,
-the request copies its fields
+Before an asynchronous handler is invoked, the engine copies its request fields
 and inline wire body into one owned vector. This includes handlers that
 complete immediately. The engine does not copy bytes belonging to other
 requests. The request and response then outlive the input and decoder
@@ -216,11 +215,14 @@ before running another example on port **8080**.
 Body size is only one way a connection can use resources. Two more limits
 are worth knowing:
 
-- **Async responses.** Once a connection uses async handling,
-  *max_pending_requests* caps response positions awaiting ordered delivery.
-  It defaults to **128**. These are protocol limits; the TCP transport
-  does not provide async execution or a pause/resume handshake. A hard
-  overflow closes the connection. **0** removes this limit.
+- **In-flight HTTP requests.** max_pending_requests defaults to 128 positive
+  positions, including completed responses waiting for ordered emission.
+  The engine retains unadmitted raw input up to max_deferred_input_size
+  (1 MiB). Pending serialized prefixes/inline bodies have a separate positive
+  max_pending_response_bytes budget (1 MiB). Byte overflow closes; a full
+  request window waits for capacity without a transport pause/resume hook.
+  max_task_steps_per_turn defaults to 64 positive async/admission steps.
+  Linux/Windows TCP deliver turns and TLS forwards them. See engine status.
 - **Queued output.** The TCP policy *max_buffered_send_bytes* defaults to
   **1 MiB** per connection. Linux bounds its single accumulated TX string and
   source chunks; it stops receiving until output drains. Windows bounds
@@ -279,7 +281,7 @@ storage need their own budgets.
 
 These limits sit on different sides of the protocol/transport boundary.
 The [engine-scope discussion](03-http-1-1.md#async-routes) separates independent
-coroutine work from the synchronous server; the [transport chapter](04-transports-and-tls.md)
+coroutine work from transport scheduling; the [transport chapter](04-transports-and-tls.md)
 explains the TCP side.
 
 <a name="start-and-stop"></a>

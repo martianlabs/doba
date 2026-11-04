@@ -28,6 +28,8 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -38,10 +40,12 @@
 
 #include "platform.h"
 #include "transport/server/contracts.h"
-#include "transport/server/operating_state.h"
+#include "transport/server/connection_reservation.h"
 #include "transport/server/send_state.h"
 #include "transport/server/tcp_connection.h"
 #include "transport/server/tcp_windows_overlapped_receive.h"
+#include "transport/server/tcp_windows_overlapped_processing.h"
+#include "transport/server/tcp_windows_processing_timer.h"
 #include "transport/server/tcp_windows_overlapped_send.h"
 
 namespace martianlabs::doba::transport::server::detail {
@@ -69,14 +73,17 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
           const std::atomic<bool>& stopping,
           types::on_client_connected_delegate on_connection,
           types::on_client_disconnected_delegate on_disconnection,
-          connection_reservation reservation = {})
+          connection_reservation reservation = {},
+          HANDLE completion_port = nullptr,
+          windows_processing_timer<ENty>* timer = nullptr)
       : reservation_{std::move(reservation)},
         on_connection_{on_connection},
         on_disconnection_{on_disconnection},
         socket_{in_socket},
         input_{receive_buffer_capacity, create_engine},
         stopping_{stopping},
-        output_{send_buffer_size} {}
+        output_{send_buffer_size},
+        completion_port_{completion_port}, timer_{timer} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
   ~context() { close_socket_(); }
@@ -134,10 +141,30 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
     if (state_ == state::kOpen) {
       try {
-        input_.process(size);
+        progress_ = input_.process(size);
       } catch (...) {
         close_socket_();
         throw;
+      }
+    }
+    advance_();
+    return finished_();
+  }
+  // +=========================================================================+
+  // | [>] processing_completed                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Native packets carry connection identity, never application tasks/frames.
+  bool processing_completed(std::uint64_t version = 0) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (!version) processing_posted_ = false;
+    else if (version != timer_version_) return finished_();
+    else scheduled_.reset();
+    if (stopping_.load()) close();
+    if (state_ == state::kOpen && ready_()) {
+      try {
+        progress_ = input_.engine.on_processing_turn(output_idle_());
+      } catch (...) {
+        close_socket_();
       }
     }
     advance_();
@@ -182,7 +209,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +-------------------------------------------------------------------------+
   void connected() {
     // The engine belongs to this context. Its callbacks are synchronous,
-    // non-retained and invoked only during input under state_mutex_.
+    // non-retained and invoked only during engine entries under state_mutex_.
     input_.engine.set_on_close([this]() { close(); });
     input_.engine.set_on_send([this](
         std::string_view head, std::string_view body,
@@ -230,7 +257,10 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // Marks close inside engine input; its accepted output drains afterwards.
   void close() {
     // Called synchronously by the engine under state_mutex_.
-    if (state_ == state::kOpen) state_ = state::kDraining;
+    if (state_ == state::kOpen) {
+      state_ = state::kDraining;
+      cancel_processing_();
+    }
   }
   // +=========================================================================+
   // | [>] send                                                     ( private )|
@@ -255,6 +285,11 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     send_pending_();
     if (state_ == state::kClosed) return;
     if (state_ == state::kOpen) {
+      reconcile_();
+      if (state_ != state::kOpen) {
+        if (state_ == state::kAborting) close_socket_();
+        return;
+      }
       if (!receive_()) close_socket_();
       return;
     }
@@ -334,9 +369,71 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     sending_ = true;
   }
   // +=========================================================================+
+  // | [>] output_idle_                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool output_idle_() const noexcept {
+    return !sending_ && !output_.queued() && output_.buffer.empty();
+  }
+  // +=========================================================================+
+  // | [>] ready_                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool ready_() const noexcept {
+    return progress_.turn_requested ||
+        (progress_.turn_after_output_drained && output_idle_()) ||
+        (progress_.turn_at && *progress_.turn_at <= clock::now());
+  }
+  // +=========================================================================+
+  // | [>] cancel_processing_                                      ( private ) |
+  // +-------------------------------------------------------------------------+
+  void cancel_processing_() {
+    progress_ = {};
+    if (scheduled_) {
+      timer_->cancel(this);
+      scheduled_.reset();
+      ++timer_version_;
+    }
+  }
+  // +=========================================================================+
+  // | [>] reconcile_                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Called under the existing context lock. Empty sync snapshots do no native
+  // scheduling, allocation, timer locking or clock query.
+  void reconcile_() {
+    if (progress_.turn_at != scheduled_) {
+      if (scheduled_) timer_->cancel(this);
+      scheduled_.reset();
+      if (++timer_version_ == 0) {
+        close_socket_();
+        return;
+      }
+      if (progress_.turn_at && *progress_.turn_at > clock::now()) {
+        if (!timer_ || !timer_->replace(this->shared_from_this(),
+                *progress_.turn_at, timer_version_)) {
+          close_socket_();
+          return;
+        }
+        scheduled_ = progress_.turn_at;
+      }
+    }
+    if (!processing_posted_ && ready_()) {
+      auto* packet = new (std::nothrow)
+          overlapped_processing<ENty>(this->shared_from_this());
+      if (!packet) { close_socket_(); return; }
+      processing_posted_ = true;
+      // Release publication ownership before another worker can dequeue.
+      // This context lock protects the flag through Post's return.
+      if (!PostQueuedCompletionStatus(completion_port_, 0, 0, packet)) {
+        processing_posted_ = false;
+        delete packet;
+        close_socket_();
+      }
+    }
+  }
+  // +=========================================================================+
   // | [>] close_socket_                                           ( private ) |
   // +-------------------------------------------------------------------------+
   void close_socket_() {
+    cancel_processing_();
     state_ = state::kClosed;
     if (socket_ != INVALID_SOCKET) {
       closesocket(socket_);
@@ -348,7 +445,8 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +-------------------------------------------------------------------------+
   // Called under state_mutex_. Outstanding operations still own their bytes.
   bool finished_() const noexcept {
-    return state_ == state::kClosed && !receiving_ && !sending_;
+    return state_ == state::kClosed && !receiving_ && !sending_ &&
+           !processing_posted_;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
@@ -373,6 +471,16 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // Peer EOF permits closing after the accepted output drains.
   bool receive_closed_{false};
   WSABUF ovr_wsa_{};
+  // Generic turn state is protected by the same mutex as RX/TX and the engine.
+  using clock = protocol::processing_result::clock;
+  protocol::processing_result progress_{};
+  HANDLE completion_port_{nullptr};
+  windows_processing_timer<ENty>* timer_{nullptr};
+  // At most one immediate packet, owned by IOCP until its worker handles it.
+  bool processing_posted_{false};
+  // Lifetime-owned absolute registration and stale-delivery identity.
+  std::optional<clock::time_point> scheduled_;
+  std::uint64_t timer_version_{0};
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

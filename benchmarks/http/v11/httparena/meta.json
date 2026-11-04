@@ -9,7 +9,8 @@
   "enabled": true,
   "tests": [
     "baseline",
-    "pipelined"
+    "pipelined",
+    "async"
   ],
   "completeness": {
     "routing": true,

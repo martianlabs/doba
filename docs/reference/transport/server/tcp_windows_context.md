@@ -30,12 +30,13 @@ Use the public TCP transport. This header is internal.
 
 A context owns the socket, engine, fixed RX buffer, active TX batch and pending
 inline output. The protocol retains incomplete messages. The engine processes
-fresh input synchronously; its registered send/close callbacks must not escape
-input, run from another thread or execute after input returns. They copy output
-or mark close, without posting I/O or taking another lock. The completed input
-transition submits its accumulated output.
+fresh input and processing turns under the same mutex. Its registered
+send/close callbacks must not escape an entry or run from an external thread.
+They copy output or mark close without posting socket I/O. Close also withdraws
+any registered deadline through the group timer registry. The completed RX or
+processing entry submits its accumulated output.
 
-One mutex serializes engine input, socket completions and administrative stop.
+One mutex serializes engine input/turns, completions and administrative stop.
 RX and TX may remain in flight together. A kernel-owned TX batch stays stable
 while inline output accumulates separately. Their combined logical size is
 limited by max_buffered_send_bytes; the limit does not preallocate storage.
@@ -56,12 +57,15 @@ not wait for peer EOF. Errors close immediately. Successful or pending socket
 operations keep their context, buffers and OVERLAPPED alive until completion.
 A failed submission has no completion and releases its operation immediately.
 
-Completions return the finished decision under the mutex: socket closed, no RX
-or TX pending. The worker claims one removal from its live set and notifies
+Completions return the finished decision under the mutex: socket closed, no RX,
+TX or immediate processing packet pending. The worker claims one removal from its live set and notifies
 outside both locks. Contexts never call a retirement delegate. The destructor
 closes any socket left by failed setup, after the final owner releases it.
 
-The context has no scheduler, TLS, inactivity timer, flow-control callbacks or
-retained application handlers. A blocking engine or reader occupies its IOCP
-worker; other connections retain independent mutexes. Application execution
-belongs to its own service.
+The context owns generic processing interests and one coalesced immediate IOCP
+packet, plus an optional versioned deadline in the group's timer registry.
+Engine input, processing turns and native completions use the existing context
+mutex. The engine owns task frames and ordering; a blocking entry occupies its
+worker. No task executor, inactivity scan or pressure hook exists here.
+See [Windows turns](tcp_windows_processing.md) and
+[admission ownership](connection_admission.md).

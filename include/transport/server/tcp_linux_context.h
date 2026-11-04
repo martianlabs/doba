@@ -38,6 +38,7 @@
 
 #include "common/reader.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
@@ -45,7 +46,7 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] linux_context                                              ( class ) |
 // +---------------------------------------------------------------------------+
 // | One worker owns the engine, RX, TX and optional output reader.            |
-// | Engine callbacks are valid only during synchronous input processing.     |
+// | Callbacks run only inside serialized input/processing turns.              |
 // | The worker owns the socket and destroys this context outside callbacks.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -87,10 +88,41 @@ class linux_context {
     if (size < 0) return errno == EAGAIN || errno == EWOULDBLOCK;
     if (!size) return false;
     processing_ = true;
-    engine_.on_bytes_received({receive_.get(), static_cast<std::size_t>(size)});
+    try {
+      progress_ = engine_.on_bytes_received(
+          {receive_.get(), static_cast<std::size_t>(size)});
+    } catch (...) {
+      failed_ = true;
+    }
     processing_ = false;
+    if (closing_) progress_ = {};
     return !failed_;
   }
+  // +=========================================================================+
+  // | [>] process                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool process() {
+    if (closing_ || failed_) return !failed_;
+    processing_ = true;
+    try {
+      progress_ = engine_.on_processing_turn(!pending());
+    } catch (...) {
+      failed_ = true;
+    }
+    processing_ = false;
+    if (closing_) progress_ = {};
+    return !failed_;
+  }
+  // +=========================================================================+
+  // | [>] progress                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  const protocol::processing_result& progress() const noexcept {
+    return progress_;
+  }
+  // +=========================================================================+
+  // | [>] socket                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  int socket() const noexcept { return socket_; }
   // +=========================================================================+
   // | [>] flush                                                    ( public ) |
   // +-------------------------------------------------------------------------+
@@ -174,7 +206,9 @@ class linux_context {
   std::size_t offset_{0};
   // Single reader following all bytes currently in output_.
   std::unique_ptr<common::reader> source_;
-  // True only while the engine is processing received bytes.
+  // Latest complete scheduling snapshot, meaningful only to the owner worker.
+  protocol::processing_result progress_;
+  // True only during a serialized engine input or processing entry.
   bool processing_{false};
   // The engine requested closure after accepted output is sent.
   bool closing_{false};

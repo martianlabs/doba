@@ -59,10 +59,17 @@ Engine policies are optional and follow the transport policies. The
 `DOBA_ENABLE_TLS=ON` adds the separate OpenSSL-backed TLS target and example.
 Existing TCP examples keep their dependencies and behavior.
 
-These are synchronous TCP examples on both platforms. Coroutine scheduling is
-not supplied by the transports. Inline-response pipelining is supported; an
+The engine supports synchronous and cooperative handlers on both platforms.
+Transports supply generic turns; the engine owns coroutine scheduling.
+Inline-response pipelining is supported; an
 input batch can own only one terminal reader. Later nonempty output or another
 reader closes the connection. Empty sends without a reader are no-ops.
 
 See the [runtime contract](../../../docs/reference/transport/server/tcp.md#runtime-contract)
 for ownership and Linux/Windows differences.
+
+[processing_turns](processing_turns/README.md) demonstrates concurrent async
+waits and ordered responses on one in-memory connection. It supplies turns
+itself; plain Linux/Windows TCP supports native turns in
+[async_routes](async_routes/README.md). The
+[HTTPS example](https_hello_world/README.md) includes a coroutine route.

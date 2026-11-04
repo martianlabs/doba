@@ -33,6 +33,7 @@
 #include <utility>
 
 #include "common/reader.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::protocol {
 // /////////////////////////////////////////////////////////////////////////////
@@ -41,7 +42,7 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | Sends head, body and an optional source, in that order. Bundled TCP      |
 // | copies inline bytes before returning and takes ownership of the reader.  |
-// | Invoke only inside the current engine input call, on its calling thread. |
+// | Invoke only inside a serialized engine input or processing turn.          |
 // | A reader is terminal; later nonempty output is a contract violation.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -54,40 +55,27 @@ namespace martianlabs::doba::protocol::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      (concept) |
 // +---------------------------------------------------------------------------+
-// | Structural engine interface. Bundled TCP applies this runtime contract:  |
-// | input calls are serialized per connection; bytes are immutable and       |
-// | borrowed until input returns. Engines retain incomplete messages.        |
-// | Registered send/close callbacks run only inside that input call, on its  |
-// | calling thread. Do not export callbacks or invoke them later/from other  |
-// | threads. Registration in the engine is valid for its context lifetime.   |
-// | Transport owns socket I/O and accepted output; engine owns protocol work.|
+// | Input and processing turns never overlap for one engine instance.         |
+// | Input bytes are immutable and borrowed only until that call returns;      |
+// | they are all discarded by the transport, regardless of the result.       |
+// | The engine owns any data it retains. Send/close callbacks run only        |
+// | inside these turns and must not escape for cross-thread invocation.      |
+// | Results describe processing needs, not RX control or input consumption.  |
+// | output_idle is a snapshot taken before the processing turn begins.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
 concept engine = requires(ENty& engine, std::string_view input,
                           protocol::send_delegate output,
-                          std::function<void()> close) {
+                          std::function<void()> close, bool output_idle) {
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-  { engine.on_bytes_received(input) } -> std::same_as<void>;
+  { engine.on_bytes_received(input) } ->
+      std::same_as<protocol::processing_result>;
+  { engine.on_processing_turn(output_idle) } ->
+      std::same_as<protocol::processing_result>;
 };
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] completion_engine                                          (concept) |
-// +---------------------------------------------------------------------------+
-// | A stopped engine reports when all work accepted by it has completed.     |
-// | A false result means the callback will be called exactly once later.     |
-// | This optional interface serves independent engine execution services.    |
-// | Bundled TCP never calls engine.stop or waits for application work.       |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <typename ENty>
-concept completion_engine =
-    engine<ENty> && requires(ENty& engine, std::function<void()> completed) {
-      { engine.stop(std::move(completed)) } -> std::same_as<bool>;
-    };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

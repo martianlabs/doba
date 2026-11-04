@@ -30,11 +30,13 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "../../../helpers/concurrency.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // Isolated native API faults: failed submissions never post a completion.
 enum class fault { kNone, kPort, kAccept, kAssociate, kReceive, kSend };
 // One armed failure is consumed atomically by the matching API.
@@ -171,7 +173,15 @@ struct lifecycle_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                       ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) { output(input, {}, nullptr); }
+  processing_result on_bytes_received(std::string_view input) {
+    output(input, {}, nullptr);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

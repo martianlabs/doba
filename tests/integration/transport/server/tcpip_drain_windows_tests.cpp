@@ -37,6 +37,7 @@
 #include <thread>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "common/byte_storage.h"
 #include "common/reader.h"
 #include "http_server.h"
@@ -48,9 +49,11 @@
 #include "transport/server/tcp.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::tests::integration::tcpip_client;
+using martianlabs::doba::tests::scope_exit;
 using namespace std::chrono_literals;
 
 using martianlabs::doba::tests::integration::drain_engine;
@@ -189,7 +192,7 @@ struct reader_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view) {
+  processing_result on_bytes_received(std::string_view) {
     namespace common = martianlabs::doba::common;
     common::reader source;
     std::size_t prefix_size = state_->prefix_size;
@@ -221,8 +224,13 @@ struct reader_engine {
     }
     if (state_->close) close_();
     state_->queued++;
-    return;
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   std::shared_ptr<reader_state> state_;
   send_delegate output_;
   std::function<void()> close_;
@@ -361,20 +369,37 @@ DOBA_TEST("stop rejects new engine input") {
                                                      std::move(factory));
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
+  std::future<void> stopped;
+  // Release/abort before the future or transport destructors can wait.
+  scope_exit release([&] { state->release = true; client.abort(); });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));
   DOBA_EXPECT(wait_count(state->entered, 1));
-  auto stopped = std::async(std::launch::async, [&]() { transport.stop(); });
-  const bool draining = stopped.wait_for(150ms) == std::future_status::timeout;
+  stopped = std::async(std::launch::async, [&]() { transport.stop(); });
+  bool listener_closed = false;
+  const auto deadline = std::chrono::steady_clock::now() + 5s;
+  while (std::chrono::steady_clock::now() < deadline) {
+    tcpip_client probe;
+    // Winsock can take about two seconds to report loopback refusal.
+    if (!probe.connect(port, 3s) &&
+        probe.native_error() == WSAECONNREFUSED) {
+      listener_closed = true;
+      break;
+    }
+    std::this_thread::yield();
+  }
+  const bool draining = stopped.wait_for(0ms) == std::future_status::timeout;
   const bool sent = client.send_all("new request");
-  std::this_thread::sleep_for(50ms);
   state->release = true;
-  client.receive(8 * 1024 * 1024, 5s);
+  const auto received = client.receive(8 * 1024 * 1024, 5s);
   client.close();
   stopped.get();
+  DOBA_EXPECT(listener_closed);
   DOBA_EXPECT(draining);
   DOBA_EXPECT(sent);
+  DOBA_EXPECT(received.has_value());
+  DOBA_EXPECT_EQUAL(*received, std::string(8 * 1024 * 1024, 'x'));
   DOBA_EXPECT_EQUAL(state->entered.load(), 1);
 }
 

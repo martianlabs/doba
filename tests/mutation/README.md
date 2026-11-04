@@ -39,7 +39,7 @@ is a failed campaign, never a successful detection.
 | body-limit | Disable the configured Content-Length body budget | A body one byte above the limit is rejected |
 | response-order | Send a completed successor before its pending predecessor | No output is sent while the predecessor is suspended |
 | rejection-successor | Notify transport closure but omit the engine's terminal-state update | A later receive cannot dispatch a successor |
-| admission | Remove connection admission guard | Reservation above capacity fails |
+| admission | Remove the guard in connection_reservation.h | Reservation above capacity fails |
 | sources | Remove the single-reader guard | A second terminal reader is rejected |
 | partial-batch | Exclude sent bytes from the active batch budget | Later output cannot exceed the hard TX limit |
 | http-bytes | Remove pending response byte guard | Overflow closes the connection |

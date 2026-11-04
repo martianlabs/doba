@@ -103,6 +103,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_test(NAME doba_linux_transport_tests
     COMMAND doba_integration_tests --file transport/server/tcpip_linux_tests.cpp)
   set_tests_properties(doba_linux_transport_tests PROPERTIES TIMEOUT 120)
+  add_test(NAME doba_linux_processing_tests
+    COMMAND doba_integration_tests
+            --file transport/server/tcp_processing_linux_tests.cpp)
+  set_tests_properties(doba_linux_processing_tests PROPERTIES TIMEOUT 120)
   add_executable(doba_linux_accept_error_tests
     "${CMAKE_CURRENT_LIST_DIR}/transport/server/tcp_accept_error_linux.cpp")
   target_include_directories(doba_linux_accept_error_tests PRIVATE
@@ -142,3 +146,41 @@ endif()
 if(DOBA_ENABLE_TLS)
   add_subdirectory(tls)
 endif()
+
+if(WIN32)
+  add_executable(doba_windows_processing_tests
+    "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+    "${DOBA_IOCP_TEST_DIR}/tcp_processing_windows_probe.cpp")
+  target_include_directories(doba_windows_processing_tests PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/helpers")
+  target_link_libraries(doba_windows_processing_tests PRIVATE doba_headers)
+  add_test(NAME doba_windows_processing_tests
+    COMMAND doba_windows_processing_tests)
+  set_tests_properties(doba_windows_processing_tests PROPERTIES TIMEOUT 60)
+endif()
+
+if(DOBA_BUILD_EXAMPLES)
+  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME doba_processing_examples_tests COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/helpers/processing_examples.py"
+    "$<TARGET_FILE:common_task_execution>"
+    "$<TARGET_FILE:http_processing_turns>" "$<TARGET_FILE:http_async_routes>")
+  set_tests_properties(doba_processing_examples_tests PROPERTIES TIMEOUT 30)
+endif()
+
+# Independent negative controls remain active in Release verification.
+find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+add_test(NAME doba_test_diagnostics_tests COMMAND "${Python3_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/../helpers/sanitizer_diagnostics_tests.py")
+set_tests_properties(doba_test_diagnostics_tests PROPERTIES TIMEOUT 30)
+
+# A focused sanitizer/repetition target with independent wire oracles.
+add_executable(doba_stream_integrity_tests
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/http_test_helper_tests.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/server_stream_integrity_tests.cpp")
+target_include_directories(doba_stream_integrity_tests PRIVATE
+  "${CMAKE_CURRENT_LIST_DIR}/helpers")
+target_link_libraries(doba_stream_integrity_tests PRIVATE doba_headers)
+add_test(NAME doba_stream_integrity_tests COMMAND doba_stream_integrity_tests)
+set_tests_properties(doba_stream_integrity_tests PROPERTIES TIMEOUT 90)

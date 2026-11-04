@@ -35,15 +35,17 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
 #include "transport/server/tls_configuration.h"
 
 namespace martianlabs::doba::transport::server::detail {
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tls_engine                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | TCP sees an ordinary synchronous engine. Only this adapter knows TLS.     |
+// | TCP sees an ordinary engine and its turn results. Only TLS sees SSL.     |
 // | All output, including a terminal source, is encoded before TCP sees it.   |
 // | One bounded BIO pair moves records without owning or accessing a socket. |
 // +---------------------------------------------------------------------------+
@@ -103,11 +105,9 @@ class tls_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
-    if (failed_ || closing_) { close_(); return; }
-    ciphertext_.clear();
-    plaintext_output_.clear();
-    accepted_ = 0;
+  processing_result on_bytes_received(std::string_view input) {
+    if (failed_ || closing_) { close_(); return {}; }
+    begin_batch();
     try {
       while (!input.empty() && !closing_ && !failed_) {
         std::size_t written = 0;
@@ -117,22 +117,62 @@ class tls_engine {
         input.remove_prefix(written);
         pump();
       }
-      if (failed_) fail();
-      flush_record();
-      if (closing_) shutdown();
-      // TCP copies this complete batch before returning. A failure above
-      // discards the batch, including a partially consumed source.
-      if (!ciphertext_.empty()) output_(ciphertext_, {}, nullptr);
-      if (closing_) close_();
-    } catch (...) {
+      return finish_batch();
+    } catch (...) { return abort_batch(); }
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool output_idle) {
+    if (failed_ || closing_) { close_(); return {}; }
+    // Native scheduling cannot precede application input, but do not expose
+    // an unfinished handshake to a protocol even in a custom adapter harness.
+    if (!SSL_is_init_finished(session_.get())) return {};
+    begin_batch();
+    try {
+      processing_ = true;
+      source_seen_ = false;
+      progress_ = engine_.on_processing_turn(output_idle);
       processing_ = false;
-      failed_ = true;
-      ciphertext_.clear();
-      close_();
-    }
+      return finish_batch();
+    } catch (...) { return abort_batch(); }
   }
 
+
  private:
+  // +=========================================================================+
+  // | [>] begin_batch                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  void begin_batch() {
+    ciphertext_.clear();
+    plaintext_output_.clear();
+    accepted_ = 0;
+  }
+  // +=========================================================================+
+  // | [>] finish_batch                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  // TCP copies encoded output before return. No TLS output remains hidden
+  // behind its output-idle snapshot, including synchronously drained readers.
+  processing_result finish_batch() {
+    if (failed_) fail();
+    flush_record();
+    if (closing_) shutdown();
+    if (!ciphertext_.empty()) output_(ciphertext_, {}, nullptr);
+    if (closing_) { progress_ = {}; close_(); }
+    return progress_;
+  }
+  // +=========================================================================+
+  // | [>] abort_batch                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  processing_result abort_batch() {
+    processing_ = false;
+    failed_ = true;
+    progress_ = {};
+    ciphertext_.clear();
+    plaintext_output_.clear();
+    close_();
+    return {};
+  }
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
   // +-------------------------------------------------------------------------+
@@ -174,7 +214,7 @@ class tls_engine {
         if (!received) fail();
         processing_ = true;
         source_seen_ = false;
-        engine_.on_bytes_received({plaintext_.data(), received});
+        progress_ = engine_.on_bytes_received({plaintext_.data(), received});
         processing_ = false;
         if (failed_) fail();
         if (closing_) return;
@@ -274,20 +314,22 @@ class tls_engine {
   std::unique_ptr<BIO, decltype(&BIO_free)> network_;
   // Reusable decrypted receive block borrowed by the application engine.
   std::vector<char> plaintext_;
-  // Protocol state; invoked only synchronously by TCP's owning worker.
+  // Protocol state; RX and turns are serialized by the TCP backend.
   ENty engine_;
   // TCP's existing synchronous callbacks, never invoked from source readers.
   protocol::send_delegate output_;
   std::function<void()> close_;
   // At most one 16 KiB plaintext record; combines prefix/body/source writes.
   std::string plaintext_output_;
-  // Ciphertext accepted atomically by TCP after successful input processing.
+  // Ciphertext accepted by TCP after a successful RX or processing entry.
   std::string ciphertext_;
-  // Plaintext produced by all protocol calls in this TCP input batch.
+  // Plaintext produced by all protocol calls in this RX or turn batch.
   std::size_t accepted_{0};
-  // Application output is permitted only inside its engine input call.
+  // Last complete protocol snapshot; TLS control-only RX must preserve it.
+  processing_result progress_{};
+  // Application output is permitted only inside an engine RX or turn call.
   bool processing_{false};
-  // A source is terminal for the current application input call.
+  // A source is terminal for the current application RX or turn call.
   bool source_seen_{false};
   // Valid output drains before closure; fatal errors discard the current batch.
   bool closing_{false};

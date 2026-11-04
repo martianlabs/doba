@@ -28,12 +28,14 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/server/tcp.h"
 #include "../../../helpers/concurrency.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 using namespace martianlabs::doba;
 using namespace martianlabs::doba::tests::integration;
 using namespace std::chrono_literals;
@@ -53,7 +55,15 @@ struct observing_engine {
   protocol::send_delegate output;
   void set_on_close(std::function<void()>) {}
   void set_on_send(protocol::send_delegate value) { output = std::move(value); }
-  void on_bytes_received(std::string_view) { output({}, payload, nullptr); }
+  processing_result on_bytes_received(std::string_view) {
+    output({}, payload, nullptr);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 };
 template <template <class, class> class Transport, class Peer, class Policies>
 void admission_fairness(Policies p) {

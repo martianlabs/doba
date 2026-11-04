@@ -47,6 +47,9 @@ DOBA_TEST("defaults are bounded and allow supported features") {
   DOBA_EXPECT(value.allow_chunked);
   DOBA_EXPECT(value.allow_upgrade);
   DOBA_EXPECT_EQUAL(value.max_pending_requests, 128);
+  DOBA_EXPECT_EQUAL(value.max_pending_response_bytes, 1024 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_deferred_input_size, 1024 * 1024);
+  DOBA_EXPECT_EQUAL(value.max_task_steps_per_turn, 64);
   DOBA_EXPECT_EQUAL(value.max_query_parameters, 128);
   DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 1024);
   DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 4096);
@@ -66,6 +69,9 @@ DOBA_TEST("fields retain configured boundaries and switches") {
                        .allow_chunked = false,
                        .allow_upgrade = false,
                        .max_pending_requests = 2,
+                       .max_pending_response_bytes = 256,
+                       .max_task_steps_per_turn = 3,
+                       .max_deferred_input_size = 1024,
                        .max_query_parameters = 1,
                        .max_chunk_extension_size = 5,
                        .max_trailer_section_size = 6,
@@ -79,6 +85,9 @@ DOBA_TEST("fields retain configured boundaries and switches") {
   DOBA_EXPECT(!value.allow_chunked);
   DOBA_EXPECT(!value.allow_upgrade);
   DOBA_EXPECT_EQUAL(value.max_pending_requests, 2);
+  DOBA_EXPECT_EQUAL(value.max_pending_response_bytes, 256);
+  DOBA_EXPECT_EQUAL(value.max_task_steps_per_turn, 3);
+  DOBA_EXPECT_EQUAL(value.max_deferred_input_size, 1024);
   DOBA_EXPECT_EQUAL(value.max_query_parameters, 1);
   DOBA_EXPECT_EQUAL(value.max_chunk_extension_size, 5);
   DOBA_EXPECT_EQUAL(value.max_trailer_section_size, 6);

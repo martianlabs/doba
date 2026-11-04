@@ -84,6 +84,27 @@ foreach(suite IN LISTS suites)
     message(STATUS "Verified resilience inventory")
     continue()
   endif()
+  if(suite STREQUAL "unit")
+    set(processing_files task_execution_tests.cpp processing_result_tests.cpp
+      engine_concurrency_tests.cpp processing_turn_tests.cpp
+      engine_security_state_tests.cpp)
+    if(NOT WIN32)
+      list(APPEND processing_files processing_queue_linux_tests.cpp)
+    endif()
+  else()
+    set(processing_files tcp_factory_tests.cpp processing_result_tests.cpp
+      server_stream_integrity_tests.cpp http_test_helper_tests.cpp)
+    if(WIN32)
+      list(APPEND processing_files tcp_processing_windows_tests.cpp)
+    else()
+      list(APPEND processing_files tcp_processing_linux_tests.cpp)
+    endif()
+  endif()
+  foreach(required_file IN LISTS processing_files)
+    if(NOT inventory MATCHES "${required_file}:[0-9]+ - ")
+      message(FATAL_ERROR "Missing ${suite} processing cases: ${required_file}")
+    endif()
+  endforeach()
   if(NOT WIN32)
     if(suite STREQUAL "unit")
       set(native_file tcp_context_linux_tests.cpp)
@@ -104,7 +125,10 @@ if(NOT WIN32)
     COMMAND_ERROR_IS_FATAL ANY
   )
   foreach(required IN ITEMS doba_unit_tests doba_integration_tests
-      doba_linux_transport_tests doba_linux_accept_error_tests)
+      doba_test_diagnostics_tests doba_stream_integrity_tests
+      doba_security_model_tests
+      doba_linux_transport_tests doba_linux_accept_error_tests
+      doba_linux_processing_tests doba_httparena_tests)
     if(NOT registered MATCHES "Test +#[0-9]+: ${required}(\n|$)")
       message(FATAL_ERROR "Missing registered Linux test: ${required}")
     endif()
@@ -125,7 +149,14 @@ if(WIN32)
       "Test +#[0-9]+: doba_windows_lifecycle_tests(\n|$)")
     message(FATAL_ERROR "Missing Windows socket lifecycle fault tests")
   endif()
-  foreach(native IN ITEMS iocp_completion windows_lifecycle)
+  foreach(required IN ITEMS doba_windows_processing_tests doba_httparena_tests
+      doba_test_diagnostics_tests doba_stream_integrity_tests
+      doba_security_model_tests)
+    if(NOT registered MATCHES "Test +#[0-9]+: ${required}(\n|$)")
+      message(FATAL_ERROR "Missing registered Windows test: ${required}")
+    endif()
+  endforeach()
+  foreach(native IN ITEMS iocp_completion windows_lifecycle windows_processing)
     set(binary
       "${DOBA_CI_BUILD_DIR}/tests/integration/doba_${native}_tests${suffix}")
     execute_process(
@@ -148,7 +179,8 @@ if(DOBA_CI_REQUIRE_TLS)
     COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${DOBA_CI_BUILD_DIR}" -N
     OUTPUT_VARIABLE registered COMMAND_ERROR_IS_FATAL ANY)
   set(required_tls doba_tls_tests doba_tls_core_tests
-      doba_tls_configuration_tests doba_tls_header_guard_tests)
+      doba_tls_configuration_tests doba_tls_header_guard_tests
+      doba_tls_processing_tests doba_tls_processing_wire_tests)
   if(configuration MATCHES "DOBA_BUILD_EXAMPLES:BOOL=ON(\n|$)")
     list(APPEND required_tls doba_tls_examples_tests)
   endif()
@@ -159,5 +191,12 @@ if(DOBA_CI_REQUIRE_TLS)
   endforeach()
   if(NOT configuration MATCHES "DOBA_ENABLE_TLS:BOOL=ON(\n|$)")
     message(FATAL_ERROR "TLS inventory requires DOBA_ENABLE_TLS=ON")
+  endif()
+endif()
+
+if(configuration MATCHES "DOBA_BUILD_EXAMPLES:BOOL=ON(\n|$)")
+  if(NOT registered MATCHES
+      "Test +#[0-9]+: doba_processing_examples_tests(\n|$)")
+    message(FATAL_ERROR "Missing registered processing executable examples")
   endif()
 endif()

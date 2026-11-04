@@ -40,7 +40,7 @@ connection state remains serialized. See the context and worker references for
 buffer ownership, close progression and completion lifetime.
 
 An external sequential owner configures, starts and stops the transport. Engine
-callbacks cannot escape synchronous input, and administrative calls cannot run
+callbacks cannot escape serialized RX/processing entries, and administrative calls cannot run
 from its IOCP workers. Stop drains accepted output and socket operations before
 joining workers and closing IOCP. Connection notifications are paired once and
 run outside the transport's locks.

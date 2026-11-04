@@ -53,14 +53,27 @@ bool reply(Peer& peer, std::string_view expected) {
   std::string head;
   while (!head.ends_with("\r\n\r\n") && head.size() < 4096) {
     auto byte = peer.receive(1);
-    if (!byte) return false;
+    if (!byte) {
+      test_helper::set_context(peer.socket.error());
+      return false;
+    }
     head += *byte;
   }
-  if (!head.starts_with("HTTP/1.1 200")) return false;
+  if (!head.starts_with("HTTP/1.1 200")) {
+    test_helper::set_context(head);
+    return false;
+  }
   while (!expected.empty()) {
     auto size = std::min<std::size_t>(65536, expected.size());
     auto bytes = peer.receive(size);
-    if (!bytes || *bytes != expected.substr(0, size)) return false;
+    if (!bytes) {
+      test_helper::set_context(peer.socket.error());
+      return false;
+    }
+    if (*bytes != expected.substr(0, size)) {
+      test_helper::set_context("Unexpected response body bytes");
+      return false;
+    }
     expected.remove_prefix(size);
   }
   return true;
@@ -106,6 +119,8 @@ void terminal_source(Policies p) {
   p.port = std::to_string(port);
   p.worker_count = 2;
   protocol::http::v11::policies limits;
+  // Retain the next request as raw input until the current source drains.
+  limits.max_pending_requests = 1;
   limits.max_pending_response_bytes = 1;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
   std::atomic<int> calls{0};

@@ -126,6 +126,7 @@ struct worker {
       }
       uint16_t port_num = parse_port(configuration_.port);
       std::size_t workers = setup_listener(ip_address, port_num);
+      processing_timer_.start(io_h_);
       setup_workers(workers);
       setup_accept_pipeline(workers);
     } catch (...) {
@@ -189,6 +190,7 @@ struct worker {
                          [this]() { return pending_accepts_ == 0; });
       for (const auto& ctx : contexts_) contexts.push_back(ctx);
     }
+    processing_timer_.stop();
     for (const auto& ctx : contexts) {
       if (ctx->stop()) finish_context(ctx);
     }
@@ -206,6 +208,7 @@ struct worker {
       }
     }
     workers_.clear();
+    processing_timer_.reset();
     if (ioh != nullptr) CloseHandle(ioh);
     {
       std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -375,6 +378,18 @@ struct worker {
               handle_receive(op->ctx, bytes, st != FALSE);
               break;
             }
+            case io_type::kProcessing: {
+              std::unique_ptr<overlapped_processing<ENty>> op(
+                  static_cast<overlapped_processing<ENty>*>(ovb));
+              handle_processing(op->ctx, 0);
+              break;
+            }
+            case io_type::kProcessingTimer: {
+              for (auto& [ctx, version] : processing_timer_.take_due()) {
+                if (ctx) handle_processing(ctx, version);
+              }
+              break;
+            }
             case io_type::kSend: {
               std::unique_ptr<overlapped_send<ENty>> op(
                   static_cast<overlapped_send<ENty>*>(ovb));
@@ -478,7 +493,8 @@ struct worker {
       ctx = std::make_shared<context<ENty>>(
           accepted, configuration_.receive_buffer_capacity,
           configuration_.max_buffered_send_bytes, create_engine_, stopping_,
-          on_connection_, on_disconnection_, std::move(*reservation));
+          on_connection_, on_disconnection_, std::move(*reservation),
+          io_h_, &processing_timer_);
     } catch (...) { return; }
     // Before this transfer the accept operation owns the socket, even when
     // the engine constructor throws. Afterwards the context owns it.
@@ -520,6 +536,16 @@ struct worker {
                          : op->ctx->send_failed();
     } catch (...) { finished = op->ctx->abort(); }
     if (finished) finish_context(op->ctx);
+  }
+  // +=========================================================================+
+  // | [>] handle_processing                                       ( private ) |
+  // +-------------------------------------------------------------------------+
+  void handle_processing(const std::shared_ptr<context<ENty>>& ctx,
+                         std::uint64_t version) {
+    bool finished;
+    try { finished = ctx->processing_completed(version); }
+    catch (...) { finished = ctx->abort(); }
+    if (finished) finish_context(ctx);
   }
   // +=========================================================================+
   // | [>] replenish_accept_pipeline                              ( private ) |
@@ -609,6 +635,8 @@ struct worker {
   std::vector<std::jthread> workers_;
   inline static thread_local const worker* current_worker_{nullptr};
   context_set contexts_;
+  // No native timer exists until a connection reports a future deadline.
+  windows_processing_timer<ENty> processing_timer_;
   types::on_client_connected_delegate on_connection_;
   types::on_client_disconnected_delegate on_disconnection_;
 };

@@ -48,8 +48,9 @@ a selected value are marked "Not set".
 
 The planned first delivery is `0.1.0-beta1`, a beta for controlled
 deployments. There is currently no release candidate. The current Linux and
-Windows transports provide synchronous TCP and prefix/source. The optional TLS
-class reuses TCP with its own encryption buffers and finite source budget.
+Windows transports provide TCP, prefix/source and generic processing turns.
+The optional TLS class reuses TCP with its own encryption buffers, finite source
+budget and forwarding of cooperative engine turns.
 Application execution, inactivity timers and pressure/resume are outside the
 transport contract. Use the current contracts and qualification evidence.
 RE1 is the remaining open release gate. GZIP is future product work.

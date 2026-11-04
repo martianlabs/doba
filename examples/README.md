@@ -32,11 +32,14 @@ examples if you need to replace either side.
 you need their APIs.
 
 
-Network examples use synchronous TCP or the separate TCP-based TLS class on
-Linux and Windows. Neither transport supplies coroutine execution or
-pressure/resume hooks. The engine retains
-independent task/execution APIs for separate integrations and tests; configuring
-an executor alone does not change the transport contract.
+Network examples use TCP or the separate TCP-based TLS class on
+Linux and Windows. Neither transport supplies an application executor. The
+[processing-turn example](http/v11/processing_turns/README.md) demonstrates
+concurrent handlers through the single HTTP engine using an in-memory adapter.
+Linux and Windows TCP supply these turns natively; see
+[async_routes](http/v11/async_routes/README.md). TLS forwards them too; the
+[HTTPS example](http/v11/https_hello_world/README.md) includes an async route.
+A separate executor is not part of the engine interface.
 
 See the [TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract)
 and [policy reference](../docs/reference/transport/server/tcp_policies.md) for

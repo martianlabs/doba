@@ -44,7 +44,7 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] linux_transport                                            ( class ) |
 // +---------------------------------------------------------------------------+
-// | Synchronous TCP transport. Configuration/start/stop are owner operations. |
+// | Worker-owned TCP. Configuration/start/stop are external owner operations. |
 // | Each worker owns its listener, connections and one reader per socket.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////

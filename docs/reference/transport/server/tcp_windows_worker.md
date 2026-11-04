@@ -47,9 +47,10 @@ stop that observes a finished context claims removal by erasing it once. Only
 the successful eraser reports disconnection, outside both transport locks.
 
 Stop closes admission and waits for pending accepts to finish initialization.
-It snapshots live contexts, releases the lifecycle lock and requests their drain.
-Once real context I/O finishes and the live set is empty, stop wakes and joins
-all workers, then closes IOCP. The temporary snapshot avoids entering context
+It snapshots live contexts and releases the lifecycle lock. It then stops
+native timer producers and requests connection drain. Real I/O and queued processing packets
+finish before the live set becomes empty. Workers join before timer storage
+and IOCP are released. The temporary snapshot avoids entering context
 locks under the lifecycle lock. Stop never waits for application tasks.
 
 The lifecycle mutex protects admission, pending accepts and the live set.
@@ -60,6 +61,9 @@ User notifications run outside these locks. No try_lock or weak_ptr is used.
 
 Configuration, callback registration, start and stop are sequential operations
 of an external owner. Reentrant or worker-owned administration is rejected.
-Concurrent administrative success is unsupported. Engine callbacks are strictly
-synchronous; no external producers, TLS, scheduler, quiescence, inactivity or
-pressure/resume mechanism is provided.
+Concurrent administrative success is unsupported. Engine callbacks run only
+inside serialized RX/processing entries. A lazy group timer publishes generic
+IOCP wakes; it never enters an engine. No external application producers,
+quiescence, inactivity scan or pressure/resume service is provided. See
+[processing delivery](tcp_windows_processing.md) and
+[admission ownership](connection_admission.md).

@@ -281,6 +281,9 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/reader
   )
   add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/common/task_execution
+  )
+  add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/filesystem
   )
   add_subdirectory(
@@ -294,6 +297,12 @@ if(
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/hello_world
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/processing_turns
+  )
+  add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/async_routes
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/http/v11/custom_http_request
@@ -383,6 +392,9 @@ if(
     )
     add_subdirectory(
       ${CMAKE_CURRENT_LIST_DIR}/tests/integration
+    )
+    add_subdirectory(
+      ${CMAKE_CURRENT_LIST_DIR}/benchmarks/http/v11/httparena
     )
   endif()
 endif()

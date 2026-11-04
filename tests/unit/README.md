@@ -50,6 +50,12 @@ shared loading and invalidation races independently of HTTP. The
 containers, and coroutine helpers. Storage cases exercise memory buffers,
 disk spill, moves, cleanup, and failed operations.
 
+[Controlled task tests](common/task_execution_tests.cpp) verify exclusive
+frame ownership, final suspension, cancellation, exception inspection and
+rejection of foreign awaiters. Deadline boundaries are checked without real
+time delays. Serialized worker migration is tested with explicit joins.
+The existing standalone task tests remain enabled.
+
 Decoder cases also reuse or overwrite caller buffers and inspect owned
 requests after the decoder has gone away. A view that happens to point at
 something readable today isn't much of an ownership guarantee.
@@ -78,17 +84,17 @@ These helper tests do not assert that Linux uses those Windows components.
 </h2>
 
 The [engine concurrency cases](protocol/http/v11/engine_concurrency_tests.cpp)
-use explicit gates and independently supplied execution services to control
-handler completion, input and protocol stop. They verify ordering, owned frames,
-callback counts and lifetimes. This is engine coverage, not coroutine support
-in the TCP transports. Common coroutine helpers remain independently tested.
+use serialized processing turns, controlled eligibility times and explicit
+handler gates. They verify concurrent progress, ordered output, owned frames,
+callback counts and cancellation. Common task helpers are independently tested;
+no injected application executor is needed.
 
 [Operating helpers](transport/server/operating_policies_tests.cpp) test shared
-Windows admission reservations and pressure calculations used by the engine.
+Windows admission reservations and current TX limits/reader ownership.
 [HTTP budgets](protocol/http/v11/policy_budget_audit_tests.cpp) and
-[flow wakeups](protocol/http/v11/flow_wakeup_tests.cpp) exercise independent
-protocol credit and readiness, including subscription/completion races.
-The TCP backends do not install those hooks or perform inactivity sampling.
+[processing turns](protocol/http/v11/processing_turn_tests.cpp) exercise finite
+protocol credit, deferred input, ready deadlines and cooperative completion.
+Native turn delivery is covered by the integration suites on both backends.
 
 [Policy construction](transport/server/tcp_transport_tests.cpp) covers defaults,
 platform ranges and zero meanings. [Regression detectors](protocol/http/v11/regression_detection_tests.cpp)
@@ -125,3 +131,10 @@ reported. Temporary directory overrides restore the prior environment during
 unwinding; decoder spill checks use private directories and propagate directory
 inspection errors instead of treating them as empty results.
 
+
+The current HTTP engine tests use serialized processing turns. Same-connection
+cases cover overlapping waits, out-of-order completion with ordered output,
+progress during source drain, per-turn fairness, bounded admission and byte
+limits, interim responses and cancellation. Old cross-thread completion,
+observer and pressure-hysteresis tests were replaced with the current contracts;
+see the block-4 removal/coverage ledger in out/async-processing/block-4.

@@ -42,12 +42,14 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/processing_result.h"
 #include "common/reader.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/server/tcp.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace common = martianlabs::doba::common;
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -78,7 +80,15 @@ struct synchronous_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view bytes) { action(*this, bytes); }
+  processing_result on_bytes_received(std::string_view bytes) {
+    action(*this, bytes);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

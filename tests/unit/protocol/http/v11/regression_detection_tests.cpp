@@ -68,11 +68,10 @@ DOBA_TEST("detection rejects a body one byte above its configured limit") {
 // |     completes                                                             |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("detection queues a successor response until the first completes") {
-  tests::manual_event pending;
   router<request, response> routes;
   routes.add("GET", "/first",
              [&](const request&, response& res) -> common::task<void> {
-               co_await pending;
+               co_await common::yield();
                res.ok_200().set_body("first");
              });
   routes.add("GET", "/next", [](const request&, response& res) {
@@ -87,12 +86,11 @@ DOBA_TEST("detection queues a successor response until the first completes") {
     wire.append(head).append(body);
   });
   current.set_on_close([] {});
-  tests::scope_exit release([&] { pending.open(); });
   current.on_bytes_received("GET /first HTTP/1.1\r\nHost: x\r\n\r\n" +
                             std::string(next));
-  DOBA_EXPECT(pending.wait_for_waiters(1));
+  // The first task yielded; the successor response must still be retained.
   DOBA_EXPECT_EQUAL(sends, 0);
-  pending.open();
+  current.on_processing_turn(true);
   DOBA_EXPECT_EQUAL(sends, 2);
   const auto first = wire.find("\r\n\r\nfirst");
   const auto second = wire.find("\r\n\r\nsecond");

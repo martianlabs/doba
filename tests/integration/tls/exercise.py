@@ -31,6 +31,12 @@ import sys
 import threading
 import time
 
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'helpers'))
+from sanitizer_diagnostics import require_clean_diagnostics
+
 if not __debug__:
   raise RuntimeError('TLS tests require Python assertions enabled')
 
@@ -75,6 +81,7 @@ def server(mode='echo', plain=1048576, bio=17408, cipher=2097152,
       stdout, stderr = process.communicate()
       raise AssertionError('TLS fixture failed to stop: ' + stderr)
     waiter.join(1)
+    require_clean_diagnostics(stderr)
     if process.returncode != 0:
       raise AssertionError(f'TLS fixture exit {process.returncode}: {stderr}')
 
@@ -234,6 +241,14 @@ def main():
     with socket.create_connection(('127.0.0.1', port), timeout=5) as truncated:
       truncated.sendall(b'\x16\x03')
     exchange(100)
+    # Incomplete unauthenticated handshakes cannot occupy the sole worker.
+    with contextlib.ExitStack() as pending:
+      for _ in range(4):
+        stalled = pending.enter_context(socket.create_connection(
+            ('127.0.0.1', port), timeout=5))
+        stalled.sendall(b'\x16\x03\x03\x40\x00\x01')
+      exchange(101)
+    exchange(102)
   print('TLS 1.2/1.3, pipeline, source, close, fragmentation '
         'and isolation: PASS')
   with server(plain=4096, bio=127) as port:

@@ -88,7 +88,12 @@ class custom_transport {
     constexpr std::string_view request =
         "GET /hello HTTP/1.1\r\nHost: example.com\r\n"
         "Connection: close\r\n\r\n";
-    connection_->on_bytes_received(request);
+    const auto progress = connection_->on_bytes_received(request);
+    // This synchronous example does not provide a processing event loop.
+    if (progress.turn_requested || progress.turn_at ||
+        progress.turn_after_output_drained) {
+      close_requested_ = true;
+    }
     if (close_requested_) {
       connection_.reset();
       on_disconnection_();

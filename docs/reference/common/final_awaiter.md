@@ -45,7 +45,7 @@ struct final_awaiter { ... };
 
 Provides the final awaiter type.
 
-**Source:** [include/common/task.h:56](../../../include/common/task.h#L56)
+**Source:** [include/common/task.h:58](../../../include/common/task.h#L58)
 
 <a id="field-promise"></a>
 
@@ -61,7 +61,7 @@ Stores the promise value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/common/task.h:57](../../../include/common/task.h#L57)
+**Source:** [include/common/task.h:59](../../../include/common/task.h#L59)
 
 <a id="method-await-ready"></a>
 
@@ -79,7 +79,7 @@ Implements the coroutine await_ready hook.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:58](../../../include/common/task.h#L58)
+**Source:** [include/common/task.h:60](../../../include/common/task.h#L60)
 
 <a id="method-await-suspend"></a>
 
@@ -101,7 +101,7 @@ Implements the coroutine await_suspend hook.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:66](../../../include/common/task.h#L66)
+**Source:** [include/common/task.h:69](../../../include/common/task.h#L69)
 
 <a id="method-await-resume"></a>
 
@@ -119,4 +119,12 @@ Implements the coroutine await_resume hook.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/task.h:67](../../../include/common/task.h#L67)
+**Source:** [include/common/task.h:70](../../../include/common/task.h#L70)
+
+## Final-frame ownership
+
+For detached `task::start`, `await_ready` invokes completion and returns true,
+so completion releases the frame automatically as before. For a frame owned
+by `task_execution`, it returns false without invoking completion. The frame
+remains suspended and valid for inspection until its owner destroys it.
+See [controlled ownership](task_execution.md).

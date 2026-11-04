@@ -22,6 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <chrono>
+#include <string>
+
 #include "common/signaler.h"
 #include "https_server.h"
 
@@ -45,6 +48,14 @@ int main(int count, char** arguments) {
       [](const martianlabs::doba::protocol::http::v11::request&,
              martianlabs::doba::protocol::http::v11::response& response) {
     response.ok_200().set_body("hello over TLS");
+  });
+  server.add_route("GET", "/wait/:id",
+      [](const martianlabs::doba::protocol::http::v11::request&,
+         martianlabs::doba::protocol::http::v11::response& response,
+         int id) -> martianlabs::doba::common::task<> {
+    co_await martianlabs::doba::common::sleep_for(
+        std::chrono::milliseconds(10));
+    response.ok_200().set_body(std::to_string(id));
   });
   server.start();
   martianlabs::doba::common::signaler::wait();

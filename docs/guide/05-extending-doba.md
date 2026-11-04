@@ -64,7 +64,7 @@ The input method appends each new block to engine-owned storage and sends
 complete lines:
 
 ```cpp
-void on_bytes_received(std::string_view input) {
+protocol::processing_result on_bytes_received(std::string_view input) {
   input_.append(input);
   std::size_t consumed = 0;
   for (;;) {
@@ -77,6 +77,11 @@ void on_bytes_received(std::string_view input) {
     consumed += line.size();
   }
   input_.erase(0, consumed);
+  return {};
+}
+
+protocol::processing_result on_processing_turn(bool) {
+  return {};
 }
 ```
 
@@ -229,27 +234,16 @@ The [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract
 specifies buffers, reader lifetime, platform limits and stop behavior. A C++
 concept checks signatures; implementing it alone does not prove these guarantees.
 
-HTTP retains optional flow-control methods for independent embedding:
-
-```cpp
-void set_input_flow_control(std::function<bool()> pressure,
-                            std::function<void()> ready);
-bool input_paused() const noexcept;
-void resume_input();
-```
-
-Neither bundled TCP backend installs these hooks or calls resume_input. The
-methods describe engine capabilities; they do not imply pressure handling or
-application scheduling in the transport. A custom integration that opts into
-flow control owns its callbacks and lifetime. It serializes receive, resume
-and engine stop, defers new input while paused, and handles ready notifications
-without concurrent or reentrant engine entry. The engine owns the deferred
-remainder of one receive block. An empty resume does not poll pressure.
-
-Likewise, an independently supplied execution_capacity belongs to an engine
-execution service. It does not make asynchronous output compatible with the
-current TCP callbacks. Coroutine integration must satisfy that boundary and own
-application task lifetime; transport stop does not complete application tasks.
+HTTP now reports immediate/deadline/output-drain needs through the returned
+processing_result. The engine retains bounded unadmitted input itself and
+supports several cooperative async handlers per connection, while preserving
+response order. It has no input pause/resume hook, external execution service
+or completion observer. All engine calls and destruction remain serialized.
+See [the current engine contract](../reference/protocol/http/v11/engine.md).
+Linux and Windows TCP supply serialized processing turns with monotonic
+deadlines. TLS forwards the same results through its serialized adapter.
+An in-memory adapter can also supply turns as shown by
+[processing_turns](../../examples/http/v11/processing_turns/README.md).
 
 Custom HTTP requests accept a final `borrow_bytes` argument in `from(...)`.
 The decoder supplies true so fields can reference its immutable input;
@@ -284,3 +278,9 @@ the pieces meet; a real network transport also needs connection management,
 buffering, and safe output delivery. Head back to the [guide index](README.md)
 when you're ready for the final chapter.
 
+
+Both engine entry points return processing_result directly. An empty result
+requests no additional turns. It never acknowledges a subset of received
+bytes: the full input block can be reused once the call returns. See the
+[processing contract](../reference/protocol/processing_result.md), including
+native immediate/deadline/output-drain semantics on both TCP backends and TLS.

@@ -32,8 +32,10 @@ and Windows IOCP under the [TCP contract](../../docs/reference/transport/server/
 They cover fresh RX blocks, engine-owned fragments, bounded/partial TX, one
 terminal reader, failure isolation, startup/stop and restart.
 The separate [TLS groups](tls/README.md) cover negotiation, encrypted traffic,
-configuration, limits and the two executable examples on the same backends.
-Transport-scheduled tasks and pressure/resume are outside scope.
+configuration, processing turns, ordered mixed handlers, limits and both TLS
+executable examples on the same backends.
+Native transports deliver generic processing turns; coroutine frames and
+response order belong to the engine. Pressure/resume remains outside scope.
 
 [Portable empty-send cases](transport/server/tcp_empty_source_tests.cpp) run in
 both binaries with one/four workers and an exact TX budget: reader or empty
@@ -71,13 +73,17 @@ accept bursts, paired notifications and restart. [Policies](transport/server/ope
 [Prefix/source](transport/server/tcp_prefix_source_windows_tests.cpp) checks
 reader release before new input; [serialization](transport/server/tcp_serialization_windows_tests.cpp)
 checks many synchronous output callbacks and progress on independent connections.
-[Execution isolation](transport/server/tcp_execution_windows_tests.cpp) verifies
-that TCP does not inject/replace an execution service or install flow hooks.
+[Factory state](transport/server/tcp_factory_tests.cpp) verifies the current
+engine contract without execution hooks on Linux and Windows: one factory per
+accepted connection, preserved application state and paired disconnects with
+one/two workers.
 
-Two isolated Windows executables intercept APIs only inside their own tests:
+Isolated Windows executables intercept APIs only inside their own tests:
 [IOCP publication](transport/server/tcp_iocp_completion_windows_probe.cpp) forces
 packet dequeue before the socket call returns; [lifecycle](transport/server/tcp_lifecycle_windows_probe.cpp)
 checks partial startup, socket ownership, failed submissions and restart.
+[Processing publication](transport/server/tcp_processing_windows_probe.cpp)
+forces early dequeue, stale timer wake cancellation, batches and native faults.
 Production and benchmark sources have no hooks. CI lists both executables and
 repeats their cases; historical required-check labels containing TLS still
 configure TLS=OFF.
@@ -121,3 +127,9 @@ Platform-specific files are selected by CMake; unsupported or absent scenarios
 are not counted as passing. Shared portable cases must appear in both native
 integration inventories. See the [policy coverage matrix](../../docs/reference/transport/server/tcp_policies.md#validation-coverage).
 
+
+The [HttpArena correctness group](benchmarks/httparena.py) exercises the actual
+standalone driver with all three selected profiles.
+[Processing example checks](helpers/processing_examples.py) execute the built
+common, in-memory engine and TCP demos when examples are enabled. Neither group
+substitutes for the final throughput comparison. See [CI coverage](../ci-inventory.md).

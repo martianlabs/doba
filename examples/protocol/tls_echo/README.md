@@ -16,3 +16,9 @@ involved. The private key must be unencrypted.
 An optional final argument selects the listening port instead of 8443. The
 [TLS example test](../../../tests/integration/tls/examples.py) runs the built
 executable with an isolated port and a verified client.
+
+The engine contract returns processing_result from both input and processing
+entry points. This synchronous example returns the empty result and requests
+no additional processing. Input bytes remain borrowed only for the call.
+Linux and Windows TCP support native continuation turns; TLS forwards them.
+This particular example requests none.

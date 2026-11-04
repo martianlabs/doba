@@ -1,9 +1,9 @@
 # TLS validation coverage
 
-This inventory covers the current synchronous TCP-based TLS class on Linux and
-Windows. It is a functional contract matrix, not a claim of 100% line or branch
-coverage. It does not qualify asynchronous application callbacks or retired
-transport mechanisms. TCP and common::reader keep their existing contracts.
+This inventory covers the current TCP-based TLS class and cooperative engine
+turns on Linux and Windows. It is a functional contract matrix, not a claim of
+100% line or branch coverage. External application callbacks and retired
+transport mechanisms are excluded. TCP and common::reader retain their contracts.
 
 | Supported contract | Direct evidence |
 | --- | --- |
@@ -20,6 +20,9 @@ transport mechanisms. TCP and common::reader keep their existing contracts.
 | Engine/peer close, failures and independent sessions | wire close_notify, failed reader, invalid input, EOF, concurrent sessions and recovery |
 | Partial send/progress and pending-output lifetime | large bounded source to a slow peer, continuation and peer teardown |
 | Admission during TLS negotiation and restart | one held connection at the admission limit; rejection/recovery; request before and after explicit restart |
+| Processing snapshot, control-only RX and output-idle | [processing peer](../../../../tests/integration/tls/processing.cpp): all interest combinations, retained KeyUpdate deadline, busy ciphertext, close precedence |
+| Prefix/source and failures from processing turns | exact/overflow/cumulative plain budgets, encoded budget, failed reader, second reader, handler exception after encoding; 90 cases across two TLS versions and three BIO capacities |
+| Concurrent ordered HTTPS, cancellation and stop | [native processing tests](../../../../tests/integration/tls/processing.py): later sync request releases a waiting predecessor on the same connection; mixed reader output, failure, close, separate-connection progress, timed-frame cancellation and stop |
 | HTTPS constructor with authentication providers | authenticated tuple construction; 401 rejection and authorized 200 response over TLS |
 | Optional compilation and dependency isolation | [negative header consumer](../../../../tests/package/tls_guard/CMakeLists.txt), package consumers; CI builds plain consumer from TLS installation with OpenSSL discovery disabled |
 | HTTPS and non-HTTP usage examples | [example runner](../../../../tests/integration/tls/examples.py) executes both built examples with verified clients, validates output and the echo line limit |

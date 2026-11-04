@@ -27,12 +27,14 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "common/signaler.h"
 #include "protocol/contracts.h"
 #include "server.h"
 #include "transport/server/tls.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] usings                                                     ( public ) |
@@ -66,13 +68,13 @@ struct custom_protocol {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     while (!input.empty()) {
       const auto end = input.find('\n');
       const auto size = end == std::string_view::npos ? input.size() : end + 1;
       if (size > kMaximumLineSize - input_.size()) {
         on_close_();
-        return;
+        return {};
       }
       input_.append(input.substr(0, size));
       input.remove_prefix(size);
@@ -81,7 +83,13 @@ struct custom_protocol {
         input_.clear();
       }
     }
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 
  private:
   // +=========================================================================+

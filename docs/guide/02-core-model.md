@@ -70,7 +70,7 @@ and TCP moves the bytes.
 
 A protocol engine understands the bytes for one connection. The
 [engine contract](../../include/protocol/contracts.h) is a C++ concept that
-checks four pieces:
+checks five pieces:
 
 - **Policies.** *policies_type* names the engine's policy type. It can be
   empty when the engine needs no options.
@@ -79,16 +79,23 @@ checks four pieces:
 - **Closure.** *set_on_close* receives a callback the engine can use to ask
   the transport to close the connection.
 - **Input.** *on_bytes_received* gets a *std::string_view* of the newly
-  received bytes, immutable throughout the call. It returns void. The engine
+  received bytes, immutable throughout the call. It returns processing_result.
+  The engine
   must process or copy those bytes before returning; the transport reuses
   the buffer on the next read.
 
-Here are the three calls as the concept checks them:
+- **Processing.** *on_processing_turn(output_idle)* runs eligible work on a
+  serialized transport turn and returns the next processing_result snapshot.
+
+The concept checks these four operations:
 
 ```cpp
 { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
 { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-{ engine.on_bytes_received(input) } -> std::same_as<void>;
+{ engine.on_bytes_received(input) } ->
+    std::same_as<protocol::processing_result>;
+{ engine.on_processing_turn(output_idle) } ->
+    std::same_as<protocol::processing_result>;
 ```
 
 The [send delegate](../../include/protocol/contracts.h) is that output
@@ -118,9 +125,9 @@ that setup in TCP. The [factory contract](../../include/protocol/contracts.h)
 requires a move-constructible callable that takes no arguments even when const
 and returns the engine type.
 
-Input calls are serialized per connection and stop when closing begins. The
-engine stores its registered callbacks but invokes send/close only inside the
-current input call, on that calling thread. They must not escape for delayed or
+Input and processing turns are serialized per connection and stop when closing
+begins. The engine stores its registered callbacks but invokes send/close only
+inside the current input or processing turn, on that calling thread. They must not escape for delayed or
 cross-thread use. Windows may use another IOCP worker for the next serialized
 input call; serialization does not imply fixed thread affinity.
 
@@ -157,10 +164,11 @@ These are the callback and lifecycle calls the concept checks:
 { tr.stop() } -> std::same_as<void>;
 ```
 
-The engine retains optional execution and flow-control interfaces for
-independent embedding and tests. The bundled TCP backends neither install
-these hooks nor execute application tasks. Configuration and start/stop come
-from a sequential external owner, outside worker callbacks.
+The engine owns managed task frames and HTTP response order. It returns
+processing needs directly instead of installing execution, completion or flow
+hooks. Native workers deliver those turns; they never receive application jobs.
+Configuration and start/stop belong to a sequential external owner, outside
+worker callbacks.
 
 A working transport creates an engine for each connection, wires up its send
 and close callbacks, feeds it input, and handles its output. The concept
@@ -232,3 +240,8 @@ them.** The two examples show you can change either side without rebuilding
 the other.
 
 Head back to the [guide index](README.md) when you're ready for more.
+
+The result describes future processing needs, never RX consumption or read
+policy. See [processing turns](../reference/protocol/processing_result.md) for
+the full contract and implementation status. Current native backends accept
+empty results; nonempty turn requests are rejected until native integration.

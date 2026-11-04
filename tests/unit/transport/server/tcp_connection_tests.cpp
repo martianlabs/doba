@@ -32,10 +32,12 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "test_helper.h"
 #include "transport/server/tcp_connection.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] usings                                                    ( public )  |
@@ -57,6 +59,8 @@ struct test_engine {
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
+  // Processing needs returned by the probe after consuming each full block.
+  processing_result progress{};
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
@@ -68,11 +72,17 @@ struct test_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     const auto* bytes = input.data();
     const auto size = input.size();
     receive(bytes, size);
+    return progress;
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -176,3 +186,29 @@ DOBA_TEST("TCP RX adapter invokes callbacks during engine input") {
   DOBA_EXPECT(closed);
 }
 
+
+// +===========================================================================+
+// | [>] Scheduling does not acknowledge input                    ( test-case )|
+// +---------------------------------------------------------------------------+
+DOBA_TEST("tcp connection returns processing needs without retaining RX") {
+  auto factory = [] { return test_engine{}; };
+  tcp_connection<test_engine> input(8, factory);
+  const auto due = processing_result::clock::time_point{} +
+                   std::chrono::seconds(9);
+  input.engine.progress = {true, due, true};
+  std::string received;
+  input.engine.receive = [&](const char* bytes, std::size_t size) {
+    received.append(bytes, size);
+  };
+  const auto* storage = input.receive_buffer().data();
+  for (const auto bytes : {"abcdefgh", "ij"}) {
+    std::memcpy(input.receive_buffer().data(), bytes, std::strlen(bytes));
+    const auto result = input.process(std::strlen(bytes));
+    DOBA_EXPECT(result.turn_requested);
+    DOBA_EXPECT(result.turn_at && *result.turn_at == due);
+    DOBA_EXPECT(result.turn_after_output_drained);
+    DOBA_EXPECT_EQUAL(input.receive_buffer().data(), storage);
+    DOBA_EXPECT_EQUAL(input.receive_buffer().size(), 8);
+  }
+  DOBA_EXPECT_EQUAL(received, "abcdefghij");
+}

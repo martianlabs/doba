@@ -41,6 +41,8 @@ int main() {
   limits.max_request_body_size = 5;
   limits.max_pending_requests = 128;
   limits.max_pending_response_bytes = 1024 * 1024;
+  limits.max_deferred_input_size = 1024 * 1024;
+  limits.max_task_steps_per_turn = 64;
   martianlabs::doba::transport::server::tcp_policies io;
   io.ip = "0.0.0.0";
   io.port = "8080";

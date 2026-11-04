@@ -90,134 +90,36 @@ struct connection {
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t receive(std::string_view data) {
-    value.on_bytes_received(data);
+    needs = value.on_bytes_received(data);
+    drain_sources();
     return data.size();
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  void turn() {
+    needs = value.on_processing_turn(true);
+    drain_sources();
+  }
+  void drain_sources() {
+    while (needs.turn_after_output_drained) {
+      needs = value.on_processing_turn(true);
+    }
+  }
+  martianlabs::doba::protocol::processing_result needs;
   engine<request, response> value;
   std::string wire;
   std::vector<std::size_t> blocks;
   int closes{0};
 };
 
-struct suspend_once {
-  std::coroutine_handle<>& next;
-
-  bool await_ready() const noexcept { return false; }
-  void await_suspend(std::coroutine_handle<> handle) const noexcept {
-    next = handle;
-  }
-  void await_resume() const noexcept {}
-};
 }  // namespace
-
-DOBA_TEST("engine reports completion after pending work finishes") {
-  router<request, response> routes;
-  std::coroutine_handle<> pending;
-  routes.add("GET", "/wait", [&pending](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{pending};
-    make_response(res, "done");
-  });
-  connection current(routes);
-  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  DOBA_EXPECT(static_cast<bool>(pending));
-  bool completed = false;
-  DOBA_EXPECT(!current.value.stop([&completed]() { completed = true; }));
-  DOBA_EXPECT(!completed);
-  pending.resume();
-  DOBA_EXPECT(completed);
-}
-
-DOBA_TEST("engine stops immediately without pending work") {
-  router<request, response> routes;
-  connection current(routes);
-  bool completed = false;
-  DOBA_EXPECT(current.value.stop([&completed]() { completed = true; }));
-  DOBA_EXPECT(!completed);
-}
-
-DOBA_TEST("engine completion follows asynchronous observers") {
-  router<request, response> routes;
-  std::coroutine_handle<> pending;
-  routes.add("GET", "/wait", [&pending](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{pending};
-    make_response(res, "done");
-  });
-  bool finished = false;
-  bool completed_after_finish = false;
-  engine<request, response> value({}, routes, []() {},
-                                  [&finished]() { finished = true; });
-  value.set_on_send([](std::string_view, std::string_view,
-                       std::unique_ptr<reader>) {});
-  value.set_on_close([]() {});
-  const std::string_view wire = "GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  value.on_bytes_received(wire);
-  DOBA_EXPECT(static_cast<bool>(pending));
-  DOBA_EXPECT(!value.stop([&]() { completed_after_finish = finished; }));
-  pending.resume();
-  DOBA_EXPECT(completed_after_finish);
-}
-
-DOBA_TEST("engine submits opaque work with execution thresholds") {
-  router<request, response> routes;
-  routes.add("GET", "/wait", [](const request&, response& res)
-                 -> task<void> {
-    co_await martianlabs::doba::common::yield();
-    co_await martianlabs::doba::common::sleep_for(
-        std::chrono::milliseconds(10));
-    make_response(res, "done");
-  });
-  connection current(routes);
-  using namespace martianlabs::doba::transport::server;
-  std::vector<std::pair<std::chrono::steady_clock::time_point, execution_work>>
-      queued;
-  current.value.set_execution_capacity(
-      {&queued, [](void* owner, std::chrono::steady_clock::time_point due,
-                   execution_work work) {
-         auto& entries = *static_cast<decltype(queued)*>(owner);
-         entries.push_back({due, work});
-       }});
-  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  DOBA_EXPECT_EQUAL(queued.size(), 1U);
-  DOBA_EXPECT(queued[0].first ==
-              std::chrono::steady_clock::time_point::min());
-  auto work = queued[0].second;
-  const auto before = std::chrono::steady_clock::now();
-  work.run(work.context);
-  DOBA_EXPECT_EQUAL(queued.size(), 2U);
-  DOBA_EXPECT(queued[1].first > before);
-  DOBA_EXPECT(current.wire.empty());
-  work = queued[1].second;
-  work.run(work.context);
-  DOBA_EXPECT(current.wire.ends_with("\r\n\r\ndone"));
-}
-
-DOBA_TEST("engine closes when execution rejects a continuation") {
-  router<request, response> routes;
-  routes.add("GET", "/wait", [](const request&, response&) -> task<void> {
-    co_await martianlabs::doba::common::yield();
-  });
-  connection current(routes);
-  current.value.set_execution_capacity(
-      {nullptr, [](void*, std::chrono::steady_clock::time_point,
-                   martianlabs::doba::transport::server::execution_work) {
-         throw std::runtime_error("execution rejected");
-       }});
-  current.receive("GET /wait HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
-  DOBA_EXPECT_EQUAL(current.closes, 1);
-}
 
 DOBA_TEST("engine orders asynchronous and synchronous responses") {
   router<request, response> routes;
-  std::coroutine_handle<> next;
-  routes.add("POST", "/slow", [&next](const request& req, response& res)
+  routes.add("POST", "/slow", [](const request& req, response& res)
                  -> task<void> {
-    co_await suspend_once{next};
+    co_await martianlabs::doba::common::yield();
     std::array<std::byte, 4> body{};
     const auto state = req.get_body_reader()->read(body);
     if (!state.complete || state.produced != 4) {
@@ -236,7 +138,7 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
   const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(slow + fast), slow.size() + fast.size());
   DOBA_EXPECT(current.wire.empty());
-  next.resume();
+  current.turn();
   const auto second = current.wire.find("HTTP/1.1", 1);
   DOBA_EXPECT(second != std::string::npos);
   DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\ndata"));
@@ -245,11 +147,10 @@ DOBA_TEST("engine orders asynchronous and synchronous responses") {
 
 DOBA_TEST("engine retains a borrowed request body across suspension") {
   router<request, response> routes;
-  std::coroutine_handle<> next;
-  routes.add("POST", "/slow", [&next](const request& req, response& res)
+  routes.add("POST", "/slow", [](const request& req, response& res)
                  -> task<void> {
     res.ok_200().set_header("Date", "fixed").set_body(req.get_body_reader());
-    co_await suspend_once{next};
+    co_await martianlabs::doba::common::yield();
   });
   routes.add("GET", "/fast", [](const request&, response& res) {
     make_response(res, "fast");
@@ -261,7 +162,7 @@ DOBA_TEST("engine retains a borrowed request body across suspension") {
   const std::string fast = "GET /fast HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(slow + fast), slow.size() + fast.size());
   DOBA_EXPECT(current.wire.empty());
-  next.resume();
+  current.turn();
   const auto second = current.wire.find("HTTP/1.1", 1);
   DOBA_EXPECT(second != std::string::npos);
   DOBA_EXPECT(current.wire.substr(0, second).ends_with("\r\n\r\ndata"));
@@ -270,10 +171,9 @@ DOBA_TEST("engine retains a borrowed request body across suspension") {
 
 DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   router<request, response> routes;
-  std::coroutine_handle<> pending;
-  routes.add("GET", "/slow", [&pending](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{pending};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   routes.add("GET", "/fast", [](const request&, response& res) {
@@ -291,7 +191,7 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   connection independent(routes);
   independent.receive(fast);
   DOBA_EXPECT_EQUAL(independent.blocks.size(), 1);
-  pending.resume();
+  current.turn();
   DOBA_EXPECT_EQUAL(current.blocks.size(), 3);
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\nfast"));
   current.receive(fast);
@@ -300,7 +200,7 @@ DOBA_TEST("engine returns to synchronous delivery after asynchronous work") {
   current.receive(slow);
   current.receive(fast);
   DOBA_EXPECT_EQUAL(current.blocks.size(), 4);
-  pending.resume();
+  current.turn();
   DOBA_EXPECT_EQUAL(current.blocks.size(), 6);
   DOBA_EXPECT_EQUAL(current.closes, 0);
 }
@@ -363,41 +263,12 @@ DOBA_TEST("engine alternates execution models in one batch") {
   DOBA_EXPECT(current.wire.substr(fourth).ends_with("\r\n\r\nfast"));
 }
 
-DOBA_TEST("engine orders two asynchronous completions") {
-  router<request, response> routes;
-  std::coroutine_handle<> first;
-  std::coroutine_handle<> second;
-  routes.add("GET", "/first", [&first](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{first};
-    make_response(res, "first");
-  });
-  routes.add("GET", "/second", [&second](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{second};
-    make_response(res, "second");
-  });
-  connection current(routes);
-  const std::string requests =
-      "GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n"
-      "GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n";
-  DOBA_EXPECT_EQUAL(current.receive(requests), requests.size());
-  second.resume();
-  DOBA_EXPECT(current.wire.empty());
-  first.resume();
-  const auto next = current.wire.find("HTTP/1.1", 1);
-  DOBA_EXPECT(next != std::string::npos);
-  DOBA_EXPECT(current.wire.substr(0, next).ends_with("\r\n\r\nfirst"));
-  DOBA_EXPECT(current.wire.substr(next).ends_with("\r\n\r\nsecond"));
-}
-
 DOBA_TEST("engine drains queued responses after current completion") {
   router<request, response> routes;
-  std::coroutine_handle<> first;
   const std::string large(16385, 'x');
-  routes.add("GET", "/first", [&first](const request&, response& res)
+  routes.add("GET", "/first", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{first};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "first");
   });
   routes.add("GET", "/large", [&large](const request&, response& res)
@@ -425,7 +296,7 @@ DOBA_TEST("engine drains queued responses after current completion") {
       "GET /last HTTP/1.1\r\nHost: localhost\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(requests), requests.size());
   DOBA_EXPECT(current.wire.empty());
-  first.resume();
+  current.turn();
   const auto second = current.wire.find("HTTP/1.1", 1);
   DOBA_EXPECT(second != std::string::npos);
   const auto third = current.wire.find("HTTP/1.1", second + 1);
@@ -438,11 +309,10 @@ DOBA_TEST("engine drains queued responses after current completion") {
 
 DOBA_TEST("engine stops dispatch after a queued asynchronous error") {
   router<request, response> routes;
-  std::coroutine_handle<> slow;
   int later_calls = 0;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{slow};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   routes.add("GET", "/fail", [](const request&, response&)
@@ -460,85 +330,9 @@ DOBA_TEST("engine stops dispatch after a queued asynchronous error") {
       "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n";
   current.receive(requests);
   DOBA_EXPECT_EQUAL(later_calls, 0);
-  slow.resume();
+  current.turn();
   DOBA_EXPECT_EQUAL(current.closes, 1);
   DOBA_EXPECT(current.wire.find("later") == std::string::npos);
-}
-
-DOBA_TEST("engine bounds positions behind a suspended request") {
-  router<request, response> routes;
-  std::coroutine_handle<> slow;
-  int later_calls = 0;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{slow};
-    make_response(res, "slow");
-  });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
-    later_calls++;
-    make_response(res, "later");
-  });
-  connection current(routes);
-  current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  for (int i = 0; i < 128; i++) {
-    current.receive("GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  }
-  DOBA_EXPECT_EQUAL(later_calls, 127);
-  DOBA_EXPECT_EQUAL(current.closes, 1);
-  slow.resume();
-  DOBA_EXPECT(current.wire.empty());
-}
-
-DOBA_TEST("engine uses the configured pending request limit") {
-  router<request, response> routes;
-  std::coroutine_handle<> slow;
-  int later_calls = 0;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{slow};
-    make_response(res, "slow");
-  });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
-    later_calls++;
-    make_response(res, "later");
-  });
-  policies configuration;
-  configuration.max_pending_requests = 2;
-  connection current(routes, configuration);
-  current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  current.receive("GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  DOBA_EXPECT_EQUAL(later_calls, 1);
-  current.receive("GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  DOBA_EXPECT_EQUAL(later_calls, 1);
-  DOBA_EXPECT_EQUAL(current.closes, 1);
-  slow.resume();
-  DOBA_EXPECT(current.wire.empty());
-}
-
-DOBA_TEST("engine allows unlimited pending requests when configured") {
-  router<request, response> routes;
-  std::coroutine_handle<> slow;
-  int later_calls = 0;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{slow};
-    make_response(res, "slow");
-  });
-  routes.add("GET", "/later", [&later_calls](const request&, response& res) {
-    later_calls++;
-    make_response(res, "later");
-  });
-  policies configuration;
-  configuration.max_pending_requests = 0;
-  connection current(routes, configuration);
-  current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  for (int i = 0; i < 33; i++) {
-    current.receive("GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  }
-  DOBA_EXPECT_EQUAL(later_calls, 33);
-  DOBA_EXPECT_EQUAL(current.closes, 0);
-  slow.resume();
-  DOBA_EXPECT_EQUAL(current.blocks.size(), 34);
 }
 
 DOBA_TEST("engine uses configured response head and inline capacities") {
@@ -570,6 +364,7 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
       "GET /sync HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET /async HTTP/1.1\r\nHost: localhost\r\n\r\n";
   value.on_bytes_received(bytes);
+  value.on_processing_turn(true);
   DOBA_EXPECT_EQUAL(sources, 2);
   DOBA_EXPECT(wire.find("\r\n\r\nab") != std::string::npos);
   DOBA_EXPECT(wire.ends_with("\r\n\r\ncd"));
@@ -577,11 +372,10 @@ DOBA_TEST("engine uses configured response head and inline capacities") {
 
 DOBA_TEST("engine stops dispatch after a queued close response") {
   router<request, response> routes;
-  std::coroutine_handle<> slow;
   int later_calls = 0;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{slow};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   routes.add("GET", "/close", [](const request&, response& res)
@@ -600,17 +394,16 @@ DOBA_TEST("engine stops dispatch after a queued close response") {
       "GET /close HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
   DOBA_EXPECT_EQUAL(later_calls, 0);
-  slow.resume();
+  current.turn();
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 
 DOBA_TEST("engine keeps an asynchronous response written before suspension") {
   router<request, response> routes;
-  std::coroutine_handle<> slow;
-  routes.add("GET", "/slow", [&slow](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
     make_response(res, "before");
-    co_await suspend_once{slow};
+    co_await martianlabs::doba::common::yield();
   });
   routes.add("GET", "/later", [](const request&, response& res) {
     make_response(res, "later");
@@ -619,7 +412,7 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
   current.receive(
       "GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
       "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
-  slow.resume();
+  current.turn();
   const auto next = current.wire.find("HTTP/1.1", 1);
   DOBA_EXPECT(next != std::string::npos);
   DOBA_EXPECT(current.wire.substr(0, next).ends_with("\r\n\r\nbefore"));
@@ -629,10 +422,9 @@ DOBA_TEST("engine keeps an asynchronous response written before suspension") {
 
 DOBA_TEST("engine closes after an asynchronous handler error") {
   router<request, response> routes;
-  std::coroutine_handle<> next;
-  routes.add("GET", "/fail", [&next](const request&, response&)
+  routes.add("GET", "/fail", [](const request&, response&)
                  -> task<void> {
-    co_await suspend_once{next};
+    co_await martianlabs::doba::common::yield();
     throw std::runtime_error("handler failure");
   });
   routes.add("GET", "/later", [](const request&, response& res) {
@@ -644,7 +436,7 @@ DOBA_TEST("engine closes after an asynchronous handler error") {
   DOBA_EXPECT_EQUAL(current.receive(first + later),
                     first.size() + later.size());
   DOBA_EXPECT(current.wire.empty());
-  next.resume();
+  current.turn();
   DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 500 "));
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\nInternal Server Error"));
   DOBA_EXPECT(current.wire.find("later") == std::string::npos);
@@ -653,10 +445,9 @@ DOBA_TEST("engine closes after an asynchronous handler error") {
 
 DOBA_TEST("engine orders 100 Continue after an asynchronous response") {
   router<request, response> routes;
-  std::coroutine_handle<> next;
-  routes.add("GET", "/slow", [&next](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{next};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   routes.add("POST", "/upload", [](const request&, response& res) {
@@ -669,7 +460,7 @@ DOBA_TEST("engine orders 100 Continue after an asynchronous response") {
       "Expect: 100-continue\r\nContent-Length: 4\r\n\r\n";
   DOBA_EXPECT_EQUAL(current.receive(first + head), first.size() + head.size());
   DOBA_EXPECT(current.wire.empty());
-  next.resume();
+  current.turn();
   const auto interim = current.wire.find("HTTP/1.1 100 Continue");
   DOBA_EXPECT(interim != std::string::npos);
   DOBA_EXPECT(current.wire.substr(0, interim).ends_with("\r\n\r\nslow"));
@@ -698,11 +489,10 @@ DOBA_TEST("engine preserves HEAD and 405 for asynchronous routes") {
 
 DOBA_TEST("engine honors close on an asynchronous request") {
   router<request, response> routes;
-  std::coroutine_handle<> next;
   int later_calls = 0;
-  routes.add("GET", "/slow", [&next](const request&, response& res)
+  routes.add("GET", "/slow", [](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{next};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   routes.add("GET", "/later", [&later_calls](const request&, response& res) {
@@ -715,7 +505,7 @@ DOBA_TEST("engine honors close on an asynchronous request") {
       "Connection: close\r\n\r\n"
       "GET /later HTTP/1.1\r\nHost: localhost\r\n\r\n");
   DOBA_EXPECT_EQUAL(later_calls, 0);
-  next.resume();
+  current.turn();
   DOBA_EXPECT(current.wire.ends_with("\r\n\r\nslow"));
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
@@ -1481,10 +1271,9 @@ DOBA_TEST("engine authenticates all route forms before invoking handlers") {
 DOBA_TEST("engine orders authentication rejection after suspended response") {
   namespace auth = martianlabs::doba::protocol::http::auth;
   router<request, response> routes;
-  std::coroutine_handle<> pending;
   routes.add("GET", "/slow", [&](const request&, response& res)
                  -> task<void> {
-    co_await suspend_once{pending};
+    co_await martianlabs::doba::common::yield();
     make_response(res, "slow");
   });
   int calls = 0;
@@ -1498,7 +1287,7 @@ DOBA_TEST("engine orders authentication rejection after suspended response") {
   current.receive("GET /slow HTTP/1.1\r\nHost: localhost\r\n\r\n"
                   "GET /private HTTP/1.1\r\nHost: localhost\r\n\r\n");
   DOBA_EXPECT(current.wire.empty());
-  pending.resume();
+  current.turn();
   DOBA_EXPECT(current.wire.starts_with("HTTP/1.1 200 "));
   DOBA_EXPECT(current.wire.find("slowHTTP/1.1 401 ") != std::string::npos);
   DOBA_EXPECT_EQUAL(calls, 0);
@@ -1551,60 +1340,10 @@ DOBA_TEST("engine maps custom rejection statuses and preserves HEAD") {
   }
 }
 
-DOBA_TEST("engine keeps one owner of each asynchronous observer") {
-  router<request, response> routes;
-  routes.add("GET", "/", [](const request&, response& res) -> task<void> {
-    make_response(res, "done");
-    co_return;
-  });
-  auto started = std::make_shared<int>(0);
-  auto finished = std::make_shared<int>(0);
-  engine<request, response> value(
-      {}, routes, [started]() { ++*started; },
-      [finished]() { ++*finished; });
-  DOBA_EXPECT_EQUAL(started.use_count(), 2L);
-  DOBA_EXPECT_EQUAL(finished.use_count(), 2L);
-  value.set_on_send([](std::string_view, std::string_view,
-                       std::unique_ptr<reader>) {});
-  value.set_on_close([]() {});
-  const std::string_view wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
-  value.on_bytes_received(wire);
-  DOBA_EXPECT_EQUAL(*started, 1);
-  DOBA_EXPECT_EQUAL(*finished, 1);
-}
-
-DOBA_TEST("engine completes stopping when the finish observer throws") {
-  router<request, response> routes;
-  std::coroutine_handle<> pending;
-  routes.add("GET", "/", [&pending](const request&, response& res)
-                 -> task<void> {
-    co_await suspend_once{pending};
-    make_response(res, "done");
-  });
-  int finished = 0;
-  bool completed = false;
-  engine<request, response> value({}, routes, []() {}, [&]() {
-    ++finished;
-    throw std::runtime_error("observer failed");
-  });
-  value.set_on_send([](std::string_view, std::string_view,
-                       std::unique_ptr<reader>) {});
-  value.set_on_close([]() {});
-  const std::string_view wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
-  value.on_bytes_received(wire);
-  DOBA_EXPECT(static_cast<bool>(pending));
-  DOBA_EXPECT(!value.stop([&]() { completed = finished == 1; }));
-  pending.resume();
-  DOBA_EXPECT_EQUAL(finished, 1);
-  DOBA_EXPECT(completed);
-  DOBA_EXPECT(value.stop([]() {}));
-}
-
 DOBA_TEST(
     "async handlers retain saved field and body views across decoder reuse") {
   for (const bool pipeline : {false, true}) {
     router<request, response> routes;
-    std::coroutine_handle<> pending;
     const char* original = nullptr;
     bool valid = true;
     routes.add(
@@ -1613,7 +1352,7 @@ DOBA_TEST(
           const auto data = req.get_body_reader()->take_borrowed_raw(3);
           valid = data.has_value();
           original = host.data();
-          co_await suspend_once{pending};
+          co_await martianlabs::doba::common::yield();
           valid = valid && host == "original";
           valid = valid && req.get_host().data() == original;
           if (data) {
@@ -1631,10 +1370,10 @@ DOBA_TEST(
     current.receive(std::string("POST /wait HTTP/1.1\r\nHost: "
                                 "original\r\nContent-Length: 3\r\n\r\nabc") +
                     (pipeline ? next : ""));
-    DOBA_EXPECT(static_cast<bool>(pending));
+    DOBA_EXPECT(current.needs.turn_requested);
     if (!pipeline) current.receive(next);
     DOBA_EXPECT(current.wire.empty());
-    std::thread resumed([&]() { pending.resume(); });
+    std::thread resumed([&]() { current.turn(); });
     resumed.join();
     DOBA_EXPECT(valid);
     DOBA_EXPECT(current.wire.find("original") != std::string::npos);
@@ -1699,11 +1438,10 @@ DOBA_TEST(
 DOBA_TEST(
     "queued synchronous responses do not overwrite a pending async response") {
   router<request, response> routes;
-  std::coroutine_handle<> pending;
   bool intact = false;
   routes.add("GET", "/wait", [&](const request&, response& res) -> task<void> {
     res.ok_200().set_header("X-Owner", "async").set_body("pending");
-    co_await suspend_once{pending};
+    co_await martianlabs::doba::common::yield();
     intact = res.get_header("X-Owner").second == "async";
   });
   routes.add("GET", "/sync", [](const request& req, response& res) {
@@ -1715,7 +1453,7 @@ DOBA_TEST(
   current.receive("GET /sync?id=first HTTP/1.1\r\nHost: a\r\n\r\n");
   current.receive("GET /sync?id=second HTTP/1.1\r\nHost: a\r\n\r\n");
   DOBA_EXPECT(current.wire.empty());
-  pending.resume();
+  current.turn();
   DOBA_EXPECT(intact);
   const auto first = current.wire.find("\r\n\r\npending");
   const auto second = current.wire.find("\r\n\r\nfirst");

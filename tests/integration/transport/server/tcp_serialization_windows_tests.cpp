@@ -32,12 +32,14 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/server/tcp.h"
 #include "../../../helpers/concurrency.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
 using namespace std::chrono_literals;
@@ -79,7 +81,7 @@ struct serial_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view bytes) {
+  processing_result on_bytes_received(std::string_view bytes) {
     if (active.exchange(true)) state->overlap = true;
     martianlabs::doba::tests::scope_exit leave([&] { active = false; });
     for (char byte : bytes) {
@@ -92,7 +94,13 @@ struct serial_engine {
       const std::string body(256, byte);
       for (int i = 0; i < 16; ++i) output({}, body, nullptr);
     }
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

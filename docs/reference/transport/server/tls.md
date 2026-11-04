@@ -9,7 +9,7 @@
 **Header:** [include/transport/server/tls.h](../../../../include/transport/server/tls.h)
 
 `tls<Engine, Factory>` is a concrete TCP-derived transport on Linux and
-Windows. TCP hosts a synchronous TLS engine adapter; its platform backends,
+Windows. TCP hosts a serialized TLS engine adapter; its platform backends,
 contexts, buffers and synchronization are unchanged. Plain TCP neither includes
 OpenSSL nor checks whether TLS is enabled.
 
@@ -30,11 +30,17 @@ Connection notifications describe TCP admission, not successful TLS negotiation.
 
 **Runtime contract**
 
-- TLS 1.2 and 1.3 are supported. TLS processing, engine input and output are
+- TLS 1.2 and 1.3 are supported. TLS processing, engine input, processing turns and output are
   serialized by the existing TCP connection owner. The engine receives only
   decrypted application bytes, borrowed until its input call returns.
-- Send and close callbacks are valid only during that input call, on the same
-  thread. Coroutine scheduling and deferred callbacks are not supported.
+- Both engine entry points return the shared processing_result. Immediate,
+  absolute-deadline and drained-output interests pass through TLS unchanged;
+  control-only records preserve the previous snapshot. Close clears scheduling.
+- Send and close callbacks are valid only inside an engine input or processing
+  call, on that call's thread. Coroutine frames and cooperative resumption
+  belong to the engine; TLS never receives handles or external completions.
+  Output-idle reflects all previously accepted encrypted TCP output. Busy
+  ciphertext does not prevent a deadline turn from progressing handlers.
 - `prefix`, `body` and one terminal `source` are consumed in order. A source is
   read synchronously to completion; all its bytes count toward the finite
   plaintext batch budget. It must not block indefinitely. An additional source
@@ -44,7 +50,7 @@ Connection notifications describe TCP admission, not successful TLS negotiation.
   finite ciphertext batch and calls TCP only after processing succeeds. A failed
   source, source without progress, or exceeded limit discards the current batch
   and closes the connection. Output from earlier successful batches may already
-  have reached the peer; this is not a transaction across multiple input calls.
+  have reached the peer; this is not a transaction across multiple input/processing calls.
 - Fully consumed source ownership is released before the send callback returns.
   More decrypted input may then reach the engine within the same TCP batch.
 - A plaintext output block groups prefix/body/source bytes into records of at

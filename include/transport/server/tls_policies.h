@@ -56,7 +56,7 @@ struct tls_policies : tcp_policies {
   // Inherited TX budget includes inline bytes AND a synchronously read source.
   // Network BIO capacity per direction (positive, at most INT_MAX).
   std::size_t network_bio_buffer_capacity = kDefaultNetworkBioBufferCapacity;
-  // Maximum encoded bytes accumulated per TCP input call (must be positive).
+  // Maximum encoded bytes per TCP RX or processing turn (must be positive).
   // This is also TCP's finite TX budget; it is separate from the plain budget.
   std::size_t max_buffered_ciphertext_bytes = kDefaultBufferedCiphertextBytes;
   // Optional single ALPN token, at most 255 bytes; empty disables negotiation.

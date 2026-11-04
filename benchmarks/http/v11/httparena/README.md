@@ -1,30 +1,48 @@
 # HttpArena HTTP/1.1 benchmark adapter
 
-This phase measures only **baseline** and **pipelined** while preparing the
-Linux transport rewrite. The adapter runs the existing transport unchanged.
-It is independent of the doba unit-test and compliance targets; reducing this
-driver's profiles does not disable those suites.
+This adapter supports **baseline**, **pipelined** and **async** over plain TCP
+on Linux and Windows. All handlers are registered in the same executable with
+the normal single HTTP engine; there is no async mode switch or executor.
 
 ## Routes and scope
 
 | Method | Route | Response |
 | --- | --- | --- |
 | GET | `/baseline11?a=13&b=42` | Query sum: `55`. |
-| POST | `/baseline11?a=13&b=42` | Query sum plus integer body; `20` yields `75`. |
-| GET | `/pipeline` | Plain text `ok`, including pipelined requests. |
+| POST | `/baseline11?a=13&b=42` | Query sum plus decoded integer body. |
+| GET | `/pipeline` | Plain text `ok`, including pipelined batches. |
+| GET | `/delay/:ms` | Wait the parsed path value in milliseconds; plain text echo of that value. |
 
-The baseline handlers parse values for each request. POST accepts both
-Content-Length and chunked bodies through the engine's decoded body reader.
-There is no precomputed baseline response or transport-specific fast path.
+Baseline parses each request and checks signed addition for overflow. POST
+accepts Content-Length and chunked bodies through the engine's body reader.
+Invalid integers or overflowing sums return 400. No response is precomputed.
 
-Only HTTP on port 8080 is started. There are no TLS, async, JSON, static-file
-or echo routes, dataset requirements, certificate mounts or response caches.
-`meta.json` declares exactly `baseline` and `pipelined`.
+The async handler obtains its parameter through doba's own router, validates a
+whole integer in 0..60000, then co_awaits common::sleep_for. Invalid or out-of-range
+values return 400. Zero remains zero. Each request owns its value and absolute
+wait; no blocking sleep, external I/O, shared delay variable or fixed timer is
+used. The engine owns coroutine frames and ordered responses; the native
+transport owns generic turns and bytes. Mixing sync/async in one pipeline is
+supported without changing the transport or tuning library policies.
+
+This follows the [HttpArena implementation contract](https://http-arena.com/docs/test-profiles/h1/async/implementation/).
+Its [validation checks](https://http-arena.com/docs/test-profiles/h1/async/validation/)
+require dynamic path-derived delays, matching response bodies and no early
+response. The official timed workload currently uses a flat 10 ms value;
+validation varies it. Library qualification additionally checks mixed ordered
+requests on one connection. Supporting a single request per measured connection
+does not qualify that same-connection behavior by itself.
+
+Only HTTP on port 8080 is started by default. There are no TLS, JSON, static-file
+or echo profiles and no datasets, certificate mounts or response caches.
+meta.json declares exactly baseline, pipelined and async. PORT optionally chooses
+another listening port for local tests; WORKERS selects a positive worker count
+(default 1). Both are driver-only settings, not engine configuration switches.
 
 ## Build and run
 
-Use a C++20 compiler, CMake 3.20 or newer, and platform thread support.
-This target does not require RapidJSON, zlib or OpenSSL.
+Use C++20, CMake 3.20+ and platform thread support. Standalone builds require no
+Python, RapidJSON, zlib or OpenSSL:
 
 ```sh
 cmake -S benchmarks/http/v11/httparena -B out/httparena \
@@ -33,110 +51,109 @@ cmake --build out/httparena --config Release --parallel
 WORKERS=1 ./out/httparena/doba_httparena_http_v11
 ```
 
-The driver defaults to one worker in this phase. `WORKERS` selects a
-positive worker count explicitly. Linux uses independent SO_REUSEPORT
-listeners, with each connection remaining on its accepting worker.
+Linux workers use independent SO_REUSEPORT listeners; a connection stays on its
+accepting worker. Root test builds also build this driver and register
+`doba_httparena_tests`, using Python 3.9+. That is a correctness test, not a
+throughput run: dynamic GET/POST, chunked/fragmented input, sixteen-response
+pipelines, invalid arithmetic, random delays, 32 different overlapping waits,
+zero delay and mixed same-connection response order. The script reports batch
+elapsed time but asserts no concurrency throughput ceiling.
 
-The container exposes only port 8080 and needs no data volumes:
+The container still exposes port 8080 without data volumes:
 
 ```sh
 docker build --tag doba-httparena-http-v11 \
   benchmarks/http/v11/httparena
-docker run --rm --publish 8080:8080 --env WORKERS=1 \
-  doba-httparena-http-v11
+docker run --rm --publish 8080:8080 --env WORKERS=1 doba-httparena-http-v11
 ```
 
-The Dockerfile fetches the library selected by `DOBA_REF`, which defaults
-to `main`. To measure the working directory, use the local build above;
-the default container build does not include local library changes.
+The Dockerfile fetches DOBA_REF (default main). That ref must contain the
+cooperative engine/native processing implementation; it does not include local
+uncommitted library changes. Use the local build above to qualify this source
+tree. Select a remote ref containing the matching implementation.
 
 ## Local reference against Spliffy
 
 Use the same worker count and server CPU affinity for both servers, and a
 separate CPU affinity for the load generator. Run servers sequentially.
-Verify response bodies before measuring, including GET, Content-Length POST,
-chunked POST, fragmented requests and ordered pipelined responses.
+Verify response bodies before measuring, including dynamic GET and POST
+values, Content-Length and chunked bodies, fragmented requests and ordered
+pipelines. Check the complete worker/listener group before admitting load.
 
-The current single-worker comparison uses these settings:
+The async-plan block-2 reference uses these platform-specific resources:
 
-| Setting | Baseline | Pipelined |
+| Setting | Linux / WSL | Windows |
 | --- | --- | --- |
-| Workers | 1 | 1 |
-| Connections | 4096 | 4096 |
-| Generator threads | 4 | 4 |
-| Pipeline depth | 1 | 16 |
-| Warmup on measured sockets | 5 seconds | 5 seconds |
-| Measurement | 15 seconds | 30 seconds |
-| Repetitions per server | 3 | 3 |
+| Workers per server | 4 | 1 |
+| Server CPUs | 0,2,4,6 | 0 |
+| Connections | 4096 | 1024 |
+| Generator threads | 4 | 8 |
+| Generator CPUs | 8,10,12,14 | 4-15 |
+| Observer CPU | 15 | 2 |
+| Generator | gcannon 0.6.1 | autocannon 8.0.0 |
+| Node for Spliffy | 26.13.0 | 24.16.0 |
 
-Baseline rotates GET, Content-Length POST and chunked POST raw templates.
-Pipelined requests target `/pipeline`. Select the median-throughput run for
-each server and profile, keeping latency and resource figures from that run.
-Preserve every raw result and alternate server order between repetitions.
-Variation up to 10% is expected on this WSL machine.
+Both profiles warm the same admitted sockets for five seconds before
+resetting measurement counters. Baseline measures ten seconds at depth one;
+pipelined measures fifteen seconds at depth sixteen. Baseline rotates raw
+GET, Content-Length POST and chunked POST templates. Pipelined targets
+`/pipeline`. Both tools send batches of sixteen rather than a sliding window.
 
-With the server running on CPU `0`, run the generator from this
-directory on CPUs `8,10,12,14`:
+The Windows gate requires a checked response from all 1024 connections.
+The Linux gate verifies 4096 accepted server sockets before warmup. Failed
+admission, measured socket errors, timeouts, reconnects or invalid responses
+reject a trial. Linux does not separately retain warmup error counters after
+reset; Windows retains them and rejects warmup errors too. Functional
+preflights run outside measured processes. Pilots are
+preserved separately and do not enter the reported medians.
+
+Run three alternating repetitions for each server and profile. Keep the
+median-throughput run with its own latency, CPU and memory figures, and
+report dispersion from all repetitions. CPU and peak RSS cover same-cohort
+warmup plus measurement; throughput and latency exclude warmup. Summed
+process RSS can count shared pages more than once. Resource figures and
+throughput from different platforms are not directly comparable.
+
+The runners, request templates, patches, manifests, binaries and raw output
+are preserved in `out/async-processing/block-2/`. From the repository root:
 
 ```sh
-load_generator=/var/tmp/doba-linux-minimal-b3/gcannon-steady/gcannon
-taskset -c 8,10,12,14 "$load_generator" http://127.0.0.1:8080 \
-  -c 4096 -t 4 -p 1 -d 15s --json \
-  --raw requests/get.raw,requests/post_cl.raw,requests/post_chunked.raw
-taskset -c 8,10,12,14 "$load_generator" http://127.0.0.1:8080/pipeline \
-  -c 4096 -t 4 -p 16 -d 30s --json
+python3 out/async-processing/block-2/linux/compare.py
 ```
 
-Block 3 uses a local copy of gcannon 0.6.1. Its observer first waits for
-4096 accepted sockets, then releases a five-second warmup on those same
-connections before the tool resets counters. Request, parser and statistics
-code are unchanged. Use the archived comparison runner for this admission
-barrier; the commands above describe the load shape alone.
-The original tool remains intact. The patch, binaries and hashes are preserved
-under `out/transport-linux/minimal/block-3/`. The runner checks that all 4096
-connections are accepted before measuring.
+```powershell
+pwsh -NoProfile -File out/async-processing/block-2/windows/compare.ps1
+```
 
-A separate warmup invocation creates different sockets and does not establish
-the measured cohort. Do not use it to infer equal-concurrency latency or RSS.
-The original transport accepts slowly under load, so historical short runs
-can include different active connection counts. Compare current candidates
-and the preserved block-2 executable within this new, identical methodology.
-These CPU numbers describe this machine; select disjoint physical cores
-appropriate to the host when reproducing elsewhere.
+The runners intentionally refuse to overwrite results. Linux runtime paths
+and Windows dependency paths are recorded in the archived runners and
+manifests; restore those frozen dependencies before reproducing a campaign.
+These commands describe the local qualification setup, not a portable
+HttpArena deployment. Choose disjoint physical cores suitable for another
+host. Variation up to 10% is expected on this WSL machine.
 
-Spliffy runs the original baseline and pipeline route implementations, with
-other route files omitted from its local runtime and no TLS listener.
-Its pipeline handler uses a native declarative response; doba uses its normal
-engine and synchronous handler. The comparison includes that difference.
+The private Linux generator publishes stop/reset flags through C11 atomics;
+its request, parser and statistics implementation remains unchanged. The
+Windows copy adds cohort admission and counter reset around autocannon's
+normal measurement path. Public client hooks supply raw templates, validate
+response bodies and maintain sixteen-response batches. Original files and
+patches remain in the artifacts; upstream installations are preserved.
 
-Generated reference artifacts live under
-`out/transport-linux/minimal/block-1/`: the original headers and driver,
-header hashes, reference executable, comparison script, functional checks,
-manifest, raw runs, selected results and report. These are local artifacts,
-not published HttpArena leaderboard results. Future blocks must retain this
-reference rather than overwrite it.
+Spliffy 1.7.0 uses the original HttpArena baseline and pipeline handlers,
+with unrelated route files omitted and TLS disabled. Its pipeline handler
+uses a native declarative response; doba parses each request and invokes
+its normal synchronous handler. The comparison includes that difference.
 
-Linux supports one or more independent SO_REUSEPORT workers.
-The new transport supports synchronous callbacks and prefix/source;
-This driver intentionally remains TCP-only. Library TLS support is provided
-by the separate `tls` class; asynchronous routes are outside the driver scope.
+The additional `original` executable uses the source snapshot preceding
+async-plan block 1. It is rebuilt with the same compiler and Release options
+as the current candidate and participates in the same alternating campaign.
+Preserve it for the final accumulated sync-regression comparison. Register
+both sync and async handlers in the current candidate, without an activation
+switch, while retaining these baseline and pipelined loads. The final campaign
+adds real /delay/10 requests for async against an equivalently configured
+Spliffy handler; it must preserve all three profiles and raw validation logs.
 
-The four-worker block-1 reference remains preserved. Block 2 reruns its
-original executable with one worker alongside the candidate and Spliffy;
-compare those runs rather than comparing different worker counts.
-
-Block 3 also preserves connection-ramp samples and a memory experiment with
-4096 preconnected, fully accepted peers and three checked response rounds.
-It separates allocated per-connection memory from slow connection admission;
-it is not a replacement for the throughput measurements.
-
-Block 4 compares four workers for each server on physical cores 0,2,4,6;
-the generator remains on 8,10,12,14. Both servers use WORKERS=4. All other
-load settings and the accepted-connection warmup barrier remain unchanged.
-The block-3 single-worker reference remains preserved separately; compare
-throughput only with the worker count and CPU affinity stated for each run.
-Artifacts are preserved under `out/transport-linux/minimal/block-4/`.
-
-Block 5 repeats the four-worker comparison under the same full-admission
-warmup barrier. Final sources, manifests, raw runs and audit evidence live
-under `out/transport-linux/minimal/block-5/`.
+Historical transport-rewrite evidence remains separately preserved under
+`out/transport-linux/minimal/`. Its different campaigns and resource counts
+must not be substituted for the new paired reference. Local measurements
+are not published HttpArena leaderboard results.

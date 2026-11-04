@@ -20,3 +20,10 @@ It does not demonstrate socket concurrency, TCP policies, timers or application
 execution. The native [TCP contract](../../../../docs/reference/transport/server/tcp.md#runtime-contract)
 applies to the bundled network backends; the engine/transport concepts check
 signatures and do not make this demo a production network implementation.
+
+The engine contract returns processing_result from both input and processing
+entry points. This synchronous example returns the empty result and requests
+no additional processing. Input bytes remain borrowed only for the call.
+Native TCP and TLS support continuation turns. This minimal in-memory
+transport deliberately implements only the empty result and rejects nonempty
+requests; it does not demonstrate a general native scheduler.

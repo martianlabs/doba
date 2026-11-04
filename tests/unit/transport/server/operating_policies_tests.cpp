@@ -34,7 +34,7 @@
 #include "protocol/http/v11/policies.h"
 #include "tcp_policy_engine.h"
 #include "test_helper.h"
-#include "transport/server/operating_state.h"
+#include "transport/server/connection_reservation.h"
 #include "transport/server/send_state.h"
 #include "transport/server/tcp.h"
 
@@ -106,18 +106,6 @@ DOBA_TEST("connection admission never exceeds a concurrent global maximum") {
   DOBA_EXPECT_EQUAL(budget->used.load(), 0);
 }
 
-DOBA_TEST("pressure watermarks round safely for tiny and unlimited budgets") {
-  for (std::size_t maximum : {1u, 2u, 3u, 4u, 32u, 128u}) {
-    const auto high = maximum - maximum / 4;
-    DOBA_EXPECT(!update_pressure(false, high - 1, maximum));
-    DOBA_EXPECT(update_pressure(false, high, maximum));
-    DOBA_EXPECT(update_pressure(true, maximum / 2 + 1, maximum));
-    DOBA_EXPECT(!update_pressure(true, maximum / 2, maximum));
-  }
-  DOBA_EXPECT(!update_pressure(true, 1000000, 0));
-  DOBA_EXPECT(update_pressure(false, static_cast<std::size_t>(-1),
-                              static_cast<std::size_t>(-1)));
-}
 
 DOBA_TEST("source blocks use the send capacity after their prefix drains") {
   const std::string bytes = "abcdefgh";

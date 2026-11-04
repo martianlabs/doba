@@ -22,6 +22,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include "protocol/processing_result.h"
 #include "../../../helpers/concurrency.h"
 #include "http_server.h"
 #include "tcpip_client.h"
@@ -34,6 +35,7 @@
 #include <vector>
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 using namespace martianlabs::doba;
 using namespace martianlabs::doba::tests::integration;
 using namespace std::chrono_literals;
@@ -48,7 +50,15 @@ struct echo_engine {
     send = std::move(callback);
   }
   void set_on_close(std::function<void()>) {}
-  void on_bytes_received(std::string_view bytes) { send(bytes, {}, nullptr); }
+  processing_result on_bytes_received(std::string_view bytes) {
+    send(bytes, {}, nullptr);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
 };
 
 struct plain_peer {

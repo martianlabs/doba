@@ -28,6 +28,7 @@
 #include <coroutine>
 #include <exception>
 #include <functional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -35,6 +36,7 @@
 #include "common/task_scheduler.h"
 
 namespace martianlabs::doba::common {
+class task_execution;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] task                                                        ( class ) |
@@ -56,6 +58,7 @@ class task {
     struct final_awaiter {
       promise_type& promise;
       bool await_ready() noexcept {
+        if (promise.controlled) return false;
         auto callback = std::move(promise.completion);
         try {
           if (callback) callback(promise.error);
@@ -69,9 +72,18 @@ class task {
     final_awaiter final_suspend() noexcept { return {*this}; }
     void return_void() noexcept {}
     void unhandled_exception() noexcept { error = std::current_exception(); }
+    template <typename Aty>
+    Aty&& await_transform(Aty&& awaiter) {
+      if constexpr (!std::is_same_v<std::remove_cvref_t<Aty>, yield_awaiter> &&
+                    !std::is_same_v<std::remove_cvref_t<Aty>, sleep_awaiter>) {
+        if (controlled) throw std::logic_error("Unsupported task awaiter");
+      }
+      return std::forward<Aty>(awaiter);
+    }
     std::function<void(std::exception_ptr)> completion;
     std::exception_ptr error;
     task_scheduler scheduler;
+    bool controlled{false};  // Retain the frame for its serialized owner.
   };
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
@@ -107,6 +119,7 @@ class task {
   // +-------------------------------------------------------------------------+
   void start(std::function<void(std::exception_ptr)> completion,
              task_scheduler scheduler) {
+    if (!handle_) throw std::logic_error("Task already transferred");
     auto handle = std::exchange(handle_, {});
     handle.promise().completion = std::move(completion);
     handle.promise().scheduler = scheduler;
@@ -114,6 +127,7 @@ class task {
   }
 
  private:
+  friend class task_execution;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+

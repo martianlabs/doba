@@ -11,6 +11,11 @@
 Fast code still has to behave. Here's where we check that doba does, from a
 single borrowed byte to a server full of unhelpful clients.
 
+The [security and integrity audit](security-audit.md) records verified test
+weaknesses, strengthened oracles, the coverage matrix and remaining assurance
+gaps. Normal suite execution in Release is intentional. Passing tests do not
+certify the absence of races or vulnerabilities.
+
 <a name="unit-tests"></a>
 <h2>
   <a href="../resources/tests/overview/h2-unit-tests.svg#gh-light-mode-only">
@@ -64,8 +69,9 @@ the party includes cleaning up afterwards.
   </a>
 </h2>
 
-libFuzzer supplies the questionable HTTP. Decoder and chunked-body checks
-cover boundaries, fragmentation, ownership, and memory/disk storage.
+libFuzzer supplies questionable input. Decoder and chunked-body checks cover
+boundaries, fragmentation, ownership and memory/disk storage. The engine model
+checks mixed ordered responses, source lifetimes and terminal frontiers.
 [What the fuzzers check](fuzz/README.md).
 
 <a name="mutation-checks"></a>
@@ -115,17 +121,36 @@ A stuck test must leave something more useful than a spinning CI job.
 
 Native Linux and Windows transport coverage follows the
 [TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract).
-Protocol-only async and common::task tests use independently supplied execution
-services. They do not validate asynchronous socket handlers or a transport
-executor. The separate [TLS groups](integration/tls/README.md) validate the
-TCP-based TLS class; inactivity and pressure/resume remain outside scope.
+Protocol-only async tests supply serialized processing turns and controlled
+eligibility times. Native TCP and TLS groups validate real-socket coroutine
+handlers, mixed ordered output, cancellation and independent connection progress.
+Common::task standalone scheduling remains a separate API. Inactivity and
+pressure/resume remain outside the transport contract.
 
 CI preserves historical Release TLS required-check names for branch protection,
 and keeps those TCP jobs configured with TLS=OFF. Dedicated TLS jobs build and
 run the current TLS tests and examples with TLS=ON. TCP jobs validate the native
 cases listed in the suite documentation. Engine concurrency repeats 200 times;
-native Linux transport or Windows IOCP cases repeat 20 times in their jobs.
+native Linux transport/processing or Windows IOCP/processing groups repeat
+20 times in their jobs. Dedicated TLS jobs build the processing probe and run
+both processing groups alongside the existing TLS coverage.
 Local inventory can be collected without Git by providing
 -DDOBA_CI_SOURCE_DESCRIPTION=working-tree to cmake/ci_test_inventory.cmake and
 preserving source hashes. These statements describe configured coverage, not a
 new remote CI run.
+
+Protocol processing-contract tests qualify the result value, exact entry-point
+return types and unchanged factory construction without HTTP dependencies.
+TCP holder tests verify complete RX delivery and buffer reuse. Native tests
+exercise immediate/deadline/output-drain interests, coalescing, cancellation,
+publication interleavings and restart. TLS processing checks preserve interests
+through control records and advance handlers during encrypted output drain.
+CI inventory requires the current native and TLS groups, the HttpArena dynamic
+correctness test and actual executable processing examples when built.
+
+The [async retirement inventory](../docs/reference/protocol/http/v11/async-retirement.md)
+maps removed execution/pressure fixtures to current processing and admission
+coverage. Tests do not preserve unsupported contracts solely as fake hooks.
+
+See [CI processing coverage](ci-inventory.md) for mandatory groups, configured
+sanitizer runs and the separation between correctness and throughput checks.

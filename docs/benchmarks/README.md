@@ -273,5 +273,7 @@ and measurement warnings. Only the current dataset is retained here.
 
 This published campaign predates the current TCP and TLS implementations.
 Its charts are measurement history, not qualification of the current TLS class
-or asynchronous execution. The current Linux comparison
-uses only baseline and pipelined; see the [local driver](../../benchmarks/http/v11/httparena/README.md).
+or asynchronous execution. The frozen pre-async reference covers baseline and
+pipelined; the [current driver](../../benchmarks/http/v11/httparena/README.md)
+now also supports real async. New throughput comparisons are qualified
+separately and do not replace this published historical dataset.

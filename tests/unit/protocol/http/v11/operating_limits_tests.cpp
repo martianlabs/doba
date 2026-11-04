@@ -22,97 +22,32 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "protocol/http/v11/engine.h"
-#include "protocol/http/v11/request.h"
-#include "protocol/http/v11/response.h"
-#include "test_helper.h"
-#include <coroutine>
+#include <array>
+#include <chrono>
+#include <memory>
+#include <stdexcept>
 #include <string>
-#include <string_view>
-#include <utility>
+#include <thread>
+#include <vector>
+
+#include "engine_probe.h"
+#include "test_helper.h"
 
 namespace {
-using namespace martianlabs::doba::protocol::http::v11;
-using martianlabs::doba::common::reader;
-using martianlabs::doba::protocol::deserialization_status;
-using martianlabs::doba::protocol::http::router;
-} // namespace
-
-DOBA_TEST("pending HTTP bytes enforce exact boundaries before copying") {
-  for (std::size_t size : {7u, 8u, 9u}) {
-    detail::engine_async pending(128, {}, {}, 8);
-    std::string wire;
-    int closes = 0;
-    pending.set_on_send([&](auto head, auto body, std::unique_ptr<reader>) {
-      wire += head;
-      wire += body;
-    });
-    pending.set_on_close([&] { ++closes; });
-    DOBA_EXPECT(pending.reserve().has_value());
-    DOBA_EXPECT(pending.reserve().has_value());
-    std::string body(size - 1, 'b');
-    pending.submit(1, {"h", body, nullptr}, true, false);
-    DOBA_EXPECT_EQUAL(closes, size > 8 ? 1 : 0);
-    if (size <= 8) {
-      DOBA_EXPECT(pending.pressured());
-      pending.submit(0, {"first", {}, nullptr}, true, false);
-      DOBA_EXPECT_EQUAL(wire, "firsth" + body);
-      DOBA_EXPECT(!pending.pressured());
-    }
-  }
-}
-
-DOBA_TEST("pending interim bytes accumulate and zero removes the byte cap") {
-  for (std::size_t budget : {0u, 8u}) {
-    detail::engine_async pending(0, {}, {}, budget);
-    std::string wire;
-    int closes = 0;
-    pending.set_on_send([&](auto h, auto b, std::unique_ptr<reader>) {
-      wire += h;
-      wire += b;
-    });
-    pending.set_on_close([&] { ++closes; });
-    pending.reserve();
-    pending.reserve();
-    pending.submit(1, {"1234", {}, nullptr}, false, false);
-    pending.submit(1, {{}, "5678", nullptr}, false, false);
-    pending.submit(1, {"9", {}, nullptr}, true, false);
-    DOBA_EXPECT_EQUAL(closes, budget ? 1 : 0);
-    pending.submit(0, {"0", {}, nullptr}, true, false);
-    DOBA_EXPECT_EQUAL(wire, budget ? "" : "0123456789");
-  }
-}
-
-DOBA_TEST(
-    "HTTP flow pauses within a receive block and resumes without reentrancy") {
-  router<request, response> routes;
-  int calls = 0;
-  bool pressure = false;
-  routes.add("GET", "/", [&](const request &, response &res) {
-    ++calls;
-    res.ok_200().set_body("ok");
-  });
-  engine<request, response, decltype(routes)> value({}, routes);
-  value.set_on_close([] {});
-  value.set_on_send(
-      [&](auto, auto, std::unique_ptr<reader>) { pressure = true; });
-  value.set_input_flow_control([&] { return pressure; }, [] {});
-  std::string request_wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
-  value.on_bytes_received(request_wire + request_wire + request_wire);
-  DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT(value.input_paused());
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(calls, 1);
-  pressure = false;
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(calls, 2);
-  pressure = false;
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(calls, 3);
-  pressure = false;
-  value.resume_input();
-  DOBA_EXPECT(!value.input_paused());
-}
+using namespace martianlabs::doba;
+using probe = tests::unit::engine_probe;
+using request = probe::request;
+using response = probe::response;
+using router = probe::router;
+using policies = probe::policies;
+using protocol::http::v11::decoder;
+using protocol::deserialization_status;
+using clock_type = probe::clock;
+using common::task;
+using common::yield;
+using common::sleep_for;
+using namespace std::chrono_literals;
+}  // namespace
 
 DOBA_TEST(
     "decoder bounds huge incomplete heads and accepts exact complete heads") {
@@ -146,93 +81,69 @@ DOBA_TEST(
   DOBA_EXPECT(result.response->serialize().head.starts_with("HTTP/1.1 431"));
 }
 
-DOBA_TEST("HTTP flow does not poll pressure without input and still retains a pressured block") {
-  router<request, response> routes;
-  int calls = 0, polls = 0;
-  bool pressure = false;
-  routes.add("GET", "/", [&](const request&, response& res) {
-    ++calls;
-    res.ok_200().set_body("ok");
+DOBA_TEST("pending HTTP bytes enforce exact boundaries before copying") {
+  // Establish the exact serialized size with the same deterministic headers.
+  router routes;
+  routes.add("GET", "/wait", [](const request&, response&) -> task<> {
+    co_await sleep_for(1h);
   });
-  engine<request, response, decltype(routes)> value({}, routes);
-  value.set_on_close([] {});
-  value.set_on_send([](auto, auto, std::unique_ptr<reader>) {});
-  value.set_input_flow_control(
-      [&] {
-        ++polls;
-        return pressure;
-      },
-      [] {});
-  value.on_bytes_received({});
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(polls, 0);
-  const std::string wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
-  value.on_bytes_received(wire);
-  DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT_EQUAL(polls, 1);
-  pressure = true;
-  value.on_bytes_received(wire + wire);
-  DOBA_EXPECT(value.input_paused());
-  DOBA_EXPECT_EQUAL(calls, 1);
-  pressure = false;
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(calls, 3);
-  DOBA_EXPECT(!value.input_paused());
-  const auto before = polls;
-  value.resume_input();
-  value.on_bytes_received({});
-  DOBA_EXPECT_EQUAL(polls, before);
+  routes.add("GET", "/next", [](const request&, response& res) {
+    res.ok_200().set_header("Date", "fixed").set_body("payload");
+  });
+  probe measured(routes);
+  measured.receive(probe::get("/next"));
+  DOBA_EXPECT_EQUAL(measured.outputs.size(), 1U);
+  const auto size = measured.outputs[0].size();
+  for (auto limit : {size - 1, size, size + 1}) {
+    policies limits;
+    limits.max_pending_response_bytes = limit;
+    probe current(routes, limits);
+    current.receive(probe::get("/wait") + probe::get("/next"));
+    DOBA_EXPECT_EQUAL(current.closes, limit < size ? 1 : 0);
+    DOBA_EXPECT(current.outputs.empty());
+    current.receive(probe::get("/next"));
+    if (limit < size) DOBA_EXPECT_EQUAL(current.closes, 1);
+  }
 }
 
-namespace {
-struct demand_gate {
-  std::coroutine_handle<> handle;
-  bool await_ready() const noexcept { return false; }
-  void await_suspend(std::coroutine_handle<> next) noexcept { handle = next; }
-  void await_resume() const noexcept {}
-  void resume() {
-    if (auto next = std::exchange(handle, {})) next.resume();
+DOBA_TEST("deferred raw input enforces exact boundaries while the window is full") {
+  for (std::size_t bytes : {7U, 8U, 9U}) {
+    router routes;
+    int calls = 0;
+    routes.add("GET", "/", [&](const request&, response&) -> task<> {
+      ++calls;
+      co_await sleep_for(1h);
+    });
+    policies limits;
+    limits.max_pending_requests = 1;
+    limits.max_deferred_input_size = 8;
+    probe current(routes, limits);
+    current.receive(probe::get("/"));
+    const auto due = current.needs.turn_at;
+    current.receive(std::string(bytes, 'x'));
+    DOBA_EXPECT_EQUAL(calls, 1);
+    DOBA_EXPECT_EQUAL(current.closes, bytes > 8 ? 1 : 0);
+    if (bytes <= 8) {
+      DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
+      DOBA_EXPECT(!current.needs.turn_requested);
+    }
   }
-};
-}  // namespace
+}
 
-DOBA_TEST(
-    "HTTP demand pressure subscribes on arriving input and resumes after async "
-    "credit") {
-  router<request, response> routes;
-  demand_gate gate;
-  int calls = 0, replies = 0, wakes = 0, closes = 0;
-  routes.add("GET", "/",
-             [&](const request&,
-                 response& res) -> martianlabs::doba::common::task<void> {
-               ++calls;
-               co_await gate;
-               res.ok_200().set_body("ok");
-             });
-  policies limits;
-  limits.max_pending_requests = 1;
-  engine<request, response, decltype(routes)> value(limits, routes);
-  struct cleanup {
-    demand_gate& gate;
-    ~cleanup() { gate.resume(); }
-  } finish{gate};
-  value.set_on_close([&] { ++closes; });
-  value.set_on_send([&](auto, auto, std::unique_ptr<reader>) { ++replies; });
-  value.set_input_flow_control([] { return false; }, [&] { ++wakes; });
-  const std::string wire = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
-  value.on_bytes_received(wire);
-  DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT(!value.input_paused());
-  value.on_bytes_received(wire);
-  DOBA_EXPECT_EQUAL(calls, 1);
-  DOBA_EXPECT(value.input_paused());
-  gate.resume();
-  DOBA_EXPECT_EQUAL(wakes, 1);
-  value.resume_input();
-  DOBA_EXPECT_EQUAL(calls, 2);
-  DOBA_EXPECT(!value.input_paused());
-  gate.resume();
-  DOBA_EXPECT_EQUAL(replies, 2);
-  DOBA_EXPECT_EQUAL(wakes, 1);
-  DOBA_EXPECT_EQUAL(closes, 0);
+DOBA_TEST("HTTP processing limits reject zero instead of enabling unlimited work") {
+  router routes;
+  for (int field = 0; field < 4; ++field) {
+    policies limits;
+    if (field == 0) limits.max_pending_requests = 0;
+    if (field == 1) limits.max_pending_response_bytes = 0;
+    if (field == 2) limits.max_deferred_input_size = 0;
+    if (field == 3) limits.max_task_steps_per_turn = 0;
+    bool rejected = false;
+    try {
+      probe current(routes, limits);
+    } catch (const std::invalid_argument&) {
+      rejected = true;
+    }
+    DOBA_EXPECT(rejected);
+  }
 }

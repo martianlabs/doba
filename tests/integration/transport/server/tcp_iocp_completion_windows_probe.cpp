@@ -31,11 +31,13 @@
 #include <thread>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "../../../helpers/concurrency.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 // Test-only API interception lives in an isolated executable. Production
 // headers and the benchmark driver contain no hooks or alternate paths.
 // Operations watched while the transport-facing API call is still active.
@@ -147,7 +149,15 @@ struct completion_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                       ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) { output(input, {}, nullptr); }
+  processing_result on_bytes_received(std::string_view input) {
+    output(input, {}, nullptr);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

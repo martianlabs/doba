@@ -25,37 +25,36 @@
 #ifndef martianlabs_doba_protocol_http_v11_engine_h
 #define martianlabs_doba_protocol_http_v11_engine_h
 
+#include <algorithm>
+#include <chrono>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 #include "protocol/http/common/header_names.h"
+#include "protocol/http/common/headers/www_authenticate.h"
 #include "protocol/http/common/method_names.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/common/router_match_result.h"
 #include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/decoder.h"
-#include "protocol/http/v11/engine_async.h"
-#include "protocol/http/v11/engine_sync.h"
+#include "protocol/http/v11/pending_response.h"
 #include "protocol/http/v11/policies.h"
+#include "protocol/http/v11/request_processor_async.h"
+#include "protocol/http/v11/request_processor_sync.h"
 #include "protocol/http/v11/results.h"
-#include "transport/server/contracts.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      ( class ) |
-// +---------------------------------------------------------------------------+
-// | HTTP/1.1 protocol engine.                                                 |
-// +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// |   RQty - request being used.                                              |
-// |   RSty - response being used.                                             |
-// |   ROty - router being used.                                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <contracts::request RQty, contracts::response RSty,
@@ -70,178 +69,496 @@ class engine {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  engine(policies_type configuration, const ROty& router,
-         std::function<void()> on_async_started = {},
-         std::function<void()> on_async_finished = {})
-      : router_{router},
-        decoder_{configuration},
-        async_{std::make_shared<detail::engine_async>(
-            configuration.max_pending_requests, std::move(on_async_started),
-            std::move(on_async_finished), configuration.max_pending_response_bytes)} {}
+  engine(policies_type configuration, const ROty& router)
+      : router_{router}, decoder_{configuration} {
+    if (!configuration.max_pending_requests ||
+        !configuration.max_deferred_input_size ||
+        !configuration.max_pending_response_bytes ||
+        !configuration.max_task_steps_per_turn) {
+      throw std::invalid_argument("HTTP processing limits must be positive");
+    }
+  }
   engine(const engine&) = delete;
-  engine(engine&&) noexcept = delete;
+  engine(engine&&) = delete;
   ~engine() = default;
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   engine& operator=(const engine&) = delete;
-  engine& operator=(engine&&) noexcept = delete;
+  engine& operator=(engine&&) = delete;
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Let's set the 'on_send' callback to send data to the transport.         |
-  // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate output) {
     on_send_ = std::move(output);
-    async_->set_on_send(on_send_);
   }
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Let's set the 'on_close' callback to close the transport.               |
-  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> close) {
     on_close_ = std::move(close);
-    async_->set_on_close(on_close_);
-  }
-  // +=========================================================================+
-  // | [>] set_execution_capacity                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Sets the execution capacity for the engine.                             |
-  // +-------------------------------------------------------------------------+
-  void set_execution_capacity(
-      transport::server::execution_capacity execution) noexcept {
-    execution_ = execution;
-  }
-  // +=========================================================================+
-  // | [>] stop                                                     ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool stop(std::function<void()> completed) {
-    closed_ = true;
-    return async_->stop(std::move(completed));
   }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Handles bytes received from the transport.                              |
-  // +-------------------------------------------------------------------------+
-  // Optional transport flow control. At most one receive block is retained;
-  // the engine owns deferred bytes; do not deliver more input while paused.
-  void set_input_flow_control(std::function<bool()> pressure,
-                              std::function<void()> ready) {
-    output_pressure_ = std::move(pressure);
-    async_->set_on_input_ready(std::move(ready));
-  }
-  bool input_paused() const noexcept { return paused_.load(std::memory_order_relaxed); }
-  void resume_input() {
-    std::string_view remaining(deferred_);
-    process_input_(remaining);
-    deferred_.erase(0, deferred_.size() - remaining.size());
-  }
-  void on_bytes_received(std::string_view input) {
-    process_input_(input);
-    if (!closed_ && !input.empty() && paused_.load(std::memory_order_relaxed)) deferred_.assign(input);
-  }
-
- private:
-  void process_input_(std::string_view& input) {
-    if (closed_) { input = {}; return; }
-    paused_.store(false, std::memory_order_relaxed);
-    while (!closed_) {
-      // Check pressure when there is input to admit, not at an empty boundary.
-      // The next block is still checked before starting another request.
-      if (input.empty()) return;
-      if (!message_started_ && output_pressure_ &&
-          (output_pressure_() || (!synchronous_ && async_->pressured()))) {
-        paused_.store(true, std::memory_order_relaxed);
-        return;
+  processing_result on_bytes_received(std::string_view input) {
+    if (closed_) return {};
+    try {
+      auto budget = decoder_.configuration().max_task_steps_per_turn;
+      if (deferred_.empty()) {
+        process_input_(input, budget);
+        retain_(input);
+      } else {
+        retain_(input);
+        process_deferred_(budget);
       }
-      if (!synchronous_) {
-        if (!async_->accepting()) return;
-        if (async_->idle()) synchronous_ = true;
-      }
-      try {
-        message_started_ = true;
-        deserialization_result result = decoder_.deserialize(input);
-        if (result.code != deserialization_status::kSucceeded) {
-          const bool rejected =
-              result.code == deserialization_status::kInvalidSource;
-          if (result.response) {
-            if (!synchronous_) {
-              const bool submitted =
-                  rejected ? async_->handle_error<RQty, RSty, ROty>(
-                                 *result.response, closed_)
-                           : async_->handle_interim<RQty, RSty, ROty>(
-                                 *result.response);
-              if (!submitted) return;
-            } else {
-              detail::engine_sync<RQty, RSty, ROty>::handle_response(
-                  *result.response, rejected, on_send_);
-              if (rejected) query_for_close();
-            }
-          }
-          return;
-        }
-        message_started_ = false;
-        RQty& request = *result.request;
-        router_match_result<RQty, RSty> match{};
-        std::string_view path;
-        if (request.get_target() == target::kOriginForm ||
-            request.get_target() == target::kAbsoluteForm) {
-          path = request.get_absolute_path();
-          match = router_.match(request.get_method(), path);
-        }
-        if (!synchronous_ || detail::engine_async::handles(match)) {
-          synchronous_ = false;
-          if (!async_->handle_request(decoder_, router_, request, match, path,
-                                      execution_, async_, closed_,
-                                      response_head_, response_body_)) {
-            return;
-          }
-        } else if (detail::engine_sync<RQty, RSty, ROty>::handle_request(
-                       decoder_, router_, request, match, on_send_,
-                       response_head_, response_body_)) {
-          query_for_close();
-        }
-        continue;
-      } catch (...) {
-        query_for_close();
-        return;
-      }
+    } catch (...) {
+      query_for_close();
     }
+    return processing_();
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool output_idle) {
+    if (closed_) return {};
+    try {
+      auto budget = decoder_.configuration().max_task_steps_per_turn;
+      if (output_pending_ && output_idle) {
+        output_pending_ = false;
+        pop_front_();
+      }
+      // Reserve an admission step when retained input can use free capacity.
+      const auto allowance = admission_ready_() ? budget - 1 : budget;
+      resume_pending_(budget, allowance);
+      flush_();
+      process_deferred_(budget);
+    } catch (...) {
+      query_for_close();
+    }
+    return processing_();
   }
 
  private:
   // +=========================================================================+
-  // | [>] query_for_close                                         ( private ) |
+  // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  // | If the connection isn't already marked for closure, it marks it and     |
-  // | calls the `on_close_` callback.                                         |
+  using clock = processing_result::clock;
+  using sync_processor = detail::request_processor_sync<RQty, RSty, ROty>;
+  using async_processor = detail::request_processor_async<RQty, RSty>;
+  using entry_type = detail::pending_response<RQty, RSty>;
+  using queue_type = std::deque<entry_type>;
+  // +=========================================================================+
+  // | [>] process_input_                                          ( private ) |
+  // +-------------------------------------------------------------------------+
+  void process_input_(std::string_view& input, std::size_t& budget) {
+    while (!closed_ && !admission_closed_ && !input.empty() && budget &&
+           capacity_()) {
+      auto result = decoder_.deserialize(input);
+      if (result.code != deserialization_status::kSucceeded) {
+        const bool rejected =
+            result.code == deserialization_status::kInvalidSource;
+        if (result.response) {
+          auto serialized = serialize(*result.response, rejected);
+          if (!pending_ && !output_pending_) {
+            send_direct_(std::move(serialized));
+            if (rejected) query_for_close();
+          } else {
+            auto& entry = decoding_ ? *decoding_ : append_();
+            if (rejected) {
+              store_(entry, std::move(serialized), true);
+              decoding_ = nullptr;
+              barrier_(pending_->size() - 1);
+            } else {
+              store_interim_(entry, std::move(serialized));
+              decoding_ = &entry;
+            }
+            flush_();
+          }
+        }
+        return;
+      }
+      auto& request = *result.request;
+      router_match_result<RQty, RSty> match{};
+      if (request.get_target() == target::kOriginForm ||
+          request.get_target() == target::kAbsoluteForm) {
+        match = router_.match(request.get_method(),
+                              request.get_absolute_path());
+      }
+      if (match.async_handler || match.async_parametrized_handler) {
+        auto& entry = decoding_ ? *decoding_ : append_();
+        decoding_ = nullptr;
+        --budget;
+        entry.handler =
+            std::make_unique<async_processor>(decoder_, std::move(request));
+        bool failed = false;
+        try {
+          if (authenticate(match, entry.handler->request(),
+                           entry.handler->response())) {
+            entry.handler->start(match);
+            entry.handler->resume(clock::now());
+          }
+        } catch (...) {
+          failed = true;
+        }
+        if (entry.handler->done() || failed) {
+          finish_async_(entry, failed);
+        }
+        if (entry.close || entry.handler->request().wants_connection_close()) {
+          barrier_(pending_->size() - 1);
+        }
+        flush_();
+      } else {
+        bool close = request.wants_connection_close();
+        auto response = decoder_.make_response(response_head_, response_body_);
+        try {
+          if (authenticate(match, request, response)) {
+            sync_processor::execute(router_, request, response, match);
+          }
+        } catch (...) {
+          close = true;
+          build_error_response(response);
+        }
+        auto serialized = serialize(request, response, close);
+        if (!pending_ && !output_pending_) {
+          send_direct_(std::move(serialized));
+          if (close) query_for_close();
+        } else {
+          --budget;
+          auto& entry = decoding_ ? *decoding_ : append_();
+          decoding_ = nullptr;
+          store_(entry, std::move(serialized), close);
+          if (close) barrier_(pending_->size() - 1);
+          flush_();
+        }
+      }
+    }
+    if (admission_closed_) input = {};
+  }
+  // +=========================================================================+
+  // | [>] resume_pending_                                         ( private ) |
+  // +-------------------------------------------------------------------------+
+  void resume_pending_(std::size_t& budget, std::size_t allowance) {
+    if (!pending_ || !allowance) return;
+    const auto count = pending_->size();
+    for (std::size_t visited = 0; visited < count && allowance; ++visited) {
+      const auto index = cursor_;
+      auto& entry = (*pending_)[index];
+      cursor_ = (cursor_ + 1) % count;
+      if (entry.complete || !entry.handler) continue;
+      if (!entry.handler->resume(clock::now())) continue;
+      --budget;
+      --allowance;
+      if (entry.handler->done()) {
+        finish_async_(entry, false);
+        if (entry.close) {
+          barrier_(index);
+          return;
+        }
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] finish_async_                                           ( private ) |
+  // +-------------------------------------------------------------------------+
+  void finish_async_(entry_type& entry, bool failed) {
+    bool close = entry.handler->request().wants_connection_close();
+    if (failed || entry.handler->error()) {
+      close = true;
+      build_error_response(entry.handler->response());
+    }
+    auto output = serialize(entry.handler->request(), entry.handler->response(),
+                            close);
+    store_(entry, std::move(output), close);
+  }
+  // +=========================================================================+
+  // | [>] store_                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  void store_(entry_type& entry, serialization_result output, bool close) {
+    reserve_bytes_(output.head.size(), output.body.size());
+    entry.head.assign(output.head);
+    entry.body.assign(output.body);
+    entry.source = std::move(output.source);
+    pending_bytes_ += entry.head.size() + entry.body.size();
+    entry.close = close;
+    entry.complete = true;
+  }
+  // +=========================================================================+
+  // | [>] store_interim_                                          ( private ) |
+  // +-------------------------------------------------------------------------+
+  void store_interim_(entry_type& entry, serialization_result output) {
+    if (!entry.interim.empty() || !output.body.empty() || output.source) {
+      throw std::logic_error("Invalid interim response");
+    }
+    reserve_bytes_(output.head.size(), 0);
+    entry.interim.assign(output.head);
+    pending_bytes_ += entry.interim.size();
+  }
+  // +=========================================================================+
+  // | [>] reserve_bytes_                                          ( private ) |
+  // +-------------------------------------------------------------------------+
+  void reserve_bytes_(std::size_t head, std::size_t body) const {
+    const auto capacity = decoder_.configuration().max_pending_response_bytes;
+    const auto used = pending_bytes_;
+    if (head > capacity - used || body > capacity - used - head) {
+      throw std::length_error("Pending response byte limit exceeded");
+    }
+  }
+  // +=========================================================================+
+  // | [>] flush_                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  void flush_() {
+    while (!closed_ && pending_ && !output_pending_) {
+      auto& front = pending_->front();
+      if (!front.interim.empty()) {
+        on_send_(front.interim, {}, nullptr);
+        pending_bytes_ -= front.interim.size();
+        front.interim.clear();
+      }
+      if (!front.complete) return;
+      const bool source = static_cast<bool>(front.source);
+      front.source_sent = source;
+      output_pending_ = source;
+      on_send_(front.head, front.body, std::move(front.source));
+      pending_bytes_ -= front.head.size() + front.body.size();
+      front.head.clear();
+      front.body.clear();
+      if (front.close) {
+        query_for_close();
+        return;
+      }
+      if (!source) pop_front_();
+    }
+  }
+  // +=========================================================================+
+  // | [>] send_direct_                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  void send_direct_(serialization_result output) {
+    if (output.source) {
+      auto& entry = append_();
+      entry.complete = true;
+      entry.source_sent = true;
+      output_pending_ = true;
+      on_send_(output.head, output.body, std::move(output.source));
+    } else {
+      on_send_(output.head, output.body, nullptr);
+    }
+  }
+  // +=========================================================================+
+  // | [>] append_                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  entry_type& append_() {
+    if (!pending_) pending_ = std::make_unique<queue_type>();
+    pending_->emplace_back();
+    return pending_->back();
+  }
+  // +=========================================================================+
+  // | [>] pop_front_                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  void pop_front_() {
+    pending_->pop_front();
+    if (cursor_) --cursor_;
+    if (pending_->empty()) {
+      pending_.reset();
+      cursor_ = 0;
+    }
+  }
+  // +=========================================================================+
+  // | [>] barrier_                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  void barrier_(std::size_t position) {
+    admission_closed_ = true;
+    deferred_.clear();
+    decoding_ = nullptr;
+    while (pending_->size() > position + 1) {
+      auto& last = pending_->back();
+      pending_bytes_ -=
+          last.interim.size() + last.head.size() + last.body.size();
+      pending_->pop_back();
+    }
+    cursor_ %= pending_->size();
+  }
+  // +=========================================================================+
+  // | [>] capacity_                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool capacity_() const noexcept {
+    return decoding_ || !pending_ ||
+           pending_->size() < decoder_.configuration().max_pending_requests;
+  }
+  // +=========================================================================+
+  // | [>] admission_ready_                                        ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool admission_ready_() const noexcept {
+    return !admission_closed_ && !deferred_.empty() && capacity_();
+  }
+  // +=========================================================================+
+  // | [>] process_deferred_                                       ( private ) |
+  // +-------------------------------------------------------------------------+
+  void process_deferred_(std::size_t& budget) {
+    if (closed_ || !admission_ready_()) return;
+    std::string_view input(deferred_);
+    process_input_(input, budget);
+    if (!closed_ && !admission_closed_) {
+      deferred_.erase(0, deferred_.size() - input.size());
+    }
+  }
+  // +=========================================================================+
+  // | [>] retain_                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  void retain_(std::string_view input) {
+    if (closed_ || admission_closed_ || input.empty()) return;
+    const auto limit = decoder_.configuration().max_deferred_input_size;
+    if (input.size() > limit - deferred_.size()) {
+      throw std::length_error("Deferred input byte limit exceeded");
+    }
+    deferred_.append(input);
+  }
+  // +=========================================================================+
+  // | [>] processing_                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  processing_result processing_() const noexcept {
+    if (closed_) return {};
+    processing_result result{admission_ready_(), {}, output_pending_};
+    if (!pending_) return result;
+    const auto now = clock::now();
+    for (const auto& entry : *pending_) {
+      if (entry.complete || !entry.handler) continue;
+      const auto task = entry.handler->processing();
+      result.turn_requested |= task.turn_requested;
+      if (task.turn_at) {
+        if (*task.turn_at <= now) {
+          result.turn_requested = true;
+        } else if (!result.turn_at || *task.turn_at < *result.turn_at) {
+          result.turn_at = task.turn_at;
+        }
+      }
+    }
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] query_for_close                                         ( private ) |
   // +-------------------------------------------------------------------------+
   void query_for_close() {
     if (closed_) return;
     closed_ = true;
-    on_close_();
+    admission_closed_ = true;
+    deferred_.clear();
+    decoding_ = nullptr;
+    pending_bytes_ = 0;
+    if (pending_) {
+      // An accepted source may still borrow the front handler's owned bytes.
+      if (output_pending_ && pending_->front().source_sent) {
+        pending_->erase(pending_->begin() + 1, pending_->end());
+      } else {
+        pending_.reset();
+      }
+    }
+    if (on_close_) on_close_();
+  }
+  // +=========================================================================+
+  // | [>] authenticate                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  static bool authenticate(const router_match_result<RQty, RSty>& match,
+                           const RQty& request, RSty& response) {
+    if (!match.authenticate || !*match.authenticate) return true;
+    const auto result = (*match.authenticate)(request);
+    if (result.status == auth::authentication_status::kAccepted) return true;
+    if ((!result.challenge.empty() &&
+         !http::headers::www_authenticate::check(result.challenge)) ||
+        (result.status == auth::authentication_status::kUnauthenticated &&
+         result.challenge.find_first_not_of(" \t,") ==
+             std::string::npos)) {
+      throw std::invalid_argument("Invalid authentication challenge");
+    }
+    switch (result.status) {
+      case auth::authentication_status::kInvalidRequest:
+        response.bad_request_400();
+        break;
+      case auth::authentication_status::kUnauthenticated:
+        response.unauthorized_401();
+        break;
+      case auth::authentication_status::kForbidden:
+        response.forbidden_403();
+        break;
+      default:
+        throw std::invalid_argument("Invalid authentication result");
+    }
+    if (!result.challenge.empty()) {
+      response.set_header(header_names::kWwwAuthenticate, result.challenge);
+    }
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] build_error_response                                    ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Builds a generic error response with a 500 Internal Server Error        |
+  // | status. It sets the response body to "Internal Server Error".           |
+  // | This is used when an exception occurs during request processing.        |
+  // +-------------------------------------------------------------------------+
+  static void build_error_response(RSty& response) {
+    response.internal_server_error_500();
+    response.set_body("Internal Server Error");
+  }
+  // +=========================================================================+
+  // | [>] serialize                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Serializes the response. If the connection should be closed,            |
+  // | it sets the "Connection: close" header. It returns the                  |
+  // | serialized result.                                                      |
+  // +-------------------------------------------------------------------------+
+  static serialization_result serialize(RSty& response, bool close) {
+    if (close) response.set_header(header_names::kConnection, "close");
+    return response.serialize();
+  }
+  // +=========================================================================+
+  // | [>] serialize                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Serializes the response based on the request. If the connection should  |
+  // | be closed, it sets the "Connection: close" header. It returns the       |
+  // | serialized result.                                                      |
+  // +-------------------------------------------------------------------------+
+  static serialization_result serialize(const RQty& request, RSty& response,
+                                        bool& close) {
+    serialization_result serialized;
+    try {
+      if (response.is_continue_100()) {
+        close = true;
+        build_error_response(response);
+      }
+      if (close) {
+        response.set_header(header_names::kConnection, "close");
+      } else if (response.wants_connection_close()) {
+        close = true;
+      }
+      // RFC 9110 S9.3.2: HEAD preserves framing but never sends body bytes.
+      if (request.get_method() == method_names::kHead) response.suppress_body();
+      serialized = response.serialize();
+    } catch (...) {
+      close = true;
+      build_error_response(response);
+      response.set_header(header_names::kConnection, "close");
+      if (request.get_method() == method_names::kHead) response.suppress_body();
+      serialized = response.serialize();
+    }
+    return serialized;
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   const ROty& router_;
   decoder<RQty, RSty> decoder_;
-  std::string response_head_;
+  std::string response_head_;       // Reusable synchronous response storage.
   std::string response_body_;
-  std::function<void()> on_close_;
-  std::shared_ptr<detail::engine_async> async_;
-  transport::server::execution_capacity execution_;
   protocol::send_delegate on_send_;
-  std::function<bool()> output_pressure_;
-  std::string deferred_;
-  // This flag gates transport input; it publishes no engine-owned data.
-  // Receive and resume calls remain serialized by the transport.
-  std::atomic<bool> paused_{false};
-  bool message_started_{false};
+  std::function<void()> on_close_;
+  std::string deferred_;            // Bounded, unadmitted raw input.
+  std::unique_ptr<queue_type> pending_;  // Lazy ordered engine-owned records.
+  entry_type* decoding_{nullptr};   // Reserved record for an interim response.
+  std::size_t pending_bytes_{0};    // Owned serialized prefix/inline bytes.
+  std::size_t cursor_{0};           // Fair resumption position in the records.
+  bool output_pending_{false};      // Current terminal source must drain.
+  bool admission_closed_{false};    // An ordered close frontier is known.
   bool closed_{false};
-  bool synchronous_{true};
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

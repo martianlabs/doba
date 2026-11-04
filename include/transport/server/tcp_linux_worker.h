@@ -25,24 +25,30 @@
 #ifndef martianlabs_doba_transport_server_tcp_linux_worker_h
 #define martianlabs_doba_transport_server_tcp_linux_worker_h
 
+#include <algorithm>
 #include <array>
+#include <chrono>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <netinet/tcp.h>
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
 #include <utility>
 
 #include "transport/server/tcp_linux_context.h"
+#include "transport/server/tcp_linux_processing_queue.h"
 #include "transport/server/tcp_policies.h"
 
 namespace martianlabs::doba::transport::server::detail {
@@ -98,8 +104,8 @@ class linux_worker {
     if (::bind(listener_, reinterpret_cast<sockaddr*>(&address),
                sizeof(address)) < 0 ||
         ::listen(listener_, backlog ? backlog : SOMAXCONN) < 0 ||
-        !watch(stop_, EPOLL_CTL_ADD, EPOLLIN) ||
-        !watch(listener_, EPOLL_CTL_ADD, EPOLLIN)) {
+        !watch(stop_, EPOLL_CTL_ADD, EPOLLIN, kStop) ||
+        !watch(listener_, EPOLL_CTL_ADD, EPOLLIN, kListener)) {
       throw std::runtime_error("Cannot start Linux listener");
     }
     thread_ = std::thread([this]() { run(); });
@@ -119,6 +125,7 @@ class linux_worker {
     }
     close_descriptor(listener_);
     close_descriptor(stop_);
+    close_descriptor(timer_);
     close_descriptor(epoll_);
   }
   // +=========================================================================+
@@ -139,10 +146,11 @@ class linux_worker {
   // +=========================================================================+
   // | [>] watch                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  bool watch(int socket, int operation, std::uint32_t events) noexcept {
+  bool watch(int socket, int operation, std::uint32_t events,
+             std::uint64_t identity) noexcept {
     epoll_event event{};
     event.events = events;
-    event.data.fd = socket;
+    event.data.u64 = identity;
     return ::epoll_ctl(epoll_, operation, socket, &event) == 0;
   }
   // +=========================================================================+
@@ -167,6 +175,12 @@ class linux_worker {
         ::close(socket);
         continue;
       }
+      if (next_identity_ == std::numeric_limits<std::uint64_t>::max()) {
+        ::close(socket);
+        close_descriptor(listener_);
+        return;
+      }
+      const auto identity = next_identity_++;
       try {
         const int enabled = 1;
         if (::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &enabled,
@@ -176,13 +190,13 @@ class linux_worker {
         auto context = std::make_unique<linux_context<ENty>>(
             socket, configuration_.receive_buffer_capacity,
             configuration_.max_buffered_send_bytes, factory_);
-        if (!watch(socket, EPOLL_CTL_ADD, EPOLLIN | EPOLLRDHUP)) {
+        if (!watch(socket, EPOLL_CTL_ADD, EPOLLIN | EPOLLRDHUP, identity)) {
           throw std::runtime_error("Cannot register accepted socket");
         }
-        contexts_.emplace(socket, std::move(context));
+        contexts_.emplace(identity, std::move(context));
         if (connected_) connected_();
       } catch (...) {
-        if (contexts_.contains(socket)) close(socket);
+        if (contexts_.contains(identity)) close(identity);
         else ::close(socket);
       }
     }
@@ -190,44 +204,137 @@ class linux_worker {
   // +=========================================================================+
   // | [>] close                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  void close(int socket) noexcept {
+  void close(std::uint64_t identity) noexcept {
+    auto found = contexts_.find(identity);
+    if (found == contexts_.end()) return;
+    if (processing_) processing_->cancel(identity);
+    const auto socket = found->second->socket();
     ::epoll_ctl(epoll_, EPOLL_CTL_DEL, socket, nullptr);
     ::close(socket);
-    contexts_.erase(socket);
+    contexts_.erase(found);
     if (disconnected_) {
       try { disconnected_(); } catch (...) {}
     }
   }
   // +=========================================================================+
+  // | [>] reconcile                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  void reconcile(std::uint64_t identity, const linux_context<ENty>& context) {
+    const auto& progress = context.progress();
+    if (!progress.turn_requested && !progress.turn_at &&
+        !(progress.turn_after_output_drained && !context.pending())) {
+      if (processing_) processing_->cancel(identity);
+      return;
+    }
+    if (!processing_) processing_ = std::make_unique<linux_processing_queue>();
+    processing_->reconcile(identity, progress, !context.pending(),
+        progress.turn_at ? clock::now() : clock::time_point{});
+  }
+  // +=========================================================================+
+  // | [>] service                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  void service(std::uint64_t identity, linux_context<ENty>& context,
+               bool was_pending) {
+    if (!context.flush()) {
+      close(identity);
+      return;
+    }
+    const bool pending = context.pending();
+    if (pending != was_pending &&
+        !watch(context.socket(), EPOLL_CTL_MOD,
+               pending ? EPOLLOUT : EPOLLIN | EPOLLRDHUP, identity)) {
+      close(identity);
+      return;
+    }
+    reconcile(identity, context);
+  }
+  // +=========================================================================+
   // | [>] handle                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  void handle(int socket, std::uint32_t events) {
-    auto found = contexts_.find(socket);
+  void handle(std::uint64_t identity, std::uint32_t events) {
+    auto found = contexts_.find(identity);
     if (found == contexts_.end()) return;
     auto& context = *found->second;
     try {
       if (events & (EPOLLERR | EPOLLHUP)) {
-        close(socket);
+        close(identity);
         return;
       }
       const bool was_pending = context.pending();
       if (!was_pending && !context.receive()) {
-        close(socket);
+        close(identity);
         return;
       }
-      if (!context.flush()) {
-        close(socket);
-        return;
-      }
-      const bool pending = context.pending();
-      if (pending != was_pending &&
-          !watch(socket, EPOLL_CTL_MOD,
-                 pending ? EPOLLOUT : EPOLLIN | EPOLLRDHUP)) {
-        close(socket);
-      }
+      service(identity, context, was_pending);
     } catch (...) {
-      close(socket);
+      close(identity);
     }
+  }
+  // +=========================================================================+
+  // | [>] process                                                 ( private ) |
+  // +-------------------------------------------------------------------------+
+  void process(std::uint64_t identity) {
+    auto found = contexts_.find(identity);
+    if (found == contexts_.end()) return;
+    auto& context = *found->second;
+    try {
+      const bool was_pending = context.pending();
+      if (!context.process()) {
+        close(identity);
+        return;
+      }
+      service(identity, context, was_pending);
+    } catch (...) {
+      close(identity);
+    }
+  }
+  // +=========================================================================+
+  // | [>] read_timer                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool read_timer() noexcept {
+    std::uint64_t expirations;
+    ssize_t size;
+    do {
+      size = ::read(timer_, &expirations, sizeof(expirations));
+    } while (size < 0 && errno == EINTR);
+    if (size == static_cast<ssize_t>(sizeof(expirations))) {
+      armed_.reset();
+      return true;
+    }
+    return size < 0 && errno == EAGAIN;
+  }
+  // +=========================================================================+
+  // | [>] arm_timer                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool arm_timer() noexcept {
+    if (!processing_) return true;
+    const auto next = processing_->next_deadline();
+    // A bounded promotion may leave due identities for the next poll turn.
+    if (next && *next <= clock::now()) return true;
+    if (next == armed_) return true;
+    if (next && timer_ < 0) {
+      timer_ = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+      if (timer_ < 0 || !watch(timer_, EPOLL_CTL_ADD, EPOLLIN, kTimer)) {
+        return false;
+      }
+    }
+    itimerspec setting{};
+    if (next) {
+      auto remaining = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          *next - clock::now());
+      if (remaining.count() <= 0) remaining = std::chrono::nanoseconds(1);
+      const auto seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(remaining);
+      setting.it_value.tv_sec = static_cast<time_t>(std::min<std::int64_t>(
+          seconds.count(), std::numeric_limits<time_t>::max()));
+      setting.it_value.tv_nsec = static_cast<long>(
+          (remaining - seconds).count());
+    }
+    if (timer_ >= 0 && ::timerfd_settime(timer_, 0, &setting, nullptr) < 0) {
+      return false;
+    }
+    armed_ = next;
+    return true;
   }
   // +=========================================================================+
   // | [>] run                                                     ( private ) |
@@ -235,24 +342,71 @@ class linux_worker {
   void run() noexcept {
     std::array<epoll_event, 64> events{};
     for (;;) {
-      const int ready = ::epoll_wait(epoll_, events.data(), events.size(), -1);
+      int timeout = -1;
+      if (processing_) {
+        const auto due = processing_->next_deadline();
+        if (processing_->ready_count() || (due && *due <= clock::now())) {
+          timeout = 0;
+        }
+      }
+      const int ready =
+          ::epoll_wait(epoll_, events.data(), events.size(), timeout);
       if (ready < 0) {
         if (errno == EINTR) continue;
         break;
       }
       bool stopping = false;
       for (int i = 0; i < ready; ++i) {
-        if (events[i].data.fd == stop_) stopping = true;
+        if (events[i].data.u64 == kStop) stopping = true;
       }
       if (stopping) break;
-      for (int i = 0; i < ready; ++i) {
-        const auto& event = events[i];
-        if (event.data.fd == listener_) accept();
-        else handle(event.data.fd, event.events);
+      try {
+        bool healthy = true;
+        for (int i = 0; i < ready; ++i) {
+          const auto& event = events[i];
+          if (event.data.u64 == kListener) {
+            if (listener_ >= 0) accept();
+          } else if (event.data.u64 == kTimer) {
+            healthy = read_timer();
+            if (!healthy) break;
+          } else {
+            handle(event.data.u64, event.events);
+          }
+        }
+        if (!healthy) break;
+        if (processing_) {
+          if (processing_->next_deadline()) {
+            processing_->promote(clock::now());
+          }
+          const auto count = std::min<std::size_t>(
+              64, processing_->ready_count());
+          for (std::size_t i = 0; i < count; ++i) {
+            const auto identity = processing_->take_ready();
+            if (!identity) break;
+            process(*identity);
+          }
+        }
+        if (!arm_timer()) break;
+      } catch (...) {
+        break;
       }
     }
+    if (processing_) processing_->clear();
+    close_descriptor(listener_);
+    close_descriptor(timer_);
+    armed_.reset();
     while (!contexts_.empty()) close(contexts_.begin()->first);
   }
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  using clock = linux_processing_queue::clock;
+  // +=========================================================================+
+  // | [>] CONSTANTs                                               ( private ) |
+  // +-------------------------------------------------------------------------+
+  static constexpr std::uint64_t kStop = 0;
+  static constexpr std::uint64_t kListener = 1;
+  static constexpr std::uint64_t kTimer = 2;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
@@ -272,8 +426,15 @@ class linux_worker {
   int listener_{-1};
   // The sole owner of connection processing.
   std::thread thread_;
-  // Socket-indexed contexts, accessed only by the worker thread.
-  std::unordered_map<int, std::unique_ptr<linux_context<ENty>>> contexts_;
+  // Lifetime identities prevent stale epoll events from following FD reuse.
+  std::uint64_t next_identity_{3};
+  std::unordered_map<std::uint64_t,
+                     std::unique_ptr<linux_context<ENty>>> contexts_;
+  // Allocated only when a connection requests runnable work or a deadline.
+  std::unique_ptr<linux_processing_queue> processing_;
+  // One monotonic timer descriptor, created only for future deadlines.
+  int timer_{-1};
+  std::optional<clock::time_point> armed_;
 };
 }  // namespace martianlabs::doba::transport::server::detail
 

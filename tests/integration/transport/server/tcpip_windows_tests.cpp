@@ -35,6 +35,7 @@
 #include <string_view>
 #include <thread>
 
+#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -42,6 +43,7 @@
 #include "transport/server/tcp.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_count;
@@ -89,14 +91,19 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     const auto* bytes = input.data();
     [[maybe_unused]] const auto size = input.size();
     if (!size) throw std::runtime_error("Invalid input");
-    if (state->receive) { state->receive(*this, bytes, size); return; }
+    if (state->receive) { state->receive(*this, bytes, size); return {}; }
     echo(bytes, size);
-    return;
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

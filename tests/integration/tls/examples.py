@@ -30,6 +30,12 @@ import subprocess
 import sys
 import time
 
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'helpers'))
+from sanitizer_diagnostics import require_clean_diagnostics
+
 if not __debug__:
   raise RuntimeError('TLS example tests require assertions enabled')
 
@@ -81,10 +87,12 @@ def running(binary):
     if child.poll() is None:
       child.terminate()
     try:
-      child.communicate(timeout=5)
+      stdout, stderr = child.communicate(timeout=5)
     except subprocess.TimeoutExpired:
       child.kill()
-      child.communicate(timeout=5)
+      stdout, stderr = child.communicate(timeout=5)
+      raise AssertionError('TLS example did not terminate')
+    require_clean_diagnostics(stderr)
 
 
 # /////////////////////////////////////////////////////////////////////////////
@@ -98,12 +106,14 @@ def main():
     with CONTEXT.wrap_socket(socket.create_connection(
         ('127.0.0.1', port), timeout=5), server_hostname='localhost') as peer:
       assert peer.selected_alpn_protocol() == 'http/1.1'
-      peer.sendall(b'GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n')
-      import http.client
-      with http.client.HTTPResponse(peer) as response:
-        response.begin()
-        assert response.status == 200
-        assert response.read() == b'hello over TLS'
+      for path, expected in (('/hello', b'hello over TLS'),
+                             ('/wait/7', b'7')):
+        peer.sendall(f'GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n'.encode())
+        import http.client
+        with http.client.HTTPResponse(peer) as response:
+          response.begin()
+          assert response.status == 200
+          assert response.read() == expected
   CONTEXT.set_alpn_protocols([])
   with running(ECHO) as port:
     with CONTEXT.wrap_socket(socket.create_connection(

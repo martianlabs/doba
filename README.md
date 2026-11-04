@@ -22,15 +22,17 @@ for more.
 
 **Native IOCP on Windows. Native epoll on Linux.**
 
-Both backends support synchronous TCP, inline pipelining and one terminal
+Both backends support TCP with cooperative engine turns, inline pipelining
+and one terminal
 prefix/source reader per connection. Linux uses independent SO_REUSEPORT
 workers; Windows uses IOCP. See the
 [TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
 and [policy limits](docs/reference/transport/server/tcp_policies.md).
 
 TCP needs no external libraries. Optional TLS is a separate class over TCP,
-using OpenSSL and its own buffers. Coroutine execution services remain
-independent of both transports.
+using OpenSSL and its own buffers. One HTTP engine handles sync and coroutine
+routes automatically; transports deliver serialized turns and the engine owns
+frames, bounded concurrency and response order.
 
 [Try the examples](examples/README.md)
 

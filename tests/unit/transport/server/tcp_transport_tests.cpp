@@ -37,7 +37,7 @@ namespace {
 namespace tr = martianlabs::doba::transport::server;
 
 using martianlabs::doba::tests::unit::policy_engine;
-static_assert(!tr::contracts::execution_receiver<policy_engine>);
+static_assert(martianlabs::doba::protocol::contracts::engine<policy_engine>);
 }  // namespace
 
 // +===========================================================================+

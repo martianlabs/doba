@@ -35,11 +35,13 @@
 #include <unistd.h>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "common/reader.h"
 #include "test_helper.h"
 #include "transport/server/tcp_linux_context.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace common = martianlabs::doba::common;
 namespace detail = martianlabs::doba::transport::server::detail;
 
@@ -75,7 +77,19 @@ struct byte_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view bytes) { action(*this, bytes); }
+  processing_result on_bytes_received(std::string_view bytes) {
+    action(*this, bytes);
+    return progress;
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool output_idle) {
+    return on_turn ? on_turn(*this, output_idle) : processing_result{};
+  }
+  // Turn snapshots and behavior are owned by the serialized engine.
+  processing_result progress{};
+  std::function<processing_result(byte_engine&, bool)> on_turn{};
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -459,4 +473,86 @@ DOBA_TEST("Linux empty sends do not permit a second terminal reader") {
   DOBA_EXPECT(!context.receive());
   DOBA_EXPECT(!context.flush());
   DOBA_EXPECT(peer.drain().empty());
+}
+
+// +===========================================================================+
+// | [>] Requested turns are retained for the worker                  ( test-case )|
+// +---------------------------------------------------------------------------+
+DOBA_TEST("Linux context retains each requested processing condition") {
+  for (int condition = 0; condition < 3; ++condition) {
+    socket_pair sockets;
+    auto factory = [condition] {
+      byte_engine engine;
+      engine.action = [](byte_engine&, std::string_view bytes) {
+        DOBA_EXPECT_EQUAL(bytes, "x");
+      };
+      if (condition == 0) engine.progress.turn_requested = true;
+      if (condition == 1) {
+        engine.progress.turn_at = processing_result::clock::time_point{};
+      }
+      if (condition == 2) engine.progress.turn_after_output_drained = true;
+      return engine;
+    };
+    detail::linux_context<byte_engine> context(sockets.sockets[0], 8, 64,
+                                               factory);
+    DOBA_EXPECT(context.receive());
+    DOBA_EXPECT_EQUAL(context.progress().turn_requested, condition == 0);
+    DOBA_EXPECT_EQUAL(context.progress().turn_at.has_value(), condition == 1);
+    DOBA_EXPECT_EQUAL(context.progress().turn_after_output_drained,
+                      condition == 2);
+    DOBA_EXPECT(context.process());
+    DOBA_EXPECT(!context.progress().turn_requested);
+    DOBA_EXPECT(!context.progress().turn_at);
+    DOBA_EXPECT(!context.progress().turn_after_output_drained);
+    DOBA_EXPECT(sockets.drain().empty());
+  }
+}
+
+// +===========================================================================+
+// | [>] Closing wins over requested scheduling                 ( test-case )|
+// +---------------------------------------------------------------------------+
+DOBA_TEST("Linux close retains output when a result also requests processing") {
+  socket_pair sockets;
+  auto factory = [] {
+    byte_engine engine;
+    engine.action = [](byte_engine& current, std::string_view) {
+      current.send("ok", {}, nullptr);
+      current.close();
+    };
+    engine.progress = {true, processing_result::clock::time_point{}, true};
+    return engine;
+  };
+  detail::linux_context<byte_engine> context(sockets.sockets[0], 8, 64,
+                                             factory);
+  DOBA_EXPECT(context.receive());
+  DOBA_EXPECT(!context.flush());
+  DOBA_EXPECT_EQUAL(sockets.drain(), "ok");
+}
+
+DOBA_TEST("Linux processing callbacks can send only inside a later turn") {
+  socket_pair sockets;
+  int calls = 0;
+  auto factory = [&] {
+    byte_engine engine;
+    engine.action = [](byte_engine&, std::string_view) {};
+    engine.progress.turn_requested = true;
+    engine.on_turn = [&](byte_engine& current, bool idle) {
+      ++calls;
+      if (idle) current.send("turn", {}, nullptr);
+      current.close();
+      return processing_result{true, {}, true};
+    };
+    return engine;
+  };
+  detail::linux_context<byte_engine> context(sockets.sockets[0], 8, 64,
+                                             factory);
+  DOBA_EXPECT(context.receive());
+  DOBA_EXPECT_EQUAL(calls, 0);
+  DOBA_EXPECT(context.process());
+  DOBA_EXPECT_EQUAL(calls, 1);
+  DOBA_EXPECT(!context.progress().turn_requested);
+  DOBA_EXPECT(!context.flush());
+  DOBA_EXPECT_EQUAL(sockets.drain(), "turn");
+  DOBA_EXPECT(context.process());
+  DOBA_EXPECT_EQUAL(calls, 1);
 }

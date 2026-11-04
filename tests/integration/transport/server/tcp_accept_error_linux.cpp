@@ -37,10 +37,12 @@
 #include <utility>
 #include <vector>
 
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "transport/server/tcp.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::tests::integration::tcpip_client;
 namespace tr = martianlabs::doba::transport::server;
 
@@ -67,7 +69,15 @@ struct echo_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view bytes) { send(bytes, {}, nullptr); }
+  processing_result on_bytes_received(std::string_view bytes) {
+    send(bytes, {}, nullptr);
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+

@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <atomic>
+#include <chrono>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -29,11 +31,13 @@
 #include <string>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "https_server.h"
 #include "transport/server/tls.h"
 #include "protocol/http/common/auth/basic.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport::server;
 namespace common = martianlabs::doba::common;
 // /////////////////////////////////////////////////////////////////////////////
@@ -58,15 +62,15 @@ struct echo_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view input) {
+  processing_result on_bytes_received(std::string_view input) {
     if (input.size() > 4096) throw std::runtime_error("RX bound exceeded");
     pending.append(input);
     for (;;) {
       const auto end = pending.find('\n');
-      if (end == std::string::npos) return;
+      if (end == std::string::npos) return {};
       const auto line = pending.substr(0, end);
       pending.erase(0, end + 1);
-      if (line == "close") { close(); return; }
+      if (line == "close") { close(); return {}; }
       if (line == "bad") { send({}, {}, source("x")); send("!", {}, {}); }
       else if (line == "source") {
         send("pre:", "body:", source("tail"));
@@ -75,7 +79,7 @@ struct echo_engine {
         send("discard:", {}, source(""));
         send({}, {}, source(""));
       } else if (line == "empty-close") {
-        send("pre:", "body:", source("")); close(); return;
+        send("pre:", "body:", source("")); close(); return {};
       } else if (line == "inline-exact") {
         send("pre:", std::string(4092, 'e'), {});
       } else if (line == "inline-over") {
@@ -102,10 +106,15 @@ struct echo_engine {
       } else if (line == "exact") send({}, {}, source(std::string(4096, 'e')));
       else if (line == "over") send({}, {}, source(std::string(4097, 'e')));
       else if (line == "source-close") {
-        send("pre:", "body:", source("tail")); close(); return;
+        send("pre:", "body:", source("tail")); close(); return {};
       } else send("echo:", line + "\n", {});
     }
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] source                                                   ( public ) |
   // +-------------------------------------------------------------------------+
@@ -183,6 +192,9 @@ int main(int count, char** args) {
           });
       serve(server);
     } else if (mode.starts_with("http")) {
+      if (mode == "http-async") policies.worker_count = 1;
+      std::atomic<unsigned> started{0}, finished{0}, live{0};
+      std::atomic<bool> released{false};
       policies.alpn_protocol =
           std::string_view(args[4]) == "http-invalid" ? "h2" : "http/1.1";
       martianlabs::doba::https_server<> server(std::move(policies));
@@ -191,7 +203,63 @@ int main(int count, char** args) {
              martianlabs::doba::protocol::http::v11::response& response) {
         response.ok_200().set_body("hello");
       });
+      if (mode == "http-async") {
+        namespace http = martianlabs::doba::protocol::http::v11;
+        using namespace std::chrono_literals;
+        server.add_route("GET", "/wait/:id",
+            [&](const http::request&, http::response& response,
+                int id) -> common::task<> {
+          ++started;
+          co_await common::sleep_for(1ms);
+          ++finished;
+          response.ok_200().set_body(std::to_string(id));
+        });
+        server.add_route("GET", "/gated",
+            [&](const http::request&, http::response& response)
+                -> common::task<> {
+          ++started;
+          while (!released.load()) co_await common::yield();
+          ++finished;
+          response.ok_200().set_body("gated");
+        });
+        server.add_route("GET", "/release",
+            [&](const http::request&, http::response& response) {
+          released = true;
+          response.ok_200().set_body("release");
+        });
+        server.add_route("GET", "/source",
+            [](const http::request&, http::response& response)
+                -> common::task<> {
+          co_await common::sleep_for(1ms);
+          response.ok_200().set_body(std::move(*echo_engine::source(
+              std::string(32768, 's'))), 32768);
+        });
+        server.add_route("GET", "/fail",
+            [](const http::request&, http::response&) -> common::task<> {
+          co_await common::yield();
+          throw std::runtime_error("async handler failed");
+        });
+        server.add_route("GET", "/sleep",
+            [&](const http::request&, http::response&) -> common::task<> {
+          ++live;
+          auto guard = std::shared_ptr<int>(new int, [&](int* value) {
+            delete value;
+            --live;
+          });
+          ++started;
+          co_await common::sleep_for(1h);
+        });
+        server.add_route("GET", "/state",
+            [&](const http::request&, http::response& response) {
+          response.ok_200().set_body(std::to_string(started.load()) + ":" +
+              std::to_string(finished.load()) + ":" +
+              std::to_string(live.load()));
+        });
+      }
       serve(server);
+      if (mode == "http-async") {
+        std::cout << "LIVE " << live.load() << '\n' << std::flush;
+      }
     } else {
       policies.alpn_protocol = "doba-echo";
       auto factory = [] { return echo_engine{}; };

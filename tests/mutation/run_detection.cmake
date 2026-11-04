@@ -84,12 +84,12 @@ foreach(name IN LISTS names)
 endforeach()
 
 set(ids body-limit response-order rejection-successor)
-set(headers protocol/http/v11/headers/content_length.h protocol/http/v11/engine_async.h protocol/http/v11/engine.h)
+set(headers protocol/http/v11/headers/content_length.h protocol/http/v11/engine.h protocol/http/v11/engine.h)
 set(before "if (policies.max_request_body_size != 0 &&"
-  "if (final && position == next_send_.load(std::memory_order_relaxed) &&"
+  "if (!front.complete)"
   "if (rejected) query_for_close()")
 set(after "if (false && policies.max_request_body_size != 0 &&"
-  "if (final && true &&" "if (rejected) on_close_()")
+  "if (false && !front.complete)" "if (rejected) on_close_()")
 set(assertions "result.code == protocol::deserialization_status::kInvalidSource" "(sends) == (0)" "(dispatched) == (0)")
 foreach(index RANGE 0 2)
   foreach(list_name IN ITEMS ids headers before after assertions names)

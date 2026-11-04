@@ -15,7 +15,7 @@ optional TLS on Linux or Windows.
 
 Both backends deliver RX bytes to one engine per connection and copy its
 inline output before send returns. Input is serialized; the engine invokes
-send/close only within the current input call on that thread. It retains any
+send/close only within a serialized input or processing turn. It retains any
 incomplete protocol message after the call. No callback can escape for later
 or cross-thread use. A blocking engine or reader occupies its I/O worker.
 
@@ -134,7 +134,8 @@ and matching unencrypted key. HTTPS selects `http/1.1` automatically and rejects
 other ALPN tokens; the generic TLS transport remains protocol-independent.
 
 TLS owns encryption/decryption buffers and reuses the unchanged TCP transport.
-It supports TLS 1.2/1.3, synchronous engines and bounded prefix/source output.
+It supports TLS 1.2/1.3, synchronous/cooperative handlers and bounded
+prefix/source output.
 A source is read completely during the send callback and counts toward the
 plaintext limit; this version does not stream arbitrarily large files.
 See the [complete contract](../reference/transport/server/tls.md),
@@ -147,3 +148,10 @@ drains accepted valid output. Linux administrative stop cancels pending TX after
 the active call returns; Windows drains accepted TX and real I/O completions.
 Neither backend waits for application tasks or supplies a shutdown deadline.
 See the [lifecycle contract](../reference/transport/server/tcp.md#runtime-contract).
+
+The shared [processing contract](../reference/protocol/processing_result.md)
+defines both returned results. Linux and Windows TCP deliver native turns;
+TLS forwards them through the same serialized connection entries. The engine
+owns coroutine frames and response ordering. Ciphertext still in flight does
+not prevent a due handler from advancing. TLS control records preserve the
+engine's outstanding scheduling snapshot.

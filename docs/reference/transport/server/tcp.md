@@ -16,16 +16,17 @@
 This is the runtime contract for the bundled Linux and Windows TCP transports.
 The engine and transport concepts check C++ signatures; they do not enforce
 these ownership and execution rules. Both backends support synchronous inline
-pipelining and prefix/source. TLS and coroutine execution are outside this scope.
+pipelining, prefix/source and generic processing turns;
+coroutine frames and execution policy belong to the engine. TLS is separate.
 
-**Input and callbacks.** Each connection has its own engine. Input calls never
+**Input and callbacks.** Each connection has its own engine. Input and processing calls never
 overlap for that connection. RX bytes are immutable and borrowed until the call
 returns; the engine retains any incomplete protocol message it needs later.
 Different connections may execute concurrently. Linux has one owning worker per
 connection; Windows may use different IOCP workers between serialized calls.
 
 The engine stores registered send/close callbacks for its context lifetime and
-invokes them only during its current input call, on that calling thread. They
+invokes them only during its current serialized input or processing turn. They
 must not be exported, invoked later or called from another thread. After requesting
 close, the engine must return without further output. Protocol processing and
 any independent execution service belong to the engine. A blocking engine or
@@ -132,3 +133,33 @@ workers through `detail::linux_transport`; Windows retains its existing
 
 **Source:** [include/transport/server/tcp.h:92](../../../../include/transport/server/tcp.h#L92)
 
+
+## Processing-result support
+
+Linux and Windows TCP deliver immediate, monotonic-deadline and output-drain
+processing turns on their transport workers. TLS forwards the same complete
+snapshots and executes engine turns through those serialized entries.
+Coroutine frames remain engine-owned; no transport accepts application jobs
+or externally resumed handles.
+
+Both entry points retain the general
+[processing_result](../../protocol/processing_result.md) contract. Each backend
+reconciles one connection snapshot after an engine entry and output progress.
+Busy TX still applies the existing RX policy, but does not block processing
+turns of already-admitted tasks. No callback is recursive or invoked by a
+background timer thread. Close withdraws scheduling while accepted output drains.
+
+Linux uses a lazy ready/deadline registry and at most one lazy timerfd per
+worker. Uncontended synchronous traffic creates neither. Unchanged earliest
+deadlines avoid rearming the kernel timer. Epoll records use nonreused lifetime
+identities, and registration cancellation precedes engine destruction.
+See [Linux processing turns](tcp_linux_processing.md) for ownership, budgets,
+shutdown, resource failures and tests.
+
+Windows reuses its per-connection mutex for RX, TX and processing turns. Generic
+immediate packets hold the exact connection owner. One lazy native thread-pool
+timer serves the IOCP worker group; its callback only posts a coalesced wake.
+IOCP workers select up to 64 due connections per notification, release the timer
+lock and enter each connection under its existing lock. No application task or
+SSL call runs in the native timer callback. See
+[Windows processing turns](tcp_windows_processing.md).

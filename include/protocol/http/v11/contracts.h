@@ -67,25 +67,6 @@ auto make_engine_factory(typename ENty::policies_type configuration,
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] make_engine_factory                                      ( function ) |
-// +---------------------------------------------------------------------------+
-// | Creates a factory function for engines providing asynchronous callbacks.  |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-template <protocol::contracts::engine ENty, typename ROty>
-auto make_engine_factory(typename ENty::policies_type configuration,
-                         const ROty& routes,
-                         std::function<void()> on_async_started,
-                         std::function<void()> on_async_finished) {
-  return [configuration = std::move(configuration), &routes,
-          on_async_started = std::move(on_async_started),
-          on_async_finished = std::move(on_async_finished)]() -> ENty {
-    return ENty{configuration, routes, on_async_started, on_async_finished};
-  };
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
 // | [>] engine_factory                                               ( type ) |
 // +---------------------------------------------------------------------------+
 // | Type of the engine factory function.                                      |
@@ -126,7 +107,8 @@ concept request =
       { value.body_is_stored() } -> std::same_as<bool>;
       { mutable_value.make_owned() } -> std::same_as<void>;
       { value.body_wire_size() } -> std::same_as<std::size_t>;
-      { mutable_value.rebase_bytes(std::uintptr_t{}, text.data()) } noexcept -> std::same_as<void>;
+      { mutable_value.rebase_bytes(std::uintptr_t{}, text.data()) } noexcept
+          -> std::same_as<void>;
       { mutable_value.begin_body(index, index) } -> std::same_as<bool>;
       { mutable_value.append_body(text) } -> std::same_as<bool>;
       { mutable_value.finish_body(false, index, index, index) }
@@ -181,7 +163,8 @@ concept response =
              std::string_view text, body::reader* body_reader,
              body::body_writer body_writer, common::reader source) {
       { RSty::from(size, size) } -> std::same_as<RSty>;
-      { RSty::from(size, size, head_storage, body_storage) } -> std::same_as<RSty>;
+      { RSty::from(size, size, head_storage, body_storage) }
+          -> std::same_as<RSty>;
       { value.serialize() } -> std::same_as<serialization_result>;
       { value.add_header(text, text) } -> std::same_as<RSty&>;
       { value.add_header(text, 1) } -> std::same_as<RSty&>;

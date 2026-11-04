@@ -24,11 +24,13 @@
 
 #include <array>
 #include <charconv>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -55,6 +57,18 @@ bool parse_integer(std::string_view source, std::int64_t& value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
+// | [>] checked_add                                              ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+bool checked_add(std::int64_t a, std::int64_t b, std::int64_t& result) {
+  if ((b > 0 && a > std::numeric_limits<std::int64_t>::max() - b) ||
+      (b < 0 && a < std::numeric_limits<std::int64_t>::min() - b)) return false;
+  result = a + b;
+  return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] read_query_sum                                           ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
@@ -67,8 +81,7 @@ bool read_query_sum(const request& req, std::int64_t& value) {
       !parse_integer(b->second, b_value)) {
     return false;
   }
-  value = a_value + b_value;
-  return true;
+  return checked_add(a_value, b_value, value);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -88,7 +101,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
     if (state.has_error) return false;
     used += state.produced;
     if (state.complete) break;
-    if (used == buffer.size()) return false;
+    if (!state.produced || used == buffer.size()) return false;
   }
   return parse_integer(
       std::string_view(reinterpret_cast<const char*>(buffer.data()), used),
@@ -100,7 +113,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the baseline and pipelined routes on TCP.                            |
+// | Runs baseline, pipelined and cooperative delay routes over TCP.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -117,9 +130,19 @@ int main() {
     }
     workers = requested;
   }
+  std::string port = "8080";
+  if (const char* configured = std::getenv("PORT")) {
+    std::int64_t requested = 0;
+    if (!parse_integer(configured, requested) || requested < 1 ||
+        requested > 65535) {
+      std::cerr << "PORT must be an integer from 1 to 65535\n";
+      return 1;
+    }
+    port = std::to_string(requested);
+  }
   policies http_configuration;
   http_server<> http_server(
-      {.worker_count = workers, .ip = "0.0.0.0", .port = "8080"},
+      {.worker_count = workers, .ip = "0.0.0.0", .port = port},
       http_configuration);
   http_server.add_route(
       "GET", "/pipeline",
@@ -148,16 +171,31 @@ int main() {
         std::int64_t value = 0;
         std::int64_t body_value = 0;
         if (!read_query_sum(req, value) ||
-            !read_body_integer(req, body_value)) {
+            !read_body_integer(req, body_value) ||
+            !checked_add(value, body_value, value)) {
           res.bad_request_400();
           res.set_body("invalid request");
           return;
         }
         res.add_header("Content-Type", "text/plain")
-            .set_body(std::to_string(value + body_value));
+            .set_body(std::to_string(value));
+      });
+  http_server.add_route(
+      "GET", "/delay/:ms",
+      [](const request&, response& res, std::string_view milliseconds)
+          -> martianlabs::doba::common::task<> {
+        std::int64_t delay = 0;
+        if (!parse_integer(milliseconds, delay) || delay < 0 || delay > 60000) {
+          res.bad_request_400().set_body("invalid delay");
+          co_return;
+        }
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(delay));
+        res.ok_200().add_header("Content-Type", "text/plain")
+            .set_body(std::to_string(delay));
       });
   http_server.start();
-  std::cerr << "workers: " << workers << "; HTTP port: 8080\n";
+  std::cerr << "workers: " << workers << "; HTTP port: " << port << '\n';
   // The benchmark harness owns process shutdown.
   std::promise<void> shutdown;
   shutdown.get_future().wait();

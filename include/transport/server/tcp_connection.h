@@ -62,11 +62,11 @@ struct tcp_connection {
   std::span<char> receive_buffer() noexcept {
     return {buffer.get(), capacity};
   }
-  void process(std::size_t received) {
+  protocol::processing_result process(std::size_t received) {
     if (received > capacity) {
       throw std::out_of_range("TCP receive size exceeds buffer");
     }
-    engine.on_bytes_received({buffer.get(), received});
+    return engine.on_bytes_received({buffer.get(), received});
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |

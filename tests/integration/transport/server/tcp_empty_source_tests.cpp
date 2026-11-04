@@ -31,6 +31,7 @@
 #include <string_view>
 #include <utility>
 
+#include "protocol/processing_result.h"
 #include "common/reader.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -38,6 +39,7 @@
 #include "../../../helpers/concurrency.h"
 
 namespace {
+using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport::server;
 using martianlabs::doba::common::reader;
 using martianlabs::doba::protocol::send_delegate;
@@ -93,12 +95,12 @@ struct empty_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                       ( public ) |
   // +-------------------------------------------------------------------------+
-  void on_bytes_received(std::string_view) {
+  processing_result on_bytes_received(std::string_view) {
     if (state->calls.fetch_add(1) != 0) {
       state->released = state->bytes.use_count() == 1;
       send("done", {}, nullptr);
       close();
-      return;
+      return {};
     }
     send({}, {}, nullptr);
     send("pre", {}, nullptr);
@@ -113,7 +115,13 @@ struct empty_engine {
     send({}, {}, nullptr);
     if (state->selected == output_case::kCloseSource ||
         state->selected == output_case::kCloseEmptySource) close();
+    return {};
   }
+  // +=========================================================================+
+  // | [>] on_processing_turn                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  processing_result on_processing_turn(bool) { return {}; }
+
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( public ) |
   // +-------------------------------------------------------------------------+

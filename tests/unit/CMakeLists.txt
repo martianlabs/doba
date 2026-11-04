@@ -80,3 +80,13 @@ set_tests_properties(
   PROPERTIES
   TIMEOUT 120
 )
+
+# Run the same model in ordinary tests and coverage-guided fuzzing.
+add_executable(doba_security_model_tests
+  "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/engine_security_state_tests.cpp")
+target_include_directories(doba_security_model_tests PRIVATE
+  "${CMAKE_CURRENT_LIST_DIR}/helpers")
+target_link_libraries(doba_security_model_tests PRIVATE doba_headers)
+add_test(NAME doba_security_model_tests COMMAND doba_security_model_tests)
+set_tests_properties(doba_security_model_tests PROPERTIES TIMEOUT 60)

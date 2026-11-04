@@ -265,7 +265,10 @@ Whether the server allows protocol upgrades offered via Upgrade. NOTE: no protoc
 std::size_t max_pending_requests = 128;
 ```
 
-Maximum response positions awaiting ordered delivery per connection (0 means unlimited), including retained sources. This is not a request rate. Cooperative transports pause at ceil(75%) and resume at floor(50%); without the optional hooks, hard-limit rejection still closes the connection.
+Positive maximum admitted request positions, including completed responses
+awaiting ordered emission and a source currently draining. Default: 128.
+At the limit, admission pauses inside the engine while raw input is retained
+within its separate budget. Native RX is not paused by an engine hook.
 
 **Value:** `128`
 
@@ -285,7 +288,7 @@ Maximum query parameter pairs (0 means unlimited).
 
 **Value:** `kDefaultMaxQueryParameters`
 
-**Source:** [include/protocol/http/v11/policies.h:85](../../../../../include/protocol/http/v11/policies.h#L85)
+**Source:** [include/protocol/http/v11/policies.h:88](../../../../../include/protocol/http/v11/policies.h#L88)
 
 <a id="field-max-chunk-extension-size"></a>
 
@@ -301,7 +304,7 @@ Maximum chunk extension bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxChunkExtensionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:87](../../../../../include/protocol/http/v11/policies.h#L87)
+**Source:** [include/protocol/http/v11/policies.h:90](../../../../../include/protocol/http/v11/policies.h#L90)
 
 <a id="field-max-trailer-section-size"></a>
 
@@ -317,7 +320,7 @@ Maximum trailer section bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxTrailerSectionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:89](../../../../../include/protocol/http/v11/policies.h#L89)
+**Source:** [include/protocol/http/v11/policies.h:92](../../../../../include/protocol/http/v11/policies.h#L92)
 
 <a id="field-max-request-head-size"></a>
 
@@ -333,7 +336,7 @@ Maximum request head bytes (must be positive).
 
 **Value:** `kDefaultMaxRequestHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:91](../../../../../include/protocol/http/v11/policies.h#L91)
+**Source:** [include/protocol/http/v11/policies.h:94](../../../../../include/protocol/http/v11/policies.h#L94)
 
 <a id="field-request-body-memory-threshold"></a>
 
@@ -350,7 +353,7 @@ Request body wire bytes kept in memory (0 spills immediately).
 
 **Value:** `kDefaultRequestBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:93](../../../../../include/protocol/http/v11/policies.h#L93)
+**Source:** [include/protocol/http/v11/policies.h:96](../../../../../include/protocol/http/v11/policies.h#L96)
 
 <a id="field-max-response-head-size"></a>
 
@@ -366,7 +369,7 @@ Maximum response head bytes (must be positive).
 
 **Value:** `kDefaultMaxResponseHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:96](../../../../../include/protocol/http/v11/policies.h#L96)
+**Source:** [include/protocol/http/v11/policies.h:99](../../../../../include/protocol/http/v11/policies.h#L99)
 
 <a id="field-response-body-memory-threshold"></a>
 
@@ -383,7 +386,7 @@ Response body bytes kept inline (0 disables inline storage).
 
 **Value:** `kDefaultResponseBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:98](../../../../../include/protocol/http/v11/policies.h#L98)
+**Source:** [include/protocol/http/v11/policies.h:101](../../../../../include/protocol/http/v11/policies.h#L101)
 
 <a id="field-max-pending-response-bytes"></a>
 
@@ -395,6 +398,35 @@ Response body bytes kept inline (0 disables inline storage).
 std::size_t max_pending_response_bytes = 1024 * 1024;
 ```
 
-Maximum serialized head and body bytes retained while waiting for ordered delivery, including interim responses. Zero means unlimited. Credit is checked before copying and released on transfer to the transport or discard. A hard overflow closes the connection. Reader-owned storage and arbitrary handler allocations are outside this budget.
+Positive maximum serialized head/inline body bytes awaiting ordered delivery,
+including interim responses. Checked before copying and released on transport
+acceptance/discard. Overflow closes. Reader backing storage, allocated string
+capacity and arbitrary handler allocations are outside this logical budget.
+Retained request/response objects and frames have separate per-request limits;
+this policy counts the owned serialized copies, not every allocation in them.
+A reader's logical body length is excluded, but its serialized head counts
+when queued behind earlier output. Client receipt of the preceding body is
+not an output-drain notification. A one-position request window retains the
+next request as raw input until that position is released.
 
-**Source:** [include/protocol/http/v11/policies.h:83](../../../../../include/protocol/http/v11/policies.h#L83)
+**Source:** [include/protocol/http/v11/policies.h:82](../../../../../include/protocol/http/v11/policies.h#L82)
+
+<a id="field-max-deferred-input-size"></a>
+
+## max_deferred_input_size
+
+`std::size_t max_deferred_input_size = 1024 * 1024;`
+
+Positive maximum raw input bytes retained before admission. No preallocation.
+The decoder separately owns incomplete message bytes under its normal limits.
+Overflow closes before copying the excess; there is no unlimited zero setting.
+
+<a id="field-max-task-steps-per-turn"></a>
+
+## max_task_steps_per_turn
+
+`std::size_t max_task_steps_per_turn = 64;`
+
+Positive shared per-entry budget for async starts/resumes and queued admissions.
+Runnable work left over requests a later immediate turn. Deadlines are not
+restarted. Uncontended synchronous inline batches keep their direct path.

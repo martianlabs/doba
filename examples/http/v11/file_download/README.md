@@ -18,11 +18,12 @@ The response is `200 OK`, has a `Content-Length` matching the file size,
 and contains this README. If the file is missing, the route returns `404`.
 
 Linux supports independent SO_REUSEPORT workers; 0 selects one worker.
-The new transport supports synchronous callbacks and prefix/source;
-This example uses synchronous TCP. For TLS, use `https_server<>` and account
-for its finite source budget; asynchronous routes remain outside transport.
+This example uses synchronous handlers and TCP prefix/source. The same engine
+supports cooperative handlers; see [async_routes](../async_routes/README.md).
+For TLS use `https_server<>` and account for its finite source budget.
 
-On Windows and Linux the output reader is terminal for its input call. Do not
-pipeline a later response behind a download reader in the same RX block.
-Send the next request after the download drains. The transport reads bounded
-blocks and owns the reader until its final socket batch completes.
+The HTTP engine accepts pipelined requests behind a download and retains their
+responses in order. It emits later responses after the reader drains; it never
+submits later nonempty output against a pending transport reader. TCP reads
+bounded blocks and owns the reader through its final socket batch. TLS consumes
+the reader synchronously within its finite plaintext/ciphertext batch limits.

@@ -8,165 +8,14 @@
 
 **Header:** [include/transport/server/contracts.h](../../../../include/transport/server/contracts.h)
 
-Declares the structural transport interface and execution capability types.
-Execution capabilities are supplied independently to engines; bundled TCP
-provides synchronous socket I/O and never injects an application executor.
-See the [TCP runtime contract](tcp.md#runtime-contract).
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server
-
-[execution_work](#type-execution-work) ·
-[execution_capacity](#type-execution-capacity)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_work
-
-[context](#field-context) ·
-[run](#field-run)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::execution_capacity
-
-[owner](#field-owner) ·
-[submit](#field-submit)
-
-### <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport::server::contracts
-
-[execution_receiver](#concept-execution-receiver) ·
-[transport](#concept-transport)
-
-<a id="api"></a>
-<a href="../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
-<a id="type-execution-work"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_work
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct execution_work { ... };
-```
-
-An opaque work item for an independently supplied execution service. The
-engine/service owns its state and execution lifetime. Bundled TCP does not
-queue or execute these items.
-
-**Source:** [include/transport/server/contracts.h:41](../../../../include/transport/server/contracts.h#L41)
-
-<a id="field-context"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> context
-
-**FIELD** · *transport::server::execution_work*
-
-```cpp
-void* context{nullptr};
-```
-
-Stores the context value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:42](../../../../include/transport/server/contracts.h#L42)
-
-<a id="field-run"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> run
-
-**FIELD** · *transport::server::execution_work*
-
-```cpp
-void (*run)(void*) noexcept{nullptr};
-```
-
-Stores the run value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:43](../../../../include/transport/server/contracts.h#L43)
-
-<a id="type-execution-capacity"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_capacity
-
-**TYPE** · *transport::server*
-
-**Declaration synopsis:**
-
-```cpp
-struct execution_capacity { ... };
-```
-
-While active, accepted work runs once, no earlier than its threshold.
-
-**Source:** [include/transport/server/contracts.h:55](../../../../include/transport/server/contracts.h#L55)
-
-<a id="field-owner"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> owner
-
-**FIELD** · *transport::server::execution_capacity*
-
-```cpp
-void* owner{nullptr};
-```
-
-Stores the owner value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:56](../../../../include/transport/server/contracts.h#L56)
-
-<a id="field-submit"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> submit
-
-**FIELD** · *transport::server::execution_capacity*
-
-```cpp
-void (*submit)(void*, std::chrono::steady_clock::time_point,
-                 execution_work){nullptr};
-```
-
-Stores the submit value.
-
-**Value:** `{nullptr}`
-
-**Source:** [include/transport/server/contracts.h:57](../../../../include/transport/server/contracts.h#L57)
-
-<a id="concept-execution-receiver"></a>
-
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> execution_receiver
-
-**CONCEPT** · *transport::server::contracts*
-
-```cpp
-template <typename ENty>
-concept execution_receiver =
-    requires(ENty& engine, execution_capacity execution) {
-      { engine.set_execution_capacity(execution) } -> std::same_as<void>;
-    };
-```
-
-Checks the compile-time requirements for execution receiver.
-
-**Template parameters:**
-
-- **ENty:** `typename ENty`.
-
-**Source:** [include/transport/server/contracts.h:69](../../../../include/transport/server/contracts.h#L69)
+Declares the structural transport interface. Protocols describe future
+processing through [processing_result](../../protocol/processing_result.md),
+returned directly by both engine entry points. No application work/executor
+capability is supplied or injected by this contract.
 
 <a id="concept-transport"></a>
 
-## <a href="../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport
-
-**CONCEPT** · *transport::server::contracts*
+## transport
 
 ```cpp
 template <typename TRty, typename ENty, typename FNty>
@@ -186,30 +35,23 @@ concept transport =
     };
 ```
 
-Checks construction from policies and an engine factory, notification
-registration, start and stop. Runtime requirements of bundled TCP also apply:
+The concept checks construction, notifications, start and stop. It cannot prove
+runtime ownership or synchronization. The bundled backends additionally require:
 
-- A sequential external owner configures, starts and stops the transport;
-  administrative calls must not originate inside worker callbacks.
-- Input is serialized per connection. Send/close run synchronously inside input;
-  accepted inline output is copied before returning and readers transfer ownership.
-- Socket buffers and operation state remain valid until the kernel releases them.
-- Engine close drains accepted output. Linux administrative stop cancels pending
-  output; Windows administrative stop drains it and real IOCP completions.
-- TLS, coroutine scheduling and application-task lifetime are outside TCP.
+- A sequential external owner configures, starts and stops the transport.
+  Administrative calls cannot originate inside worker callbacks.
+- RX and processing turns are serialized per connection. Send/close callbacks
+  run only inside those entries; inline bytes are copied before return and
+  terminal reader ownership transfers to the transport.
+- Native operations retain their buffers and exact connection until completion.
+- Close withdraws processing interests while accepted output drains. Linux
+  administrative stop cancels pending output; Windows drains it and real IOCP
+  operations before workers join.
+- The engine owns coroutine frames, cooperative scheduling and response order.
+  TCP delivers generic immediate/deadline/output-drain turns. TLS adapts those
+  same entries without changing native TCP ownership.
 
-The concept checks signatures, not these behavioral guarantees. The
-[TCP runtime contract](tcp.md#runtime-contract) defines ownership, terminal
-readers, limits, errors and the deliberate differences between platforms.
-
-**Template parameters:**
-
-- **TRty:** `typename TRty`.
-- **ENty:** `typename ENty`.
-- **FNty:** `typename FNty`.
-
-**Source:** [include/transport/server/contracts.h:90](../../../../include/transport/server/contracts.h#L90)
-
-The bundled TCP transports do not supply execution_capacity. These shared
-types remain available to protocol engines and their independently supplied
-execution services.
+See the [TCP runtime contract](tcp.md#runtime-contract),
+[Linux turns](tcp_linux_processing.md) and
+[Windows turns](tcp_windows_processing.md). These are behavioral requirements,
+not additional executor, pressure or quiescence interfaces.

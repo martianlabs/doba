@@ -33,3 +33,14 @@ add_test(NAME doba_tls_header_guard_tests COMMAND "${CMAKE_COMMAND}"
   "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
   "-DDOBA_INCLUDE_DIR=${DOBA_INCLUDE_DIR}")
 set_tests_properties(doba_tls_header_guard_tests PROPERTIES TIMEOUT 45)
+
+add_executable(doba_tls_processing processing.cpp)
+target_link_libraries(doba_tls_processing PRIVATE martianlabs::doba_tls)
+add_test(NAME doba_tls_processing_tests COMMAND doba_tls_processing
+  "${CMAKE_CURRENT_LIST_DIR}/cert.pem" "${CMAKE_CURRENT_LIST_DIR}/key.pem")
+set_tests_properties(doba_tls_processing_tests PROPERTIES TIMEOUT 45)
+
+add_test(NAME doba_tls_processing_wire_tests COMMAND "${Python3_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/processing.py" "$<TARGET_FILE:doba_tls_fixture>"
+  "${CMAKE_CURRENT_LIST_DIR}/cert.pem" "${CMAKE_CURRENT_LIST_DIR}/key.pem")
+set_tests_properties(doba_tls_processing_wire_tests PROPERTIES TIMEOUT 90)
