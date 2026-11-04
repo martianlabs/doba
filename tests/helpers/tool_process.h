@@ -259,6 +259,7 @@ class process {
     return code_;
   }
   void terminate() noexcept {
+    if (finished_) return;
 #ifdef _WIN32
     if (child_) TerminateProcess(child_, 1);
 #else
@@ -266,6 +267,7 @@ class process {
 #endif
   }
   void kill() noexcept {
+    if (finished_) return;
 #ifdef _WIN32
     if (child_) TerminateProcess(child_, 1);
 #else
@@ -288,13 +290,17 @@ class process {
     }
   }
   static std::string text(std::string value) {
-    size_t position = 0;
-    while ((position = value.find("\r\n", position)) != std::string::npos) {
-      value.erase(position, 1);
-      ++position;
+    size_t output = 0;
+    for (size_t input = 0; input < value.size(); ++input) {
+      if (value[input] == '\r' && input + 1 < value.size() &&
+          value[input + 1] == '\n') continue;
+      value[output++] = value[input];
     }
+    value.resize(output);
     return value;
   }
+  fs::path output_path() const { return directory_.path() / "stdout"; }
+  fs::path error_path() const { return directory_.path() / "stderr"; }
   std::string output() const {
     return text(read(directory_.path() / "stdout"));
   }
