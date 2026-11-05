@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -57,7 +57,7 @@ using namespace std::chrono_literals;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] synchronous_engine                                        ( struct ) |
+// | [>] synchronous_engine                                         ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct synchronous_engine {
@@ -122,7 +122,7 @@ std::size_t descriptor_count() {
 }  // namespace
 
 // +===========================================================================+
-// | [>] Linux preserves ordered output across RX blocks        ( test-case ) |
+// | [>] Linux preserves ordered output across RX blocks         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux preserves ordered output across RX blocks") {
   auto factory = []() {
@@ -151,7 +151,7 @@ DOBA_TEST("Linux preserves ordered output across RX blocks") {
 }
 
 // +===========================================================================+
-// | [>] Linux drains prefix and source before engine close     ( test-case ) |
+// | [>] Linux drains prefix and source before engine close      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux drains prefix and source before engine close") {
   const std::string body(128 * 1024, 's');
@@ -180,7 +180,7 @@ DOBA_TEST("Linux drains prefix and source before engine close") {
 }
 
 // +===========================================================================+
-// | [>] Linux isolates engine failures and supports restart    ( test-case ) |
+// | [>] Linux isolates engine failures and supports restart     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux isolates engine failures and supports restart") {
   auto factory = []() {
@@ -211,7 +211,7 @@ DOBA_TEST("Linux isolates engine failures and supports restart") {
 }
 
 // +===========================================================================+
-// | [>] Linux stop releases pending reader output              ( test-case ) |
+// | [>] Linux stop releases pending reader output               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux stop releases a reader with pending socket output") {
   std::promise<void> entered;
@@ -271,7 +271,7 @@ DOBA_TEST("Linux drains a reader after client half close") {
 }
 
 // +===========================================================================+
-// | [>] Linux peers progress during pending output             ( test-case ) |
+// | [>] Linux peers progress during pending output              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux serves peers while another connection has pending output") {
   const std::string body(8 * 1024 * 1024, 's');
@@ -380,7 +380,7 @@ DOBA_TEST("Linux isolates failing connection notifications") {
 }
 
 // +===========================================================================+
-// | [>] Linux releases admission capacity after EOF           ( test-case ) |
+// | [>] Linux releases admission capacity after EOF             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux releases admission capacity after EOF") {
   std::promise<void> disconnected;
@@ -462,7 +462,7 @@ DOBA_TEST("Linux unwinds failed startup without descriptor leaks") {
 }
 
 // +===========================================================================+
-// | [>] Linux releases descriptors after reset and restart     ( test-case ) |
+// | [>] Linux releases descriptors after reset and restart      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux releases descriptors after reset and restart") {
   const std::string body(8 * 1024 * 1024, 's');
@@ -492,7 +492,7 @@ DOBA_TEST("Linux releases descriptors after reset and restart") {
 }
 
 // +===========================================================================+
-// | [>] Linux workers own independent connections and sources  ( test-case ) |
+// | [>] Linux workers own independent connections and sources   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux workers own independent connections and sources") {
   const std::string body(8192, 's');
@@ -550,7 +550,7 @@ DOBA_TEST("Linux workers own independent connections and sources") {
 }
 
 // +===========================================================================+
-// | [>] Linux partitions finite admission without exceeding it ( test-case ) |
+// | [>] Linux partitions finite admission without exceeding it  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux partitions finite admission without exceeding it") {
   std::atomic<unsigned> created{0};
@@ -594,7 +594,7 @@ DOBA_TEST("Linux partitions finite admission without exceeding it") {
 }
 
 // +===========================================================================+
-// | [>] Linux default worker serves loopback                   ( test-case ) |
+// | [>] Linux default worker serves loopback                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux worker_count zero serves synchronous loopback") {
   auto factory = []() {
@@ -615,7 +615,7 @@ DOBA_TEST("Linux worker_count zero serves synchronous loopback") {
 }
 
 // +===========================================================================+
-// | [>] Linux rejects callback mutation and worker stop        ( test-case ) |
+// | [>] Linux rejects callback mutation and worker stop         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux rejects active callback mutation and worker stop") {
   std::function<void()> stop;

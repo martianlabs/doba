@@ -101,7 +101,8 @@ DOBA_TEST("probe concurrent assertions") {
     worker = std::jthread([&] {
       while (!ready.load()) std::this_thread::yield();
       for (int i = 0; i < 16; ++i) {
-        martianlabs::doba::tests::unit::test_helper::set_context("concurrent worker");
+        martianlabs::doba::tests::unit::test_helper::set_context(
+            "concurrent worker");
         (void)martianlabs::doba::tests::unit::test_helper::expect(
             false, "worker failure", __FILE__, __LINE__);
       }

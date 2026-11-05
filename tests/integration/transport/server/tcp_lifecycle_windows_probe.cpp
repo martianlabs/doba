@@ -38,6 +38,11 @@
 namespace {
 using martianlabs::doba::protocol::processing_result;
 // Isolated native API faults: failed submissions never post a completion.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] fault                                                        ( enum ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 enum class fault { kNone, kPort, kAccept, kAssociate, kReceive, kSend };
 // One armed failure is consumed atomically by the matching API.
 std::atomic<fault> armed{fault::kNone};
@@ -50,14 +55,14 @@ std::atomic<unsigned> closes{0};
 LPFN_ACCEPTEX native_accept = nullptr;
 
 // +---------------------------------------------------------------------------+
-// | [>] consume_fault                                          ( function ) |
+// | [>] consume_fault                                            ( function ) |
 // +---------------------------------------------------------------------------+
 bool consume_fault(fault expected) {
   return armed.compare_exchange_strong(expected, fault::kNone);
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_port                                           ( function ) |
+// | [>] tracked_port                                             ( function ) |
 // +---------------------------------------------------------------------------+
 HANDLE WINAPI tracked_port(HANDLE file, HANDLE port, ULONG_PTR key,
                            DWORD workers) {
@@ -71,7 +76,7 @@ HANDLE WINAPI tracked_port(HANDLE file, HANDLE port, ULONG_PTR key,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_close                                          ( function ) |
+// | [>] tracked_close                                            ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_close(SOCKET socket) {
   if (socket == watched.load()) ++closes;
@@ -79,7 +84,7 @@ int WSAAPI tracked_close(SOCKET socket) {
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_accept                                         ( function ) |
+// | [>] tracked_accept                                           ( function ) |
 // +---------------------------------------------------------------------------+
 BOOL PASCAL tracked_accept(SOCKET listener, SOCKET socket, PVOID buffer,
                           DWORD bytes, DWORD local, DWORD remote,
@@ -93,7 +98,7 @@ BOOL PASCAL tracked_accept(SOCKET listener, SOCKET socket, PVOID buffer,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_ioctl                                          ( function ) |
+// | [>] tracked_ioctl                                            ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_ioctl(SOCKET socket, DWORD code, LPVOID input,
                          DWORD input_size, LPVOID output, DWORD output_size,
@@ -109,7 +114,7 @@ int WSAAPI tracked_ioctl(SOCKET socket, DWORD code, LPVOID input,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_receive                                        ( function ) |
+// | [>] tracked_receive                                          ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
                           LPDWORD bytes, LPDWORD flags,
@@ -123,7 +128,7 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_send                                           ( function ) |
+// | [>] tracked_send                                             ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
                        LPDWORD bytes, DWORD flags,
@@ -152,26 +157,26 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] lifecycle_engine                                          ( struct ) |
+// | [>] lifecycle_engine                                           ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct lifecycle_engine {
   // +=========================================================================+
-  // | [>] USINGs                                                  ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] set_on_send                                             ( public ) |
+  // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(martianlabs::doba::protocol::send_delegate value) {
     output = std::move(value);
   }
   // +=========================================================================+
-  // | [>] set_on_close                                            ( public ) |
+  // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()>) {}
   // +=========================================================================+
-  // | [>] on_bytes_received                                       ( public ) |
+  // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
     output(input, {}, nullptr);
@@ -192,7 +197,7 @@ struct lifecycle_engine {
 
 namespace {
 // +---------------------------------------------------------------------------+
-// | [>] check_fault                                            ( function ) |
+// | [>] check_fault                                              ( function ) |
 // +---------------------------------------------------------------------------+
 void check_fault(fault injected) {
   namespace tr = martianlabs::doba::transport::server;

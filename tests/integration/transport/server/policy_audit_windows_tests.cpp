@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -42,10 +42,24 @@ using namespace std::chrono_literals;
 using protocol::http::v11::request;
 using protocol::http::v11::response;
 constexpr std::string_view get = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] plain_peer                                                 ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct plain_peer {
   tcpip_client socket;
+  // +-------------------------------------------------------------------------+
+  // | [>] connect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool connect(std::uint16_t port) { return socket.connect(port); }
+  // +-------------------------------------------------------------------------+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool send(std::string_view input) { return socket.send_all(input); }
+  // +-------------------------------------------------------------------------+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   auto receive(std::size_t size) { return socket.receive(size); }
 };
 template <class Peer>

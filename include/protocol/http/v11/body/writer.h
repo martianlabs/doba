@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -54,9 +54,15 @@ class body_writer {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] chunked                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   static body_writer chunked(common::byte_storage_options opts = {}) {
     return body_writer(common::writer(std::move(opts)), writer_chunked());
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] raw                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   static body_writer raw(common::byte_storage_options opts = {}) {
     return body_writer(common::writer(std::move(opts)), writer_raw());
   }

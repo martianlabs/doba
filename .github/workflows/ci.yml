@@ -299,7 +299,8 @@ jobs:
           "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
           "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
           "-DDOBA_ENABLE_TLS=OFF"
-          "-DCMAKE_CXX_FLAGS=-g -fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer"
+          "-DCMAKE_CXX_FLAGS=-g -fsanitize=${{ matrix.sanitizer }}
+          -fno-omit-frame-pointer"
 
       - name: Build
         run: cmake --build ${{ matrix.build_dir }}
@@ -365,8 +366,12 @@ jobs:
           - name: Clang UBSan
             compiler: C:/Program Files/LLVM/bin/clang++.exe
             runtime: MultiThreaded
-            flags: -O3 -DNDEBUG -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g
-            linker_flags: -fsanitize=undefined -fno-sanitize-recover=undefined -Xlinker /INCREMENTAL:NO
+            flags: >-
+              -O3 -DNDEBUG -fsanitize=undefined -fno-sanitize-recover=undefined
+              -fno-omit-frame-pointer -g
+            linker_flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined
+              -Xlinker /INCREMENTAL:NO
 
     env:
       ASAN_OPTIONS: halt_on_error=1
@@ -398,7 +403,8 @@ jobs:
 
       - name: Verify test inventory
         env:
-          ASAN_OPTIONS: halt_on_error=1:verbosity=1:log_path=out/build/msvc-asan/ci-evidence/asan
+          ASAN_OPTIONS: "halt_on_error=1:verbosity=1:log_path=out/build/\
+            msvc-asan/ci-evidence/asan"
         run: >-
           cmake "-DDOBA_CI_BUILD_DIR=out/build/msvc-asan"
           "-DDOBA_CI_INVENTORY_TIMEOUT=120"
@@ -416,10 +422,10 @@ jobs:
           --repeat until-fail:200 --output-on-failure --no-tests=error
 
       - name: Repeat native IOCP lifecycle cases
-        run: >-
-          ctest --test-dir out/build/msvc-asan
-          -R '^doba_(iocp_completion|windows_lifecycle|windows_processing|stream_integrity)_tests$'
-          --repeat until-fail:20 --output-on-failure --no-tests=error
+        run: "ctest --test-dir out/build/msvc-asan \
+          -R '^doba_(iocp_completion|windows_lifecycle|windows_processing|\
+          stream_integrity)_tests$' \
+          --repeat until-fail:20 --output-on-failure --no-tests=error"
 
       - name: Run reproducible fault and ownership campaign
         run: >-
@@ -538,7 +544,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: out/fuzz-corpus/${{ matrix.harness }}
-          key: fuzz-${{ runner.os }}-${{ matrix.harness }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: "fuzz-${{ runner.os }}-${{ matrix.harness }}-\
+            ${{ github.run_id }}-${{ github.run_attempt }}"
           restore-keys: fuzz-${{ runner.os }}-${{ matrix.harness }}-
 
       - name: Restore evolving engine corpus
@@ -546,12 +553,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: out/fuzz-corpus/engine
-          key: fuzz-${{ runner.os }}-engine-${{ github.run_id }}-${{ github.run_attempt }}
+          key: "fuzz-${{ runner.os }}-engine-${{ github.run_id }}-\
+            ${{ github.run_attempt }}"
           restore-keys: fuzz-${{ runner.os }}-engine-
 
       - name: Install Clang fuzzing runtime
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          clang libclang-rt-dev ninja-build
 
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         if: runner.os == 'Windows'
@@ -561,16 +571,21 @@ jobs:
       - name: Configure Release fuzzers
         run: >-
           cmake -S . -B out/build/fuzz -G Ninja
-          "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
           "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
           "-DDOBA_BUILD_FUZZERS=ON" "-DDOBA_BUILD_TESTS=OFF"
           "-DDOBA_BUILD_EXAMPLES=OFF" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build harness
-        run: cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }} doba_fuzz_seed_corpus
+        run: >-
+          cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }}
+          doba_fuzz_seed_corpus
 
       - name: Generate canonical seeds
-        run: out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus${{ matrix.suffix }} out/fuzz-corpus
+        run: >-
+          out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus${{ matrix.suffix }}
+          out/fuzz-corpus
 
       - name: Record reproduction environment
         shell: bash
@@ -583,20 +598,22 @@ jobs:
       - name: Replay corpus
         shell: bash
         run: |
-          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }} \
+          out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}} \
             -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
             -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
-            out/fuzz-corpus/${{ matrix.harness }} 2>&1 | tee out/fuzz-artifacts/replay.log
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 |
+            tee out/fuzz-artifacts/replay.log
 
       - name: Run bounded fuzz campaign
         shell: bash
         run: |
-          out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }} \
-            -max_total_time=${{ github.event_name == 'schedule' && 600 || 60 }} \
+          out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}} \
+            -max_total_time=${{github.event_name == 'schedule' && 600 || 60}} \
             -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
             -dict=tests/fuzz/http.dict -print_final_stats=1 \
             -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
-            out/fuzz-corpus/${{ matrix.harness }} 2>&1 | tee out/fuzz-artifacts/campaign.log
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 |
+            tee out/fuzz-artifacts/campaign.log
 
       # Keep the established required-check names. Decoder jobs also gate the
       # stateful mixed-handler engine model on both operating systems.
@@ -609,17 +626,19 @@ jobs:
           out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }} \
             -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=512 \
             -artifact_prefix=out/fuzz-artifacts/engine/ \
-            out/fuzz-corpus/engine 2>&1 | tee out/fuzz-artifacts/engine-replay.log
+            out/fuzz-corpus/engine 2>&1 |
+            tee out/fuzz-artifacts/engine-replay.log
 
       - name: Run bounded engine fuzz campaign
         if: matrix.harness == 'decoder'
         shell: bash
         run: |
           out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }} \
-            -max_total_time=${{ github.event_name == 'schedule' && 600 || 60 }} \
+            -max_total_time=${{github.event_name == 'schedule' && 600 || 60}} \
             -timeout=5 -rss_limit_mb=2048 -max_len=512 \
             -print_final_stats=1 -artifact_prefix=out/fuzz-artifacts/engine/ \
-            out/fuzz-corpus/engine 2>&1 | tee out/fuzz-artifacts/engine-campaign.log
+            out/fuzz-corpus/engine 2>&1 |
+            tee out/fuzz-artifacts/engine-campaign.log
 
       - name: Upload fuzz evidence and reproducers
         if: always()
@@ -631,7 +650,7 @@ jobs:
             out/fuzz-corpus/${{ matrix.harness }}/
             out/fuzz-corpus/engine/
             out/fuzz-artifacts/
-            out/build/fuzz/tests/fuzz/fuzz_${{ matrix.harness }}${{ matrix.suffix }}
+            out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}}
             out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }}
             out/build/fuzz/tests/fuzz/*.pdb
             out/build/fuzz/tests/fuzz/*.dll
@@ -657,7 +676,9 @@ jobs:
           persist-credentials: false
       - name: Install Clang runtime
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev ninja-build
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          clang libclang-rt-dev ninja-build
       - uses: TheMrMilchmann/setup-msvc-dev@v4
         if: runner.os == 'Windows'
         with:
@@ -665,7 +686,8 @@ jobs:
       - name: Verify original tests and detect eight mutants
         run: >-
           cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
-          "-DDOBA_MUTATION_OUTPUT=out/mutations" -P tests/mutation/run_detection.cmake
+          "-DDOBA_MUTATION_OUTPUT=out/mutations"
+          -P tests/mutation/run_detection.cmake
       - name: Upload mutation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -901,14 +923,19 @@ jobs:
         run: |
           $compiler = 'C:/Program Files/LLVM/bin/clang++.exe'
           if ((Test-Path $compiler) -and
-              ((& $compiler --version | Out-String) -match 'clang version 22\.1\.8\b')) {
+              ((& $compiler --version | Out-String) -match
+                'clang version 22\.1\.8\b')) {
             exit 0
           }
           New-Item -ItemType Directory -Force out/tools | Out-Null
           $installer = Join-Path $PWD 'out/tools/LLVM-22.1.8-win64.exe'
-          Invoke-WebRequest -OutFile $installer -Uri `
-            'https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-win64.exe'
-          $expected = '16e5709785fef73c854646241c4a92c5cd574318d1b33c63330dd7721903e55c'
+          Invoke-WebRequest -OutFile $installer -Uri (
+            'https://github.com/llvm/llvm-project/releases/download/' +
+            'llvmorg-22.1.8/LLVM-22.1.8-win64.exe'
+          )
+          $expected = (
+            '16e5709785fef73c854646241c4a92c5cd574318d1b33c63330dd7721903e55c'
+          )
           if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) {
             throw 'LLVM installer checksum mismatch'
           }
@@ -928,14 +955,17 @@ jobs:
         shell: pwsh
         run: |
           $options = @()
-          if ($IsWindows) { $options += @('--openssl-root', $env:OPENSSL_ROOT_DIR) }
+          if ($IsWindows) {
+            $options += @('--openssl-root', $env:OPENSSL_ROOT_DIR)
+          }
           $tool = './out/build/qualification/doba_coverage'
           if ($IsWindows) { $tool += '.exe' }
           & $tool `
             --build out/build/coverage --output out/coverage `
             --compiler '${{ matrix.compiler }}' --llvm-cov '${{ matrix.cov }}' `
             --llvm-profdata '${{ matrix.profdata }}' `
-            --baseline 'tests/qualification/baselines/${{ matrix.baseline }}.json' `
+            --baseline `
+              'tests/qualification/baselines/${{ matrix.baseline }}.json' `
             @options
       - name: Upload coverage and reproduction evidence
         if: always()
@@ -979,9 +1009,12 @@ jobs:
         id: version
         shell: bash
         run: |
-          major="$(awk '$2 == "DOBA_VERSION_MAJOR" { print $3 }' include/version.h)"
-          minor="$(awk '$2 == "DOBA_VERSION_MINOR" { print $3 }' include/version.h)"
-          patch="$(awk '$2 == "DOBA_VERSION_PATCH" { print $3 }' include/version.h)"
+          major="$(awk '$2 == "DOBA_VERSION_MAJOR" { print $3 }' \
+            include/version.h)"
+          minor="$(awk '$2 == "DOBA_VERSION_MINOR" { print $3 }' \
+            include/version.h)"
+          patch="$(awk '$2 == "DOBA_VERSION_PATCH" { print $3 }' \
+            include/version.h)"
           version="${major}.${minor}.${patch}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version in include/version.h: $version" >&2

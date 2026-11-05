@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -37,21 +37,21 @@ struct method_names {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +=========================================================================+
-  // +---------+---------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Method  | Description                                                   |
-  // +---------+---------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | GET     | Transfer a current representation of the target resource.     |
   // | HEAD    | Same as GET, but do not transfer the response content.        |
   // | POST    | Perform resource-specific processing on the request content.  |
   // | PUT     | Replace all current representations of the target resource    |
-  // |         | with the request content.                                     |
+  // | | with the request content.                                             |
   // | DELETE  | Remove all current representations of the target resource.    |
   // | CONNECT | Establish a tunnel to the server identified by the            |
-  // |         | target resource.                                              |
+  // | | target resource.                                                      |
   // | OPTIONS | Describe the communication options for the target resource.   |
   // | TRACE   | Perform a message loop-back test along the path to the        |
-  // |         | target resource.                                              |
-  // +---------+---------------------------------------------------------------+
+  // | | target resource.                                                      |
+  // +-------------------------------------------------------------------------+
   static constexpr char kGet[] = "GET";
   static constexpr char kHead[] = "HEAD";
   static constexpr char kPost[] = "POST";

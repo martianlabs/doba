@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -116,6 +116,9 @@ class byte_storage {
   // +-------------------------------------------------------------------------+
   bool spill() { return spilled_ || spill_to_file(); }
   // The open handle remains readable after removing the temporary name.
+  // +-------------------------------------------------------------------------+
+  // | [>] unlink_file                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void unlink_file() noexcept {
     if (spill_path_.empty()) return;
     std::error_code error;

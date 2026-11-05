@@ -33,7 +33,7 @@
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] wire_response                                             ( struct ) |
+// | [>] wire_response                                              ( struct ) |
 // +---------------------------------------------------------------------------+
 struct wire_response {
   int status{};

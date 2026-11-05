@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -40,7 +40,7 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | Encodes an outgoing chunked Transfer-Encoding body. Each call to write()  |
 // | wraps the caller-supplied raw payload into a single chunk:                |
-// |   <hex-size>\r\n<payload>\r\n                                             |
+// | <hex-size>\r\n<payload>\r\n                                               |
 // | A zero-length payload is skipped (it would otherwise be mistaken for the  |
 // | terminating chunk). Call end() once, after the last write(), to emit the  |
 // | terminating "0\r\n\r\n" sequence (no trailers are produced).              |

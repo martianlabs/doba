@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -59,7 +59,7 @@ namespace martianlabs::doba::transport::server::detail {
 // | connection.                                                               |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
+// | ENty - engine type being used.                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -95,11 +95,11 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] send_completed                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Called when a send operation finishes. It takes the number of bytes    |
-  // | sent and the total number submitted, then updates the send state and   |
-  // | checks the output buffer. If the socket is invalid or something goes   |
-  // | wrong, it aborts the connection. Otherwise, it keeps sending any       |
-  // | data that’s still waiting.                                             |
+  // | Called when a send operation finishes. It takes the number of bytes     |
+  // | sent and the total number submitted, then updates the send state and    |
+  // | checks the output buffer. If the socket is invalid or something goes    |
+  // | wrong, it aborts the connection. Otherwise, it keeps sending any        |
+  // | data that’s still waiting.                                              |
   // +-------------------------------------------------------------------------+
   bool send_completed(std::size_t size, std::size_t submitted_size) {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -115,7 +115,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     return finished_();
   }
   // +=========================================================================+
-  // | [>] start_io                               ( public ) |
+  // | [>] start_io                                                 ( public ) |
   // +-------------------------------------------------------------------------+
   // Starts I/O after initialization; true means closed with no pending I/O.
   bool start_io() {
@@ -174,7 +174,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] receive_failed                                           ( public ) |
   // +-------------------------------------------------------------------------+
   // | Called when a receive operation fails. It locks the state mutex, marks  |
-  // | receiving as closed, and aborts the connection.                        |
+  // | receiving as closed, and aborts the connection.                         |
   // +-------------------------------------------------------------------------+
   bool receive_failed() {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -186,7 +186,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // | [>] send_failed                                              ( public ) |
   // +-------------------------------------------------------------------------+
   // | Called when a send operation fails. It locks the state mutex, resets    |
-  // | the send state to idle, and aborts the connection.                     |
+  // | the send state to idle, and aborts the connection.                      |
   // +-------------------------------------------------------------------------+
   bool send_failed() {
     std::lock_guard<std::mutex> lock(state_mutex_);
@@ -237,7 +237,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     try { on_disconnection_(); } catch (...) {}
   }
   // +=========================================================================+
-  // | [>] notify_connection                                       ( public ) |
+  // | [>] notify_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
   // Initialization precedes all I/O and the owner's accept-drain barrier.
   void notify_connection() {
@@ -247,12 +247,12 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
 
  private:
   // +=========================================================================+
-  // | [>] ENUMs                                                  ( private ) |
+  // | [>] ENUMs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
   // Close drains output, shuts down TX, then awaits EOF or external stop.
   enum class state { kOpen, kDraining, kShutdown, kAborting, kClosed };
   // +=========================================================================+
-  // | [>] close                                                    ( private )|
+  // | [>] close                                                   ( private ) |
   // +-------------------------------------------------------------------------+
   // Marks close inside engine input; its accepted output drains afterwards.
   void close() {
@@ -263,7 +263,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
   }
   // +=========================================================================+
-  // | [>] send                                                     ( private )|
+  // | [>] send                                                    ( private ) |
   // +-------------------------------------------------------------------------+
   // Copies accepted output under the engine input lock; never posts I/O.
   void send(std::string_view head, std::string_view body,
@@ -275,9 +275,9 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
   }
   // +=========================================================================+
-  // | [>] advance_                                               ( private ) |
+  // | [>] advance_                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Called under state_mutex_, after engine input or a send completion.    |
+  // | Called under state_mutex_, after engine input or a send completion.     |
   // +-------------------------------------------------------------------------+
   void advance_() {
     if (state_ == state::kAborting) close_socket_();
@@ -311,11 +311,11 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] receive_                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts receiving data by creating an overlapped receive object and     |
-  // | calling `WSARecv()`. It sets up the buffer and its size, then checks   |
-  // | the result. If `WSARecv()` fails with an error other than              |
-  // | `WSA_IO_PENDING`, it deletes the object and returns false. Otherwise,  |
-  // | it marks receiving as active and returns true.                         |
+  // | Starts receiving data by creating an overlapped receive object and      |
+  // | calling `WSARecv()`. It sets up the buffer and its size, then checks    |
+  // | the result. If `WSARecv()` fails with an error other than               |
+  // | `WSA_IO_PENDING`, it deletes the object and returns false. Otherwise,   |
+  // | it marks receiving as active and returns true.                          |
   // +-------------------------------------------------------------------------+
   bool receive_() {
     if (receiving_ || output_.has_source()) return true;
@@ -338,7 +338,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] send_pending_                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Posts one batch under state_mutex_. Completion flags are published     |
+  // | Posts one batch under state_mutex_. Completion flags are published      |
   // | before unlocking, even if socket I/O completes before the API returns.  |
   // +-------------------------------------------------------------------------+
   void send_pending_() {
@@ -441,7 +441,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
   }
   // +=========================================================================+
-  // | [>] finished_                                              ( private ) |
+  // | [>] finished_                                               ( private ) |
   // +-------------------------------------------------------------------------+
   // Called under state_mutex_. Outstanding operations still own their bytes.
   bool finished_() const noexcept {

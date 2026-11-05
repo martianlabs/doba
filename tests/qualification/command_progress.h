@@ -33,7 +33,7 @@ namespace martianlabs::doba::tests::tools {
 // | [>] command_progress                                            ( class ) |
 // +---------------------------------------------------------------------------+
 // | Observe one child without worker threads or repeated full-file reads.     |
-// | Human-readable output is streamed; exported LLVM data stays in its file. |
+// | Human-readable output is streamed; exported LLVM data stays in its file.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class command_progress {

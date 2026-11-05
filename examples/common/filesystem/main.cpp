@@ -46,9 +46,11 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
-  const bool attributes = argc == 4 && std::string_view(argv[3]) == "--metadata";
+  const bool attributes =
+      argc == 4 && std::string_view(argv[3]) == "--metadata";
   if (argc != 3 && !attributes) {
-    std::cerr << "Usage: common_filesystem <root> <relative-file> [--metadata]\n";
+    std::cerr
+        << "Usage: common_filesystem <root> <relative-file> [--metadata]\n";
     return 1;
   }
   std::error_code error;

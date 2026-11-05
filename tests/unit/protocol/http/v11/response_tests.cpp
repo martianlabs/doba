@@ -489,7 +489,7 @@ DOBA_TEST("request reader echoes into inline response body") {
 }
 
 // +===========================================================================+
-// | [>] partially read raw body uses remaining borrowed bytes ( test-case ) |
+// | [>] partially read raw body uses remaining borrowed bytes   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("partially read raw body uses remaining borrowed bytes") {
   std::string payload = "abcdef";
@@ -509,7 +509,7 @@ DOBA_TEST("partially read raw body uses remaining borrowed bytes") {
 }
 
 // +===========================================================================+
-// | [>] copied raw body survives moves and replacement        ( test-case ) |
+// | [>] copied raw body survives moves and replacement          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("copied raw body survives moves and replacement") {
   std::string payload(10240, 'x');

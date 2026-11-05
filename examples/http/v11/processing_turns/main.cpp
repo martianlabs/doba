@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -39,7 +39,7 @@ using namespace protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | A serialized in-memory adapter supplies turns for concurrent handlers.   |
+// | A serialized in-memory adapter supplies turns for concurrent handlers.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

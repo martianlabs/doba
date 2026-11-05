@@ -32,6 +32,11 @@
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] echo_body                                                  ( header ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace martianlabs::doba::tests::integration {
 inline void echo_body(const protocol::http::v11::request& req,
                       protocol::http::v11::response& res) {

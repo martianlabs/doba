@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2026 martianLabs
 //
@@ -82,7 +82,8 @@ class cache {
   // +=========================================================================+
   // | [>] find                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Expired entries are removed lazily. Hits promote without waiting for LRU writes.
+  // Expired entries are removed lazily. Hits promote without waiting for LRU
+  // writes.
   value_type find(const KEty& key) {
     value_type value;
     {
@@ -144,7 +145,8 @@ class cache {
   bool erase(const KEty& key, const value_type& expected) {
     std::lock_guard lock(mutex_);
     auto found = entries_.find(key);
-    if (found == entries_.end() || found->second.value != expected) return false;
+    if (found == entries_.end() || found->second.value != expected)
+      return false;
     remove_locked(found);
     return true;
   }
@@ -178,15 +180,15 @@ class cache {
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
   struct charge {
-    // +=========================================================================+
-    // | [>] ATTRIBUTEs                                               ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +-----------------------------------------------------------------------+
 
     std::shared_ptr<std::atomic<std::size_t>> live;
     std::size_t cost;
-    // +=========================================================================+
-    // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] CONSTRUCTORs/DESTRUCTORs                               ( public ) |
+    // +-----------------------------------------------------------------------+
     charge(std::shared_ptr<std::atomic<std::size_t>> counter,
            std::size_t amount)
         : live(std::move(counter)), cost(amount) {
@@ -195,22 +197,22 @@ class cache {
     ~charge() { live->fetch_sub(cost); }
   };
   struct retained {
-    // +=========================================================================+
-    // | [>] ATTRIBUTEs                                               ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +-----------------------------------------------------------------------+
 
     std::shared_ptr<charge> reservation;
     value_type value;
-    // +=========================================================================+
-    // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] CONSTRUCTORs/DESTRUCTORs                               ( public ) |
+    // +-----------------------------------------------------------------------+
     retained(value_type v, std::shared_ptr<charge> r)
         : reservation(std::move(r)), value(std::move(v)) {}
   };
   struct flight {
-    // +=========================================================================+
-    // | [>] ATTRIBUTEs                                               ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +-----------------------------------------------------------------------+
 
     std::thread::id owner = std::this_thread::get_id();
     std::condition_variable_any changed;
@@ -219,9 +221,9 @@ class cache {
     std::exception_ptr error;
   };
   struct entry {
-    // +=========================================================================+
-    // | [>] ATTRIBUTEs                                               ( public ) |
-    // +-------------------------------------------------------------------------+
+    // +=======================================================================+
+    // | [>] ATTRIBUTEs                                             ( public ) |
+    // +-----------------------------------------------------------------------+
 
     value_type value;
     std::size_t cost;
@@ -240,7 +242,8 @@ class cache {
   // cost must upper-bound the resources retained by the returned value.
   // Null is also returned on capacity rejection or concurrent invalidation.
   // Exceptions reach all callers waiting on that load. No failures are cached.
-  // Do not recursively load this cache from a loader (same-key recursion throws).
+  // Do not recursively load this cache from a loader. Same-key recursion
+  // throws.
   template <typename LDty>
   value_type load(const KEty& key, std::size_t cost, LDty&& loader,
                   bool wait_for_load) {

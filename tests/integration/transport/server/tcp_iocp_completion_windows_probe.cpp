@@ -50,7 +50,7 @@ std::atomic<bool> receive_watched{false}, send_watched{false};
 std::atomic<bool> timed_out{false};
 
 // +---------------------------------------------------------------------------+
-// | [>] wait_for_packet                                       ( function ) |
+// | [>] wait_for_packet                                          ( function ) |
 // +---------------------------------------------------------------------------+
 void wait_for_packet(const std::atomic<bool>& seen) {
   const auto deadline = std::chrono::steady_clock::now() +
@@ -65,7 +65,7 @@ void wait_for_packet(const std::atomic<bool>& seen) {
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_receive                                       ( function ) |
+// | [>] tracked_receive                                          ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
                           LPDWORD bytes, LPDWORD flags,
@@ -83,7 +83,7 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_send                                          ( function ) |
+// | [>] tracked_send                                             ( function ) |
 // +---------------------------------------------------------------------------+
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
                        LPDWORD bytes, DWORD flags,
@@ -101,7 +101,7 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] tracked_completion                                    ( function ) |
+// | [>] tracked_completion                                       ( function ) |
 // +---------------------------------------------------------------------------+
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
                                LPOVERLAPPED* operation, DWORD timeout) {
@@ -133,21 +133,21 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 struct completion_engine {
   // +=========================================================================+
-  // | [>] USINGs                                                  ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] set_on_send                                             ( public ) |
+  // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(martianlabs::doba::protocol::send_delegate value) {
     output = std::move(value);
   }
   // +=========================================================================+
-  // | [>] set_on_close                                            ( public ) |
+  // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()>) {}
   // +=========================================================================+
-  // | [>] on_bytes_received                                       ( public ) |
+  // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
     output(input, {}, nullptr);

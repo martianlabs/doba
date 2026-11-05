@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -56,13 +56,13 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | This struct manages a pool of worker threads that handle TCP connections  |
 // | and data. It sets up a listener, accepts new connections, and creates     |
-// | a context for each one. It also lets you start and stop the      |
+// | a context for each one. It also lets you start and stop the               |
 // | workers and set callbacks for when connections are established or         |
 // | disconnected.                                                             |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
-// |   FAty - engine factory type being used.                                  |
+// | ENty - engine type being used.                                            |
+// | FAty - engine factory type being used.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
@@ -222,8 +222,8 @@ struct worker {
   // +=========================================================================+
   // | [>] parse_port                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Converts a port number from a string to `uint16_t`.                    |
-  // | If the value is invalid or out of range, it throws a runtime error.    |
+  // | Converts a port number from a string to `uint16_t`.                     |
+  // | If the value is invalid or out of range, it throws a runtime error.     |
   // +-------------------------------------------------------------------------+
   uint16_t parse_port(std::string_view port) const {
     if (port.empty()) {
@@ -241,9 +241,9 @@ struct worker {
   // +=========================================================================+
   // | [>] ensure_stopped                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Checks that the worker is stopped before callbacks can change.         |
-  // | If it is, it throws a runtime error. This prevents changing the        |
-  // | transport callbacks while the worker is active.                        |
+  // | Checks that the worker is stopped before callbacks can change.          |
+  // | If it is, it throws a runtime error. This prevents changing the         |
+  // | transport callbacks while the worker is active.                         |
   // +-------------------------------------------------------------------------+
   void ensure_stopped() const {
     if (stopping_ || io_h_ != nullptr) {
@@ -254,12 +254,12 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_listener                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Sets up the listener socket and I/O completion port.                   |
-  // | It creates a socket, binds it to the given IP address and port,        |
-  // | and starts listening. It also gets the `AcceptEx` function pointer     |
-  // | and links the listener socket to the completion port.                  |
-  // | If anything goes wrong, it throws a runtime error.                     |
-  // | It returns the number of workers to start.                             |
+  // | Sets up the listener socket and I/O completion port.                    |
+  // | It creates a socket, binds it to the given IP address and port,         |
+  // | and starts listening. It also gets the `AcceptEx` function pointer      |
+  // | and links the listener socket to the completion port.                   |
+  // | If anything goes wrong, it throws a runtime error.                      |
+  // | It returns the number of workers to start.                              |
   // +-------------------------------------------------------------------------+
   std::size_t setup_listener(in_addr ip, uint16_t port_num) {
     std::size_t workers = configuration_.worker_count;
@@ -327,9 +327,10 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_accept_pipeline                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Sets up the accept pipeline by working out how many accepts to keep    |
-  // | pending and calling `replenish_accept_pipeline()`. If it can’t get the |
-  // | pipeline ready, it throws a runtime error.                             |
+  // | Sets up the accept pipeline by working out how many accepts to keep     |
+  // | pending and calling `replenish_accept_pipeline()`. If it can’t get      |
+  // | the                                                                     |
+  // | pipeline ready, it throws a runtime error.                              |
   // +-------------------------------------------------------------------------+
   void setup_accept_pipeline(std::size_t workers) {
     {
@@ -344,9 +345,9 @@ struct worker {
   // +=========================================================================+
   // | [>] setup_workers                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts `number_of_workers` threads to handle I/O. Each thread runs a   |
-  // | loop that waits for I/O completions and handles them as they come in.  |
-  // | If anything goes wrong, it throws a runtime error.                     |
+  // | Starts `number_of_workers` threads to handle I/O. Each thread runs a    |
+  // | loop that waits for I/O completions and handles them as they come in.   |
+  // | If anything goes wrong, it throws a runtime error.                      |
   // +-------------------------------------------------------------------------+
   std::size_t setup_workers(std::size_t number_of_workers) {
     for (std::size_t i = 0; i < number_of_workers; i++) {
@@ -406,9 +407,9 @@ struct worker {
   // +=========================================================================+
   // | [>] get_accept_socket                                       ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the accept socket while the worker is running.                 |
-  // | If it’s stopping, it returns `INVALID_SOCKET`.                         |
-  // | The returned socket may close after this call.                         |
+  // | Returns the accept socket while the worker is running.                  |
+  // | If it’s stopping, it returns `INVALID_SOCKET`.                          |
+  // | The returned socket may close after this call.                          |
   // +-------------------------------------------------------------------------+
   SOCKET get_accept_socket() {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -419,8 +420,8 @@ struct worker {
   // | [>] finish_accept                                           ( private ) |
   // +-------------------------------------------------------------------------+
   // | Decreases the number of pending accepts and checks whether the pipeline |
-  // | needs topping up. If it does, it calls `replenish_accept_pipeline()`.  |
-  // | This method is thread-safe and can be called from any thread.          |
+  // | needs topping up. If it does, it calls `replenish_accept_pipeline()`.   |
+  // | This method is thread-safe and can be called from any thread.           |
   // +-------------------------------------------------------------------------+
   void finish_accept() {
     bool replenish = false;
@@ -435,10 +436,10 @@ struct worker {
   // +=========================================================================+
   // | [>] register_context                                        ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a context to the live set unless the worker is stopping.          |
-  // | It tries to add the context and                                        |
-  // | returns true if it succeeds. If an exception occurs, it returns false. |
-  // | This method is thread-safe and can be called from any thread.          |
+  // | Adds a context to the live set unless the worker is stopping.           |
+  // | It tries to add the context and                                         |
+  // | returns true if it succeeds. If an exception occurs, it returns false.  |
+  // | This method is thread-safe and can be called from any thread.           |
   // +-------------------------------------------------------------------------+
   bool register_context(const std::shared_ptr<context<ENty>>& ctx) {
     std::lock_guard<std::mutex> lifecycle_lock(lifecycle_mutex_);
@@ -450,7 +451,7 @@ struct worker {
     }
   }
   // +=========================================================================+
-  // | [>] finish_context                                         ( private ) |
+  // | [>] finish_context                                          ( private ) |
   // +-------------------------------------------------------------------------+
   // Erasure is the unique claim for notification, including a stop/completion
   // race. Keep the caller's shared owner through the callback and unlock first.
@@ -466,11 +467,11 @@ struct worker {
   // | [>] handle_accept                                           ( private ) |
   // +-------------------------------------------------------------------------+
   // | Checks a completed accept and the listener socket.                      |
-  // | is valid, sets up the accepted socket, makes it non-blocking, and sets |
-  // | `TCP_NODELAY`. Then it creates a context for the connection, links it  |
-  // | to the I/O completion port, and calls the connection callback. If      |
-  // | setup fails, the current owner closes the socket.     |
-  // | Called on an I/O worker thread.                                        |
+  // | is valid, sets up the accepted socket, makes it non-blocking, and sets  |
+  // | `TCP_NODELAY`. Then it creates a context for the connection, links it   |
+  // | to the I/O completion port, and calls the connection callback. If       |
+  // | setup fails, the current owner closes the socket.                       |
+  // | Called on an I/O worker thread.                                         |
   // +-------------------------------------------------------------------------+
   void handle_accept(overlapped_accept* ova) {
     SOCKET listener = get_accept_socket();
@@ -512,10 +513,10 @@ struct worker {
   // +=========================================================================+
   // | [>] handle_receive                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Handles a finished receive operation. It checks that the receive       |
-  // | succeeded, the connection is still open, and another receive can be    |
-  // | started. If any of these checks fail, it stops the context.            |
-  // | Called on an I/O worker thread.                                        |
+  // | Handles a finished receive operation. It checks that the receive        |
+  // | succeeded, the connection is still open, and another receive can be     |
+  // | started. If any of these checks fail, it stops the context.             |
+  // | Called on an I/O worker thread.                                         |
   // +-------------------------------------------------------------------------+
   void handle_receive(const std::shared_ptr<context<ENty>>& ctx,
                       DWORD bytes_received, bool success) {
@@ -527,7 +528,7 @@ struct worker {
     if (finished) finish_context(ctx);
   }
   // +=========================================================================+
-  // | [>] handle_send                                            ( private ) |
+  // | [>] handle_send                                             ( private ) |
   // +-------------------------------------------------------------------------+
   void handle_send(overlapped_send<ENty>* op, DWORD bytes, bool success) {
     bool finished;
@@ -548,11 +549,11 @@ struct worker {
     if (finished) finish_context(ctx);
   }
   // +=========================================================================+
-  // | [>] replenish_accept_pipeline                              ( private ) |
+  // | [>] replenish_accept_pipeline                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Posts new accept operations until the number waiting reaches the       |
-  // | accept depth. If the worker is stopping, it returns                    |
-  // | false. It returns true if it posts enough accepts.                     |
+  // | Posts new accept operations until the number waiting reaches the        |
+  // | accept depth. If the worker is stopping, it returns                     |
+  // | false. It returns true if it posts enough accepts.                      |
   // +-------------------------------------------------------------------------+
   bool replenish_accept_pipeline() {
     for (;;) {
@@ -569,12 +570,12 @@ struct worker {
   // +=========================================================================+
   // | [>] post_accept                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts a new accept operation by creating a socket and an overlapped   |
-  // | structure, then calling `AcceptEx`. If the worker is stopping, it      |
-  // | closes the socket and returns false. If enough accepts are pending,    |
-  // | it closes the unused socket and returns true.                         |
-  // | If `AcceptEx` fails, it closes the socket and returns false.           |
-  // | Otherwise, it returns true.                                            |
+  // | Starts a new accept operation by creating a socket and an overlapped    |
+  // | structure, then calling `AcceptEx`. If the worker is stopping, it       |
+  // | closes the socket and returns false. If enough accepts are pending,     |
+  // | it closes the unused socket and returns true.                           |
+  // | If `AcceptEx` fails, it closes the socket and returns false.            |
+  // | Otherwise, it returns true.                                             |
   // +-------------------------------------------------------------------------+
   bool post_accept(bool replacement) {
     SOCKET soc = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0,

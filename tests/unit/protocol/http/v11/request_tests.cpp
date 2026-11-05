@@ -276,7 +276,7 @@ DOBA_TEST("duplicate cookies retain the first exact name") {
 }
 
 // +===========================================================================+
-// | [>] decoded paths do not change caller storage             ( test-case ) |
+// | [>] decoded paths do not change caller storage              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoded paths do not change caller storage") {
   std::string path = "/a%20b";
@@ -287,7 +287,7 @@ DOBA_TEST("decoded paths do not change caller storage") {
 }
 
 // +===========================================================================+
-// | [>] encoded literal path survives request moves            ( test-case ) |
+// | [>] encoded literal path survives request moves             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("encoded literal path survives request moves") {
   auto value = request::from("GET", "/a%252F%2Fb", target::kOriginForm, {},
@@ -300,7 +300,7 @@ DOBA_TEST("encoded literal path survives request moves") {
 }
 
 // +===========================================================================+
-// | [>] decoded path outlives caller storage                   ( test-case ) |
+// | [>] decoded path outlives caller storage                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoded path outlives caller storage") {
   std::optional<request> retained;

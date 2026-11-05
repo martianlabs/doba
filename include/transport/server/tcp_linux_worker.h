@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -54,10 +54,10 @@
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] linux_worker                                               ( class ) |
+// | [>] linux_worker                                                ( class ) |
 // +---------------------------------------------------------------------------+
 // | Owns socket I/O and connection contexts on one thread.                    |
-// | The event descriptor carries only a stop signal, never application work. |
+// | The event descriptor carries only a stop signal, never application work.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,

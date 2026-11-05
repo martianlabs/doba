@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -41,7 +41,7 @@ static_assert(martianlabs::doba::protocol::contracts::engine<policy_engine>);
 }  // namespace
 
 // +===========================================================================+
-// | [>] tcp transport rejects invalid buffer policies          ( test-case ) |
+// | [>] tcp transport rejects invalid buffer policies           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcp transport rejects invalid buffer policies") {
   auto factory = []() { return policy_engine{}; };
@@ -82,7 +82,7 @@ bool accepts_policies(tr::tcp_policies policies) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] declared TCP defaults                                  ( test-case ) |
+// | [>] declared TCP defaults                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("TCP policies retain all agreed defaults") {
   const tr::tcp_policies policies;

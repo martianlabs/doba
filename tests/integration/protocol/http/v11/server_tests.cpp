@@ -289,7 +289,7 @@ DOBA_TEST("HTTP/1.1 serves coalesced requests before a partial successor") {
 }
 
 // +===========================================================================+
-// | [>] serves three sequential requests                       ( test-case ) |
+// | [>] serves three sequential requests                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 serves three sequential requests") {
   tcpip_client client;
@@ -569,7 +569,7 @@ DOBA_TEST("HTTP/1.1 echoes raw bodies across the spill threshold") {
 }
 
 // +===========================================================================+
-// | [>] raw echo survives decoder buffer reuse                 ( test-case ) |
+// | [>] raw echo survives decoder buffer reuse                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 raw echo survives decoder buffer reuse") {
   tcpip_client client;

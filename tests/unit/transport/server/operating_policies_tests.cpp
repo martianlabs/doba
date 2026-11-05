@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -38,6 +38,11 @@
 #include "transport/server/send_state.h"
 #include "transport/server/tcp.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] operating_policies_tests                               ( test-suite ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace {
 using namespace martianlabs::doba::transport::server;
 using namespace martianlabs::doba::transport::server::detail;

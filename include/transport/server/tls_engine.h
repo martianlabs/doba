@@ -45,9 +45,9 @@ using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // | [>] tls_engine                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | TCP sees an ordinary engine and its turn results. Only TLS sees SSL.     |
+// | TCP sees an ordinary engine and its turn results. Only TLS sees SSL.      |
 // | All output, including a terminal source, is encoded before TCP sees it.   |
-// | One bounded BIO pair moves records without owning or accessing a socket. |
+// | One bounded BIO pair moves records without owning or accessing a socket.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -338,7 +338,7 @@ class tls_engine {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] tls_factory                                               ( struct ) |
+// | [>] tls_factory                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Adapts the application's factory without changing TCP's factory contract. |
 // +---------------------------------------------------------------------------+

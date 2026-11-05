@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -67,11 +67,25 @@ task<> sleep_once(clock_type::duration duration, int& steps) {
   ++steps;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] foreign_awaiter                                            ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct foreign_awaiter {
   bool& touched;
   bool ready;
+  // +-------------------------------------------------------------------------+
+  // | [>] await_ready                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool await_ready() const noexcept { touched = true; return ready; }
+  // +-------------------------------------------------------------------------+
+  // | [>] await_suspend                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   void await_suspend(std::coroutine_handle<>) const noexcept { touched = true; }
+  // +-------------------------------------------------------------------------+
+  // | [>] await_resume                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void await_resume() const noexcept { touched = true; }
 };
 
@@ -92,6 +106,11 @@ task<> local_lifetime(const std::shared_ptr<int>& token, bool fail_at_end) {
   if (fail_at_end) throw std::runtime_error("local cleanup");
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] awaitable                                                  ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct awaitable {
   bool& touched;
   foreign_awaiter operator co_await() const noexcept {

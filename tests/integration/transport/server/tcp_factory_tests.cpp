@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -57,7 +57,7 @@ struct factory_probe {
 // +---------------------------------------------------------------------------+
 // | [>] factory_engine                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Requires only the current protocol contract, with no execution hooks.    |
+// | Requires only the current protocol contract, with no execution hooks.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct factory_engine {

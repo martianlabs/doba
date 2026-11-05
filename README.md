@@ -190,18 +190,19 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage, 2026-11-04: Linux 95.15% lines and 88.58% condition outcomes; Windows 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
   </picture>
 </a>
 
-**Measured coverage for 0.1.0 (2026-11-04):** Linux **95.15% of executable
-lines / 88.58% of condition outcomes**; Windows **94.64% / 88.50%**.
+**Measured coverage for 0.1.0:** Linux **95.17% of executable lines /
+88.87% of condition outcomes** (2026-11-05); Windows **94.64% / 88.50%**
+(2026-11-04).
 These are local Release measurements of emitted production mappings;
 unmapped headers are inventoried separately.
 [See coverage by module, validation results and release history](docs/coverage/README.md).

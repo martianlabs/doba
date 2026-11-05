@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -35,14 +35,14 @@ namespace martianlabs::doba::transport::server::detail {
 // | [>] basic_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
 // | This class provides a basic transport for an engine.                      |
-// | The engine and factory are template parameters; TCP policies configure   |
-// | the IOCP worker group. Start and stop belong to a sequential external    |
-// | owner. Application execution and TLS are outside this transport.         |
+// | The engine and factory are template parameters; TCP policies configure    |
+// | the IOCP worker group. Start and stop belong to a sequential external     |
+// | owner. Application execution and TLS are outside this transport.          |
 // | You can also set callbacks for connection and disconnection events.       |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
-// |   FAty - engine factory type being used.                                  |
+// | ENty - engine type being used.                                            |
+// | FAty - engine factory type being used.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,

@@ -29,6 +29,11 @@
 #include <string_view>
 #include <vector>
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] special_file_paths_windows                                 ( header ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace martianlabs::doba::tests::unit {
 inline std::vector<std::string_view> special_file_paths(
     const std::filesystem::path&, const std::filesystem::path&) {

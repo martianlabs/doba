@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -149,6 +149,9 @@ class reader {
   static reader raw(common::byte_storage source, std::size_t length) {
     return reader(common::reader(std::move(source)), reader_raw(length));
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] chunked                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   static reader chunked(common::byte_storage source,
                         std::size_t extension_limit,
                         std::size_t trailer_limit) {
@@ -156,6 +159,9 @@ class reader {
                   reader_chunked(extension_limit, trailer_limit));
   }
 
+  // +-------------------------------------------------------------------------+
+  // | [>] rebind_borrowed                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   void rebind_borrowed(std::span<const std::byte> source) noexcept {
     source_.rebind_borrowed(source);
     if (!borrowed_raw_.empty()) borrowed_raw_ = source;

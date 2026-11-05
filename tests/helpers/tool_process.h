@@ -44,7 +44,7 @@ extern char** environ;
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] process                                                    ( class ) |
+// | [>] process                                                     ( class ) |
 // +---------------------------------------------------------------------------+
 // Output goes to private files: even a verbose sanitizer child cannot fill a
 // pipe while its parent waits. Destruction always reaps an unfinished child.
@@ -56,6 +56,9 @@ class process {
   HANDLE child_{};
   HANDLE input_{};
 
+  // +-------------------------------------------------------------------------+
+  // | [>] wide                                                    ( private ) |
+  // +-------------------------------------------------------------------------+
   static std::wstring wide(const std::string& value) {
     int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
       value.data(), static_cast<int>(value.size()), nullptr, 0);
@@ -65,6 +68,9 @@ class process {
       static_cast<int>(value.size()), result.data(), size);
     return result;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] quote                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
   static std::wstring quote(const std::string& argument) {
     std::wstring result = L"\"";
     unsigned slashes = 0;
@@ -84,7 +90,7 @@ class process {
 
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   using environment = std::map<std::string, std::string>;
   process(const std::vector<std::string>& command,
@@ -231,6 +237,9 @@ class process {
     if (input_ >= 0) close(input_);
 #endif
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] poll                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool poll() {
     if (finished_) return true;
 #ifdef _WIN32
@@ -250,6 +259,9 @@ class process {
     finished_ = true;
     return true;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] wait                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   int wait(clock::duration timeout = 10s) {
     auto deadline = clock::now() + timeout;
     while (!poll()) {
@@ -258,6 +270,9 @@ class process {
     }
     return code_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] terminate                                                ( public ) |
+  // +-------------------------------------------------------------------------+
   void terminate() noexcept {
     if (finished_) return;
 #ifdef _WIN32
@@ -266,6 +281,9 @@ class process {
     if (child_ > 0) ::kill(child_, SIGTERM);
 #endif
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] kill                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void kill() noexcept {
     if (finished_) return;
 #ifdef _WIN32
@@ -274,6 +292,9 @@ class process {
     if (child_ > 0) ::kill(child_, SIGKILL);
 #endif
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void send(std::string_view text) {
     while (!text.empty()) {
 #ifdef _WIN32
@@ -289,6 +310,9 @@ class process {
       text.remove_prefix(static_cast<size_t>(size));
     }
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] text                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   static std::string text(std::string value) {
     size_t output = 0;
     for (size_t input = 0; input < value.size(); ++input) {
@@ -299,14 +323,29 @@ class process {
     value.resize(output);
     return value;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] output_path                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   fs::path output_path() const { return directory_.path() / "stdout"; }
+  // +-------------------------------------------------------------------------+
+  // | [>] error_path                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   fs::path error_path() const { return directory_.path() / "stderr"; }
+  // +-------------------------------------------------------------------------+
+  // | [>] output                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string output() const {
     return text(read(directory_.path() / "stdout"));
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] errors                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string errors() const {
     return text(read(directory_.path() / "stderr"));
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] expect_output                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   void expect_output(std::string_view text, clock::duration timeout = 10s) {
     auto deadline = clock::now() + timeout;
     while (output().find(text) == std::string::npos) {
@@ -317,6 +356,11 @@ class process {
   }
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] process_result                                             ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct process_result {
   int code;
   std::string output;

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2026 martianLabs
 //
@@ -68,7 +68,7 @@ struct clock_stub {
 };
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] parallel_clock                                            ( struct ) |
+// | [>] parallel_clock                                             ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Gate two lookups inside now() to verify overlapping read access.          |
 // +---------------------------------------------------------------------------+
@@ -162,7 +162,8 @@ DOBA_TEST("cache expiration uses its clock and starts after loading") {
 }
 
 // +===========================================================================+
-// | [>] cache rejects excess loads and coalesces concurrent same key loads( test-case ) |
+// | [>] cache rejects excess loads and coalesces concurrent     ( test-case ) |
+// | same key loads                                                            |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "cache rejects excess loads and coalesces concurrent same key loads") {
@@ -241,7 +242,8 @@ DOBA_TEST("cache invalidation prevents obsolete loads from republishing") {
 }
 
 // +===========================================================================+
-// | [>] cache releases reservations after failures and detects recursion( test-case ) |
+// | [>] cache releases reservations after failures and detects  ( test-case ) |
+// | recursion                                                                 |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache releases reservations after failures and detects recursion") {
   cache<int, std::string> value;
@@ -305,7 +307,8 @@ DOBA_TEST("shared readers retain evicted values after cache destruction") {
 }
 
 // +===========================================================================+
-// | [>] cache handles concurrent distinct keys with bounded live cost( test-case ) |
+// | [>] cache handles concurrent distinct keys with bounded     ( test-case ) |
+// | live cost                                                                 |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache handles concurrent distinct keys with bounded live cost") {
   cache<int, int> value({.max_entries = 8, .max_cost = 8, .max_loads = 4});
@@ -330,7 +333,8 @@ DOBA_TEST("cache handles concurrent distinct keys with bounded live cost") {
 }
 
 // +===========================================================================+
-// | [>] cache shares loader exceptions with waiters and permits retry( test-case ) |
+// | [>] cache shares loader exceptions with waiters and permits ( test-case ) |
+// | retry                                                                     |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache shares loader exceptions with waiters and permits retry") {
   cache<int, std::string> value;
@@ -380,7 +384,8 @@ DOBA_TEST("cache shares loader exceptions with waiters and permits retry") {
 }
 
 // +===========================================================================+
-// | [>] cache invalidation wakes waiters before an obsolete loader finishes( test-case ) |
+// | [>] cache invalidation wakes waiters before an obsolete     ( test-case ) |
+// | loader finishes                                                           |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "cache invalidation wakes waiters before an obsolete loader finishes") {
@@ -508,11 +513,13 @@ DOBA_TEST("cache conditional erase preserves a newer generation") {
 }
 
 // +===========================================================================+
-// | [>] cache lookups overlap without serializing readers        ( test-case ) |
+// | [>] cache lookups overlap without serializing readers       ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("cache permits concurrent hits while retaining invalidation contracts") {
+DOBA_TEST(
+    "cache permits concurrent hits while retaining invalidation contracts") {
   cache<int, int, parallel_clock> value;
-  auto pinned = value.get_or_load(1, 4, [] { return std::make_shared<const int>(42); });
+  auto pinned =
+      value.get_or_load(1, 4, [] { return std::make_shared<const int>(42); });
   manual_event entered, release;
   parallel_clock::arrivals = 0;
   parallel_clock::entered = &entered;

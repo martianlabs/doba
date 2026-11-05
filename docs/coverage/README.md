@@ -10,12 +10,14 @@
 
 [Back to doba](../../README.md#fast-is-nice-correct-is-non-negotiable)
 
-**doba 0.1.0, measured rather than guessed.** This is the initial release
-coverage reference, measured locally on **2026-11-04** with optimizations,
-TLS and examples enabled. The version is declared in
+**doba 0.1.0, measured rather than guessed.** The latest local coverage
+measurements are from **2026-11-05 for Linux** and **2026-11-04 for Windows**,
+with optimizations, TLS and examples enabled. The version is declared in
 [version.h](../../include/version.h). These measurements qualify the tested
 source snapshot; they do not assert that a matching release tag was published.
-The first remote CI run for this qualification remains pending.
+The Linux refresh passes all existing coverage gates. The reported remote
+Linux coverage failure preceded this correction; a successful remote run
+of the corrected snapshot has not been verified.
 
 [Results](#results) / [By module](#by-module) / [Test families](#test-families) /
 [Method](#method) / [CI safeguards](#ci-safeguards) /
@@ -24,17 +26,21 @@ The first remote CI run for this qualification remains pending.
 <a name="results"></a>
 ## The measured result
 
-| Platform | Executable lines | Condition outcomes | Mapped headers | Unmapped headers |
-| --- | --- | --- | --- | --- |
-| Linux | **8,169 / 8,585 (95.15%)** | **4,730 / 5,340 (88.58%)** | 129 | 60 |
-| Windows | **8,436 / 8,914 (94.64%)** | **4,788 / 5,410 (88.50%)** | 136 | 53 |
+| Platform | Measured on | Executable lines | Condition outcomes | Mapped headers | Unmapped headers |
+| --- | --- | --- | --- | --- | --- |
+| Linux | 2026-11-05 | **8,271 / 8,691 (95.17%)** | **4,751 / 5,346 (88.87%)** | 129 | 60 |
+| Windows | 2026-11-04 | **8,436 / 8,914 (94.64%)** | **4,788 / 5,410 (88.50%)** | 136 | 53 |
 
 Only production headers under `include/` contribute. Tests, examples, STL and
 OpenSSL implementation code are excluded from these percentages. Each platform
 has its own denominator. Unmapped headers remain explicit; they are not counted
 as covered, nor assigned guessed executable lines.
 
-The [0.1.0 data snapshot](releases/0.1.0.json) contains exact module counts,
+The [updated 0.1.0 data snapshot](releases/0.1.0-2026-11-05.json) contains
+independent measurement dates and source hashes for each platform. It retains
+the historical Windows measurement rather than attributing it to the refreshed
+Linux source. The [initial snapshot](releases/0.1.0.json) remains unchanged.
+Both snapshots contain exact module counts,
 per-header line and condition counts, the full unmapped inventory, uncovered
 condition locations, toolchain details and production-header SHA-256 hashes.
 
@@ -43,14 +49,14 @@ condition locations, toolchain details and production-header SHA-256 hashes.
 
 | Module | Linux lines | Linux outcomes | Windows lines | Windows outcomes |
 | --- | --- | --- | --- | --- |
-| common | 89.87% | 81.96% | 88.67% | 78.95% |
+| common | 89.88% | 81.96% | 88.67% | 78.95% |
 | http-common | 97.06% | 93.83% | 97.06% | 93.88% |
 | http-engine | 97.61% | 93.08% | 97.61% | 93.08% |
-| http-messages | 91.87% | 83.33% | 91.87% | 83.33% |
-| http-parser | 95.90% | 91.31% | 95.90% | 91.41% |
+| http-messages | 91.83% | 83.33% | 91.87% | 83.33% |
+| http-parser | 95.91% | 91.31% | 95.90% | 91.41% |
 | network | no emitted mapping | no emitted mapping | 100.00% | 100.00% |
 | public-contracts | 100.00% | 100.00% | 100.00% | 100.00% |
-| static-files | 96.61% | 80.17% | 95.54% | 79.53% |
+| static-files | 96.69% | 83.62% | 95.54% | 79.53% |
 | tcp | 94.19% | 79.52% | 91.78% | 83.88% |
 | tls | 99.21% | 79.78% | 99.21% | 79.78% |
 
@@ -62,6 +68,11 @@ includes the common engine and synchronous/asynchronous request processors.
 groups public wrappers and protocol/transport contracts with emitted mapping.
 Linux's network environment has no emitted runtime mapping in this snapshot.
 
+The Linux refresh covers explicit cache invalidation of all representations,
+retained response snapshots, invalid static-file policies and escaped directory
+redirects. The formatting pass changed executable-line counts; the regression
+floors remain unchanged.
+
 <a name="test-families"></a>
 ## What the tests exercise
 
@@ -72,7 +83,7 @@ Linux's network environment has no emitted runtime mapping in this snapshot.
 | Routing and authentication | Route precedence, typed parameters, suspended parameter views, Basic/Bearer credential parsing, challenges and header-injection rejection. |
 | HTTP output | Serialization, status/field/trailer validation, exact binary framing and independent wire-oracle negative controls. |
 | HTTP execution | Synchronous and coroutine handlers, mixed ordered responses, bounded admission, deadlines, cancellation and source lifetimes. |
-| Static files | Path containment, metadata invalidation, variants, ranges, conditional responses and cache behavior. |
+| Static files | Path containment, metadata and explicit cache invalidation, retained snapshots, variants, ranges, conditional responses, invalid policies and escaped redirects. |
 | Linux TCP | epoll processing, partial sends, EAGAIN, prefix/source bounds, descriptor exhaustion, startup recovery and scheduling cancellation. |
 | Windows TCP | IOCP publication/completion ordering, send/receive failures, timer retries, stale wakes, shutdown and connection cleanup. |
 | Winsock lifecycle | Three injected startup errors, exact rejection, no cleanup after failed construction, successful retry and nested owner cleanup. |
@@ -80,8 +91,12 @@ Linux's network environment has no emitted runtime mapping in this snapshot.
 | Test infrastructure | Negative oracle controls, assertion/exception propagation, watchdogs, sanitizer diagnostics from exit-zero children, inventory and coverage regression gates. |
 | Package and examples | Source/installed consumers, TLS dependency boundaries and executable examples; configured in the broader CI matrix. |
 
-The local qualification results below belong to this snapshot. Configured CI
-jobs and source-level test declarations are separate quantities.
+The instrumented suite results below follow each platform's measurement date.
+The sanitizer campaigns and repeated fault groups are historical results from
+2026-11-04; they were not repeated for the Linux coverage refresh. The updated
+Windows MSVC Release suite also passes 23/23 groups, without a new Windows
+instrumented measurement. Configured CI jobs and source-level test declarations
+are separate quantities.
 
 | Local validation | Linux | Windows |
 | --- | --- | --- |
@@ -120,7 +135,7 @@ uninstantiated code. The data snapshot preserves them for review.
 | Toolchain | Clang/LLVM **18.1.3** | Clang/LLVM **22.1.8** |
 | Host | WSL Ubuntu, Linux **6.6.87.2** | Windows 11 **10.0.26300** |
 | Configuration | Release, TLS and examples enabled | Release, TLS and examples enabled |
-| Profile association | 79 observed profiles / 53 executable targets | 79 observed profiles / 57 executable targets |
+| Profile association | 106 observed profiles / 62 executable targets | 79 observed profiles / 57 executable targets |
 
 Instrumented builds are for qualification. Performance measurements use their
 own builds. Reproduction commands, report layout and technical details live in
@@ -174,7 +189,8 @@ scope; it is not a security certification.
 
 | Source version | Measurement date | Evidence status | Archived data |
 | --- | --- | --- | --- |
-| **0.1.0** | **2026-11-04** | Local Release qualification; first remote run pending | [Complete snapshot](releases/0.1.0.json) |
+| **0.1.0 refresh** | **Linux: 2026-11-05; Windows: 2026-11-04** | Local coverage gates passed on Linux; historical Windows coverage retained | [Updated snapshot](releases/0.1.0-2026-11-05.json) |
+| **0.1.0 initial** | **2026-11-04** | Initial local Release qualification | [Initial snapshot](releases/0.1.0.json) |
 
 For each release, measure the final source with the documented toolchains,
 review the uncovered locations and record the CI/artifact provenance. Add a new

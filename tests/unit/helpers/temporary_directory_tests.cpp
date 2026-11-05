@@ -37,7 +37,8 @@ DOBA_TEST("temporary directory restores the environment during unwinding") {
   try {
     temporary_directory value("doba-temporary-override");
     DOBA_EXPECT_EQUAL(value.changed(), 0);
-    DOBA_EXPECT_EQUAL(temporary_directory::current(), "doba-temporary-override");
+    DOBA_EXPECT_EQUAL(temporary_directory::current(),
+                      "doba-temporary-override");
     throw std::runtime_error("expected fixture failure");
   } catch (const std::runtime_error&) {
   }

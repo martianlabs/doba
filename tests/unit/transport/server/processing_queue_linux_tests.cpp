@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -28,6 +28,11 @@
 #include "test_helper.h"
 #include "transport/server/tcp_linux_processing_queue.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] processing_queue_linux_tests                           ( test-suite ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace {
 using queue_type = martianlabs::doba::transport::server::detail::
     linux_processing_queue;

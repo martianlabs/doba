@@ -69,19 +69,36 @@ static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
 static_assert(!martianlabs::doba::protocol::http::v11::contracts::router<
               int, request, router_value_response>);
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] route_only_router                                          ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct route_only_router {
   template <typename Hty>
+  // +-------------------------------------------------------------------------+
+  // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void add(std::string_view method, std::string_view path, Hty handler) {
     routes_.add(method, path, std::move(handler));
   }
   template <typename CTty, typename... Args>
+  // +-------------------------------------------------------------------------+
+  // | [>] add_controller                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   void add_controller(Args&&... args) {
     routes_.template add_controller<CTty>(std::forward<Args>(args)...);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] match                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   router_match_result<request, router_value_response> match(
       std::string_view method, std::string_view path) const {
     return routes_.match(method, path);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] allowed_methods                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string allowed_methods(std::string_view path) const {
     return routes_.allowed_methods(path);
   }
@@ -92,12 +109,26 @@ struct route_only_router {
 static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
               route_only_router, request, router_value_response>);
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] suspend_once                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct suspend_once {
   std::coroutine_handle<>& next;
+  // +-------------------------------------------------------------------------+
+  // | [>] await_ready                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool await_ready() const noexcept { return false; }
+  // +-------------------------------------------------------------------------+
+  // | [>] await_suspend                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   void await_suspend(std::coroutine_handle<> handle) const noexcept {
     next = handle;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] await_resume                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void await_resume() const noexcept {}
 };
 }  // namespace
@@ -679,7 +710,7 @@ struct failing_controller {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] staged_controller                                         ( struct ) |
+// | [>] staged_controller                                          ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct staged_controller {
@@ -702,11 +733,22 @@ struct staged_controller {
   void get(const request&, router_value_response&) {}
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] async_controller                                           ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct async_controller {
   template <typename Rty>
+  // +-------------------------------------------------------------------------+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   void register_routes(Rty& routes) {
     routes.add("GET", "/async/:id", &async_controller::get);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   task<void> get(const request&, router_value_response& res, int id) {
     res.value = std::to_string(id);
     co_return;

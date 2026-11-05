@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -37,7 +37,7 @@ using martianlabs::doba::tests::unit::processing_engine;
 namespace contracts = martianlabs::doba::protocol::contracts;
 
 // +===========================================================================+
-// | [>] Contract signatures                                       ( static ) |
+// | [>] Contract signatures                                        ( static ) |
 // +---------------------------------------------------------------------------+
 static_assert(contracts::engine<processing_engine<>>);
 static_assert(!contracts::engine<processing_engine<void>>);

@@ -66,9 +66,21 @@ void require(bool condition, const char* diagnostic) {
 // /////////////////////////////////////////////////////////////////////////////
 struct plain_peer {
   tcpip_client socket;
+  // +-------------------------------------------------------------------------+
+  // | [>] connect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool connect(std::uint16_t port) { return socket.connect(port); }
+  // +-------------------------------------------------------------------------+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool send(std::string_view wire) { return socket.send_all(wire); }
+  // +-------------------------------------------------------------------------+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   auto receive(std::size_t size) { return socket.receive(size); }
+  // +-------------------------------------------------------------------------+
+  // | [>] drained                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool drained() { return socket.wait_for_close(5s); }
 };
 
@@ -80,6 +92,9 @@ struct plain_peer {
 template <typename Server>
 struct observed_server : Server {
   using Server::Server;
+  // +-------------------------------------------------------------------------+
+  // | [>] on_stopping                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void on_stopping(std::function<void()> callback) {
     this->set_on_stopping(std::move(callback));
   }
@@ -293,7 +308,7 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
 
 // +===========================================================================+
 // | [>] resilience TCP drains mixed clients and restarts        ( test-case ) |
-// |     without retained resources                                            |
+// | without retained resources                                                |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "resilience TCP drains mixed clients and restarts without retained "

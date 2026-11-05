@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -35,7 +35,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] policies                                                   ( struct ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 resource limits, memory thresholds and feature switches.        |
+// | HTTP/1.1 resource limits, memory thresholds and feature switches.         |
 // | The defaults below preserve the standard server behavior.                 |
 // | A limit of 0 means unlimited unless noted.                                |
 // +---------------------------------------------------------------------------+

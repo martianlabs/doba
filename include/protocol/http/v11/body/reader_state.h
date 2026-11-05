@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -35,12 +35,12 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | [>] reader_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Result of a body reader read() call.                                      |
-// |   produced  - bytes of decoded payload written into the caller-supplied   |
-// |               output span during this call. Wire framing bytes consumed   |
-// |               from the source reader are internal and not reported.       |
-// |   complete  - body fully decoded; no further read() calls needed.         |
-// |   has_error - a protocol or size-limit error was detected.                |
-// |   error     - error code, if has_error is true.                           |
+// | produced  - bytes of decoded payload written into the caller-supplied     |
+// | output span during this call. Wire framing bytes consumed                 |
+// | from the source reader are internal and not reported.                     |
+// | complete  - body fully decoded; no further read() calls needed.           |
+// | has_error - a protocol or size-limit error was detected.                  |
+// | error     - error code, if has_error is true.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct reader_state {

@@ -33,21 +33,21 @@
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] json                                                       ( class ) |
+// | [>] json                                                        ( class ) |
 // +---------------------------------------------------------------------------+
 // Private tooling value. Reject ambiguous objects, malformed numbers, invalid
 // Unicode escapes, excessive nesting and trailing input instead of guessing.
 class json {
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   using array = std::vector<json>;
   using object = std::map<std::string, json>;
 
  private:
   // +-------------------------------------------------------------------------+
-  // | [>] IMPLEMENTATION                                        ( private ) |
+  // | [>] IMPLEMENTATION                                          ( private ) |
   // +-------------------------------------------------------------------------+
   enum class kind { empty, boolean, number, text, sequence, mapping };
   kind kind_{kind::empty};
@@ -57,19 +57,34 @@ class json {
   array sequence_;
   object mapping_;
 
+  // +-------------------------------------------------------------------------+
+  // | [>] parser                                                    ( class ) |
+  // +-------------------------------------------------------------------------+
   class parser {
+    // +-----------------------------------------------------------------------+
+    // | [>] ATTRIBUTEs                                            ( private ) |
+    // +-----------------------------------------------------------------------+
     std::string_view input_;
     size_t position_{};
 
+    // +-----------------------------------------------------------------------+
+    // | [>] take                                                  ( private ) |
+    // +-----------------------------------------------------------------------+
     char take() {
       require(position_ < input_.size(), "Truncated JSON");
       return input_[position_++];
     }
+    // +-----------------------------------------------------------------------+
+    // | [>] whitespace                                            ( private ) |
+    // +-----------------------------------------------------------------------+
     void whitespace() {
       while (position_ < input_.size() &&
         std::string_view(" \n\r\t").find(input_[position_]) !=
           std::string_view::npos) ++position_;
     }
+    // +-----------------------------------------------------------------------+
+    // | [>] hex                                                   ( private ) |
+    // +-----------------------------------------------------------------------+
     unsigned hex() {
       unsigned result = 0;
       for (int index = 0; index < 4; ++index) {
@@ -82,6 +97,9 @@ class json {
       }
       return result;
     }
+    // +-----------------------------------------------------------------------+
+    // | [>] utf8                                                  ( private ) |
+    // +-----------------------------------------------------------------------+
     static void utf8(std::string& text, unsigned code) {
       if (code < 128) text += static_cast<char>(code);
       else {
@@ -93,6 +111,9 @@ class json {
         }
       }
     }
+    // +-----------------------------------------------------------------------+
+    // | [>] string                                                ( private ) |
+    // +-----------------------------------------------------------------------+
     std::string string() {
       require(take() == '"', "Expected JSON string");
       std::string result;
@@ -152,6 +173,9 @@ class json {
         }
       }
     }
+    // +-----------------------------------------------------------------------+
+    // | [>] value                                                 ( private ) |
+    // +-----------------------------------------------------------------------+
     json value(unsigned depth) {
       require(depth < 128, "JSON nesting limit exceeded");
       whitespace();
@@ -219,7 +243,13 @@ class json {
     }
 
   public:
+    // +-----------------------------------------------------------------------+
+    // | [>] CONSTRUCTORs                                           ( public ) |
+    // +-----------------------------------------------------------------------+
     explicit parser(std::string_view input) : input_(input) {}
+    // +-----------------------------------------------------------------------+
+    // | [>] parse                                                  ( public ) |
+    // +-----------------------------------------------------------------------+
     json parse() {
       auto result = value(0);
       whitespace();
@@ -230,7 +260,7 @@ class json {
 
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
   json() = default;
   json(std::nullptr_t) {}
@@ -242,36 +272,66 @@ class json {
   json(std::string value) : kind_(kind::text), text_(std::move(value)) {}
   json(array value) : kind_(kind::sequence), sequence_(std::move(value)) {}
   json(object value) : kind_(kind::mapping), mapping_(std::move(value)) {}
+  // +-------------------------------------------------------------------------+
+  // | [>] null                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   bool null() const { return kind_ == kind::empty; }
+  // +-------------------------------------------------------------------------+
+  // | [>] numeric                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool numeric() const { return kind_ == kind::number; }
+  // +-------------------------------------------------------------------------+
+  // | [>] number                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   double number() const {
     require(numeric(), "Expected JSON number");
     return number_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] boolean                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool boolean() const {
     require(kind_ == kind::boolean, "Expected JSON boolean");
     return boolean_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] string                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   const std::string& string() const {
     require(kind_ == kind::text, "Expected JSON string");
     return text_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] items                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   const array& items() const {
     require(kind_ == kind::sequence, "Expected JSON array");
     return sequence_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] items                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   array& items() {
     require(kind_ == kind::sequence, "Expected JSON array");
     return sequence_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] members                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   const object& members() const {
     require(kind_ == kind::mapping, "Expected JSON object");
     return mapping_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] members                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   object& members() {
     require(kind_ == kind::mapping, "Expected JSON object");
     return mapping_;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] contains                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   bool contains(const std::string& key) const {
     return members().contains(key);
   }
@@ -285,8 +345,17 @@ class json {
   json& operator[](size_t index) { return items().at(index); }
   const json& operator[](size_t index) const { return items().at(index); }
   bool operator==(const json&) const = default;
+  // +-------------------------------------------------------------------------+
+  // | [>] parse                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   static json parse(std::string_view input) { return parser(input).parse(); }
+  // +-------------------------------------------------------------------------+
+  // | [>] load                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   static json load(const fs::path& path) { return parse(read(path)); }
+  // +-------------------------------------------------------------------------+
+  // | [>] quote                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   static std::string quote(std::string_view text) {
     std::ostringstream output;
     output << '"';
@@ -306,6 +375,9 @@ class json {
     }
     return output.str() + '"';
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] dump                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string dump() const {
     if (null()) return "null";
     if (kind_ == kind::boolean) return boolean_ ? "true" : "false";

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -35,6 +35,11 @@
 
 namespace martianlabs::doba::common {
 // Metadata read from the open handle, not by resolving its path again.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] filesystem_metadata                                        ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct filesystem_metadata {
   std::uintmax_t size = 0;
   std::int64_t modified_seconds = 0;

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -32,7 +32,7 @@ using namespace martianlabs::doba::common;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] work                                                    ( function ) |
+// | [>] work                                                     ( function ) |
 // +---------------------------------------------------------------------------+
 // | Yield and sleep describe pending work; they do not launch threads.        |
 // +---------------------------------------------------------------------------+
@@ -49,7 +49,7 @@ task<> work(int& steps) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This standalone caller supplies its own serialized turns.                |
+// | This standalone caller supplies its own serialized turns.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

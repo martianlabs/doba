@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -38,7 +38,8 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename KEty, typename VAty>
-using hash_map = std::unordered_map<KEty, VAty, detail::base_hash, detail::base_equal>;
+using hash_map =
+    std::unordered_map<KEty, VAty, detail::base_hash, detail::base_equal>;
 }  // namespace martianlabs::doba::common
 
 #endif

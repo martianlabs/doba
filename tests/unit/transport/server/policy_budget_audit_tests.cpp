@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -29,6 +29,11 @@
 #include "test_helper.h"
 #include "transport/server/send_state.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] policy_budget_audit_tests                              ( test-suite ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace {
 using martianlabs::doba::common::reader;
 using martianlabs::doba::transport::server::detail::send_state;

@@ -39,9 +39,9 @@ namespace martianlabs::doba::tests::qualification {
 // +---------------------------------------------------------------------------+
 // | [>] profile_identity                                         ( constant ) |
 // +---------------------------------------------------------------------------+
-// | Only injected into instrumented qualification builds. The private probe  |
-// | namespaces profiles by target, including subprocesses. The probe resets |
-// | counters and exits before main, preserving an explicit zero denominator. |
+// | Only injected into instrumented qualification builds. The private probe   |
+// | namespaces profiles by target, including subprocesses. The probe resets   |
+// | counters and exits before main, preserving an explicit zero denominator.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline const bool profile_identity = [] {

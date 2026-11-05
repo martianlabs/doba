@@ -38,7 +38,7 @@ namespace martianlabs::doba::transport::server {
 // | [>] tls                                                         ( class ) |
 // +---------------------------------------------------------------------------+
 // | TLS is an engine adapter over the existing TCP implementation. Plain TCP  |
-// | Plain TCP keeps its state, synchronization and dependencies unchanged.   |
+// | Plain TCP keeps its state, synchronization and dependencies unchanged.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,

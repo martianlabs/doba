@@ -39,7 +39,7 @@
 
 namespace {
 // +---------------------------------------------------------------------------+
-// | [>] socket workers                                          ( constant ) |
+// | [>] socket workers                                           ( constant ) |
 // +---------------------------------------------------------------------------+
 // Exercise independent connection owners on both backends.
 constexpr std::size_t kSocketWorkers = 2;

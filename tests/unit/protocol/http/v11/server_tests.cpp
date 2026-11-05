@@ -191,7 +191,7 @@ DOBA_TEST("server is neither copyable nor movable") {
 }
 
 // +===========================================================================+
-// | [>] HTTP server builds transport after route registration  ( test-case ) |
+// | [>] HTTP server builds transport after route registration   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP server builds transport after route registration") {
   http_server<http::request, http::response,
@@ -304,7 +304,7 @@ DOBA_TEST("failed starts release the date server") {
 }
 
 // +===========================================================================+
-// | [>] server accepts new connections after handler failure ( test-case )    |
+// | [>] server accepts new connections after handler failure    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server accepts new connections after handler failure") {
   http_server<http::request, http::response,
@@ -341,7 +341,8 @@ DOBA_TEST("server accepts new connections after handler failure") {
 }
 
 // +===========================================================================+
-// | [>] server retains controllers and rejects live registration( test-case ) |
+// | [>] server retains controllers and rejects live             ( test-case ) |
+// | registration                                                              |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server retains controllers and rejects live registration") {
   int calls = 0;
@@ -367,7 +368,7 @@ DOBA_TEST("server retains controllers and rejects live registration") {
 }
 
 // +===========================================================================+
-// | [>] server rejects route registration during startup       ( test-case ) |
+// | [>] server rejects route registration during startup        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server rejects route registration during startup") {
   http_server<http::request, http::response,
@@ -417,7 +418,7 @@ DOBA_TEST("server rejects route registration during startup") {
 }
 
 // +===========================================================================+
-// | [>] server accepts route registration after stop           ( test-case ) |
+// | [>] server accepts route registration after stop            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server accepts route registration after stop") {
   http_server<http::request, http::response,

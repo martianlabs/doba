@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -44,8 +44,8 @@ namespace martianlabs::doba::protocol::http::detail {
 // | [>] router_handler_parametrized_async                           ( class ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -94,10 +94,10 @@ class router_handler_parametrized_async {
 // | [>] make_router_handler_parametrized_async                     (function) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
-// |   Hty - handler being used                                                |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
+// | Args - route parameters being used                                        |
+// | Hty - handler being used                                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>

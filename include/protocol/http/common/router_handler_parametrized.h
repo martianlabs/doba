@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -48,12 +48,13 @@ inline constexpr bool dependent_false_v = false;
 // | [>] extract_route_parameters                                 ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   N - number of route parameters to extract                               |
+// | N - number of route parameters to extract                                 |
 // +---------------------------------------------------------------------------+
 // | This function parses route parameters from the provided string view into  |
 // | the appropriate types and stores them in the output array.                |
 // | It returns true if all parameters were successfully parsed, and false     |
-// | otherwise. If the number of parameters does not match N, it returns false.|
+// | otherwise. If the number of parameters does not match N, it returns       |
+// | false.                                                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <std::size_t N>
@@ -92,7 +93,7 @@ bool extract_route_parameters(std::string_view pattern, std::string_view path,
 // | [>] parse_route_parameter                                    ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   T - type of the route parameter being parsed                            |
+// | T - type of the route parameter being parsed                              |
 // +---------------------------------------------------------------------------+
 // | This function parses a route parameter from the provided string view into |
 // | the appropriate type and stores it in the output parameter.               |
@@ -135,7 +136,7 @@ bool parse_route_parameter(std::string_view input, T& output) {
 // | [>] matches_route_parameter                                  ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   T - route parameter type being used                                     |
+// | T - route parameter type being used                                       |
 // +---------------------------------------------------------------------------+
 // | This function checks if the route parameter from the provided string view |
 // | matches the expected type. It returns true if the parameter matches, and  |
@@ -158,7 +159,7 @@ bool matches_route_parameter(std::string_view input) {
 // | [>] match_route_parameters_                                  ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Args - route parameters being used                                      |
+// | Args - route parameters being used                                        |
 // +---------------------------------------------------------------------------+
 // | This function checks if the route parameters from the provided array of   |
 // | string views match the expected types. It returns true if all parameters  |
@@ -177,7 +178,7 @@ bool match_route_parameters_(
 // | [>] match_route_parameters                                   ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Args - route parameters being used                                      |
+// | Args - route parameters being used                                        |
 // +---------------------------------------------------------------------------+
 // | This function checks if the route parameters from the provided array of   |
 // | string views match the expected types. It returns true if all parameters  |
@@ -197,7 +198,7 @@ bool match_route_parameters(std::string_view pattern, std::string_view path) {
 // | [>] parse_route_parameters_                                  ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Args - route parameters being used                                      |
+// | Args - route parameters being used                                        |
 // +---------------------------------------------------------------------------+
 // | This function parses the route parameters from the provided array of      |
 // | string views into the appropriate types and stores them in the provided   |
@@ -217,10 +218,10 @@ bool parse_route_parameters_(
 // | [>] invoke_route_handler                                     ( function ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Hty - handler being used                                                |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
+// | Hty - handler being used                                                  |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
+// | Args - route parameters being used                                        |
 // +---------------------------------------------------------------------------+
 // | Invokes the handler with the request and parsed route parameters.         |
 // | Throws if the path or parameters do not match.                            |
@@ -249,8 +250,8 @@ void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
 // | [>] router_handler_parametrized                                 ( class ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -297,10 +298,10 @@ class router_handler_parametrized {
 // | [>] make_router_handler_parametrized                           (function) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   Args - route parameters being used                                      |
-// |   Hty - handler being used                                                |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
+// | Args - route parameters being used                                        |
+// | Hty - handler being used                                                  |
 // +---------------------------------------------------------------------------+
 // | This function creates a router_handler_parametrized object for a          |
 // | synchronous route handler. It takes a pattern and a handler as input,     |
