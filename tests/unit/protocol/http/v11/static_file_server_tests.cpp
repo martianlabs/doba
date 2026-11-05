@@ -184,6 +184,88 @@ DOBA_TEST("static file server rejects invalid prefixes roots and directories") {
 }
 
 // +===========================================================================+
+// | [>] static file configuration validation                    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static file policies reject escaping paths and header injection") {
+  file_directory directory;
+  const static_file_policies invalid[] = {
+      {.index_file = "../outside"},
+      {.index_file = "sub/index.html"},
+      {.index_file = "/outside"},
+      {.spa_fallback = "../outside"},
+      {.spa_fallback = "/outside"},
+      {.cache_control = "public\r\nX-Injected: yes"},
+      {.cache_control = "public\nX-Injected: yes"},
+      {.mime_types = {{"", "text/plain"}}},
+      {.mime_types = {{"txt", "text/plain"}}},
+      {.mime_types = {{".txt", ""}}},
+      {.mime_types = {{".txt", "text/plain\r\nX-Injected: yes"}}},
+      {.mime_types = {{".txt", "text/plain\nX-Injected: yes"}}},
+  };
+  for (const auto& policies : invalid) {
+    bool rejected = false;
+    try {
+      static_file_server controller("/", directory.path(), policies);
+    } catch (const std::invalid_argument&) {
+      rejected = true;
+    }
+    DOBA_EXPECT(rejected);
+  }
+}
+
+// +===========================================================================+
+// | [>] static file explicit cache invalidation                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static invalidation removes all variants and preserves snapshots") {
+  file_directory directory;
+  directory.write("asset", "identity");
+  directory.write("asset.br", "brotli");
+  directory.write("asset.gz", "gzip");
+  directory.write("unrelated", "retained");
+  auto cache = std::make_shared<static_file_cache>();
+  const static_file_policies policies{.cache = cache, .precompressed = true};
+  static_file_server controller("/", directory.path(), policies);
+  router<request, response> routes;
+  routes.add_controller<static_file_server>("/", directory.path(), policies);
+  auto identity = file_request(routes, "GET", "/asset");
+  auto brotli = file_request(routes, "GET", "/asset",
+                             "Accept-Encoding: br\r\n");
+  auto gzip = file_request(routes, "GET", "/asset",
+                           "Accept-Encoding: gzip\r\n");
+  auto unrelated = file_request(routes, "GET", "/unrelated");
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 4);
+  const auto root_key = fs::canonical(directory.path()).generic_u8string();
+  std::string key(root_key.begin(), root_key.end());
+  key += '\0';
+  const auto original = cache->find(key + "asset");
+  const auto retained = cache->find(key + "unrelated");
+  DOBA_EXPECT(original != nullptr);
+  DOBA_EXPECT(retained != nullptr);
+  controller.invalidate("asset");
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
+  for (std::string_view suffix : {"", ".br", ".gz"}) {
+    DOBA_EXPECT(!cache->find(key + "asset" + std::string(suffix)));
+  }
+  DOBA_EXPECT(cache->find(key + "unrelated") == retained);
+  auto reloaded = file_request(routes, "GET", "/asset");
+  const auto replacement = cache->find(key + "asset");
+  DOBA_EXPECT(replacement != nullptr);
+  DOBA_EXPECT(replacement != original);
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 2);
+  static_file_server uncached("/", directory.path());
+  uncached.invalidate("asset");
+  uncached.clear_cache();
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 2);
+  controller.clear_cache();
+  DOBA_EXPECT_EQUAL(cache->statistics().entries, 0);
+  DOBA_EXPECT_EQUAL(file_body(identity), "identity");
+  DOBA_EXPECT_EQUAL(file_body(brotli), "brotli");
+  DOBA_EXPECT_EQUAL(file_body(gzip), "gzip");
+  DOBA_EXPECT_EQUAL(file_body(unrelated), "retained");
+  DOBA_EXPECT_EQUAL(file_body(reloaded), "identity");
+}
+
+// +===========================================================================+
 // | [>] static files decoded paths                              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("static file server uses the already decoded request path") {
@@ -746,6 +828,23 @@ DOBA_TEST(
   auto mime = file_request(routes, "GET", "/files/data.custom");
   DOBA_EXPECT_EQUAL(mime.get_header("Content-Type").second,
                     "application/x-custom");
+}
+
+// +===========================================================================+
+// | [>] directory redirects escape decoded paths                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("static redirects escape paths and preserve encoded query values") {
+  file_directory directory;
+  fs::create_directory(directory.path() / "a b");
+  router<request, response> routes;
+  routes.add_controller<static_file_server>(
+      "/files", directory.path(),
+      static_file_policies{.redirect_directories = true});
+  auto result = file_request(routes, "GET",
+      "/files/a%20b?q=one%20two&x=a%2Fb");
+  DOBA_EXPECT(file_status(result).starts_with("HTTP/1.1 301"));
+  DOBA_EXPECT_EQUAL(result.get_header("Location").second,
+                    "/files/a%20b/?q=one%20two&x=a%2Fb");
 }
 
 DOBA_TEST("static file cache expires and large files preserve direct reading") {

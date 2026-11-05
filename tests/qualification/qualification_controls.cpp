@@ -78,7 +78,12 @@ static void coverage_controls(const fs::path& root) {
   }
   auto bad = summary;
   bad["modules"]["common"]["branches"]["percent"] = 49;
-  rejected([&] { enforce(bad, baseline); }, "common/branches");
+  rejected([&] { enforce(bad, baseline); },
+    "common/branches (measured 49.000000%, required 50.000000%; covered 1/2)");
+  bad = summary;
+  bad["modules"]["common"]["lines"]["percent"] = nullptr;
+  rejected([&] { enforce(bad, baseline); },
+    "common/lines (measured not applicable, required 66.000000%; covered 2/3)");
   bad = summary; bad["measured_headers"] = json::array{};
   rejected([&] { enforce(bad, baseline); }, "Lost measured header");
   bad = summary;

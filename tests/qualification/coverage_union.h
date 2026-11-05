@@ -195,9 +195,18 @@ inline void enforce(const json& summary, const json& baseline) {
         require(floor.numeric() && std::isfinite(floor.number()) &&
           floor.number() >= 0 && floor.number() <= 100,
           "Invalid coverage floor: " + name + '/' + metric);
-        require(!current["percent"].null() &&
-          current["percent"].number() + 1e-9 >= floor.number(),
-          "Coverage regression: " + name + '/' + metric);
+        if (current["percent"].null() ||
+            !(current["percent"].number() + 1e-9 >= floor.number())) {
+          std::ostringstream diagnostic;
+          diagnostic << "Coverage regression: " << name << '/' << metric
+            << " (measured " << std::fixed << std::setprecision(6);
+          if (current["percent"].null()) diagnostic << "not applicable";
+          else diagnostic << current["percent"].number() << '%';
+          diagnostic << ", required " << floor.number() << "%; covered "
+            << std::defaultfloat << current["covered"].number() << '/'
+            << current["count"].number() << ')';
+          throw std::runtime_error(diagnostic.str());
+        }
       }
     }
   }
