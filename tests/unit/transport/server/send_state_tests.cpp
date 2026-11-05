@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -96,7 +96,7 @@ DOBA_TEST("send state enforces inline capacity") {
 }
 
 // +===========================================================================+
-// | [>] send state keeps exact capacity across partial sends   ( test-case ) |
+// | [>] send state keeps exact capacity across partial sends    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("send state keeps exact capacity across partial sends") {
   send_state output(4);
@@ -118,7 +118,7 @@ DOBA_TEST("send state keeps exact capacity across partial sends") {
 }
 
 // +===========================================================================+
-// | [>] bounded source blocks                                  ( test-case ) |
+// | [>] bounded source blocks                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("send state streams source chunks within TX capacity") {
   std::string source_bytes = "xy";

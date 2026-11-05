@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -303,7 +303,13 @@ class request {
   }
 
   // Async execution must own its bytes before calling user code.
+  // +-------------------------------------------------------------------------+
+  // | [>] borrows_bytes                                            ( public ) |
+  // +-------------------------------------------------------------------------+
   bool borrows_bytes() const noexcept { return borrowed_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] make_owned                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   void make_owned() {
     if (!borrowed_) return;
     std::size_t size = 0;
@@ -319,8 +325,14 @@ class request {
     count(host_port_);
     count(ta_host_);
     count(ta_port_);
-    for (const auto& field : headers_) { count(field.first); count(field.second); }
-    for (const auto& field : query_parameters_) { count(field.first); count(field.second); }
+    for (const auto& field : headers_) {
+      count(field.first);
+      count(field.second);
+    }
+    for (const auto& field : query_parameters_) {
+      count(field.first);
+      count(field.second);
+    }
     count(body_bytes_);
     std::vector<char> owned(size);
     std::size_t offset = 0;
@@ -338,7 +350,10 @@ class request {
     copy(ta_host_);
     copy(ta_port_);
     for (auto& field : headers_) { copy(field.first); copy(field.second); }
-    for (auto& field : query_parameters_) { copy(field.first); copy(field.second); }
+    for (auto& field : query_parameters_) {
+      copy(field.first);
+      copy(field.second);
+    }
     copy(body_bytes_);
     if (body_reader_ && !body_bytes_.empty()) {
       body_reader_->rebind_borrowed(std::as_bytes(
@@ -347,10 +362,14 @@ class request {
     head_bytes_ = std::move(owned);
     borrowed_ = false;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] rebase_bytes                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void rebase_bytes(std::uintptr_t previous, const char* current) noexcept {
     auto rebase = [&](std::string_view& text) {
       if (!text.empty()) {
-        const auto offset = reinterpret_cast<std::uintptr_t>(text.data()) - previous;
+        const auto offset =
+            reinterpret_cast<std::uintptr_t>(text.data()) - previous;
         text = {current + offset, text.size()};
       }
     };
@@ -361,13 +380,25 @@ class request {
     rebase(ta_host_);
     rebase(ta_port_);
     for (auto& field : headers_) { rebase(field.first); rebase(field.second); }
-    for (auto& field : query_parameters_) { rebase(field.first); rebase(field.second); }
+    for (auto& field : query_parameters_) {
+      rebase(field.first);
+      rebase(field.second);
+    }
     rebase(body_bytes_);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] body_is_stored                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   bool body_is_stored() const noexcept { return body_storage_.has_value(); }
+  // +-------------------------------------------------------------------------+
+  // | [>] body_wire_size                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t body_wire_size() const noexcept { return body_wire_size_; }
 
   // Inline wire bytes stay in the decoder; larger bodies use existing storage.
+  // +-------------------------------------------------------------------------+
+  // | [>] begin_body                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   bool begin_body(std::size_t memory_threshold, std::size_t declared_size) {
     body_threshold_ = memory_threshold;
     body_wire_size_ = 0;
@@ -379,30 +410,40 @@ class request {
     return (memory_threshold && declared_size <= memory_threshold) ||
            body_storage_->spill();
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] append_body                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool append_body(std::string_view bytes) {
     if (bytes.empty()) return true;
     if (!body_storage_ && bytes.size() <= body_threshold_ - body_wire_size_) {
       if (body_bytes_.empty()) body_bytes_ = bytes;
-      else body_bytes_ = {body_bytes_.data(), body_bytes_.size() + bytes.size()};
+      else
+        body_bytes_ = {body_bytes_.data(), body_bytes_.size() + bytes.size()};
       body_wire_size_ += bytes.size();
       return true;
     }
     if (!body_storage_) {
       body_storage_.emplace(common::byte_storage_options{body_threshold_, {}});
       if (!body_storage_->spill() ||
-          !body_storage_->write(body_bytes_.data(), body_bytes_.size())) return false;
+          !body_storage_->write(body_bytes_.data(), body_bytes_.size()))
+        return false;
       body_bytes_ = {};
     }
     if (!body_storage_->write(bytes.data(), bytes.size())) return false;
     body_wire_size_ += bytes.size();
     return true;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] finish_body                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   bool finish_body(bool chunked, std::size_t content_length,
                    std::size_t extension_limit, std::size_t trailer_limit) {
     if (!body_storage_) {
-      const auto bytes = std::as_bytes(std::span(body_bytes_.data(), body_bytes_.size()));
-      body_reader_ = chunked ? body::reader::chunked(bytes, extension_limit, trailer_limit)
-                             : body::reader::raw(bytes, content_length);
+      const auto bytes =
+          std::as_bytes(std::span(body_bytes_.data(), body_bytes_.size()));
+      body_reader_ =
+          chunked ? body::reader::chunked(bytes, extension_limit, trailer_limit)
+                  : body::reader::raw(bytes, content_length);
       return true;
     }
     body_storage_->finish(body_wire_size_);

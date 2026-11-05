@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -49,9 +49,9 @@ std::atomic<unsigned> fail_timer_posts{0}, timer_posts{0};
 std::atomic<bool> fail_timer_create{false}, hold_timer{false};
 martianlabs::doba::tests::manual_event release_timer;
 
-// +=========================================================================+
-// | [>] wait_until                                              ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] wait_until                                               ( function ) |
+// +---------------------------------------------------------------------------+
 bool wait_until(const std::function<bool()>& predicate) {
   const auto end = std::chrono::steady_clock::now() + 5s;
   do {
@@ -61,9 +61,9 @@ bool wait_until(const std::function<bool()>& predicate) {
   return false;
 }
 
-// +=========================================================================+
-// | [>] tracked_create                                          ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] tracked_create                                           ( function ) |
+// +---------------------------------------------------------------------------+
 PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
                                 PTP_CALLBACK_ENVIRON environment) {
   if (fail_timer_create.exchange(false)) return nullptr;
@@ -71,9 +71,9 @@ PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
   return ::CreateThreadpoolTimer(callback, state, environment);
 }
 
-// +=========================================================================+
-// | [>] tracked_arm                                             ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] tracked_arm                                              ( function ) |
+// +---------------------------------------------------------------------------+
 void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
                          DWORD window) {
   if (due) ++timer_arms;
@@ -84,9 +84,9 @@ void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
                        period, window);
 }
 
-// +=========================================================================+
-// | [>] reject_timer_post                                       ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] reject_timer_post                                        ( function ) |
+// +---------------------------------------------------------------------------+
 bool reject_timer_post() {
   auto remaining = fail_timer_posts.load();
   while (remaining) {
@@ -96,9 +96,9 @@ bool reject_timer_post() {
   return false;
 }
 
-// +=========================================================================+
-// | [>] tracked_post                                            ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] tracked_post                                             ( function ) |
+// +---------------------------------------------------------------------------+
 BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
                           LPOVERLAPPED packet) {
   const auto type = packet ? static_cast<overlapped_base*>(packet)->get_type()
@@ -121,9 +121,9 @@ BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
   return result;
 }
 
-// +=========================================================================+
-// | [>] tracked_completion                                      ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] tracked_completion                                       ( function ) |
+// +---------------------------------------------------------------------------+
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
                                 LPOVERLAPPED* packet, DWORD timeout) {
   const auto result = ::GetQueuedCompletionStatus(port, bytes, key,

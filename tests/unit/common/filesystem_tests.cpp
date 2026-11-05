@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -354,7 +354,8 @@ DOBA_TEST("filesystem rejects directory links") {
   martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
   filesystem_file file;
   std::error_code error;
-  DOBA_EXPECT(!filesystem_file::inspect(directory.path(), "linked/secret", error));
+  DOBA_EXPECT(
+      !filesystem_file::inspect(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
   DOBA_EXPECT(!file.open(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
@@ -403,7 +404,7 @@ DOBA_TEST("filesystem rejects a replaced root") {
 }
 
 // +===========================================================================+
-// | [>] filesystem rejects native special paths                ( test-case ) |
+// | [>] filesystem rejects native special paths                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem rejects native special paths") {
   file_directory directory;
@@ -421,7 +422,8 @@ DOBA_TEST("filesystem rejects native special paths") {
   }
 }
 
-DOBA_TEST("filesystem metadata describes handles and selected slices stay bounded") {
+DOBA_TEST(
+    "filesystem metadata describes handles and selected slices stay bounded") {
   file_directory directory;
   directory.write("data", "0123456789");
   filesystem_file file;
@@ -436,7 +438,8 @@ DOBA_TEST("filesystem metadata describes handles and selected slices stay bounde
   std::array<std::byte, 20> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), 4);
   DOBA_EXPECT(file.eof());
-  DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<const char*>(bytes.data()), 4), "3456");
+  DOBA_EXPECT_EQUAL(
+      std::string_view(reinterpret_cast<const char*>(bytes.data()), 4), "3456");
   DOBA_EXPECT_EQUAL(file.metadata(error), before);
   DOBA_EXPECT(!file.select(5, 1, error));
   DOBA_EXPECT(error == std::errc::invalid_argument);
@@ -448,7 +451,8 @@ DOBA_TEST("filesystem metadata describes handles and selected slices stay bounde
 // +===========================================================================+
 // | [>] filesystem queries confined path attributes             ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("filesystem inspect matches handle attributes without moving a cursor") {
+DOBA_TEST(
+    "filesystem inspect matches handle attributes without moving a cursor") {
   file_directory directory;
   directory.write("data", "0123456789");
   filesystem_file file;
@@ -458,12 +462,15 @@ DOBA_TEST("filesystem inspect matches handle attributes without moving a cursor"
   std::array<std::byte, 3> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), 3);
   error = std::make_error_code(std::errc::invalid_argument);
-  DOBA_EXPECT_EQUAL(filesystem_file::inspect(directory.path(), "data", error), before);
+  DOBA_EXPECT_EQUAL(filesystem_file::inspect(directory.path(), "data", error),
+                    before);
   DOBA_EXPECT(!error);
   DOBA_EXPECT_EQUAL(file.read(bytes), 3);
-  DOBA_EXPECT_EQUAL(std::string_view(reinterpret_cast<const char*>(bytes.data()), 3), "345");
+  DOBA_EXPECT_EQUAL(
+      std::string_view(reinterpret_cast<const char*>(bytes.data()), 3), "345");
   const auto timestamp = fs::last_write_time(directory.path() / "data");
-  fs::last_write_time(directory.path() / "data", timestamp + std::chrono::seconds(2));
+  fs::last_write_time(directory.path() / "data",
+                      timestamp + std::chrono::seconds(2));
   auto changed = filesystem_file::inspect(directory.path(), "data", error);
   DOBA_EXPECT(changed.has_value());
   DOBA_EXPECT(changed != before);
@@ -471,18 +478,21 @@ DOBA_TEST("filesystem inspect matches handle attributes without moving a cursor"
   fs::rename(directory.path() / "data", directory.path() / "previous");
   directory.write("data", "abcdefghij");
   fs::last_write_time(directory.path() / "data", timestamp);
-  const auto replaced = filesystem_file::inspect(directory.path(), "data", error);
+  const auto replaced =
+      filesystem_file::inspect(directory.path(), "data", error);
   DOBA_EXPECT(replaced.has_value());
   DOBA_EXPECT(replaced->identity != before->identity);
   DOBA_EXPECT_EQUAL(replaced->size, before->size);
   DOBA_EXPECT_EQUAL(replaced->modified_seconds, before->modified_seconds);
-  DOBA_EXPECT_EQUAL(replaced->modified_nanoseconds, before->modified_nanoseconds);
+  DOBA_EXPECT_EQUAL(replaced->modified_nanoseconds,
+                    before->modified_nanoseconds);
 }
 
 // +===========================================================================+
 // | [>] filesystem attribute query rejects invalid paths        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("filesystem inspect rejects missing files directories and invalid paths") {
+DOBA_TEST(
+    "filesystem inspect rejects missing files directories and invalid paths") {
   file_directory directory;
   directory.write("file", "data");
   fs::create_directory(directory.path() / "sub");
@@ -501,16 +511,19 @@ DOBA_TEST("filesystem inspect rejects missing files directories and invalid path
 
 #ifdef _WIN32
 // +===========================================================================+
-// | [>] filesystem inspection needs no content access            ( test-case ) |
+// | [>] filesystem inspection needs no content access           ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("filesystem inspect succeeds when another handle denies content reads") {
+DOBA_TEST(
+    "filesystem inspect succeeds when another handle denies content reads") {
   file_directory directory;
   directory.write("file", "contents");
-  const auto handle = CreateFileW((directory.path() / "file").c_str(), GENERIC_READ,
+  const auto handle = CreateFileW(
+      (directory.path() / "file").c_str(), GENERIC_READ,
       FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, 0, nullptr);
   DOBA_EXPECT(handle != INVALID_HANDLE_VALUE);
   std::error_code error;
-  const auto attributes = filesystem_file::inspect(directory.path(), "file", error);
+  const auto attributes =
+      filesystem_file::inspect(directory.path(), "file", error);
   CloseHandle(handle);
   DOBA_EXPECT(attributes.has_value());
   DOBA_EXPECT(!error);

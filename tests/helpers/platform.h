@@ -25,6 +25,11 @@
 #ifndef martianlabs_doba_tests_helpers_platform_h
 #define martianlabs_doba_tests_helpers_platform_h
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] platform                                                   ( header ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 // Platform selection belongs here. Helpers include their selected backend
 // without introducing operating-system branches in shared test code.
 #define DOBA_TEST_PLATFORM_STRING_IMPL(value) #value

@@ -58,7 +58,7 @@ DOBA_TEST("reader is movable but not copyable") {
 }
 
 // +===========================================================================+
-// | [>] readers require an actual source                       ( test-case ) |
+// | [>] readers require an actual source                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("readers reject empty buffers and unopened files") {
   bool empty_rejected = false;

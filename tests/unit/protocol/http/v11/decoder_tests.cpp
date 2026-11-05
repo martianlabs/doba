@@ -356,7 +356,7 @@ DOBA_TEST("incomplete head fails at configured head limit") {
 }
 
 // +===========================================================================+
-// | [>] request head size is bounded by HTTP policy        ( test-case ) |
+// | [>] request head size is bounded by HTTP policy             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request head size is bounded by HTTP policy") {
   constexpr std::size_t capacity = policies::kDefaultMaxRequestHeadSize;
@@ -711,7 +711,7 @@ DOBA_TEST("decoder reuses storage after sequential dispatch") {
 }
 
 // +===========================================================================+
-// | [>] invalid conditional dates are ignored                  ( test-case )  |
+// | [>] invalid conditional dates are ignored                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("invalid conditional dates do not reject requests") {
   struct test_case {
@@ -2586,11 +2586,12 @@ DOBA_TEST("decoder reads chunked bodies across the wire memory boundary") {
 }
 
 // +===========================================================================+
-// | [>] temporary body removed before dispatch                ( test-case ) |
+// | [>] temporary body removed before dispatch                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes an unread temporary body before dispatch") {
   martianlabs::doba::tests::file_directory directory;
-  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
   DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string payload(16385, 'x');
@@ -2620,7 +2621,8 @@ DOBA_TEST("decoder removes an unread temporary body before dispatch") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoder removes a temporary body after invalid framing") {
   martianlabs::doba::tests::file_directory directory;
-  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
   DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string source =
@@ -2653,7 +2655,8 @@ DOBA_TEST("decoder removes a temporary body after invalid framing") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("handler failure leaves no temporary body") {
   martianlabs::doba::tests::file_directory directory;
-  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
   DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   const std::string source =
@@ -2715,7 +2718,8 @@ DOBA_TEST("decoder returns 500 when temporary body creation fails") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request retains its open temporary body after unlink") {
   martianlabs::doba::tests::file_directory directory;
-  martianlabs::doba::tests::unit::temporary_directory temp(directory.path().string());
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
   DOBA_EXPECT_EQUAL(temp.changed(), 0);
   const auto before = body_temp_files();
   decoder_input value;

@@ -283,6 +283,9 @@ class tcpip_client {
   // | [>] native_error                                             ( public ) |
   // +-------------------------------------------------------------------------+
   int native_error() const { return native_error_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] connection_reset                                         ( public ) |
+  // +-------------------------------------------------------------------------+
   bool connection_reset() const { return native_error_ == ECONNRESET; }
   // +=========================================================================+
   // | [>] shutdown_write                                           ( public ) |
@@ -327,7 +330,13 @@ class tcpip_client {
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] invalid_socket                                          ( private ) |
+  // +-------------------------------------------------------------------------+
   static int invalid_socket() { return -1; }
+  // +-------------------------------------------------------------------------+
+  // | [>] close_socket                                            ( private ) |
+  // +-------------------------------------------------------------------------+
   static void close_socket(int socket) { ::close(socket); }
   // +=========================================================================+
   // | [>] socket_error                                            ( private ) |
@@ -368,7 +377,8 @@ class tcpip_client {
         error_ = "timeout";
         return false;
       }
-      pollfd descriptor{socket_, static_cast<short>(writing ? POLLOUT : POLLIN), 0};
+      pollfd descriptor{socket_, static_cast<short>(writing ? POLLOUT : POLLIN),
+                        0};
       auto milliseconds = (remaining.count() + 999) / 1000;
       const int timeout = static_cast<int>((std::min)(
           milliseconds, static_cast<decltype(milliseconds)>(INT_MAX)));

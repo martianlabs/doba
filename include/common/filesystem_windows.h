@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -144,27 +144,40 @@ class filesystem_file {
   // | [>] size                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] metadata                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] std::optional<filesystem_metadata> metadata(
       std::error_code& error) const {
     error.clear();
     BY_HANDLE_FILE_INFORMATION info{};
     FILE_BASIC_INFO basic{};
     if (!GetFileInformationByHandle(file_, &info) ||
-        !GetFileInformationByHandleEx(file_, FileBasicInfo, &basic, sizeof(basic))) {
-      error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+        !GetFileInformationByHandleEx(file_, FileBasicInfo, &basic,
+                                      sizeof(basic))) {
+      error = std::error_code(static_cast<int>(GetLastError()),
+                              std::system_category());
       return {};
     }
     constexpr std::int64_t epoch = 116444736000000000LL;
     const auto modified = basic.LastWriteTime.QuadPart - epoch;
     const auto changed = basic.ChangeTime.QuadPart - epoch;
     return filesystem_metadata{
-        (static_cast<std::uintmax_t>(info.nFileSizeHigh) << 32) | info.nFileSizeLow,
-        modified / 10000000, static_cast<std::uint32_t>((modified % 10000000) * 100),
+        (static_cast<std::uintmax_t>(info.nFileSizeHigh) << 32) |
+            info.nFileSizeLow,
+        modified / 10000000,
+        static_cast<std::uint32_t>((modified % 10000000) * 100),
         info.dwVolumeSerialNumber,
-        (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) | info.nFileIndexLow,
-        changed / 10000000, static_cast<std::uint32_t>((changed % 10000000) * 100),
-        info.dwFileAttributes, info.nNumberOfLinks};
+        (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32) |
+            info.nFileIndexLow,
+        changed / 10000000,
+        static_cast<std::uint32_t>((changed % 10000000) * 100),
+        info.dwFileAttributes,
+        info.nNumberOfLinks};
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] select                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   bool select(std::size_t offset, std::size_t length, std::error_code& error) {
     error.clear();
     if (offset > size_ || length > size_ - offset) {
@@ -174,7 +187,8 @@ class filesystem_file {
     LARGE_INTEGER position{};
     position.QuadPart = static_cast<LONGLONG>(offset);
     if (!SetFilePointerEx(file_, position, nullptr, FILE_BEGIN)) {
-      error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+      error = std::error_code(static_cast<int>(GetLastError()),
+                              std::system_category());
       return false;
     }
     size_ = length;
@@ -260,7 +274,8 @@ class filesystem_file {
       const bool last = current_path == target;
       filesystem_file next;
       next.file_ = CreateFileW(
-          current_path.c_str(), attributes ? FILE_READ_ATTRIBUTES : GENERIC_READ,
+          current_path.c_str(),
+          attributes ? FILE_READ_ATTRIBUTES : GENERIC_READ,
           FILE_SHARE_READ | FILE_SHARE_WRITE | (last ? FILE_SHARE_DELETE : 0),
           nullptr, OPEN_EXISTING,
           FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr);

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -41,7 +41,7 @@ namespace martianlabs::doba::transport::server::detail {
 // | delivered synchronously; incomplete messages remain protocol-owned.       |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
+// | ENty - engine type being used.                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -59,9 +59,15 @@ struct tcp_connection {
   // +-------------------------------------------------------------------------+
   // | Processes the received bytes in the input buffer using the engine.      |
   // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] receive_buffer                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   std::span<char> receive_buffer() noexcept {
     return {buffer.get(), capacity};
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] process                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   protocol::processing_result process(std::size_t received) {
     if (received > capacity) {
       throw std::out_of_range("TCP receive size exceeds buffer");

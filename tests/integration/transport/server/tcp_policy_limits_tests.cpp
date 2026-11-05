@@ -49,7 +49,7 @@ using namespace std::chrono_literals;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] policy_state                                              ( struct ) |
+// | [>] policy_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policy_state {
@@ -67,24 +67,24 @@ struct policy_state {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] policy_engine                                             ( struct ) |
+// | [>] policy_engine                                              ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policy_engine {
   // +=========================================================================+
-  // | [>] USINGs                                                  ( public ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] set_on_send                                             ( public ) |
+  // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(send_delegate value) { send = std::move(value); }
   // +=========================================================================+
-  // | [>] set_on_close                                            ( public ) |
+  // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> value) { close = std::move(value); }
   // +=========================================================================+
-  // | [>] on_bytes_received                                       ( public ) |
+  // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view bytes) {
     ++state->calls;
@@ -104,7 +104,7 @@ struct policy_engine {
   processing_result on_processing_turn(bool) { return {}; }
 
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( public ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   // Observations shared with the external test owner.
   std::shared_ptr<policy_state> state;
@@ -153,7 +153,7 @@ DOBA_TEST("TCP rejects embedded and trailing NUL in decimal port text") {
 }
 
 // +===========================================================================+
-// | [>] malformed endpoint text                                ( test-case ) |
+// | [>] malformed endpoint text                                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("TCP rejects malformed IPv4 addresses and decimal ports") {
   auto state = std::make_shared<policy_state>();

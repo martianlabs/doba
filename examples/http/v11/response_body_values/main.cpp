@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -40,10 +40,10 @@ using namespace martianlabs::doba::protocol::http::v11;
 // | This is the entry point of the application. It creates an HTTP server     |
 // | that listens on all interfaces (0.0.0.0) and port 8080.                   |
 // | The server registers four routes:                                         |
-// |   * "/text" for GET requests,                                             |
-// |   * "/binary" for GET requests,                                           |
-// |   * "/integer" for GET requests, and                                      |
-// |   * "/floating-point" for GET requests.                                   |
+// | * "/text" for GET requests,                                               |
+// | * "/binary" for GET requests,                                             |
+// | * "/integer" for GET requests, and                                        |
+// | * "/floating-point" for GET requests.                                     |
 // | Each route has a corresponding lambda function that handles the request   |
 // | and constructs an appropriate response. The server runs until a           |
 // | termination signal is received.                                           |

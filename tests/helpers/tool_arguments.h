@@ -32,7 +32,7 @@
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] arguments                                                  ( class ) |
+// | [>] arguments                                                   ( class ) |
 // +---------------------------------------------------------------------------+
 class arguments {
   std::map<std::string, std::string> values_;
@@ -40,7 +40,7 @@ class arguments {
 
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   arguments(int count, char** values,
             const std::set<std::string>& switches = {}) {
@@ -56,6 +56,9 @@ class arguments {
       }
     }
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string get(const std::string& name,
                   const std::string& fallback = "") {
     auto found = values_.find(name);
@@ -64,11 +67,17 @@ class arguments {
     values_.erase(found);
     return result;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] required                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string required(const std::string& name) {
     auto value = get(name);
     require(!value.empty(), "Required option: " + name);
     return value;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] integer                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   int integer(const std::string& name, int fallback, int low, int high) {
     auto text = get(name, std::to_string(fallback));
     require(std::regex_match(text, std::regex("[0-9]+")),
@@ -77,9 +86,15 @@ class arguments {
     require(number >= low && number <= high, "Option out of range: " + name);
     return static_cast<int>(number);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] enabled                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   bool enabled(const std::string& name) {
     return switches_.erase(name) != 0;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] finish                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   void finish() const {
     require(values_.empty() && switches_.empty(), "Unknown command option");
   }

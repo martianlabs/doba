@@ -29,6 +29,11 @@
 #include <span>
 #include <string_view>
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] body_bytes                                                 ( header ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace martianlabs::doba::tests::unit {
 inline std::span<const std::byte> bytes(std::string_view value) {
   return {reinterpret_cast<const std::byte*>(value.data()), value.size()};

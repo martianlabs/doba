@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -42,7 +42,8 @@ namespace martianlabs::doba::protocol::http {
 template <typename RQty, typename RSty>
 struct router_match_result {
   const detail::router_handler_static<RQty, RSty>* handler{nullptr};
-  const detail::router_handler_parametrized<RQty, RSty>* parametrized_handler{nullptr};
+  const detail::router_handler_parametrized<RQty, RSty>* parametrized_handler{
+      nullptr};
   const detail::router_handler_static_async<RQty, RSty>* async_handler{nullptr};
   const detail::router_handler_parametrized_async<RQty, RSty>*
       async_parametrized_handler{nullptr};

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -47,7 +47,7 @@ namespace detail = martianlabs::doba::transport::server::detail;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] byte_engine                                               ( struct ) |
+// | [>] byte_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Test engine follows the synchronous transport callback contract.          |
 // +---------------------------------------------------------------------------+
@@ -94,7 +94,7 @@ struct byte_engine {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] socket_pair                                                ( class ) |
+// | [>] socket_pair                                                 ( class ) |
 // +---------------------------------------------------------------------------+
 // | Nonblocking endpoints force partial sends without timing assumptions.     |
 // +---------------------------------------------------------------------------+
@@ -155,7 +155,7 @@ std::unique_ptr<common::reader> source(const std::string& bytes) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] Linux batches bytes and preserves partial sends       ( test-case ) |
+// | [>] Linux batches bytes and preserves partial sends         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux batches inline output and preserves partial sends") {
   const std::string body(256 * 1024, 'b');
@@ -181,7 +181,7 @@ DOBA_TEST("Linux batches inline output and preserves partial sends") {
 }
 
 // +===========================================================================+
-// | [>] Linux streams a source through bounded TX              ( test-case ) |
+// | [>] Linux streams a source through bounded TX               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux streams a source through bounded TX") {
   const std::string body(128 * 1024, 's');
@@ -206,7 +206,7 @@ DOBA_TEST("Linux streams a source through bounded TX") {
 }
 
 // +===========================================================================+
-// | [>] Linux accepts an empty source without output           ( test-case ) |
+// | [>] Linux accepts an empty source without output            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux accepts an empty source without output") {
   const std::string empty;
@@ -224,7 +224,7 @@ DOBA_TEST("Linux accepts an empty source without output") {
 }
 
 // +===========================================================================+
-// | [>] Linux rejects output following a source                ( test-case ) |
+// | [>] Linux rejects output following a source                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux rejects output following a source") {
   const std::string body("source");
@@ -393,7 +393,7 @@ DOBA_TEST("Linux accepts a new source after the previous drains") {
 }
 
 // +===========================================================================+
-// | [>] Linux closes an empty terminal delivery                ( test-case ) |
+// | [>] Linux closes an empty terminal delivery                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux closes an empty terminal delivery") {
   const std::string empty;
@@ -429,7 +429,7 @@ DOBA_TEST("Linux handles a broken output socket without SIGPIPE") {
 }
 
 // +===========================================================================+
-// | [>] empty sends preserve a terminal reader                 ( test-case ) |
+// | [>] empty sends preserve a terminal reader                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux empty sends preserve prefix source and exact TX capacity") {
   for (const std::string& body : {std::string{}, std::string(257, 's')}) {
@@ -457,7 +457,7 @@ DOBA_TEST("Linux empty sends preserve prefix source and exact TX capacity") {
 }
 
 // +===========================================================================+
-// | [>] empty sends do not permit another reader               ( test-case ) |
+// | [>] empty sends do not permit another reader                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux empty sends do not permit a second terminal reader") {
   const std::string body("source");
@@ -476,7 +476,7 @@ DOBA_TEST("Linux empty sends do not permit a second terminal reader") {
 }
 
 // +===========================================================================+
-// | [>] Requested turns are retained for the worker                  ( test-case )|
+// | [>] Requested turns are retained for the worker             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux context retains each requested processing condition") {
   for (int condition = 0; condition < 3; ++condition) {
@@ -509,7 +509,7 @@ DOBA_TEST("Linux context retains each requested processing condition") {
 }
 
 // +===========================================================================+
-// | [>] Closing wins over requested scheduling                 ( test-case )|
+// | [>] Closing wins over requested scheduling                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux close retains output when a result also requests processing") {
   socket_pair sockets;

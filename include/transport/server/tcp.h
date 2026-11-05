@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -69,8 +69,8 @@ namespace martianlabs::doba::transport::server {
 // | factory when it is created.                                               |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   ENty - engine type being used.                                          |
-// |   FAty - engine factory type being used.                                  |
+// | ENty - engine type being used.                                            |
+// | FAty - engine factory type being used.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32

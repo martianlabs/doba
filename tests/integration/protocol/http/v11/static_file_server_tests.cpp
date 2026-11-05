@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -43,7 +43,7 @@
 
 namespace {
 // +---------------------------------------------------------------------------+
-// | [>] socket workers                                          ( constant ) |
+// | [>] socket workers                                           ( constant ) |
 // +---------------------------------------------------------------------------+
 // Exercise independent connection owners on both backends.
 constexpr std::size_t kSocketWorkers = 2;
@@ -205,8 +205,9 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   tcpip_client client;
   const auto port = client.find_available_port();
   http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  server.add_controller<static_file_server>("/", directory.path(), static_file_policies{
-      .cache = cache, .precompressed = true});
+  server.add_controller<static_file_server>(
+      "/", directory.path(),
+      static_file_policies{.cache = cache, .precompressed = true});
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
@@ -214,18 +215,23 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   DOBA_EXPECT(first.has_value());
   const auto tag = std::string(first->header("ETag").value());
   DOBA_EXPECT(!tag.starts_with("W/"));
-  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " + tag + "\r\n\r\n"));
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " + tag +
+      "\r\n\r\n"));
   auto unchanged = receive_http_response(client);
   DOBA_EXPECT(unchanged.has_value());
   DOBA_EXPECT_EQUAL(unchanged->status, "HTTP/1.1 304 Not Modified");
   DOBA_EXPECT(unchanged->body.empty());
   DOBA_EXPECT_EQUAL(unchanged->header("ETag").value(), tag);
-  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nRange: bytes=3-6\r\nIf-Range: " + tag + "\r\n\r\n"));
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nRange: bytes=3-6\r\nIf-Range: " +
+      tag + "\r\n\r\n"));
   auto part = receive_http_response(client);
   DOBA_EXPECT(part.has_value());
   DOBA_EXPECT_EQUAL(part->body, "3456");
   DOBA_EXPECT_EQUAL(part->header("Content-Range").value(), "bytes 3-6/10");
-  DOBA_EXPECT(client.send_all("HEAD /file.txt HTTP/1.1\r\nHost: a\r\nAccept-Encoding: gzip\r\n\r\n"));
+  DOBA_EXPECT(client.send_all(
+      "HEAD /file.txt HTTP/1.1\r\nHost: a\r\nAccept-Encoding: gzip\r\n\r\n"));
   auto head = receive_http_response(client, true);
   DOBA_EXPECT(head.has_value());
   DOBA_EXPECT_EQUAL(head->header("Content-Encoding").value(), "gzip");
@@ -242,8 +248,9 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   DOBA_EXPECT(changed->header("ETag").value() != tag);
   fs::rename(directory.path() / "file.txt", directory.path() / "previous");
   directory.write("file.txt", "klmnopqrst");
-  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " +
-                              std::string(changed->header("ETag").value()) + "\r\n\r\n"));
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " +
+      std::string(changed->header("ETag").value()) + "\r\n\r\n"));
   auto replaced = receive_http_response(client);
   DOBA_EXPECT(replaced.has_value());
   DOBA_EXPECT_EQUAL(replaced->status, "HTTP/1.1 200 OK");
@@ -257,7 +264,8 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   server.stop();
 }
 
-DOBA_TEST("HTTP cached downloads survive invalidation disconnect and shutdown") {
+DOBA_TEST(
+    "HTTP cached downloads survive invalidation disconnect and shutdown") {
   file_directory directory;
   const std::string body(128 * 1024, 'q');
   directory.write("file", body);
@@ -265,14 +273,17 @@ DOBA_TEST("HTTP cached downloads survive invalidation disconnect and shutdown") 
   tcpip_client probe;
   const auto port = probe.find_available_port();
   http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  server.add_controller<static_file_server>("/", directory.path(), static_file_policies{.cache = cache});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
   server.start();
   std::atomic<unsigned> complete{0};
   {
     std::vector<std::jthread> clients;
     for (unsigned i = 0; i < 8; ++i) clients.emplace_back([&, i] {
       tcpip_client client;
-      if (!client.connect(port) || !client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n")) return;
+      if (!client.connect(port) ||
+          !client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n"))
+        return;
       if (i == 0) { client.close(); return; }
       auto result = receive_http_response(client);
       if (result && result->body == body) ++complete;
@@ -287,7 +298,7 @@ DOBA_TEST("HTTP cached downloads survive invalidation disconnect and shutdown") 
 }
 
 // +===========================================================================+
-// | [>] HTTP cached load bypass                                ( test-case ) |
+// | [>] HTTP cached load bypass                                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
   using martianlabs::doba::tests::manual_event;
@@ -335,7 +346,7 @@ DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
 }
 
 // +===========================================================================+
-// | [>] HTTP cached reload contention                          ( test-case ) |
+// | [>] HTTP cached reload contention                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
   file_directory directory;

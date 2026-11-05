@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -77,6 +77,11 @@ using martianlabs::doba::protocol::http::helpers;
 #if DOBA_HTTPARENA_FULL
 // Each worker reuses zlib's allocations; reset starts an independent gzip
 // member for every response. No JSON or compressed response is cached.
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] gzip_context                                               ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct gzip_context {
   z_stream stream{};
   bool initialized{false};
@@ -88,6 +93,9 @@ struct gzip_context {
     if (initialized) deflateEnd(&stream);
   }
 
+  // +-------------------------------------------------------------------------+
+  // | [>] reset                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   bool reset() {
     if (initialized) return deflateReset(&stream) == Z_OK;
     initialized = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
@@ -206,7 +214,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the HttpArena benchmark routes on TCP and TLS.                      |
+// | Runs the HttpArena benchmark routes on TCP and TLS.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -438,7 +446,8 @@ int main() {
   tls_configuration.port = "8081";
   if (const char* configured = std::getenv("TLS_PORT")) {
     std::int64_t requested = 0;
-    if (!parse_integer(configured, requested) || requested < 1 || requested > 65535) {
+    if (!parse_integer(configured, requested) || requested < 1 ||
+        requested > 65535) {
       std::cerr << "TLS_PORT must be an integer from 1 to 65535\n";
       return 1;
     }
@@ -446,20 +455,25 @@ int main() {
   }
   const char* certificate = std::getenv("TLS_CERT");
   const char* private_key = std::getenv("TLS_KEY");
-  tls_configuration.certificate_file = certificate ? certificate : "/certs/server.crt";
-  tls_configuration.private_key_file = private_key ? private_key : "/certs/server.key";
+  tls_configuration.certificate_file =
+      certificate ? certificate : "/certs/server.crt";
+  tls_configuration.private_key_file =
+      private_key ? private_key : "/certs/server.key";
   martianlabs::doba::https_server<> tls_server(tls_configuration,
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
   // The framework owns representation selection, attribute validation and the
   // bounded cache. Keep all workers under one declared budget; no file preload
-  // or per-worker maps in the adapter. Compressed siblings are selected on disk.
+  // or per-worker maps in the adapter. Compressed siblings are selected on
+  // disk.
   const common::cache_policies cache_configuration;
   static_file_policies static_configuration;
   static_configuration.precompressed = true;
-  static_configuration.cache = std::make_shared<static_file_cache>(cache_configuration);
+  static_configuration.cache =
+      std::make_shared<static_file_cache>(cache_configuration);
   const char* static_path = std::getenv("STATIC_DIR");
-  const std::filesystem::path static_root = static_path ? static_path : "/data/static";
+  const std::filesystem::path static_root =
+      static_path ? static_path : "/data/static";
   tls_server.add_controller<static_file_server>(
       "/static", static_root, static_configuration);
   tls_server.add_route(

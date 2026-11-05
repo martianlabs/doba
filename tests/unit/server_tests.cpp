@@ -40,16 +40,25 @@ using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::common::reader;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] line_engine                                               ( struct ) |
+// | [>] line_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct line_engine {
   struct policies_type {};
 
+  // +-------------------------------------------------------------------------+
+  // | [>] set_on_send                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_send(martianlabs::doba::protocol::send_delegate output) {
     on_send = std::move(output);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] set_on_close                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()>) {}
+  // +-------------------------------------------------------------------------+
+  // | [>] on_bytes_received                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
     on_send("echo: ", input, nullptr);
     return {};
@@ -65,7 +74,7 @@ struct line_engine {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] observation                                               ( struct ) |
+// | [>] observation                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct observation {
@@ -83,7 +92,7 @@ struct observation {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] memory_transport                                          ( struct ) |
+// | [>] memory_transport                                           ( struct ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty, typename FNty>
@@ -96,12 +105,21 @@ struct memory_transport {
     state->events += 'c';
     if (state->fail_construct) throw std::runtime_error("construction failed");
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] set_on_connection                                        ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_connection(std::function<void()> callback) {
     on_connection = std::move(callback);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] set_on_disconnection                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void set_on_disconnection(std::function<void()> callback) {
     on_disconnection = std::move(callback);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] start                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void start() {
     state->events += 't';
     if (state->fail_start) throw std::runtime_error("start failed");
@@ -117,10 +135,16 @@ struct memory_transport {
     constexpr char input[] = "line\n";
     engine.on_bytes_received(std::string_view(input, sizeof(input) - 1));
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] quiesce                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   void quiesce() {
     state->events += 'q';
     state->quiesces++;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void stop() {
     state->events += 'x';
     state->stops++;
@@ -133,11 +157,19 @@ struct memory_transport {
   std::function<void()> on_disconnection;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] observed_server                                             ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class observed_server
     : public martianlabs::doba::server<
           line_engine,
           memory_transport<line_engine, std::function<line_engine()>>> {
  public:
+  // +-------------------------------------------------------------------------+
+  // | [>] CONSTRUCTORs                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   explicit observed_server(observation* state)
       : server(state,
                std::function<line_engine()>([]() { return line_engine{}; })) {
@@ -156,7 +188,7 @@ class observed_server
 }  // namespace
 
 // +===========================================================================+
-// | [>] server composes a non-HTTP engine                      ( test-case ) |
+// | [>] server composes a non-HTTP engine                       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server composes a non-HTTP engine") {
   observation observed;
@@ -194,7 +226,7 @@ DOBA_TEST("server composes a non-HTTP engine") {
 }
 
 // +===========================================================================+
-// | [>] server retries after transport startup failure         ( test-case ) |
+// | [>] server retries after transport startup failure          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server retries after transport startup failure") {
   observation observed;
@@ -219,7 +251,7 @@ DOBA_TEST("server retries after transport startup failure") {
 }
 
 // +===========================================================================+
-// | [>] server emits lifecycle events in order                 ( test-case ) |
+// | [>] server emits lifecycle events in order                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server emits lifecycle events in order") {
   observation observed;
@@ -242,7 +274,7 @@ DOBA_TEST("server emits lifecycle events in order") {
 }
 
 // +===========================================================================+
-// | [>] server stays running after started callback throws     ( test-case ) |
+// | [>] server stays running after started callback throws      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server stays running after started callback throws") {
   observation observed;
@@ -266,7 +298,7 @@ DOBA_TEST("server stays running after started callback throws") {
 }
 
 // +===========================================================================+
-// | [>] server reports deferred transport construction failure ( test-case ) |
+// | [>] server reports deferred transport construction failure  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server reports deferred transport construction failure") {
   observation observed;
@@ -294,7 +326,7 @@ DOBA_TEST("server reports deferred transport construction failure") {
 }
 
 // +===========================================================================+
-// | [>] server retains move-only engine factory                ( test-case ) |
+// | [>] server retains move-only engine factory                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server retains move-only engine factory") {
   observation observed;

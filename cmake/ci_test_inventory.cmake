@@ -24,11 +24,16 @@ else()
     COMMAND_ERROR_IS_FATAL ANY
   )
 endif()
+string(CONCAT configuration_pattern
+  "^(CMAKE_BUILD_TYPE|CMAKE_CXX_COMPILER|CMAKE_CXX_FLAGS[^:]*|"
+  "CMAKE_EXE_LINKER_FLAGS[^:]*|DOBA_ENABLE_TLS|DOBA_ENABLE_STRICT_WARNINGS|"
+  "DOBA_BUILD_EXAMPLES):")
 file(STRINGS "${DOBA_CI_BUILD_DIR}/CMakeCache.txt" configuration
-  REGEX "^(CMAKE_BUILD_TYPE|CMAKE_CXX_COMPILER|CMAKE_CXX_FLAGS[^:]*|CMAKE_EXE_LINKER_FLAGS[^:]*|DOBA_ENABLE_TLS|DOBA_ENABLE_STRICT_WARNINGS|DOBA_BUILD_EXAMPLES):")
+  REGEX "${configuration_pattern}")
 string(REPLACE ";" "\n" configuration "${configuration}")
 file(WRITE "${evidence}/configuration.txt"
-  "Revision: ${revision}\nRunner: $ENV{RUNNER_OS}\nCMake: ${CMAKE_VERSION}\n${configuration}\n")
+  "Revision: ${revision}\nRunner: $ENV{RUNNER_OS}\n"
+  "CMake: ${CMAKE_VERSION}\n${configuration}\n")
 if(NOT configuration MATCHES "CMAKE_BUILD_TYPE:STRING=Release(\n|$)")
   message(FATAL_ERROR "CI tests must execute a Release build")
 endif()
@@ -48,7 +53,8 @@ foreach(suite IN LISTS suites)
   else()
     set(directory "${suite}")
   endif()
-  set(binary "${DOBA_CI_BUILD_DIR}/tests/${directory}/doba_${suite}_tests${suffix}")
+  set(binary
+    "${DOBA_CI_BUILD_DIR}/tests/${directory}/doba_${suite}_tests${suffix}")
   set(inventory_file "${evidence}/${suite}-tests.txt")
   set(errors_file "${evidence}/${suite}-inventory-errors.txt")
   message(STATUS
@@ -67,7 +73,8 @@ foreach(suite IN LISTS suites)
   file(READ "${inventory_file}" inventory)
   file(READ "${errors_file}" errors)
   file(WRITE "${evidence}/${suite}-inventory-status.txt"
-    "Command: ${binary} --list\nResult: ${result}\nElapsed: ${elapsed}s\nTimeout: ${DOBA_CI_INVENTORY_TIMEOUT}s\n")
+    "Command: ${binary} --list\nResult: ${result}\nElapsed: ${elapsed}s\n"
+    "Timeout: ${DOBA_CI_INVENTORY_TIMEOUT}s\n")
   if(NOT result STREQUAL "0" OR inventory STREQUAL "")
     message(FATAL_ERROR
       "Cannot list ${suite} tests: ${result}\n"

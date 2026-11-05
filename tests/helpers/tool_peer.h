@@ -55,7 +55,7 @@
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] peer                                                       ( class ) |
+// | [>] peer                                                        ( class ) |
 // +---------------------------------------------------------------------------+
 // Independent loopback peer. Blocking operations have a socket deadline; TLS
 // uses memory BIOs so encrypted fragmentation is testable without production
@@ -64,6 +64,9 @@ class peer {
 #ifdef _WIN32
   using socket_type = SOCKET;
   static constexpr auto invalid = INVALID_SOCKET;
+  // +-------------------------------------------------------------------------+
+  // | [>] initialize                                              ( private ) |
+  // +-------------------------------------------------------------------------+
   static void initialize() {
     struct winsock {
       winsock() {
@@ -74,11 +77,20 @@ class peer {
     };
     static winsock environment;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] close_socket                                            ( private ) |
+  // +-------------------------------------------------------------------------+
   static void close_socket(socket_type socket) { closesocket(socket); }
 #else
   using socket_type = int;
   static constexpr auto invalid = -1;
+  // +-------------------------------------------------------------------------+
+  // | [>] initialize                                              ( private ) |
+  // +-------------------------------------------------------------------------+
   static void initialize() {}
+  // +-------------------------------------------------------------------------+
+  // | [>] close_socket                                            ( private ) |
+  // +-------------------------------------------------------------------------+
   static void close_socket(socket_type socket) { ::close(socket); }
 #endif
   socket_type socket_{invalid};
@@ -87,6 +99,9 @@ class peer {
   SSL* ssl_{};
   bool fragment_{};
 
+  // +-------------------------------------------------------------------------+
+  // | [>] drain                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
   void drain() {
     char data[65536];
     BIO* output = SSL_get_wbio(ssl_);
@@ -99,6 +114,9 @@ class peer {
       } else raw_send(std::string_view(data, static_cast<size_t>(count)));
     }
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] feed                                                    ( private ) |
+  // +-------------------------------------------------------------------------+
   bool feed() {
     auto data = raw_receive(65536);
     if (data.empty()) {
@@ -114,7 +132,10 @@ class peer {
 
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] PUBLIC INTERFACE                                         ( public ) |
+  // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
   explicit peer(uint16_t port) {
     initialize();
@@ -141,10 +162,16 @@ class peer {
     if (context_) SSL_CTX_free(context_);
 #endif
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   void close() {
     if (socket_ != invalid) close_socket(socket_);
     socket_ = invalid;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] available_port                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   static uint16_t available_port() {
     initialize();
     auto probe = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -165,6 +192,9 @@ class peer {
     require(result == 0 && named == 0, "Cannot allocate loopback port");
     return ntohs(address.sin_port);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] timeout                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   void timeout(std::chrono::milliseconds duration) {
 #ifdef _WIN32
     DWORD value = static_cast<DWORD>(duration.count());
@@ -178,11 +208,17 @@ class peer {
         "Cannot set peer deadline");
     }
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] receive_buffer                                           ( public ) |
+  // +-------------------------------------------------------------------------+
   void receive_buffer(int size) {
     require(setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
       reinterpret_cast<const char*>(&size), sizeof(size)) == 0,
       "Cannot set receive buffer");
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] raw_send                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   void raw_send(std::string_view data) {
     while (!data.empty()) {
 #ifdef _WIN32
@@ -196,6 +232,9 @@ class peer {
       data.remove_prefix(static_cast<size_t>(count));
     }
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] raw_receive                                              ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string raw_receive(size_t maximum) {
     std::string data(std::min(maximum, size_t{65536}), '\0');
 #ifdef _WIN32
@@ -210,6 +249,9 @@ class peer {
     return data;
   }
 #ifdef DOBA_TOOL_TLS
+  // +-------------------------------------------------------------------------+
+  // | [>] tls                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
   void tls(const fs::path& certificate, int version = 0,
            const std::string& alpn = "doba-echo", bool fragmented = false,
            const std::string& hostname = "localhost") {
@@ -260,12 +302,18 @@ class peer {
     require(!version || SSL_version(ssl_) == version,
       "TLS negotiated the wrong version");
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] alpn                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string alpn() const {
     const unsigned char* data{};
     unsigned size{};
     SSL_get0_alpn_selected(ssl_, &data, &size);
     return size ? std::string(reinterpret_cast<const char*>(data), size) : "";
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] shutdown_tls                                             ( public ) |
+  // +-------------------------------------------------------------------------+
   void shutdown_tls() {
     auto deadline = clock::now() + 10s;
     for (;;) {
@@ -279,6 +327,9 @@ class peer {
     }
   }
 #endif
+  // +-------------------------------------------------------------------------+
+  // | [>] send                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   void send(std::string_view data) {
 #ifdef DOBA_TOOL_TLS
     if (ssl_) {
@@ -300,6 +351,9 @@ class peer {
 #endif
     raw_send(data);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string receive(size_t maximum) {
 #ifdef DOBA_TOOL_TLS
     if (ssl_) {
@@ -325,6 +379,9 @@ class peer {
 #endif
     return raw_receive(maximum);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] exact                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
   std::string exact(size_t size) {
     std::string result;
     while (result.size() < size) {
@@ -334,6 +391,9 @@ class peer {
     }
     return result;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] expect                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   void expect(std::string_view expected) {
     require(exact(expected.size()) == expected, "Peer response bytes differ");
   }

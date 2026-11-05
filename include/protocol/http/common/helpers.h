@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -236,7 +236,7 @@ struct helpers {
   // | RFC 5234 (ABNF Core Rules) S ALPHA                                      |
   // +-------------------------------------------------------------------------+
   // | ALPHA = %x41-5A / %x61-7A                                               |
-  // |        ; A-Z / a-z                                                      |
+  // | ; A-Z / a-z                                                             |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_alpha(unsigned char c) noexcept {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
@@ -252,7 +252,7 @@ struct helpers {
   // | token  = 1*tchar                                                        |
   // |                                                                         |
   // | tchar  = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /    |
-  // |          "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA                    |
+  // | "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA                             |
   // +-------------------------------------------------------------------------+
   // | DIGIT  = %x30-39   ; "0" - "9"                                          |
   // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
@@ -304,7 +304,7 @@ struct helpers {
   // | RFC 3986 S2.2 S sub-delims                                              |
   // +-------------------------------------------------------------------------+
   // | sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /      |
-  // |              ";" / "="                                                  |
+  // | ";" / "="                                                               |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_sub_delim(unsigned char c) noexcept {
     return c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' ||
@@ -323,7 +323,7 @@ struct helpers {
   // | unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"                     |
   // | pct-encoded = "%" HEXDIG HEXDIG                                         |
   // | sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," /     |
-  // |               ";" / "="                                                 |
+  // | ";" / "="                                                               |
   // +-------------------------------------------------------------------------+
   // | ALPHA  = %x41-5A / %x61-7A   ; A-Z / a-z                                |
   // | DIGIT  = %x30-39             ; 0-9                                      |
@@ -341,7 +341,7 @@ struct helpers {
   // | RFC 5234 (ABNF Core Rules) S VCHAR                                      |
   // +-------------------------------------------------------------------------+
   // | VCHAR = %x21-7E                                                         |
-  // |        ; visible (printing) characters                                  |
+  // | ; visible (printing) characters                                         |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_vchar(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_vchar) != 0;
@@ -361,7 +361,7 @@ struct helpers {
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
   // | Note: DQUOTE (%x22) and "\" (%x5C) are excluded and only allowed        |
-  // |       via quoted-pair.                                                  |
+  // | via quoted-pair.                                                        |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_qdtext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_qdtext) != 0;
@@ -377,7 +377,7 @@ struct helpers {
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
   // | Note: obs-text represents obsolete text allowed for backward            |
-  // |       compatibility with legacy implementations.                        |
+  // | compatibility with legacy implementations.                              |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_obs_text(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_obs_text) != 0;
@@ -397,8 +397,8 @@ struct helpers {
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
   // | Note: "(" (%x28), ")" (%x29), and "\" (%x5C) are excluded; inside a     |
-  // |       comment they are only allowed structurally (nested comment) or    |
-  // |       via quoted-pair.                                                  |
+  // | comment they are only allowed structurally (nested comment) or          |
+  // | via quoted-pair.                                                        |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ctext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_ctext) != 0;
@@ -412,9 +412,10 @@ struct helpers {
   // | RFC 5322 S3.2.3 S atext                                                 |
   // +-------------------------------------------------------------------------+
   // | atext = ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / |
-  // |         "-" / "/" / "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~" |
+  // | "-" / "/" / "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~"         |
   // +-------------------------------------------------------------------------+
-  // | The atom character set used by dot-atom-text and atom (RFC 5322 S3.2.3),|
+  // | The atom character set used by dot-atom-text and atom (RFC 5322         |
+  // | S3.2.3),                                                                |
   // | imported into HTTP via the From "mailbox" grammar (RFC 9110 S10.1.2).   |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_atext(unsigned char c) noexcept {
@@ -448,7 +449,7 @@ struct helpers {
   // | RFC 9110 S8.8.3 S etagc                                                 |
   // +-------------------------------------------------------------------------+
   // | etagc = %x21 / %x23-7E / obs-text                                       |
-  // |       ; VCHAR except DQUOTE, plus obs-text                              |
+  // | ; VCHAR except DQUOTE, plus obs-text                                    |
   // +-------------------------------------------------------------------------+
   // | VCHAR    = %x21-7E                                                      |
   // | DQUOTE   = %x22                                                         |
@@ -466,8 +467,8 @@ struct helpers {
   // | RFC 6265 S4.1.1 S cookie-octet                                          |
   // +-------------------------------------------------------------------------+
   // | cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E             |
-  // |              ; US-ASCII characters excluding CTLs, whitespace, DQUOTE,  |
-  // |              ; comma, semicolon, and backslash                          |
+  // | ; US-ASCII characters excluding CTLs, whitespace, DQUOTE,               |
+  // | ; comma, semicolon, and backslash                                       |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_octet(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_cookie) != 0;
@@ -544,7 +545,7 @@ struct helpers {
   // | [>] is_qvalue                                                ( public ) |
   // +=========================================================================+
   // | qvalue             | ( "0" [ "." 0*3DIGIT ] ) /                         |
-  // |                    | ( "1" [ "." 0*3("0") ] )                           |
+  // | | ( "1" [ "." 0*3("0") ] )                                              |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_qvalue(std::string_view sv) noexcept {
     if (sv.empty() || sv.size() > 5) return false;
@@ -621,7 +622,8 @@ struct helpers {
   // +=========================================================================+
   // | [>] ows_trim                                                 ( public ) |
   // +=========================================================================+
-  // | Performs OWS trimming on left & right sides of the provided string_view.|
+  // | Performs OWS trimming on left & right sides of the provided             |
+  // | string_view.                                                            |
   // +-------------------------------------------------------------------------+
   static constexpr void ows_trim(std::string_view& sv) noexcept {
     ows_ltrim(sv);
@@ -630,9 +632,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] skip_n_hextets                                           ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | h16            | 1*4HEXDIG                                              |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr int skip_n_hextets(std::string_view sv) {
     int hextets_found = 0;
     std::size_t off = 0;
@@ -658,9 +660,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_port                                                  ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | port           | *DIGIT                                                 |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_port(std::string_view sv) {
     std::size_t off = 0;
     while (off < sv.size()) {
@@ -672,13 +674,13 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_dec_octet                                             ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | dec-octet      | DIGIT                    ; 0-9                         |
-  // |                | / %x31-39 DIGIT          ; 10-99                       |
-  // |                | / "1" 2DIGIT             ; 100-199                     |
-  // |                | / "2" %x30-34 DIGIT      ; 200-249                     |
-  // |                | / "25" %x30-35           ; 250-255                     |
-  // +----------------+--------------------------------------------------------+
+  // | | / %x31-39 DIGIT          ; 10-99                                      |
+  // | | / "1" 2DIGIT             ; 100-199                                    |
+  // | | / "2" %x30-34 DIGIT      ; 200-249                                    |
+  // | | / "25" %x30-35           ; 250-255                                    |
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_dec_octet(std::string_view sv, std::size_t digits,
                                      std::size_t off) {
     if (!digits || digits > 3) return false;
@@ -704,15 +706,16 @@ struct helpers {
   // | RFC 3986 S3.2.2 S dec-octet (whole-value predicate)                     |
   // +-------------------------------------------------------------------------+
   // | dec-octet = DIGIT                 ; 0-9                                 |
-  // |           / %x31-39 DIGIT         ; 10-99                               |
-  // |           / "1" 2DIGIT            ; 100-199                             |
-  // |           / "2" %x30-34 DIGIT     ; 200-249                             |
-  // |           / "25" %x30-35          ; 250-255                             |
+  // | / %x31-39 DIGIT         ; 10-99                                         |
+  // | / "1" 2DIGIT            ; 100-199                                       |
+  // | / "2" %x30-34 DIGIT     ; 200-249                                       |
+  // | / "25" %x30-35          ; 250-255                                       |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one canonical dec-octet: a    |
   // | decimal integer in the range 0..255 with no leading zeroes (except the  |
   // | single value "0"). This is the RFC 3986 IPv4 octet shape and is also    |
-  // | the syntactic shape of a Sec-WebSocket-Version value (RFC 6455 S11.3.5).|
+  // | the syntactic shape of a Sec-WebSocket-Version value (RFC 6455          |
+  // | S11.3.5).                                                               |
   // | Unlike the positional overload, this checks digit-ness of every byte    |
   // | and rejects any value outside 0..255 or with a leading zero.            |
   // +-------------------------------------------------------------------------+
@@ -739,9 +742,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_ip_v_future                                           ( public ) |
   // +=========================================================================+
-  // +--------------+----------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | IPvFuture    | "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )     |
-  // +--------------+----------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_v_future(std::string_view sv) {
     if (sv.empty()) return false;
     if (sv.front() != 'v' && sv.front() != 'V') return false;
@@ -769,20 +772,23 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_ip_v6_address                                      ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | IPv6address    | 6( h16 ":" ) ls32                                      |
-  // |                | / "::" 5( h16 ":" ) ls32                               |
-  // |                | / [ h16 ] "::" 4( h16 ":" ) ls32                       |
-  // |                | / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32         |
-  // |                | / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32         |
-  // |                | / [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32              |
-  // |                | / [ *4( h16 ":" ) h16 ] "::" ls32                      |
-  // |                | / [ *5( h16 ":" ) h16 ] "::" h16                       |
-  // |                | / [ *6( h16 ":" ) h16 ] "::"                           |
-  // +----------------+--------------------------------------------------------+
+  // | | / "::" 5( h16 ":" ) ls32                                              |
+  // | | / [ h16 ] "::" 4( h16 ":" ) ls32                                      |
+  // | | / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32                        |
+  // | | / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32                        |
+  // | | / [ *3( h16 ":" ) h16 ] "::" h16 ":" ls32                             |
+  // | | / [ *4( h16 ":" ) h16 ] "::" ls32                                     |
+  // | | / [ *5( h16 ":" ) h16 ] "::" h16                                      |
+  // | | / [ *6( h16 ":" ) h16 ] "::"                                          |
+  // +-------------------------------------------------------------------------+
   // | ls32           | ( h16 ":" h16 ) / IPv4address                          |
   // | h16            | 1*4HEXDIG                                              |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] is_ip_v6_address                                         ( public ) |
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_v6_address(std::string_view sv) {
     // first character must be either ':' or hex-digit..
     std::size_t sep = sv.find("::");
@@ -846,9 +852,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_ip_v4_address                                         ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet    |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_v4_address(std::string_view sv) {
     if (sv.empty()) return false;
     int dec_octets_count = 0;
@@ -874,9 +880,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_ip_literal                                            ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                    |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_literal(std::string_view sv) {
     if (sv.size() < 2) return false;  // at least two characters..
     if (sv.front() != '[') return false;
@@ -891,9 +897,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] is_reg_name                                              ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | reg-name       | *( unreserved / pct-encoded / sub-delims )             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr bool is_reg_name(std::string_view sv) {
     std::size_t off = 0;
     while (off < sv.size()) {
@@ -952,10 +958,10 @@ struct helpers {
   // | RFC 6455 S4.3 S base64-value-non-empty                                  |
   // +-------------------------------------------------------------------------+
   // | base64-value-non-empty = ( 1*base64-data [ base64-padding ] )           |
-  // |                          / base64-padding                               |
+  // | / base64-padding                                                        |
   // | base64-data            = 4base64-character                              |
   // | base64-padding         = ( 2base64-character "==" )                     |
-  // |                          / ( 3base64-character "=" )                    |
+  // | / ( 3base64-character "=" )                                             |
   // | base64-character       = ALPHA / DIGIT / "+" / "/"                      |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is a non-empty canonical base64 value:   |
@@ -992,12 +998,12 @@ struct helpers {
   // +=========================================================================+
   // | [>] consume_token                                            ( public ) |
   // +=========================================================================+
-  // +---------+---------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | method  | token                                                         |
   // | token   | 1*tchar                                                       |
   // | tchar   | "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /   |
-  // |         | "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA                   |
-  // +---------+---------------------------------------------------------------+
+  // | | "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA                           |
+  // +-------------------------------------------------------------------------+
   static constexpr std::string_view consume_token(
       std::string_view sv) noexcept {
     if (sv.empty()) return std::string_view();
@@ -1382,7 +1388,7 @@ struct helpers {
   // | RFC 6265 S4.1.1 S cookie-av                                             |
   // +-------------------------------------------------------------------------+
   // | cookie-av    = expires-av / max-age-av / domain-av / path-av /          |
-  // |                secure-av / httponly-av / extension-av                   |
+  // | secure-av / httponly-av / extension-av                                  |
   // | extension-av = <any CHAR except CTLs or ";">                            |
   // +-------------------------------------------------------------------------+
   // | Validates that sv, as a whole, is exactly one cookie-av of a Set-Cookie |
@@ -1857,9 +1863,9 @@ struct helpers {
   // +=========================================================================+
   // | [>] check_uri_host                                           ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | uri-host       | IP-literal / IPv4address / reg-name                    |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static host_type check_uri_host(std::string_view sv) {
     // if the provided field-value is empty then we assume it to be regname..
     if (sv.empty()) return host_type::kRegName;
@@ -2148,9 +2154,9 @@ struct helpers {
   // | URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]     |
   // | relative-ref  = relative-part [ "?" query ] [ "#" fragment ]            |
   // | hier-part     = "//" authority path-abempty / path-absolute /           |
-  // |                 path-rootless / path-empty                              |
+  // | path-rootless / path-empty                                              |
   // | relative-part = "//" authority path-abempty / path-absolute /           |
-  // |                 path-noscheme / path-empty                              |
+  // | path-noscheme / path-empty                                              |
   // | query         = *( pchar / "/" / "?" )                                  |
   // | fragment      = *( pchar / "/" / "?" )                                  |
   // +-------------------------------------------------------------------------+
@@ -2250,13 +2256,13 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | On success, uri_host receives the uri-host substring. colon_at          |
   // | receives:                                                               |
-  // |  - for a non-IP-literal uri-host, the index of ':' within sv, or        |
-  // |    std::string_view::npos if sv contains no ':' at all;                 |
-  // |  - for an IP-literal uri-host, the index right past the closing "]",    |
-  // |    which callers MUST bounds-check (it may equal sv.size()) and         |
-  // |    compare against sv[colon_at] themselves before treating what         |
-  // |    follows as a port, since that position may hold a character other    |
-  // |    than ':'.                                                            |
+  // | - for a non-IP-literal uri-host, the index of ':' within sv, or         |
+  // | std::string_view::npos if sv contains no ':' at all;                    |
+  // | - for an IP-literal uri-host, the index right past the closing "]",     |
+  // | which callers MUST bounds-check (it may equal sv.size()) and            |
+  // | compare against sv[colon_at] themselves before treating what            |
+  // | follows as a port, since that position may hold a character other       |
+  // | than ':'.                                                               |
   // +-------------------------------------------------------------------------+
   static constexpr bool split_authority_host_port(
       std::string_view sv, std::string_view& decoded_uri_host,
@@ -2277,27 +2283,27 @@ struct helpers {
   // +=========================================================================+
   // | [>] try_to_deserialize_as_authority_form                     ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | authority-form | uri-host ":" port                                      |
   // | uri-host       | IP-literal / IPv4address / reg-name                    |
   // | port           | *DIGIT                                                 |
   // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                    |
   // | IPvFuture      | "v" 1*HEXDIG "."                                       |
-  // |                | 1*( unreserved / sub-delims / ":" )                    |
+  // | | 1*( unreserved / sub-delims / ":" )                                   |
   // | IPv4address    | dec-octet "." dec-octet "." dec-octet "." dec-octet    |
   // | dec-octet      | DIGIT                                                  |
-  // |                | / %x31-39 DIGIT                                        |
-  // |                | / "1" 2DIGIT                                           |
-  // |                | / "2" %x30-34 DIGIT                                    |
-  // |                | / "25" %x30-35                                         |
+  // | | / %x31-39 DIGIT                                                       |
+  // | | / "1" 2DIGIT                                                          |
+  // | | / "2" %x30-34 DIGIT                                                   |
+  // | | / "25" %x30-35                                                        |
   // | reg-name       | *( unreserved / pct-encoded / sub-delims )             |
   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
   // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
   // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
+  // | | "," / ";" / "="                                                       |
+  // +-------------------------------------------------------------------------+
   // +-------------------------------------------------------------------------+
   // | On success, uri_host, port, and type additionally expose the parsed     |
   // | uri-host substring, the raw port digits (empty when none follow the     |
@@ -2343,11 +2349,11 @@ struct helpers {
   // +=========================================================================+
   // | [>] try_to_deserialize_as_asterisk_form                      ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | asterisk-form  | "*"                                                    |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_asterisk_form(
       std::string_view sv, std::size_t& bytes_used) noexcept {
     // asterisk-form only ever occupies a single octet within request-target;
@@ -2361,9 +2367,9 @@ struct helpers {
   // | [>] try_to_deserialize_as_origin_form                        ( public ) |
   // +=========================================================================+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | origin-form    | absolute-path [ "?" query ]                            |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_origin_form(
       std::string_view sv, std::string_view& consumed_path,
       std::string_view& consumed_query, std::size_t& bytes_used) noexcept {
@@ -2406,7 +2412,8 @@ struct helpers {
   // | [>] ports_equivalent                                         ( public ) |
   // +=========================================================================+
   // | True when two port views denote the same effective port for "scheme".   |
-  // | Equal raw digit runs are always equivalent. Otherwise, an omitted (empty|
+  // | Equal raw digit runs are always equivalent. Otherwise, an omitted       |
+  // | (empty                                                                  |
   // | ) port is normalized to the scheme default before comparing, so e.g.    |
   // | "http" with "" and "80" compare equal while "" and "8080" do not. When  |
   // | the scheme has no known default, only exact string equality qualifies.  |
@@ -2424,16 +2431,16 @@ struct helpers {
   // +=========================================================================+
   // | [>] try_to_deserialize_as_absolute_form                      ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | absolute-form  | absolute-URI                                           |
   // | absolute-URI   | scheme ":" hier-part [ "?" query ]                     |
   // | scheme         | ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )             |
   // | hier-part      | "//" authority path-abempty                            |
-  // |                | / path-absolute                                        |
-  // |                | / path-rootless                                        |
-  // |                | / path-empty                                           |
+  // | | / path-absolute                                                       |
+  // | | / path-rootless                                                       |
+  // | | / path-empty                                                          |
   // | authority      | [ userinfo "@" ] host [ ":" port ]                     |
   // | userinfo       | *( unreserved / pct-encoded / sub-delims / ":" )       |
   // | host           | IP-literal / IPv4address / reg-name                    |
@@ -2449,8 +2456,8 @@ struct helpers {
   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
   // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
   // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
+  // | | "," / ";" / "="                                                       |
+  // +-------------------------------------------------------------------------+
   // +-------------------------------------------------------------------------+
   // | When the "//" authority path-abempty branch is taken, has_authority is  |
   // | set and uri_host, port, and type additionally expose the parsed         |
@@ -2611,17 +2618,17 @@ struct helpers {
   // +=========================================================================+
   // | [>] try_to_deserialize_as_absolute_path                      ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | absolute-path  | 1*( "/" segment )                                      |
   // | segment        | *pchar                                                 |
   // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"      |
   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
   // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
   // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
+  // | | "," / ";" / "="                                                       |
+  // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_absolute_path(
       std::string_view sv, std::string_view& consumed_path,
       std::size_t& bytes_used) noexcept {
@@ -2652,16 +2659,16 @@ struct helpers {
   // +=========================================================================+
   // | [>] try_to_deserialize_as_query                              ( public ) |
   // +=========================================================================+
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | Field          | Definition                                             |
-  // +----------------+--------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
   // | query          | *( pchar / "/" / "?" )                                 |
   // | pchar          | unreserved / pct-encoded / sub-delims / ":" / "@"      |
   // | unreserved     | ALPHA / DIGIT / "-" / "." / "_" / "~"                  |
   // | pct-encoded    | "%" HEXDIG HEXDIG                                      |
   // | sub-delims     | "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" /        |
-  // |                | "," / ";" / "="                                        |
-  // +----------------+--------------------------------------------------------+
+  // | | "," / ";" / "="                                                       |
+  // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_query(
       std::string_view sv, std::string_view& consumed_query,
       std::size_t& bytes_used) noexcept {
@@ -2702,10 +2709,11 @@ struct helpers {
   // | Splits a raw query string (the query component already stripped of its  |
   // | leading '?') into key/value pairs following the application/x-www-form- |
   // | urlencoded convention:                                                  |
-  // |   query      = pair *( "&" pair )                                       |
-  // |   pair       = key [ "=" value ]                                        |
-  // |   key/value  = *( any char except "&" ; value also except first "=" )   |
-  // | Rules: pairs are separated by '&'; the first '=' inside a pair separates|
+  // | query      = pair *( "&" pair )                                         |
+  // | pair       = key [ "=" value ]                                          |
+  // | key/value  = *( any char except "&" ; value also except first "=" )     |
+  // | Rules: pairs are separated by '&'; the first '=' inside a pair          |
+  // | separates                                                               |
   // | key from value; a pair without '=' yields an empty value; empty pairs   |
   // | (e.g. produced by "a&&b" or a leading/trailing '&') are skipped. Every  |
   // | emitted view is zero-copy over 'query', so the caller must keep the     |

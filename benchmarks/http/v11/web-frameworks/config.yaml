@@ -21,5 +21,7 @@ framework:
     - git -C doba checkout --detach FETCH_HEAD
   build:
     - mkdir build
-    - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DDOBA_INCLUDE_DIR=/usr/src/app/doba/include ..
+    - >-
+      cd build && cmake -DCMAKE_BUILD_TYPE=Release
+      -DDOBA_INCLUDE_DIR=/usr/src/app/doba/include ..
     - cd build && make

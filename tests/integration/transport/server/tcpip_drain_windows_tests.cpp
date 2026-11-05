@@ -404,21 +404,21 @@ DOBA_TEST("stop rejects new engine input") {
 }
 
 // +===========================================================================+
-// | [>] prefix/source drain                                    ( test-case ) |
+// | [>] prefix/source drain                                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("stop drains a prefix and one byte source") {
   check_reader_drain(false, false);
 }
 
 // +===========================================================================+
-// | [>] prefix/source drain                                    ( test-case ) |
+// | [>] prefix/source drain                                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("destruction drains a prefix and one byte source") {
   check_reader_drain(true, false);
 }
 
 // +===========================================================================+
-// | [>] prefix/source drain                                    ( test-case ) |
+// | [>] prefix/source drain                                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("close drains a prefix and one byte source") {
   check_reader_drain(false, true);
@@ -464,7 +464,7 @@ DOBA_TEST("sources work with a small send buffer") {
 }
 
 // +===========================================================================+
-// | [>] source failure closes connection                       ( test-case ) |
+// | [>] source failure closes connection                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("source failure closes after accepted prefix and source bytes") {
   for (const int source_error : {1, 2}) {
@@ -566,7 +566,7 @@ DOBA_TEST("source buffers respect the send limit") {
 }
 
 // +===========================================================================+
-// | [>] Windows accept burst preserves notification pairs      ( test-case ) |
+// | [>] Windows accept burst preserves notification pairs       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows stop pairs notifications across accepts and restart") {
   auto state = std::make_shared<drain_state>();
@@ -604,7 +604,7 @@ DOBA_TEST("Windows stop pairs notifications across accepts and restart") {
 }
 
 // +===========================================================================+
-// | [>] stop preserves accepting callback order                ( test-case ) |
+// | [>] stop preserves accepting callback order                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("stop preserves accepting callback order") {
   auto state = std::make_shared<drain_state>();

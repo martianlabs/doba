@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -352,7 +352,7 @@ class response {
   // | Returns the (key, value) pair for the first header whose name           |
   // | case-insensitively matches 'k'. Throws std::runtime_error if the header |
   // | is not present. The returned strings are owned copies: they do NOT      |
-  // | alias response storage and stay valid across later mutations.          |
+  // | alias response storage and stay valid across later mutations.           |
   // +-------------------------------------------------------------------------+
   std::pair<std::string, std::string> get_header(std::string_view k) const {
     std::size_t line_off, val_off, val_len, line_len;
@@ -444,7 +444,8 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Stores small payloads in response storage; larger ones use a raw writer.           |
+  // | Stores small payloads in response storage; larger ones use a raw        |
+  // | writer.                                                                 |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
@@ -797,7 +798,8 @@ class response {
     return std::get<0>(storage_)[0];
   }
   const std::string& head_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[0];
+    if (const auto* borrowed = std::get_if<1>(&storage_))
+      return *(*borrowed)[0];
     return std::get<0>(storage_)[0];
   }
   std::string& body_bytes() noexcept {
@@ -805,7 +807,8 @@ class response {
     return std::get<0>(storage_)[1];
   }
   const std::string& body_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[1];
+    if (const auto* borrowed = std::get_if<1>(&storage_))
+      return *(*borrowed)[1];
     return std::get<0>(storage_)[1];
   }
   // +=========================================================================+
@@ -815,11 +818,17 @@ class response {
   static constexpr std::size_t kDateLength = 29;
   static constexpr std::size_t kDateLineLength =
       kDatePrefix.size() + kDateLength + 2;
+  // +-------------------------------------------------------------------------+
+  // | [>] append_head                                             ( private ) |
+  // +-------------------------------------------------------------------------+
   void append_head(std::string_view value) {
     head_bytes().resize(head_size_);
     head_bytes().append(value);
     head_size_ = head_bytes().size();
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] replace_head                                            ( private ) |
+  // +-------------------------------------------------------------------------+
   void replace_head(std::size_t offset, std::size_t length,
                     std::string_view value) {
     const auto next_size = head_size_ - length + value.size();
@@ -833,12 +842,19 @@ class response {
     head_size_ = next_size;
     head_bytes().resize(next_size);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] erase_head                                              ( private ) |
+  // +-------------------------------------------------------------------------+
   void erase_head(std::size_t offset, std::size_t length) {
-    std::memmove(head_bytes().data() + offset, head_bytes().data() + offset + length,
+    std::memmove(head_bytes().data() + offset,
+                 head_bytes().data() + offset + length,
                  head_size_ - offset - length);
     head_size_ -= length;
     head_bytes().resize(head_size_);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] set_status_line                                         ( private ) |
+  // +-------------------------------------------------------------------------+
   response& set_status_line(std::string_view line, int code) {
     if (line.size() > max_head_size_) {
       throw std::out_of_range("not enough space to set status line!");

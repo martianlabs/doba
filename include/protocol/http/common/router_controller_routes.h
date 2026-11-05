@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -45,9 +45,9 @@ namespace detail {
 // | [>] router_controller_routes                                    ( class ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used                                               |
-// |   RSty - response being used                                              |
-// |   CTty - controller being registered                                      |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
+// | CTty - controller being registered                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename CTty>

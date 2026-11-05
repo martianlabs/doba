@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -46,11 +46,11 @@ namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 struct send_state {
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                ( public ) |
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit send_state(std::size_t capacity) : capacity_{capacity} {}
   // +=========================================================================+
-  // | [>] push                                                    ( public ) |
+  // | [>] push                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   // Copy inline bytes before returning. A reader terminates the input call:
   // further nonempty output is rejected until its final batch has drained.
@@ -67,7 +67,7 @@ struct send_state {
     return true;
   }
   // +=========================================================================+
-  // | [>] fill                                                    ( public ) |
+  // | [>] fill                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   // Never move or resize bytes still borrowed by WSASend. A prefix is sent
   // before the reader is touched. Reader blocks need no speculative credit:
@@ -95,7 +95,7 @@ struct send_state {
     return true;
   }
   // +=========================================================================+
-  // | [>] consume                                                 ( public ) |
+  // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   // Partial sends retain the whole active batch in the hard byte limit.
   // The reader stays owned until its final block has completed socket I/O.
@@ -109,15 +109,15 @@ struct send_state {
     return true;
   }
   // +=========================================================================+
-  // | [>] queued                                                  ( public ) |
+  // | [>] queued                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   bool queued() const noexcept { return !pending_.empty() || source_; }
   // +=========================================================================+
-  // | [>] has_source                                              ( public ) |
+  // | [>] has_source                                               ( public ) |
   // +-------------------------------------------------------------------------+
   bool has_source() const noexcept { return source_ != nullptr; }
   // +=========================================================================+
-  // | [>] clear                                                   ( public ) |
+  // | [>] clear                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   // Only called without outstanding socket I/O borrowing buffer.
   void clear() {
@@ -127,7 +127,7 @@ struct send_state {
     offset = 0;
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( public ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   // Active socket batch; its address is stable until completion.
   std::string buffer;

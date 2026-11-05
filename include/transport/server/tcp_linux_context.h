@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -43,11 +43,11 @@
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] linux_context                                              ( class ) |
+// | [>] linux_context                                               ( class ) |
 // +---------------------------------------------------------------------------+
 // | One worker owns the engine, RX, TX and optional output reader.            |
 // | Callbacks run only inside serialized input/processing turns.              |
-// | The worker owns the socket and destroys this context outside callbacks.  |
+// | The worker owns the socket and destroys this context outside callbacks.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -74,7 +74,8 @@ DOBA_TEST("pending request credit uses exact limits and resumes admission") {
   }
 }
 
-DOBA_TEST("pending sources use request slots without charging logical body size") {
+DOBA_TEST(
+    "pending sources use request slots without charging logical body size") {
   router routes;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
   routes.add("GET", "/source", [&](const request&, response& res) {
@@ -119,7 +120,8 @@ DOBA_TEST("queued source headers retain the pending byte limit") {
   DOBA_EXPECT_EQUAL(current.closes, 1);
 }
 
-DOBA_TEST("pending byte overflow cancels all yielded frames without extra sends") {
+DOBA_TEST(
+    "pending byte overflow cancels all yielded frames without extra sends") {
   router routes;
   auto token = std::make_shared<int>(0);
   routes.add("GET", "/wait", [&](const request&, response&) -> task<> {

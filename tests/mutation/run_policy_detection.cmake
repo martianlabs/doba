@@ -14,9 +14,9 @@ file(MAKE_DIRECTORY "${run}")
 if(DEFINED DOBA_MUTATION_SOURCE_DESCRIPTION)
   file(WRITE "${run}/revision.txt" "${DOBA_MUTATION_SOURCE_DESCRIPTION}\n")
 else()
-find_package(Git REQUIRED)
-execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
-  OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
+  find_package(Git REQUIRED)
+  execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${root}" rev-parse HEAD
+    OUTPUT_FILE "${run}/revision.txt" COMMAND_ERROR_IS_FATAL ANY)
 endif()
 execute_process(COMMAND "${DOBA_MUTATION_COMPILER}" --version
   OUTPUT_FILE "${run}/compiler.txt" COMMAND_ERROR_IS_FATAL ANY)
@@ -52,8 +52,10 @@ set(before_3 "if (head > capacity - used || body > capacity - used - head)")
 set(before_4 "pending_->size() < decoder_.configuration().max_pending_requests")
 set(after_0 "if (false && budget->maximum && used >= budget->maximum)")
 set(after_1 "if (false && source_)")
-set(after_2 "offset += sent;\n    if (offset < buffer.size()) { buffer.erase(0, offset); offset = 0; }")
-set(after_3 "if (false && (head > capacity - used || body > capacity - used - head))")
+string(CONCAT after_2 "offset += sent;\n"
+  "    if (offset < buffer.size()) { buffer.erase(0, offset); offset = 0; }")
+set(after_3
+  "if (false && (head > capacity - used || body > capacity - used - head))")
 set(after_4 "pending_->size() <= decoder_.configuration().max_pending_requests")
 set(names
   "connection reservations move release and unwind exactly once"
@@ -70,16 +72,19 @@ set(assertions
 
 function(build_variant id)
   set(directory "${run}/${id}")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B "${directory}/build" -G Ninja
+  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B
+    "${directory}/build" -G Ninja
     -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=${DOBA_MUTATION_COMPILER}"
-    "-DDOBA_MUTATION_ROOT=${root}" "-DDOBA_MUTATION_HEADERS=${directory}/include"
+    "-DDOBA_MUTATION_ROOT=${root}"
+    "-DDOBA_MUTATION_HEADERS=${directory}/include"
     -DDOBA_MUTATION_POLICY_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     OUTPUT_VARIABLE out ERROR_VARIABLE err RESULT_VARIABLE result TIMEOUT 60)
   file(WRITE "${directory}/configure.log" "${out}${err}")
   if(NOT result STREQUAL "0")
     message(FATAL_ERROR "Policy configure failed: ${id}")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build "${directory}/build" --parallel 2
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build "${directory}/build"
+    --parallel 2
     OUTPUT_VARIABLE out ERROR_VARIABLE err RESULT_VARIABLE result TIMEOUT 240)
   file(WRITE "${directory}/compile.log" "${out}${err}")
   if(NOT result STREQUAL "0")
@@ -87,17 +92,20 @@ function(build_variant id)
   endif()
 endfunction()
 function(run_case id name expected assertion)
-  execute_process(COMMAND "${run}/${id}/build/detection_tests${suffix}" --name "${name}"
+  execute_process(COMMAND "${run}/${id}/build/detection_tests${suffix}" --name
+    "${name}"
     OUTPUT_VARIABLE out ERROR_VARIABLE err RESULT_VARIABLE result TIMEOUT 30)
   set(log "${out}${err}")
   file(WRITE "${run}/${id}/${name}.log" "Exit: ${result}\n${log}")
-  if(NOT result STREQUAL "${expected}" OR NOT log MATCHES "running 1 unit tests")
+  if(NOT result STREQUAL "${expected}" OR NOT log MATCHES
+    "running 1 unit tests")
     message(FATAL_ERROR "Policy runtime failed, not detection: ${id}/${name}")
   endif()
   if(expected STREQUAL "1")
     string(FIND "${log}" "assertion failed:" failed)
     string(FIND "${log}" "${assertion}" planned)
-    if(failed EQUAL -1 OR planned EQUAL -1 OR log MATCHES "AddressSanitizer|UndefinedBehaviorSanitizer|runtime error:")
+    if(failed EQUAL -1 OR planned EQUAL -1 OR log MATCHES
+      "AddressSanitizer|UndefinedBehaviorSanitizer|runtime error:")
       message(FATAL_ERROR "Wrong assertion or sanitizer failure: ${id}")
     endif()
     file(APPEND "${run}/results.txt" "PASS: ${id} detected by ${assertion}\n")
@@ -136,7 +144,9 @@ foreach(index RANGE 0 ${mutation_last})
   endif()
   string(REPLACE "${before_value}" "${after_value}" source "${source}")
   file(WRITE "${header}" "${source}")
-  file(WRITE "${directory}/mutation.txt" "Header: ${headers_value}\nBefore: ${before_value}\nAfter: ${after_value}\nTest: ${names_value}\nAssertion: ${assertions_value}\n")
+  file(WRITE "${directory}/mutation.txt"
+    "Header: ${headers_value}\nBefore: ${before_value}\nAfter: ${after_value}\n"
+    "Test: ${names_value}\nAssertion: ${assertions_value}\n")
   build_variant("${ids_value}")
   run_case("${ids_value}" "${names_value}" 1 "${assertions_value}")
 endforeach()
@@ -150,4 +160,6 @@ foreach(index RANGE 0 ${last})
     message(FATAL_ERROR "Policy source changed: ${path}")
   endif()
 endforeach()
-message(STATUS "${mutation_count} policy mutations detected; originals unchanged. Evidence: ${run}")
+message(STATUS
+  "${mutation_count} policy mutations detected; originals unchanged. "
+  "Evidence: ${run}")

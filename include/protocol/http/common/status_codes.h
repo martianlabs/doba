@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -33,9 +33,9 @@ namespace martianlabs::doba::protocol::http {
 // | This section holds for the http 1.1 status codes.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// +------+--------------------------------------------------------------------+
+// +---------------------------------------------------------------------------+
 // | Code | Reason Phrase                                                      |
-// +------+--------------------------------------------------------------------+
+// +---------------------------------------------------------------------------+
 // | 100  | Continue                                                           |
 // | 101  | Switching Protocols                                                |
 // | 200  | OK                                                                 |
@@ -83,7 +83,7 @@ namespace martianlabs::doba::protocol::http {
 // | 503  | Service Unavailable                                                |
 // | 504  | Gateway Timeout                                                    |
 // | 505  | HTTP Version Not Supported                                         |
-// +------+--------------------------------------------------------------------+
+// +---------------------------------------------------------------------------+
 #define SC_100_CONTINUE 100
 #define SC_101_SWITCHING_PROTOCOLS 101
 #define SC_200_OK 200

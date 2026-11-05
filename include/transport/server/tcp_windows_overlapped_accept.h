@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -56,7 +56,7 @@ struct overlapped_accept : overlapped_base {
     if (socket != INVALID_SOCKET) closesocket(socket);
   }
   // +=========================================================================+
-  // | [>] OPERATORs                                               ( public ) |
+  // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   overlapped_accept& operator=(const overlapped_accept&) = delete;
   overlapped_accept& operator=(overlapped_accept&&) = delete;

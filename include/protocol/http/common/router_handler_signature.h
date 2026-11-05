@@ -50,9 +50,9 @@ struct router_handler_signature;
 // | [>] router_handler_signature_base                              ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   LOty - return type of the handler                                       |
-// |   LQty - type of the first argument of the handler (request)              |
-// |   Args - types of the remaining arguments of the handler (routing)        |
+// | LOty - return type of the handler                                         |
+// | LQty - type of the first argument of the handler (request)                |
+// | Args - types of the remaining arguments of the handler (routing)          |
 // +---------------------------------------------------------------------------+
 // | This struct defines the return type, request type and parameter count.    |
 // | It also binds controller methods and creates parametrized handlers.       |
@@ -118,6 +118,9 @@ struct router_handler_signature_base {
         pattern, std::forward<Hty>(handler));
   }
   template <typename RQty, typename RSty, typename Hty>
+  // +-------------------------------------------------------------------------+
+  // | [>] make_parametrized_async                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   static auto make_parametrized_async(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized_async<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
@@ -151,10 +154,10 @@ struct router_handler_signature_base {
 // | [>] router_handler_signature                                   ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Cty - class type of the handler                                         |
-// |   Retty - return type of the handler                                      |
-// |   Reqty - type of the first argument of the handler (request)             |
-// |   Args - types of the remaining arguments of the handler (routing)        |
+// | Cty - class type of the handler                                           |
+// | Retty - return type of the handler                                        |
+// | Reqty - type of the first argument of the handler (request)               |
+// | Args - types of the remaining arguments of the handler (routing)          |
 // +---------------------------------------------------------------------------+
 // | This specialization of the router_handler_signature struct handles the    |
 // | case where the handler is a const member function. It inherits from the   |
@@ -186,11 +189,11 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) noexcept>
 // | [>] router_handler_lambda                                      (concept ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   Hty - handler type being used                                           |
+// | Hty - handler type being used                                             |
 // +---------------------------------------------------------------------------+
 // | This concept checks if a given handler type Hty is a valid router handler |
 // | lambda. It requires that the handler has a request_type defined in its    |
-// | signature, takes const request and mutable response references, and      |
+// | signature, takes const request and mutable response references, and       |
 // | returns void or task<void>. Invalid signatures evaluate to false.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////

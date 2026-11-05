@@ -42,7 +42,7 @@ namespace tr = martianlabs::doba::transport::server;
 namespace common = martianlabs::doba::common;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] echo_engine                                               ( struct ) |
+// | [>] echo_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // | A deliberately non-HTTP protocol exercises the unchanged TCP contract.    |
 // +---------------------------------------------------------------------------+

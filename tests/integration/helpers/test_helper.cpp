@@ -97,7 +97,7 @@ std::vector<test_case>& tests() {
 // +---------------------------------------------------------------------------+
 // | [>] failures                                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to a static atomic counter that keeps  |
+// | This function returns a reference to a static atomic counter that keeps   |
 // | track of the number of test failures. It is used to count the number of   |
 // | failed test cases in the integration test framework. The variable is      |
 // | initialized to zero and persists for the lifetime of the program,         |
@@ -325,8 +325,9 @@ int test_helper::run(int argc, char** argv) {
     if (!matches(test)) continue;
     if (is_excluded(test)) {
       skipped_tests++;
-      std::printf("skipped %.*s:%d - %.*s\n", static_cast<int>(test.file.size()),
-                  test.file.data(), test.line, static_cast<int>(test.name.size()),
+      std::printf("skipped %.*s:%d - %.*s\n",
+                  static_cast<int>(test.file.size()), test.file.data(),
+                  test.line, static_cast<int>(test.name.size()),
                   test.name.data());
       continue;
     }

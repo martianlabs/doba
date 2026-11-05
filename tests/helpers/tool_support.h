@@ -106,14 +106,14 @@ inline std::vector<std::string> lines(const std::string& value) {
 }
 
 // +---------------------------------------------------------------------------+
-// | [>] temporary_directory                                        ( class ) |
+// | [>] temporary_directory                                         ( class ) |
 // +---------------------------------------------------------------------------+
 class temporary_directory {
   fs::path path_;
 
  public:
   // +-------------------------------------------------------------------------+
-  // | [>] PUBLIC INTERFACE                                       ( public ) |
+  // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   temporary_directory() {
     std::random_device random;
@@ -131,6 +131,9 @@ class temporary_directory {
     std::error_code error;
     fs::remove_all(path_, error);
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] path                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
   const fs::path& path() const { return path_; }
 };
 

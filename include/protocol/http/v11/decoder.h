@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -132,8 +132,8 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | This class holds for the http 1.1 decoder implementation.                 |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// |   RQty - request being used.                                              |
-// |   RSty - response being used.                                             |
+// | RQty - request being used.                                                |
+// | RSty - response being used.                                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <contracts::request RQty, contracts::response RSty>
@@ -175,9 +175,11 @@ class decoder {
     if (!reminder_active_) {
       result = parse_core(input);
       if (result.code == deserialization_status::kMoreBytesNeeded) {
-        const auto keep = body_framer_ && request_->body_is_stored()
-                              ? head_end_ : body_framer_ ? message.size()
-                                  : std::min(message.size(), context_.policies.max_request_head_size);
+        const auto keep =
+            body_framer_ && request_->body_is_stored() ? head_end_
+            : body_framer_ ? message.size()
+                           : std::min(message.size(),
+                                      context_.policies.max_request_head_size);
         const auto previous = reinterpret_cast<std::uintptr_t>(message.data());
         reminder_.assign(message.data(), message.data() + keep);
         reminder_active_ = true;
@@ -293,7 +295,7 @@ class decoder {
   // +=========================================================================+
   // | [>] make_response                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a response that owns its bytes, with the configured limits. |
+  // | Creates a response that owns its bytes, with the configured limits.     |
   // +-------------------------------------------------------------------------+
   RSty make_response() {
     return RSty::from(context_.policies.max_response_head_size,
@@ -306,13 +308,19 @@ class decoder {
   }
 
  private:
-  // Find the first head terminator, including one crossing the receive boundary.
+  // Find the first head terminator, including one crossing the receive
+  // boundary.
+  // +-------------------------------------------------------------------------+
+  // | [>] head_fragment_size                                       ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t head_fragment_size(std::string_view input) const noexcept {
-    input = input.substr(0, context_.policies.max_request_head_size - reminder_.size());
+    input = input.substr(
+        0, context_.policies.max_request_head_size - reminder_.size());
     constexpr std::string_view end = "\r\n\r\n";
     std::size_t take = input.size();
     const std::string_view previous(reminder_.data(), reminder_.size());
-    for (std::size_t split = 1; split < end.size() && split <= previous.size(); ++split) {
+    for (std::size_t split = 1; split < end.size() && split <= previous.size();
+         ++split) {
       if (previous.ends_with(end.substr(0, split)) &&
           input.starts_with(end.substr(split))) {
         take = std::min(take, end.size() - split);
@@ -327,7 +335,8 @@ class decoder {
   // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> parse_core(std::string_view& source) {
     head_request_ = false;
-    std::string_view sv = source.substr(0, context_.policies.max_request_head_size);
+    std::string_view sv =
+        source.substr(0, context_.policies.max_request_head_size);
     std::size_t i = 0;
     // +-----------------------------------------------------------------------+
     // | request-line = method SP request-target SP HTTP-version               |
@@ -346,9 +355,9 @@ class decoder {
     // | [request-target] part!                                                |
     // +-----------------------------------------------------------------------+
     // | request-target = origin-form                                          |
-    // |                / absolute-form                                        |
-    // |                / authority-form                                       |
-    // |                / asterisk-form                                        |
+    // | / absolute-form                                                       |
+    // | / authority-form                                                      |
+    // | / asterisk-form                                                       |
     // +-----------------------------------------------------------------------+
     if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     deserialization_status status;
@@ -418,10 +427,10 @@ class decoder {
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [HTTP-version] part!                                                  |
-    // +----------------+------------------------------------------------------+
+    // +-----------------------------------------------------------------------+
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
-    // +----------------+------------------------------------------------------+
+    // +-----------------------------------------------------------------------+
     constexpr std::string_view kHttpVersion = "HTTP/0.0";
     constexpr std::size_t kHttpVersionLength = kHttpVersion.size();
     const std::size_t available = std::min(kHttpVersionLength, sv.size() - i);
@@ -458,20 +467,20 @@ class decoder {
     // +-----------------------------------------------------------------------+
     // | [headers] part!                                                       |
     // +-----------------------------------------------------------------------+
-    // +-----------------+-----------------------------------------------------+
+    // +-----------------------------------------------------------------------+
     // | Rule            | Definition                                          |
-    // +-----------------+-----------------------------------------------------+
+    // +-----------------------------------------------------------------------+
     // | header-field    | field-name ":" OWS field-value OWS                  |
     // | field-name      | token                                               |
     // | token           | 1*tchar                                             |
     // | tchar           | ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / |
-    // |                 | "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" |
+    // | | "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"                 |
     // | field-value     | *( field-content )                                  |
     // | field-content   | field-vchar [ *( SP / HTAB ) field-vchar ]          |
     // | field-vchar     | VCHAR / obs-text                                    |
     // | OWS             | *( SP / HTAB )                                      |
     // | obs-fold        | CRLF 1*( SP / HTAB ) ; obsolete, not supported      |
-    // +-----------------+-----------------------------------------------------+
+    // +-----------------------------------------------------------------------+
     bool field_name_decoded = false;
     std::size_t fn_start = i;
     while (i < sv.size()) {
@@ -603,7 +612,8 @@ class decoder {
       if (reminder_active_ && !request_->body_is_stored() && threshold &&
           request_->body_wire_size() <= threshold &&
           state.consumed <= threshold - request_->body_wire_size()) {
-        const auto previous = reinterpret_cast<std::uintptr_t>(reminder_.data());
+        const auto previous =
+            reinterpret_cast<std::uintptr_t>(reminder_.data());
         const auto offset = reminder_.size();
         reminder_.insert(reminder_.end(), bytes.begin(), bytes.end());
         if (previous != reinterpret_cast<std::uintptr_t>(reminder_.data())) {
@@ -677,10 +687,10 @@ class decoder {
     return true;
   }
   // +=========================================================================+
-  // |                      HTTP/1.1 SERVER HEADER CHECKLIST                   |
-  // +------------------------------------------------------------+------------+
+  // | HTTP/1.1 SERVER HEADER CHECKLIST                                        |
+  // +-------------------------------------------------------------------------+
   // | Header                                                     |  Supported |
-  // +------------------------------------------------------------+------------+
+  // +-------------------------------------------------------------------------+
   // | Host                                                       |     [x]    |
   // | Content-Length                                             |     [x]    |
   // | Transfer-Encoding                                          |     [x]    |
@@ -747,7 +757,7 @@ class decoder {
   // | X-Forwarded-Proto                                          |     [x]    |
   // | Keep-Alive                                                 |     [x]    |
   // | Proxy-Connection                                           |     [x]    |
-  // +------------------------------------------------------------+------------+
+  // +-------------------------------------------------------------------------+
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
@@ -758,7 +768,8 @@ class decoder {
   // +-------------------------------------------------------------------------+
   // | The dispatcher for every header the semantic layer does not model. It   |
   // | runs the header's single syntactic checker and never touches the        |
-  // | context: a value the checker rejects fails deserialization, otherwise it|
+  // | context: a value the checker rejects fails deserialization, otherwise   |
+  // | it                                                                      |
   // | is accepted as-is. One template instantiation per checker keeps each    |
   // | registry entry a direct, inlinable call.                                |
   // +-------------------------------------------------------------------------+

@@ -91,26 +91,26 @@ struct turn_engine {
   processing_result on_processing_turn(bool idle) { return turn(*this, idle); }
 };
 
-// +=========================================================================+
-// | [>] source                                                  ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] source                                                   ( function ) |
+// +---------------------------------------------------------------------------+
 std::unique_ptr<common::reader> source(std::string text) {
   auto owner = std::make_shared<const std::string>(std::move(text));
   return std::make_unique<common::reader>(common::reader::shared(
       owner, std::as_bytes(std::span(*owner))));
 }
 
-// +=========================================================================+
-// | [>] same                                                    ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] same                                                     ( function ) |
+// +---------------------------------------------------------------------------+
 bool same(const processing_result& a, const processing_result& b) {
   return a.turn_requested == b.turn_requested && a.turn_at == b.turn_at &&
       a.turn_after_output_drained == b.turn_after_output_drained;
 }
 
-// +=========================================================================+
-// | [>] snapshots                                               ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] snapshots                                                ( function ) |
+// +---------------------------------------------------------------------------+
 void snapshots(tr::tls_policies settings, int version) {
   for (unsigned interests : {1U, 2U, 4U, 7U}) {
     processing_result initial{(interests & 1) != 0, {}, (interests & 4) != 0};
@@ -160,9 +160,9 @@ void snapshots(tr::tls_policies settings, int version) {
   }
 }
 
-// +=========================================================================+
-// | [>] errors                                                  ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] errors                                                   ( function ) |
+// +---------------------------------------------------------------------------+
 void errors(tr::tls_policies settings, int version) {
   for (unsigned failure = 0; failure < 9; ++failure) {
     auto limits = settings;
@@ -215,9 +215,9 @@ void errors(tr::tls_policies settings, int version) {
   }
 }
 
-// +=========================================================================+
-// | [>] peer_close                                              ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] peer_close                                               ( function ) |
+// +---------------------------------------------------------------------------+
 void peer_close(tr::tls_policies settings, int version) {
   auto factory = [] {
     turn_engine engine;
@@ -238,9 +238,9 @@ void peer_close(tr::tls_policies settings, int version) {
           "peer close_notify did not withdraw scheduling");
 }
 
-// +=========================================================================+
-// | [>] concurrent_http                                         ( function ) |
-// +-------------------------------------------------------------------------+
+// +===========================================================================+
+// | [>] concurrent_http                                          ( function ) |
+// +---------------------------------------------------------------------------+
 void concurrent_http(tr::tls_policies settings, int version) {
   using namespace protocol::http::v11;
   protocol::http::router<request, response> routes;

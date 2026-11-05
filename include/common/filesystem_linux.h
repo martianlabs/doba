@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -173,6 +173,9 @@ class filesystem_file {
   // | [>] size                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] metadata                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   [[nodiscard]] std::optional<filesystem_metadata> metadata(
       std::error_code& error) const {
     error.clear();
@@ -184,6 +187,9 @@ class filesystem_file {
     return describe(info);
   }
   // Selects a bounded slice before moving the file into a reader.
+  // +-------------------------------------------------------------------------+
+  // | [>] select                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   bool select(std::size_t offset, std::size_t length, std::error_code& error) {
     error.clear();
     if (offset > size_ || length > size_ - offset) {
@@ -224,7 +230,7 @@ class filesystem_file {
 
  private:
   // +=========================================================================+
-  // | [>] describe                                               ( private ) |
+  // | [>] describe                                                ( private ) |
   // +-------------------------------------------------------------------------+
   static filesystem_metadata describe(const struct stat& info) noexcept {
     return filesystem_metadata{

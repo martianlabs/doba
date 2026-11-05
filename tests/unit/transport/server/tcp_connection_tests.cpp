@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -40,7 +40,7 @@ namespace {
 using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] usings                                                    ( public )  |
+// | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::send_delegate;
@@ -49,7 +49,7 @@ using martianlabs::doba::transport::server::detail::tcp_connection;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] test_engine                                               ( struct )  |
+// | [>] test_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Engine probe used by TCP connection tests.                                |
 // +---------------------------------------------------------------------------+
@@ -162,7 +162,7 @@ DOBA_TEST("tcp connection propagates engine errors") {
 }
 
 // +===========================================================================+
-// | [>] RX adapter invokes callbacks during input              ( test-case ) |
+// | [>] RX adapter invokes callbacks during input               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("TCP RX adapter invokes callbacks during engine input") {
   auto factory = []() { return test_engine{}; };
@@ -188,7 +188,7 @@ DOBA_TEST("TCP RX adapter invokes callbacks during engine input") {
 
 
 // +===========================================================================+
-// | [>] Scheduling does not acknowledge input                    ( test-case )|
+// | [>] Scheduling does not acknowledge input                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection returns processing needs without retaining RX") {
   auto factory = [] { return test_engine{}; };

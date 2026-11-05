@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -42,10 +42,10 @@
 namespace martianlabs::doba::transport::server::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] linux_transport                                            ( class ) |
+// | [>] linux_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
 // | Worker-owned TCP. Configuration/start/stop are external owner operations. |
-// | Each worker owns its listener, connections and one reader per socket.    |
+// | Each worker owns its listener, connections and one reader per socket.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,

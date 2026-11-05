@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -40,10 +40,10 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] send_delegate                                              ( public ) |
 // +---------------------------------------------------------------------------+
-// | Sends head, body and an optional source, in that order. Bundled TCP      |
-// | copies inline bytes before returning and takes ownership of the reader.  |
+// | Sends head, body and an optional source, in that order. Bundled TCP       |
+// | copies inline bytes before returning and takes ownership of the reader.   |
 // | Invoke only inside a serialized engine input or processing turn.          |
-// | A reader is terminal; later nonempty output is a contract violation.     |
+// | A reader is terminal; later nonempty output is a contract violation.      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using send_delegate = std::function<void(std::string_view, std::string_view,
@@ -57,11 +57,11 @@ namespace martianlabs::doba::protocol::contracts {
 // +---------------------------------------------------------------------------+
 // | Input and processing turns never overlap for one engine instance.         |
 // | Input bytes are immutable and borrowed only until that call returns;      |
-// | they are all discarded by the transport, regardless of the result.       |
+// | they are all discarded by the transport, regardless of the result.        |
 // | The engine owns any data it retains. Send/close callbacks run only        |
-// | inside these turns and must not escape for cross-thread invocation.      |
-// | Results describe processing needs, not RX control or input consumption.  |
-// | output_idle is a snapshot taken before the processing turn begins.       |
+// | inside these turns and must not escape for cross-thread invocation.       |
+// | Results describe processing needs, not RX control or input consumption.   |
+// | output_idle is a snapshot taken before the processing turn begins.        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
@@ -81,8 +81,8 @@ concept engine = requires(ENty& engine, std::string_view input,
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |
 // +---------------------------------------------------------------------------+
-// | Creates an independent engine per connection. Calls for different        |
-// | connections may overlap on different workers; shared state must be safe. |
+// | Creates an independent engine per connection. Calls for different         |
+// | connections may overlap on different workers; shared state must be safe.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty, typename ENty>

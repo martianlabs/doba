@@ -30,7 +30,8 @@ function(doba_clang_windows_test_runtime target)
   if(NOT asan_dlls)
     string(JOIN "\n  " searched_directories ${runtime_candidates})
     message(FATAL_ERROR
-      "Clang Windows ASan runtime not found. Searched:\n  ${searched_directories}")
+      "Clang Windows ASan runtime not found. "
+      "Searched:\n  ${searched_directories}")
   endif()
   message(STATUS "Windows ASan runtime for ${target}: ${asan_dlls}")
   foreach(dll IN LISTS asan_dlls)

@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -36,15 +36,15 @@ namespace martianlabs::doba::transport::server::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] transport                                                 ( concept ) |
 // +---------------------------------------------------------------------------+
-// | Structural transport interface. Runtime rules for bundled TCP:           |
-// | configure and administer from one sequential external owner, outside     |
-// | worker callbacks. Notify connections outside transport locks.            |
-// | Serialize input/turns per connection; copy accepted inline output before |
-// | the send callback returns. Transfer reader ownership; allow             |
-// | only one terminal reader and keep socket buffers alive during I/O.       |
-// | Engine close drains accepted output. Linux administrative stop cancels   |
-// | pending output; Windows drains it before joining its IOCP workers.       |
-// | Engines own coroutine frames and ordering; TCP delivers generic turns.   |
+// | Structural transport interface. Runtime rules for bundled TCP:            |
+// | configure and administer from one sequential external owner, outside      |
+// | worker callbacks. Notify connections outside transport locks.             |
+// | Serialize input/turns per connection; copy accepted inline output before  |
+// | the send callback returns. Transfer reader ownership; allow               |
+// | only one terminal reader and keep socket buffers alive during I/O.        |
+// | Engine close drains accepted output. Linux administrative stop cancels    |
+// | pending output; Windows drains it before joining its IOCP workers.        |
+// | Engines own coroutine frames and ordering; TCP delivers generic turns.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename TRty, typename ENty, typename FNty>

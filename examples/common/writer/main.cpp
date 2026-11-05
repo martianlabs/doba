@@ -34,7 +34,7 @@ using namespace martianlabs::doba::common;
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
 // | This is a simple example of using the writer and reader classes to write  |
-// | and read data.                                                            |   
+// | and read data.                                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

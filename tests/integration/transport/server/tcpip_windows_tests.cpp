@@ -150,7 +150,7 @@ DOBA_TEST("tcpip serves independent loopback connections") {
 }
 
 // +===========================================================================+
-// | [>] Windows receives bytes across RX blocks                ( test-case ) |
+// | [>] Windows receives bytes across RX blocks                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows TCP receives bytes across multiple RX blocks") {
   tcpip_client client;
@@ -178,7 +178,7 @@ DOBA_TEST("Windows TCP receives bytes across multiple RX blocks") {
 }
 
 // +===========================================================================+
-// | [>] Windows serves sequential connection exchanges         ( test-case ) |
+// | [>] Windows serves sequential connection exchanges          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows TCP serves sequential exchanges on one connection") {
   tcpip_client client;
@@ -206,7 +206,7 @@ DOBA_TEST("Windows TCP serves sequential exchanges on one connection") {
 }
 
 // +===========================================================================+
-// | [>] Windows engine retains incomplete input                ( test-case ) |
+// | [>] Windows engine retains incomplete input                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows TCP delivers fragments retained by the engine") {
   tcpip_client client;
@@ -277,7 +277,7 @@ DOBA_TEST("tcpip preserves binary bytes across receive boundaries") {
 }
 
 // +===========================================================================+
-// | [>] tcpip isolates exceptions from engine input         ( test-case ) |
+// | [>] tcpip isolates exceptions from engine input             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip isolates exceptions from engine input") {
   for (const bool throwing : {false, true}) {
@@ -992,7 +992,7 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
 
 // +===========================================================================+
 // | [>] tcpip reuses receive space while the engine retains     ( test-case ) |
-// |     fragments                                                             |
+// | fragments                                                                 |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip reuses receive space while the engine retains fragments") {
   tcpip_client client;
@@ -1095,7 +1095,7 @@ DOBA_TEST("tcpip batches output after the receive callback") {
 }
 
 // +===========================================================================+
-// | [>] Windows limits accumulated inline output               ( test-case ) |
+// | [>] Windows limits accumulated inline output                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows TCP limits accumulated inline output per input call") {
   tcpip_client client;

@@ -34,7 +34,7 @@
 namespace martianlabs::doba::tests::tools {
 
 // +---------------------------------------------------------------------------+
-// | [>] source_coverage                                           ( struct ) |
+// | [>] source_coverage                                            ( struct ) |
 // +---------------------------------------------------------------------------+
 struct source_coverage {
   std::map<unsigned, double> lines;

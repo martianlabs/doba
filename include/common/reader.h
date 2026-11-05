@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -104,6 +104,9 @@ class reader {
   }
   // Retains the owner while reading a stable immutable slice. Each reader has
   // an independent cursor. The span must refer into the supplied owner.
+  // +-------------------------------------------------------------------------+
+  // | [>] shared                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   static reader shared(std::shared_ptr<const void> owner,
                        std::span<const std::byte> source) {
     if (!owner) throw std::invalid_argument("Shared reader needs an owner");
@@ -111,6 +114,9 @@ class reader {
     result.owner_ = std::move(owner);
     return result;
   }
+  // +-------------------------------------------------------------------------+
+  // | [>] rebind_borrowed                                          ( public ) |
+  // +-------------------------------------------------------------------------+
   void rebind_borrowed(std::span<const std::byte> source) noexcept {
     if (is_borrowed_ && !owner_) borrowed_ = source;
   }

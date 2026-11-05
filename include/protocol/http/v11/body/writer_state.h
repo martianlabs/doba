@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -35,12 +35,12 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | [>] writer_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Result of a body writer write() call.                                     |
-// |   consumed  - bytes taken from the input span (wire bytes, including any  |
-// |               chunked framing). Caller advances its buffer by this        |
-// |               amount; the remainder belongs to the next request.          |
-// |   complete  - body fully accumulated; no further write() calls needed.    |
-// |   has_error - a protocol or size-limit error was detected.                |
-// |   error     - error code, if has_error is true.                           |
+// | consumed  - bytes taken from the input span (wire bytes, including any    |
+// | chunked framing). Caller advances its buffer by this                      |
+// | amount; the remainder belongs to the next request.                        |
+// | complete  - body fully accumulated; no further write() calls needed.      |
+// | has_error - a protocol or size-limit error was detected.                  |
+// | error     - error code, if has_error is true.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct writer_state {

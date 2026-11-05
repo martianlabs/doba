@@ -12,7 +12,8 @@ string(RANDOM LENGTH 8 ALPHABET 0123456789abcdef nonce)
 set(run "${DOBA_MUTATION_OUTPUT}/${stamp}-${nonce}")
 file(MAKE_DIRECTORY "${run}")
 file(GLOB_RECURSE originals RELATIVE "${root}" "${root}/include/*.h")
-list(APPEND originals "tests/unit/protocol/http/v11/regression_detection_tests.cpp")
+list(APPEND originals
+  "tests/unit/protocol/http/v11/regression_detection_tests.cpp")
 foreach(path IN LISTS originals)
   file(SHA256 "${root}/${path}" hash)
   list(APPEND hashes "${hash}")
@@ -38,34 +39,47 @@ set(ENV{UBSAN_OPTIONS} "halt_on_error=1:print_stacktrace=1")
 
 function(build_copy id)
   set(directory "${run}/${id}")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B "${directory}/build" -G Ninja
+  execute_process(COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_LIST_DIR}" -B
+    "${directory}/build" -G Ninja
     -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=${DOBA_MUTATION_COMPILER}"
-    "-DDOBA_MUTATION_ROOT=${root}" "-DDOBA_MUTATION_HEADERS=${directory}/include"
+    "-DDOBA_MUTATION_ROOT=${root}"
+    "-DDOBA_MUTATION_HEADERS=${directory}/include"
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result TIMEOUT 60)
+    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result
+    TIMEOUT 60)
   file(WRITE "${directory}/configure.log" "${output}${errors}")
   if(NOT result STREQUAL "0")
-    message(FATAL_ERROR "Configuration failed, not a detected mutant: ${directory}")
+    message(FATAL_ERROR
+      "Configuration failed, not a detected mutant: ${directory}")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build "${directory}/build" --parallel 2
-    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result TIMEOUT 180)
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build "${directory}/build"
+    --parallel 2
+    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result
+    TIMEOUT 180)
   file(WRITE "${directory}/compile.log" "${output}${errors}")
   if(NOT result STREQUAL "0")
-    message(FATAL_ERROR "Compilation failed, not a detected mutant: ${directory}")
+    message(FATAL_ERROR
+      "Compilation failed, not a detected mutant: ${directory}")
   endif()
 endfunction()
 
 function(run_case id name assertion expected)
-  execute_process(COMMAND "${run}/${id}/build/detection_tests${executable_suffix}" --name "${name}"
-    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result TIMEOUT 15)
+  execute_process(COMMAND
+    "${run}/${id}/build/detection_tests${executable_suffix}" --name "${name}"
+    OUTPUT_VARIABLE output ERROR_VARIABLE errors RESULT_VARIABLE result
+      TIMEOUT 15)
   set(log "${output}${errors}")
   file(WRITE "${run}/${id}/${expected}-${name}.log" "Exit: ${result}\n${log}")
-  if(NOT log MATCHES "running 1 unit tests" OR NOT result STREQUAL "${expected}")
-    message(FATAL_ERROR "Unexpected test result (timeout/crash/selection is not detection): ${id}/${name}")
+  if(NOT log MATCHES "running 1 unit tests" OR NOT result STREQUAL
+    "${expected}")
+    message(FATAL_ERROR
+      "Unexpected test result (timeout/crash/selection is not detection): "
+      "${id}/${name}")
   endif()
   if(expected STREQUAL "1")
     string(FIND "${log}" "${assertion}" found)
-    if(found EQUAL -1 OR log MATCHES "AddressSanitizer|UndefinedBehaviorSanitizer|runtime error:")
+    if(found EQUAL -1 OR log MATCHES
+      "AddressSanitizer|UndefinedBehaviorSanitizer|runtime error:")
       message(FATAL_ERROR "Planned functional assertion did not detect ${id}")
     endif()
     file(APPEND "${run}/results.txt" "PASS: ${id} detected by ${assertion}\n")
@@ -84,13 +98,16 @@ foreach(name IN LISTS names)
 endforeach()
 
 set(ids body-limit response-order rejection-successor)
-set(headers protocol/http/v11/headers/content_length.h protocol/http/v11/engine.h protocol/http/v11/engine.h)
+set(headers protocol/http/v11/headers/content_length.h
+  protocol/http/v11/engine.h protocol/http/v11/engine.h)
 set(before "if (policies.max_request_body_size != 0 &&"
   "if (!front.complete)"
   "if (rejected) query_for_close()")
 set(after "if (false && policies.max_request_body_size != 0 &&"
   "if (false && !front.complete)" "if (rejected) on_close_()")
-set(assertions "result.code == protocol::deserialization_status::kInvalidSource" "(sends) == (0)" "(dispatched) == (0)")
+set(assertions
+  "result.code == protocol::deserialization_status::kInvalidSource"
+    "(sends) == (0)" "(dispatched) == (0)")
 foreach(index RANGE 0 2)
   foreach(list_name IN ITEMS ids headers before after assertions names)
     list(GET ${list_name} ${index} ${list_name}_value)
@@ -114,7 +131,8 @@ foreach(index RANGE 0 2)
   string(REPLACE "${before_value}" "${after_value}" changed "${source}")
   file(WRITE "${header}" "${changed}")
   file(WRITE "${directory}/mutation.txt"
-    "Header: ${headers_value}\nBefore: ${before_value}\nAfter: ${after_value}\nTest: ${names_value}\nAssertion: ${assertions_value}\n")
+    "Header: ${headers_value}\nBefore: ${before_value}\nAfter: ${after_value}\n"
+    "Test: ${names_value}\nAssertion: ${assertions_value}\n")
   build_copy("${ids_value}")
   run_case("${ids_value}" "${names_value}" "${assertions_value}" 1)
 endforeach()
@@ -128,7 +146,8 @@ foreach(index RANGE 0 ${last})
     message(FATAL_ERROR "Original source changed: ${path}")
   endif()
 endforeach()
-message(STATUS "Three mutations detected; originals unchanged. Evidence: ${run}")
+message(STATUS
+  "Three mutations detected; originals unchanged. Evidence: ${run}")
 set(mutation_source_args)
 if(DEFINED DOBA_MUTATION_SOURCE_DESCRIPTION)
   list(APPEND mutation_source_args

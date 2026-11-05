@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -34,31 +34,31 @@ namespace martianlabs::doba::protocol::http::v11 {
 // | granularity the HTTP/1.1 layer needs to pick a status code.               |
 // +---------------------------------------------------------------------------+
 // | kNone                 | no rejection (or reason not tracked yet).         |
-// +-----------------------+---------------------------------------------------+
+// +---------------------------------------------------------------------------+
 // | kSyntax               | malformed message; maps to 400 Bad Request.       |
-// +-----------------------+---------------------------------------------------+
+// +---------------------------------------------------------------------------+
 // | kPayloadTooLarge      | a policy limit on message size was exceeded; maps |
-// |                       | to 413 Content Too Large.                         |
-// +-----------------------+---------------------------------------------------+
+// | | to 413 Content Too Large.                                               |
+// +---------------------------------------------------------------------------+
 // | kUnsupportedFeature   | a syntactically valid feature is disabled by      |
-// |                       | policy; maps to 501 Not Implemented.              |
-// +-----------------------+---------------------------------------------------+
+// | | policy; maps to 501 Not Implemented.                                    |
+// +---------------------------------------------------------------------------+
 // | kVersionNotSupported  | the HTTP version is above what this server        |
-// |                       | speaks; maps to 505 HTTP Version Not Supported.   |
-// +-----------------------+---------------------------------------------------+
+// | | speaks; maps to 505 HTTP Version Not Supported.                         |
+// +---------------------------------------------------------------------------+
 // | kUriTooLong           | the request-target exceeds the configured         |
-// |                       | length limit; maps to 414 URI Too Long.           |
-// +-----------------------+---------------------------------------------------+
+// | | length limit; maps to 414 URI Too Long.                                 |
+// +---------------------------------------------------------------------------+
 // | kHeaderFieldsTooLarge | the header section exceeds the configured         |
-// |                       | size limit; maps to 431 Request Header Fields     |
-// |                       | Too Large.                                        |
-// +-----------------------+---------------------------------------------------+
+// | | size limit; maps to 431 Request Header Fields                           |
+// | | Too Large.                                                              |
+// +---------------------------------------------------------------------------+
 // | kHandlerError         | the user's request handler threw an exception;    |
-// |                       | maps to 500 Internal Server Error.                |
-// +-----------------------+---------------------------------------------------+
+// | | maps to 500 Internal Server Error.                                      |
+// +---------------------------------------------------------------------------+
 // | kExpectationFailed    | the Expect field states an expectation this       |
-// |                       | server cannot meet; maps to 417 Expectation       |
-// |                       | Failed.                                           |
+// | | server cannot meet; maps to 417 Expectation                             |
+// | | Failed.                                                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class rejection_reason {

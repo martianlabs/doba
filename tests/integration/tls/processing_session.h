@@ -41,7 +41,7 @@ namespace martianlabs::doba::tests::tls {
 // | [>] processing_session                                          ( class ) |
 // +---------------------------------------------------------------------------+
 // | Verified memory-BIO client and real TLS adapter; no native scheduling.    |
-// | Tests supply turns and can hold ciphertext to model occupied TCP output. |
+// | Tests supply turns and can hold ciphertext to model occupied TCP output.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -154,8 +154,17 @@ class processing_session {
   // +=========================================================================+
   // | [>] OBSERVERs                                                ( public ) |
   // +-------------------------------------------------------------------------+
+  // +-------------------------------------------------------------------------+
+  // | [>] progress                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   const protocol::processing_result& progress() const { return progress_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] closed                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
   bool closed() const { return closed_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] pending                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
   std::size_t pending() const { return ciphertext_.size(); }
 
  private:

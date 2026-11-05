@@ -6,7 +6,7 @@
 //
 //                              Apache License
 //                        Version 2.0, January 2004
-//                     http://www.apache.org/licenses/
+//                     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Copyright 2025 martianLabs
 //
@@ -33,6 +33,11 @@
 #include "engine_probe.h"
 #include "test_helper.h"
 
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] operating_limits_tests                                 ( test-suite ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace {
 using namespace martianlabs::doba;
 using probe = tests::unit::engine_probe;
@@ -106,7 +111,8 @@ DOBA_TEST("pending HTTP bytes enforce exact boundaries before copying") {
   }
 }
 
-DOBA_TEST("deferred raw input enforces exact boundaries while the window is full") {
+DOBA_TEST(
+    "deferred raw input enforces exact boundaries while the window is full") {
   for (std::size_t bytes : {7U, 8U, 9U}) {
     router routes;
     int calls = 0;
@@ -130,7 +136,8 @@ DOBA_TEST("deferred raw input enforces exact boundaries while the window is full
   }
 }
 
-DOBA_TEST("HTTP processing limits reject zero instead of enabling unlimited work") {
+DOBA_TEST(
+    "HTTP processing limits reject zero instead of enabling unlimited work") {
   router routes;
   for (int field = 0; field < 4; ++field) {
     policies limits;

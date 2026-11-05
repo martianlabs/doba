@@ -40,8 +40,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 // | This is the entry point of the application. It creates an HTTP server     |
 // | that listens on all interfaces (0.0.0.0) and port 8080.                   |
 // | The server registers two static file servers:                             |
-// |   * "/assets" serving files from the directory specified by argv[1],      |
-// |   * "/downloads" serving files from the same directory.                   |
+// | * "/assets" serving files from the directory specified by argv[1],        |
+// | * "/downloads" serving files from the same directory.                     |
 // | The server runs until a termination signal is received.                   |
 // | The root directory for the static file servers must be provided as        |
 // | a command-line argument.                                                  |
@@ -53,7 +53,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   const bool direct = argc >= 3 && std::string_view(argv[2]) == "--no-cache";
-  const std::string port = argc == 4 ? argv[3] : (argc == 3 && !direct ? argv[2] : "8080");
+  const std::string port =
+      argc == 4 ? argv[3] : (argc == 3 && !direct ? argv[2] : "8080");
   static_file_policies assets;
   if (!direct) assets.cache = std::make_shared<static_file_cache>();
   assets.precompressed = true;
