@@ -37,7 +37,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] deserialization_result                                     ( struct ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 decoding result for the selected request and response types.     |
+// | The HTTP/1.1 decode result for these request and response types.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -66,8 +66,8 @@ struct deserialization_result {
 // +---------------------------------------------------------------------------+
 // | [>] serialization_result                                       ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Borrows head and body bytes and owns an optional source.                  |
-// | The transport copies both views before the call returns.                  |
+// | Borrow head/body and own an optional reader. The transport copies both    |
+// | views before returning.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct serialization_result {

@@ -92,9 +92,9 @@ struct synchronous_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Per-test behavior, called only on the owning worker.
+  // Run this test's behavior only on its owning worker.
   std::function<void(synchronous_engine&, std::string_view)> action;
-  // Transport output and closure notifications.
+  // Transport send and close callbacks.
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
 };

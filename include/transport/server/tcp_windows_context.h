@@ -53,13 +53,10 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct keeps track of an engine's TCP connection. It manages         |
-// | the socket and input and output buffers, and handles sending and          |
-// | receiving data. It also lets you connect, stop, close, and abort the      |
-// | connection.                                                               |
+// | Keep one TCP connection's engine, socket and RX/TX state together.        |
+// | Connect, drain, close or abort it here.                                   |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | ENty - engine type being used.                                            |
+// | ENty is the protocol engine.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -86,7 +83,7 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
         completion_port_{completion_port}, timer_{timer} {}
   context(const context&) = delete;
   context(context&&) noexcept = delete;
-  ~context() { close_socket_(); }
+  ~context() { close_socket(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
@@ -95,39 +92,36 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] send_completed                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Called when a send operation finishes. It takes the number of bytes     |
-  // | sent and the total number submitted, then updates the send state and    |
-  // | checks the output buffer. If the socket is invalid or something goes    |
-  // | wrong, it aborts the connection. Otherwise, it keeps sending any        |
-  // | data that’s still waiting.                                              |
+  // | On send completion, update TX progress and send what's left. Abort if   |
+  // | the socket is invalid or the completion is bad.                         |
   // +-------------------------------------------------------------------------+
   bool send_completed(std::size_t size, std::size_t submitted_size) {
     std::lock_guard<std::mutex> lock(state_mutex_);
     sending_ = false;
     if (socket_ == INVALID_SOCKET) {
-      return finished_();
+      return finished();
     }
     if (!size || size > submitted_size || !output_.consume(size)) {
-      close_socket_();
-      return finished_();
+      close_socket();
+      return finished();
     }
-    advance_();
-    return finished_();
+    advance();
+    return finished();
   }
   // +=========================================================================+
   // | [>] start_io                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // Starts I/O after initialization; true means closed with no pending I/O.
+  // Start I/O after initialization. true means closed with no I/O pending.
   bool start_io() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     if (stopping_.load()) close();
-    advance_();
-    return finished_();
+    advance();
+    return finished();
   }
   // +=========================================================================+
   // | [>] receive_completed                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  // Holds the state lock across engine input and its synchronous callbacks.
+  // Keep the state lock through engine input and its synchronous callbacks.
   bool receive_completed(std::size_t size) {
     std::lock_guard<std::mutex> lock(state_mutex_);
     receiving_ = false;
@@ -137,79 +131,77 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
     if (stopping_.load()) close();
     if (socket_ == INVALID_SOCKET) {
-      return finished_();
+      return finished();
     }
     if (state_ == state::kOpen) {
       try {
         progress_ = input_.process(size);
       } catch (...) {
-        close_socket_();
+        close_socket();
         throw;
       }
     }
-    advance_();
-    return finished_();
+    advance();
+    return finished();
   }
   // +=========================================================================+
   // | [>] processing_completed                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Native packets carry connection identity, never application tasks/frames.
+  // Native packets carry connection IDs, not application tasks or frames.
   bool processing_completed(std::uint64_t version = 0) {
     std::lock_guard<std::mutex> lock(state_mutex_);
     if (!version) processing_posted_ = false;
-    else if (version != timer_version_) return finished_();
+    else if (version != timer_version_) return finished();
     else scheduled_.reset();
     if (stopping_.load()) close();
-    if (state_ == state::kOpen && ready_()) {
+    if (state_ == state::kOpen && ready()) {
       try {
-        progress_ = input_.engine.on_processing_turn(output_idle_());
+        progress_ = input_.engine.on_processing_turn(output_idle());
       } catch (...) {
-        close_socket_();
+        close_socket();
       }
     }
-    advance_();
-    return finished_();
+    advance();
+    return finished();
   }
   // +=========================================================================+
   // | [>] receive_failed                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Called when a receive operation fails. It locks the state mutex, marks  |
-  // | receiving as closed, and aborts the connection.                         |
+  // | On receive failure, lock state, mark RX closed and abort.               |
   // +-------------------------------------------------------------------------+
   bool receive_failed() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     receiving_ = false;
-    close_socket_();
-    return finished_();
+    close_socket();
+    return finished();
   }
   // +=========================================================================+
   // | [>] send_failed                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Called when a send operation fails. It locks the state mutex, resets    |
-  // | the send state to idle, and aborts the connection.                      |
+  // | On send failure, lock state, reset TX to idle and abort.                |
   // +-------------------------------------------------------------------------+
   bool send_failed() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     sending_ = false;
-    close_socket_();
-    return finished_();
+    close_socket();
+    return finished();
   }
   // +=========================================================================+
   // | [>] abort                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   bool abort() {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    close_socket_();
-    return finished_();
+    close_socket();
+    return finished();
   }
   // +=========================================================================+
   // | [>] connected                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Installs synchronous engine callbacks for output and close.             |
+  // | Install synchronous send and close callbacks on the engine.             |
   // +-------------------------------------------------------------------------+
   void connected() {
-    // The engine belongs to this context. Its callbacks are synchronous,
-    // non-retained and invoked only during engine entries under state_mutex_.
+    // This context owns the engine. Its callbacks aren't retained: use them
+    // only inside engine calls under state_mutex_.
     input_.engine.set_on_close([this]() { close(); });
     input_.engine.set_on_send([this](
         std::string_view head, std::string_view body,
@@ -220,26 +212,28 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Waits for active input and drains output before closing the socket.     |
+  // | Wait for active input and drain output before closing the socket.       |
   // +-------------------------------------------------------------------------+
   bool stop() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     close();
-    advance_();
-    return finished_();
+    advance();
+    return finished();
   }
   // +=========================================================================+
   // | [>] notify_disconnection                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Only the worker that erases the context from its live set calls this.
+  // Only the worker removing this live context calls here.
   void notify_disconnection() {
     if (!notified_ || !on_disconnection_) return;
-    try { on_disconnection_(); } catch (...) {}
+    try {
+      on_disconnection_();
+    } catch (...) {}
   }
   // +=========================================================================+
   // | [>] notify_connection                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  // Initialization precedes all I/O and the owner's accept-drain barrier.
+  // Initialize before I/O and before the owner's accept-drain barrier.
   void notify_connection() {
     notified_ = true;
     if (on_connection_) on_connection_();
@@ -249,75 +243,73 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +=========================================================================+
   // | [>] ENUMs                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // Close drains output, shuts down TX, then awaits EOF or external stop.
+  // Drain output, shut down TX, then wait for peer EOF or external stop.
   enum class state { kOpen, kDraining, kShutdown, kAborting, kClosed };
   // +=========================================================================+
   // | [>] close                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // Marks close inside engine input; its accepted output drains afterwards.
+  // Mark close during engine input; drain its accepted output afterwards.
   void close() {
-    // Called synchronously by the engine under state_mutex_.
+    // The engine calls this synchronously under state_mutex_.
     if (state_ == state::kOpen) {
       state_ = state::kDraining;
-      cancel_processing_();
+      cancel_processing();
     }
   }
   // +=========================================================================+
   // | [>] send                                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  // Copies accepted output under the engine input lock; never posts I/O.
+  // Copy output under the engine input lock; don't post I/O here.
   void send(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
-    // Called synchronously by the engine under state_mutex_.
+    // The engine calls this synchronously under state_mutex_.
     if (state_ != state::kOpen) return;
     if (!output_.push(head, body, std::move(source))) {
       state_ = state::kAborting;
     }
   }
   // +=========================================================================+
-  // | [>] advance_                                                ( private ) |
+  // | [>] advance                                                 ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Called under state_mutex_, after engine input or a send completion.     |
+  // | Call under state_mutex_, after engine input or a send completion.       |
   // +-------------------------------------------------------------------------+
-  void advance_() {
-    if (state_ == state::kAborting) close_socket_();
+  void advance() {
+    if (state_ == state::kAborting) close_socket();
     if (state_ == state::kClosed) return;
-    send_pending_();
+    send_pending();
     if (state_ == state::kClosed) return;
     if (state_ == state::kOpen) {
-      reconcile_();
+      reconcile();
       if (state_ != state::kOpen) {
-        if (state_ == state::kAborting) close_socket_();
+        if (state_ == state::kAborting) close_socket();
         return;
       }
-      if (!receive_()) close_socket_();
+      if (!receive()) close_socket();
       return;
     }
     if (sending_ || output_.queued() || !output_.buffer.empty()) return;
     if (state_ == state::kDraining) {
       if (::shutdown(socket_, SD_SEND) == SOCKET_ERROR) {
-        close_socket_();
+        close_socket();
         return;
       }
       state_ = state::kShutdown;
     }
     if (stopping_.load() || receive_closed_) {
-      close_socket_();
-    } else if (!receive_()) {
-      // Discard input until peer EOF to avoid resetting the final response.
-      close_socket_();
+      close_socket();
+    } else if (!receive()) {
+      // Read and discard until peer EOF; don't reset away the final response.
+      close_socket();
     }
   }
   // +=========================================================================+
-  // | [>] receive_                                                ( private ) |
+  // | [>] receive                                                 ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Starts receiving data by creating an overlapped receive object and      |
-  // | calling `WSARecv()`. It sets up the buffer and its size, then checks    |
-  // | the result. If `WSARecv()` fails with an error other than               |
-  // | `WSA_IO_PENDING`, it deletes the object and returns false. Otherwise,   |
-  // | it marks receiving as active and returns true.                          |
+  // | Post one WSARecv with an owned overlapped object. WSA_IO_PENDING is     |
+  // | fine; other errors free the object and return false. Mark RX active on  |
+  // | success.                                                                |
   // +-------------------------------------------------------------------------+
-  bool receive_() {
+  bool receive() {
     if (receiving_ || output_.has_source()) return true;
     const auto target = input_.receive_buffer();
     if (target.empty()) return false;
@@ -336,22 +328,22 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     return true;
   }
   // +=========================================================================+
-  // | [>] send_pending_                                           ( private ) |
+  // | [>] send_pending                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Posts one batch under state_mutex_. Completion flags are published      |
-  // | before unlocking, even if socket I/O completes before the API returns.  |
+  // | Post one batch under state_mutex_. Publish completion flags before      |
+  // | unlocking: I/O may finish before the API returns.                       |
   // +-------------------------------------------------------------------------+
-  void send_pending_() {
+  void send_pending() {
     if (sending_) return;
     if (!output_.fill()) {
-      close_socket_();
+      close_socket();
       return;
     }
     if (output_.buffer.empty()) return;
     auto ovs = new (std::nothrow)
         overlapped_send<ENty>(this->shared_from_this());
     if (!ovs) {
-      close_socket_();
+      close_socket();
       return;
     }
     ovs->buffer = {
@@ -363,29 +355,29 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
                                ovs, nullptr);
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
       delete ovs;
-      close_socket_();
+      close_socket();
       return;
     }
     sending_ = true;
   }
   // +=========================================================================+
-  // | [>] output_idle_                                            ( private ) |
+  // | [>] output_idle                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  bool output_idle_() const noexcept {
+  bool output_idle() const noexcept {
     return !sending_ && !output_.queued() && output_.buffer.empty();
   }
   // +=========================================================================+
-  // | [>] ready_                                                  ( private ) |
+  // | [>] ready                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  bool ready_() const noexcept {
+  bool ready() const noexcept {
     return progress_.turn_requested ||
-        (progress_.turn_after_output_drained && output_idle_()) ||
+        (progress_.turn_after_output_drained && output_idle()) ||
         (progress_.turn_at && *progress_.turn_at <= clock::now());
   }
   // +=========================================================================+
-  // | [>] cancel_processing_                                      ( private ) |
+  // | [>] cancel_processing                                       ( private ) |
   // +-------------------------------------------------------------------------+
-  void cancel_processing_() {
+  void cancel_processing() {
     progress_ = {};
     if (scheduled_) {
       timer_->cancel(this);
@@ -394,46 +386,49 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
   }
   // +=========================================================================+
-  // | [>] reconcile_                                              ( private ) |
+  // | [>] reconcile                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // Called under the existing context lock. Empty sync snapshots do no native
-  // scheduling, allocation, timer locking or clock query.
-  void reconcile_() {
+  // Already under the context lock. An empty sync result skips native
+  // scheduling, allocation, timer locks and clock queries.
+  void reconcile() {
     if (progress_.turn_at != scheduled_) {
       if (scheduled_) timer_->cancel(this);
       scheduled_.reset();
       if (++timer_version_ == 0) {
-        close_socket_();
+        close_socket();
         return;
       }
       if (progress_.turn_at && *progress_.turn_at > clock::now()) {
         if (!timer_ || !timer_->replace(this->shared_from_this(),
                 *progress_.turn_at, timer_version_)) {
-          close_socket_();
+          close_socket();
           return;
         }
         scheduled_ = progress_.turn_at;
       }
     }
-    if (!processing_posted_ && ready_()) {
+    if (!processing_posted_ && ready()) {
       auto* packet = new (std::nothrow)
           overlapped_processing<ENty>(this->shared_from_this());
-      if (!packet) { close_socket_(); return; }
+      if (!packet) {
+        close_socket();
+        return;
+      }
       processing_posted_ = true;
-      // Release publication ownership before another worker can dequeue.
-      // This context lock protects the flag through Post's return.
+      // Release publication ownership before another worker can dequeue. Keep
+      // the context lock through Post's return to protect the flag.
       if (!PostQueuedCompletionStatus(completion_port_, 0, 0, packet)) {
         processing_posted_ = false;
         delete packet;
-        close_socket_();
+        close_socket();
       }
     }
   }
   // +=========================================================================+
-  // | [>] close_socket_                                           ( private ) |
+  // | [>] close_socket                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  void close_socket_() {
-    cancel_processing_();
+  void close_socket() {
+    cancel_processing();
     state_ = state::kClosed;
     if (socket_ != INVALID_SOCKET) {
       closesocket(socket_);
@@ -441,10 +436,10 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
     }
   }
   // +=========================================================================+
-  // | [>] finished_                                               ( private ) |
+  // | [>] finished                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  // Called under state_mutex_. Outstanding operations still own their bytes.
-  bool finished_() const noexcept {
+  // Call under state_mutex_. Pending operations still own their bytes.
+  bool finished() const noexcept {
     return state_ == state::kClosed && !receiving_ && !sending_ &&
            !processing_posted_;
   }
@@ -457,28 +452,29 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   SOCKET socket_{INVALID_SOCKET};
   tcp_connection<ENty> input_;
   const std::atomic<bool>& stopping_;
-  // Serializes engine input, TX state, socket completions and external stop.
+  // Serialize engine input, TX state, completions and external stop.
   std::mutex state_mutex_;
   send_state output_;
-  // True only while the kernel owns the active TX batch.
+  // True while the kernel owns the active TX batch.
   bool sending_{false};
-  // Current connection phase; only state_mutex_ protects transitions.
+  // Connection phase; change it only under state_mutex_.
   state state_{state::kOpen};
-  // Initialization emits the connection notification before starting I/O.
+  // Notify the connection before starting I/O.
   bool notified_{false};
-  // True until the one outstanding RX completion is handled.
+  // True until the single pending RX completion is handled.
   bool receiving_{false};
-  // Peer EOF permits closing after the accepted output drains.
+  // After peer EOF, close once accepted output drains.
   bool receive_closed_{false};
   WSABUF ovr_wsa_{};
-  // Generic turn state is protected by the same mutex as RX/TX and the engine.
+  // Protect turns with the same mutex as RX, TX and the engine.
   using clock = protocol::processing_result::clock;
   protocol::processing_result progress_{};
   HANDLE completion_port_{nullptr};
   windows_processing_timer<ENty>* timer_{nullptr};
-  // At most one immediate packet, owned by IOCP until its worker handles it.
+  // At most one immediate packet; IOCP owns it until delivery.
   bool processing_posted_{false};
-  // Lifetime-owned absolute registration and stale-delivery identity.
+  // Keep the absolute registration and stale-delivery ID alive with the
+  // connection.
   std::optional<clock::time_point> scheduled_;
   std::uint64_t timer_version_{0};
 };

@@ -44,7 +44,7 @@ struct context;
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_send                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Windows overlapped send operation.                                        |
+// | One Windows overlapped send.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -57,9 +57,9 @@ struct overlapped_send : overlapped_base {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Keeps the connection and its borrowed TX bytes alive until completion.
+  // Keep the connection and borrowed TX bytes alive until completion.
   std::shared_ptr<context<ENty>> ctx;
-  // The kernel borrows these bytes until this operation completes.
+  // The kernel borrows these bytes until completion.
   WSABUF buffer{};
 };
 }  // namespace martianlabs::doba::transport::server::detail

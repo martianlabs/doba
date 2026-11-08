@@ -40,8 +40,8 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] send_state                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Owns the active socket batch, accumulated output and one terminal reader. |
-// | Only consume may change the active batch while socket I/O is pending.     |
+// | Own the active socket batch, buffered output and one terminal reader.     |
+// | While I/O is pending, only consume may change that active batch.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct send_state {
@@ -52,8 +52,8 @@ struct send_state {
   // +=========================================================================+
   // | [>] push                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Copy inline bytes before returning. A reader terminates the input call:
-  // further nonempty output is rejected until its final batch has drained.
+  // Copy inline bytes before returning. A reader ends this input call's output:
+  // reject later nonempty sends until its final batch drains.
   bool push(std::string_view head, std::string_view body,
             std::unique_ptr<common::reader> source) {
     if (head.empty() && body.empty() && !source) return true;
@@ -69,14 +69,14 @@ struct send_state {
   // +=========================================================================+
   // | [>] fill                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Never move or resize bytes still borrowed by WSASend. A prefix is sent
-  // before the reader is touched. Reader blocks need no speculative credit:
-  // they are read only after all inline output has drained.
+  // WSASend still borrows these bytes, so don't move or resize them. Send the
+  // prefix before reading the source. Read source blocks only after inline
+  // output drains; no speculative credit needed.
   bool fill() {
     if (offset != buffer.size()) return true;
     buffer.clear();
     offset = 0;
-    // Recycle idle TX storage into the accumulator for the next RX batch.
+    // Reuse idle TX storage for the next RX batch's output.
     if (!pending_.empty() || !source_) {
       buffer.swap(pending_);
       return true;
@@ -97,8 +97,8 @@ struct send_state {
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // Partial sends retain the whole active batch in the hard byte limit.
-  // The reader stays owned until its final block has completed socket I/O.
+  // Charge the whole active batch even after partial sends. Keep the reader
+  // until its last socket block completes.
   bool consume(std::size_t sent) {
     if (sent > buffer.size() - offset) return false;
     offset += sent;
@@ -119,7 +119,7 @@ struct send_state {
   // +=========================================================================+
   // | [>] clear                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Only called without outstanding socket I/O borrowing buffer.
+  // Call only when no pending socket I/O borrows buffer.
   void clear() {
     buffer.clear();
     pending_.clear();
@@ -129,20 +129,20 @@ struct send_state {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Active socket batch; its address is stable until completion.
+  // Active socket bytes; keep their address stable until completion.
   std::string buffer;
-  // Bytes already completed within the active batch.
+  // Bytes already sent from the active batch.
   std::size_t offset{0};
 
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Inline bytes produced while the kernel owns the active batch.
+  // Inline bytes added while the kernel owns the active batch.
   std::string pending_;
-  // The sole reader, terminal until its final socket batch has completed.
+  // One terminal reader, held through its last socket completion.
   std::unique_ptr<common::reader> source_;
-  // Combined active and accumulated byte limit, without preallocation.
+  // Cap active and buffered bytes together; don't preallocate the budget.
   const std::size_t capacity_;
 };
 }  // namespace martianlabs::doba::transport::server::detail

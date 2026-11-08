@@ -39,9 +39,8 @@ namespace martianlabs::doba::tests::qualification {
 // +---------------------------------------------------------------------------+
 // | [>] profile_identity                                         ( constant ) |
 // +---------------------------------------------------------------------------+
-// | Only injected into instrumented qualification builds. The private probe   |
-// | namespaces profiles by target, including subprocesses. The probe resets   |
-// | counters and exits before main, preserving an explicit zero denominator.  |
+// | Coverage-only probe: split profiles by target, subprocesses included.     |
+// | Reset counters and exit before main for an explicit zero denominator.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline const bool profile_identity = [] {
@@ -54,8 +53,9 @@ inline const bool profile_identity = [] {
   const char* pattern = std::getenv("LLVM_PROFILE_FILE");
   if (!pattern) return false;
 #endif
-  // The parent directory is retained; child processes replace any parent
-  // target prefix instead of accumulating it. Storage outlives profile flush.
+  // Keep the profile directory. Children replace the parent's target prefix
+  // instead of piling prefixes up. Keep this storage alive through profile
+  // flush.
   const char* separator = std::strrchr(pattern, '/');
   if (!separator) separator = std::strrchr(pattern, '\\');
   if (!separator) std::_Exit(3);

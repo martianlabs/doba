@@ -37,13 +37,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/request" that responds to GET requests.   |
-// | The lambda function constructs a response body containing the request     |
-// | target and host information in a human-readable format. The response is   |
-// | sent with a "Content-Type" of "text/plain; charset=utf-8". The server     |
-// | runs until a termination signal is received.                              |
+// | Show the request target and host at GET /request.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -51,7 +45,7 @@ int main() {
   http_server.add_route(
       "GET", "/request", [](const request& req, response& res) {
         res.ok_200();
-        // Target and host syntax are parsed before the handler is called.
+        // The target and host are already parsed when the handler runs.
         std::string target_form;
         switch (req.get_target()) {
           case target::kOriginForm:
@@ -79,7 +73,7 @@ int main() {
             host_type = "unknown";
             break;
         }
-        // Request accessors return views backed by the request object.
+        // These views belong to the request; don't keep them past its lifetime.
         std::string body = "method: ";
         body.append(req.get_method());
         body.append("\npath: ");

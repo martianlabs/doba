@@ -62,9 +62,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] file_request                                             ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function deserializes a request and invokes the provided callback    |
-// | with the decoded request. It asserts that the deserialization succeeds    |
-// | and that the callback is called.                                          |
+// | Decode a request, run its route handler and return the response. Reject   |
+// | invalid test input.                                                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 response file_request(router<request, response>& routes,
@@ -99,8 +98,7 @@ response file_request(router<request, response>& routes,
 // +---------------------------------------------------------------------------+
 // | [>] file_body                                                ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function serializes a response and returns the body as a string.     |
-// | It reads all data from the source if available.                           |
+// | Serialize and read any source bytes into the body string.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string file_body(response& value) {
@@ -114,8 +112,7 @@ std::string file_body(response& value) {
 // +---------------------------------------------------------------------------+
 // | [>] file_status                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function serializes a response and returns the status line           |
-// | and headers as a string.                                                  |
+// | Serialize the status line and inline headers for checks.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string file_status(response& value) {
@@ -593,8 +590,7 @@ DOBA_TEST(
   fs::permissions(path, fs::perms::owner_write | fs::perms::group_write |
                             fs::perms::others_write, fs::perm_options::remove);
   auto permissions = file_request(routes, "GET", "/file");
-  // Restore write permissions before assertions so cleanup also works on
-  // Windows.
+  // Restore write access before assertions, so Windows cleanup can still run.
   fs::permissions(path, original_permissions);
   DOBA_EXPECT(cache->find(key) != reloaded);
   DOBA_EXPECT_EQUAL(permissions.get_header("ETag").second, tag);

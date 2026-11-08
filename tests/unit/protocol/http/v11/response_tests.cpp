@@ -61,9 +61,7 @@ constexpr std::size_t max_response_body_size_in_memory =
 // +---------------------------------------------------------------------------+
 // | [>] read_source                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function reads the entire content from a reader source and returns   |
-// | it as a string. It is used for testing purposes to verify the             |
-// | correctness of the serialized body.                                       |
+// | Read the source into a string to check serialized body bytes.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string read_source(reader& source) {

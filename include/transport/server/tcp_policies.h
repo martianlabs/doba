@@ -33,35 +33,35 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tcp_policies                                               ( struct ) |
 // +---------------------------------------------------------------------------+
-// | TCP operating policies.                                                   |
+// | TCP limits and listener settings.                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct tcp_policies {
-  // Default receive block capacity, in bytes.
+  // Default socket RX block size in bytes.
   static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
-  // Positive RX block size, independent of protocol message limits.
-  // Linux: at most SSIZE_MAX. Windows: at most ULONG_MAX.
-  // The engine owns incomplete messages after the input call returns.
+  // Positive RX block size, separate from message limits. Cap it at SSIZE_MAX
+  // on Linux or ULONG_MAX on Windows. The engine keeps unfinished messages
+  // after input returns.
   std::size_t receive_buffer_capacity = kDefaultReceiveBufferCapacity;
-  // Worker count. Zero selects one on Linux, hardware concurrency on Windows
-  // (at least one). Windows counts must fit DWORD; startup needs resources.
+  // 0 workers means one on Linux, hardware concurrency on Windows, at least
+  // one. Windows counts must fit DWORD; startup still needs enough resources.
   std::size_t worker_count = 0;
-  // Nonnegative listen backlog request. Zero passes SOMAXCONN to the kernel;
-  // the kernel can cap it. This is separate from the live connection limit.
+  // Nonnegative listen backlog; 0 passes SOMAXCONN. The kernel may cap it. This
+  // isn't the live-connection limit.
   int listen_backlog = 0;
-  // Positive logical TX byte budget per connection; no preallocation.
-  // Counts the entire active batch plus accumulated inline bytes, including
-  // partial sends. Allocator capacity and reader backing storage are excluded.
-  // Linux: at most SSIZE_MAX. Windows submits ULONG-sized chunks as needed.
-  // Exceeding the budget closes the connection; one terminal reader is fixed.
+  // Positive TX byte cap per connection, without preallocation. Count the whole
+  // active batch, partial sends included, plus buffered inline bytes. Exclude
+  // allocator capacity and reader backing storage. Linux caps at SSIZE_MAX;
+  // Windows sends ULONG-sized pieces. Exceeding the budget closes the
+  // connection. One terminal reader only.
   std::size_t max_buffered_send_bytes = 1024 * 1024;
-  // Maximum live contexts; zero disables admission limiting.
-  // Linux partitions a finite budget, which must cover every selected worker.
-  // Windows shares reservations through pending I/O and context release.
+  // Live-context cap; 0 means unlimited. Linux splits a finite budget across
+  // workers, so give each one a slot. Windows holds shared credits through
+  // pending I/O and context release.
   std::size_t max_connections = 65535;
-  // Numeric IPv4 bind address, required at start. No hostnames or NUL bytes.
+  // Bind to numeric IPv4 at startup; no hostnames or NUL bytes.
   std::string ip;
-  // Decimal port in [1, 65535], required at start. No NUL or trailing data.
+  // Use a decimal port from 1 to 65535, with no NUL or trailing bytes.
   std::string port;
 };
 }  // namespace martianlabs::doba::transport::server

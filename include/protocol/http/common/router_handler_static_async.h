@@ -34,9 +34,7 @@ namespace martianlabs::doba::protocol::http::detail {
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_static_async                                 ( using ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
+// | RQty and RSty are the request and response types.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>

@@ -40,13 +40,11 @@ namespace martianlabs::doba {
 // +---------------------------------------------------------------------------+
 // | [>] server                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Server class that manages the lifecycle of a transport server and its     |
-// | associated protocol engine.                                               |
+// | Start and stop a transport server with its protocol engine.               |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
+// | Engine and transport types:                                               |
 // +---------------------------------------------------------------------------+
-// | ENty: The protocol engine type.                                           |
-// | TRty: The server transport type.                                          |
+// | ENty is the protocol engine; TRty is the server transport.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename TRty>
@@ -76,7 +74,7 @@ class server {
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Starts the server and begins accepting connections.                     |
+  // | Start listening and accepting connections.                              |
   // +-------------------------------------------------------------------------+
   void start() {
     std::lock_guard<std::mutex> lock(locked_mutex_);
@@ -104,7 +102,7 @@ class server {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Stops the server and closes all active connections.                     |
+  // | Stop the server and close its connections.                              |
   // +-------------------------------------------------------------------------+
   void stop() {
     std::lock_guard<std::mutex> lock(locked_mutex_);

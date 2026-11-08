@@ -40,7 +40,7 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] linux_processing_queue                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Worker-owned registrations; only stable connection identities are stored. |
+// | Keep registrations worker-owned and store stable connection IDs only.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class linux_processing_queue {
@@ -144,16 +144,16 @@ class linux_processing_queue {
   using ready_type = std::list<identity_type>;
   using deadline_type = std::multimap<clock::time_point, identity_type>;
   struct registration {
-    // Present only while this identity is in the coalesced ready list.
+    // Present only while this ID is in the shared-ready entry.
     std::optional<ready_type::iterator> ready;
-    // Its one cancellable connection deadline, independent of readiness.
+    // One cancellable deadline per connection, separate from readiness.
     std::optional<deadline_type::iterator> deadline;
   };
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  ready_type ready_;         // Coalesced, fair connection turns.
-  deadline_type deadlines_;  // One deadline registration per connection.
+  ready_type ready_;         // Ready connection turns, coalesced and fair.
+  deadline_type deadlines_;  // One deadline slot per connection.
   std::unordered_map<identity_type, registration> registrations_;
 };
 }  // namespace martianlabs::doba::transport::server::detail

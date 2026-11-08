@@ -37,13 +37,13 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] types                                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Platform-independent transport delegate types.                            |
+// | Share transport callback types across platforms.                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct types {
-  // On client connected delegate type
+  // Connection-arrival callback.
   using on_client_connected_delegate = std::function<void()>;
-  // On client disconnected delegate type
+  // Disconnection callback.
   using on_client_disconnected_delegate = std::function<void()>;
 };
 } // namespace martianlabs::doba::transport::server::detail
@@ -64,13 +64,10 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // | [>] tcp                                                         ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a TCP transport for an engine. It inherits from       |
-// | `basic_transport` and takes a `tcp_policies` configuration and an engine  |
-// | factory when it is created.                                               |
+// | Give an engine a TCP transport using tcp_policies and its factory. Reuse  |
+// | basic_transport for the platform backend.                                 |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | ENty - engine type being used.                                            |
-// | FAty - engine factory type being used.                                    |
+// | ENty is the engine; FAty creates it.                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 #ifdef _WIN32

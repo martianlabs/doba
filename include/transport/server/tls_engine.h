@@ -45,9 +45,9 @@ using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // | [>] tls_engine                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | TCP sees an ordinary engine and its turn results. Only TLS sees SSL.      |
-// | All output, including a terminal source, is encoded before TCP sees it.   |
-// | One bounded BIO pair moves records without owning or accessing a socket.  |
+// | TCP sees an ordinary engine and turn results; only this adapter sees SSL. |
+// | Encrypt all output, readers included, before handing it to TCP. Move      |
+// | records through a bounded BIO pair, without touching sockets.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -106,7 +106,10 @@ class tls_engine {
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
-    if (failed_ || closing_) { close_(); return {}; }
+    if (failed_ || closing_) {
+      close_();
+      return {};
+    }
     begin_batch();
     try {
       while (!input.empty() && !closing_ && !failed_) {
@@ -118,15 +121,20 @@ class tls_engine {
         pump();
       }
       return finish_batch();
-    } catch (...) { return abort_batch(); }
+    } catch (...) {
+      return abort_batch();
+    }
   }
   // +=========================================================================+
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool output_idle) {
-    if (failed_ || closing_) { close_(); return {}; }
-    // Native scheduling cannot precede application input, but do not expose
-    // an unfinished handshake to a protocol even in a custom adapter harness.
+    if (failed_ || closing_) {
+      close_();
+      return {};
+    }
+    // Native turns can't precede input. Still guard custom adapters: don't call
+    // the protocol before the handshake completes.
     if (!SSL_is_init_finished(session_.get())) return {};
     begin_batch();
     try {
@@ -135,7 +143,9 @@ class tls_engine {
       progress_ = engine_.on_processing_turn(output_idle);
       processing_ = false;
       return finish_batch();
-    } catch (...) { return abort_batch(); }
+    } catch (...) {
+      return abort_batch();
+    }
   }
 
 
@@ -151,14 +161,17 @@ class tls_engine {
   // +=========================================================================+
   // | [>] finish_batch                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  // TCP copies encoded output before return. No TLS output remains hidden
-  // behind its output-idle snapshot, including synchronously drained readers.
+  // TCP copies encrypted output before returning. Leave no hidden TLS output
+  // behind its output-idle snapshot, even for synchronously drained readers.
   processing_result finish_batch() {
     if (failed_) fail();
     flush_record();
     if (closing_) shutdown();
     if (!ciphertext_.empty()) output_(ciphertext_, {}, nullptr);
-    if (closing_) { progress_ = {}; close_(); }
+    if (closing_) {
+      progress_ = {};
+      close_();
+    }
     return progress_;
   }
   // +=========================================================================+
@@ -182,7 +195,7 @@ class tls_engine {
   // +=========================================================================+
   // | [>] drain                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  // Retains only a finite ciphertext batch; OpenSSL owns its internal state.
+  // Keep one bounded ciphertext batch; OpenSSL owns its internal state.
   std::size_t drain() {
     const auto before = ciphertext_.size();
     std::array<char, 16384> block;
@@ -222,7 +235,10 @@ class tls_engine {
       }
       if (error == SSL_ERROR_WANT_READ) return;
       if (error == SSL_ERROR_WANT_WRITE && produced) continue;
-      if (error == SSL_ERROR_ZERO_RETURN) { closing_ = true; return; }
+      if (error == SSL_ERROR_ZERO_RETURN) {
+        closing_ = true;
+        return;
+      }
       fail();
     }
   }
@@ -244,7 +260,7 @@ class tls_engine {
   // +=========================================================================+
   // | [>] flush_record                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  // Group inline responses and source blocks into ordinary TLS records.
+  // Combine inline replies and source blocks into TLS records.
   void flush_record() {
     if (plaintext_output_.empty()) return;
     for (;;) {
@@ -259,8 +275,8 @@ class tls_engine {
         plaintext_output_.clear();
         return;
       }
-      // Application writes never suspend waiting for peer input. TLS 1.2
-      // renegotiation, early data and post-handshake auth are disabled.
+      // Don't suspend application writes for peer input. Disable TLS 1.2
+      // renegotiation, early data and post-handshake auth.
       if (error != SSL_ERROR_WANT_WRITE || !produced) fail();
     }
   }
@@ -272,7 +288,10 @@ class tls_engine {
     if (failed_) return;
     if (processing_ && !closing_ && prefix.empty() && body.empty() && !source)
       return;
-    if (!processing_ || closing_ || source_seen_) { failed_ = true; return; }
+    if (!processing_ || closing_ || source_seen_) {
+      failed_ = true;
+      return;
+    }
     try {
       encode(prefix);
       encode(body);
@@ -286,12 +305,14 @@ class tls_engine {
         encode({reinterpret_cast<const char*>(block.data()), size});
       }
       if (source->failed() || !source->ok()) fail();
-    } catch (...) { failed_ = true; }
+    } catch (...) {
+      failed_ = true;
+    }
   }
   // +=========================================================================+
   // | [>] shutdown                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  // Send our close_notify and let TCP drain. Do not await the peer's reply.
+  // Send close_notify and let TCP drain; don't wait for the peer's reply.
   void shutdown() {
     for (;;) {
       ERR_clear_error();
@@ -306,32 +327,32 @@ class tls_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Immutable credentials remain alive through session destruction.
+  // Keep immutable credentials alive through session destruction.
   const std::shared_ptr<const tls_configuration> configuration_;
-  // Per-connection TLS state, including the internal half of the BIO pair.
+  // This connection's TLS state and internal BIO half.
   std::unique_ptr<SSL, decltype(&SSL_free)> session_;
-  // External BIO half; input is fed here and encoded records are drained here.
+  // Feed input and drain encrypted records through this external BIO half.
   std::unique_ptr<BIO, decltype(&BIO_free)> network_;
-  // Reusable decrypted receive block borrowed by the application engine.
+  // Reuse this decrypted RX block; the application engine borrows it.
   std::vector<char> plaintext_;
-  // Protocol state; RX and turns are serialized by the TCP backend.
+  // Protocol state; TCP serializes RX and processing turns.
   ENty engine_;
-  // TCP's existing synchronous callbacks, never invoked from source readers.
+  // TCP's synchronous callbacks; never call them from a reader.
   protocol::send_delegate output_;
   std::function<void()> close_;
-  // At most one 16 KiB plaintext record; combines prefix/body/source writes.
+  // Combine prefix/body/source writes into at most one 16 KiB plaintext record.
   std::string plaintext_output_;
-  // Ciphertext accepted by TCP after a successful RX or processing entry.
+  // Encrypted bytes TCP accepted after a successful input/turn call.
   std::string ciphertext_;
-  // Plaintext produced by all protocol calls in this RX or turn batch.
+  // Plaintext from every protocol call in this input/turn batch.
   std::size_t accepted_{0};
-  // Last complete protocol snapshot; TLS control-only RX must preserve it.
+  // Keep the last full protocol snapshot, even across TLS control-only input.
   processing_result progress_{};
-  // Application output is permitted only inside an engine RX or turn call.
+  // Allow application output only inside engine input/turn calls.
   bool processing_{false};
-  // A source is terminal for the current application RX or turn call.
+  // A reader ends output for this application input/turn call.
   bool source_seen_{false};
-  // Valid output drains before closure; fatal errors discard the current batch.
+  // Drain valid output before closing; discard this batch on fatal error.
   bool closing_{false};
   bool failed_{false};
 };
@@ -340,7 +361,7 @@ class tls_engine {
 // +---------------------------------------------------------------------------+
 // | [>] tls_factory                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Adapts the application's factory without changing TCP's factory contract. |
+// | Adapt the application's factory without changing TCP's contract.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
@@ -355,9 +376,9 @@ struct tls_factory {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Shared immutable TLS configuration retained by each generated engine.
+  // Share immutable TLS settings with every engine we create.
   std::shared_ptr<const tls_configuration> configuration;
-  // Creates the application's independent per-connection engine.
+  // Create a separate application engine per connection.
   FAty factory;
 };
 }  // namespace martianlabs::doba::transport::server::detail

@@ -133,7 +133,7 @@ void terminal_source(Policies p) {
   p.port = std::to_string(port);
   p.worker_count = 2;
   protocol::http::v11::policies limits;
-  // Retain the next request as raw input until the current source drains.
+  // Keep the next request as raw input until this reader drains.
   limits.max_pending_requests = 1;
   limits.max_pending_response_bytes = 1;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
@@ -150,7 +150,7 @@ void terminal_source(Policies p) {
   DOBA_EXPECT(peer.connect(port));
   DOBA_EXPECT(peer.send(get));
   DOBA_EXPECT(wait_count(calls, 1));
-  // The body streams through bounded TX blocks without charging its length.
+  // Stream the body through bounded TX blocks; don't charge its full length.
   DOBA_EXPECT(reply(peer, *bytes));
   DOBA_EXPECT(peer.send(get));
   DOBA_EXPECT(reply(peer, *bytes));

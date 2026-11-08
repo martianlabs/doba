@@ -55,7 +55,7 @@ class fixture_process {
     if (!stopped_) {
       try { stop(); }
       catch (const std::exception& error) {
-        // Fail even during exception unwinding; a broken cleanup cannot pass.
+        // Fail during unwinding too; broken cleanup must not pass.
         std::cerr << "TLS fixture cleanup failed: " << error.what() << '\n';
         std::abort();
       }

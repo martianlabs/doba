@@ -32,24 +32,23 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] cache_statistics                                           ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Resource counters captured by the generic cache statistics operation.     |
-// | Costs use the same caller-defined units as the admission policies.        |
+// | A snapshot of cache resource use, in the same cost units as the limits.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct cache_statistics {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Resident entries, including expired entries not yet removed.
+  // Entries still here, including expired ones not yet removed.
   std::size_t entries = 0;
-  // Declared cost currently owned by resident entries.
+  // Declared cost of entries still in the cache.
   std::size_t resident_cost = 0;
-  // Declared cost of load reservations and all retained values, including
-  // evicted values still pinned by consumers.
+  // Cost of reservations and retained values, even evicted ones callers still
+  // hold.
   std::size_t live_cost = 0;
-  // Loaders still running, including invalidated loads awaiting completion.
+  // Loaders still running, including invalidated ones finishing up.
   std::size_t loads = 0;
-  // Callers currently waiting for an existing load of the same key.
+  // Callers waiting for another load of their key.
   std::size_t waiters = 0;
 };
 }  // namespace martianlabs::doba::common

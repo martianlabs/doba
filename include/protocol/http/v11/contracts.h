@@ -54,7 +54,7 @@ namespace detail {
 // +---------------------------------------------------------------------------+
 // | [>] make_engine_factory                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | Creates a factory function for engines.                                   |
+// | Build an engine factory.                                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename ROty>
@@ -69,7 +69,7 @@ auto make_engine_factory(typename ENty::policies_type configuration,
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                               ( type ) |
 // +---------------------------------------------------------------------------+
-// | Type of the engine factory function.                                      |
+// | The engine factory's callable type.                                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename ROty>

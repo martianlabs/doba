@@ -83,7 +83,7 @@ class temporary_directory {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Whether the original environment has already been restored.
+  // Have we restored the original environment yet?
   bool restored_ = false;
   std::string previous_;
   int saved_ = -1;

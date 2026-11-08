@@ -88,7 +88,7 @@ DOBA_TEST("detection queues a successor response until the first completes") {
   current.set_on_close([] {});
   current.on_bytes_received("GET /first HTTP/1.1\r\nHost: x\r\n\r\n" +
                             std::string(next));
-  // The first task yielded; the successor response must still be retained.
+  // The first task yielded; keep its successor's response until its turn.
   DOBA_EXPECT_EQUAL(sends, 0);
   current.on_processing_turn(true);
   DOBA_EXPECT_EQUAL(sends, 2);

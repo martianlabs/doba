@@ -39,7 +39,7 @@ namespace doba_fuzz {
 // | [>] check                                                    ( function ) |
 // +---------------------------------------------------------------------------+
 inline void check(bool condition, const char* property) {
-  // assert() is disabled in Release. Properties must remain executable.
+  // Release disables assert(); these checks must still run.
   if (!condition) {
     std::fprintf(stderr, "doba fuzz property failed: %s\n", property);
     std::abort();

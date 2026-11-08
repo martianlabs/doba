@@ -145,8 +145,7 @@ target_link_libraries(
   Threads::Threads
 )
 
-# Sources are UTF-8 without BOM. Tell MSVC to treat both the source and the
-# execution character set as UTF-8, since there is no BOM to infer it from.
+# No BOM here: tell MSVC to use UTF-8 for source and execution characters.
 if(
   MSVC
 )
@@ -169,7 +168,7 @@ target_include_directories(
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
-# TLS is opt-in. The plain target never acquires OpenSSL dependencies.
+# Opt into TLS separately; plain TCP doesn't pick up OpenSSL.
 if(DOBA_ENABLE_TLS)
   find_package(OpenSSL 3.0 REQUIRED COMPONENTS SSL Crypto)
   add_library(doba_tls INTERFACE)

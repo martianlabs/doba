@@ -38,15 +38,14 @@
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-// Test-only API interception lives in an isolated executable. Production
-// headers and the benchmark driver contain no hooks or alternate paths.
-// Operations watched while the transport-facing API call is still active.
+// Intercept APIs only in this executable; keep production and the driver
+// hook-free. Watch operations while the submitting call is still active.
 std::atomic<OVERLAPPED*> receive_operation{nullptr}, send_operation{nullptr};
-// Completion packets observed by another real IOCP worker.
+// Completions seen by another real IOCP worker.
 std::atomic<bool> receive_seen{false}, send_seen{false};
-// Watch only the first operation of each kind, not idle subsequent receives.
+// Watch the first operation of each kind, not later idle receives.
 std::atomic<bool> receive_watched{false}, send_watched{false};
-// Bounded test failure if a packet is not observed.
+// Fail within a bound if no packet arrives.
 std::atomic<bool> timed_out{false};
 
 // +---------------------------------------------------------------------------+
@@ -161,7 +160,7 @@ struct completion_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Synchronous engine output; the transport owns the copied response bytes.
+  // Send synchronously; the transport owns its copied response bytes.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace
@@ -190,7 +189,7 @@ DOBA_TEST("Windows handles IOCP packets dequeued before socket API returns") {
   const auto bytes = client.receive(5, 10s);
   DOBA_EXPECT(bytes.has_value());
   if (bytes) DOBA_EXPECT_EQUAL(*bytes, "first");
-  // Ensure both watched calls returned and the connection still progresses.
+  // Check that both watched calls returned and the connection still progresses.
   DOBA_EXPECT(client.send_all("next"));
   const auto next = client.receive(4, 10s);
   DOBA_EXPECT(next.has_value());

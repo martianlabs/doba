@@ -42,15 +42,15 @@ struct pending_response {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Only asynchronous handlers need retained request/frame ownership.
+  // Only async handlers need to retain requests and coroutine frames.
   std::unique_ptr<request_processor_async<RQty, RSty>> handler;
-  std::string interim;   // At most one ordered 100 Continue per request.
-  std::string head;      // Owned serialized head awaiting transport acceptance.
-  std::string body;      // Owned inline body awaiting transport acceptance.
-  std::unique_ptr<common::reader> source;  // Same reader contract as sync.
-  bool complete{false};  // Final response is ready for ordered emission.
-  bool close{false};     // Close after this response reaches the wire frontier.
-  bool source_sent{false};  // Keep ownership while the terminal source drains.
+  std::string interim;   // Keep at most one ordered 100 Continue per request.
+  std::string head;      // Own the head until transport acceptance.
+  std::string body;      // Own the inline body until the transport accepts it.
+  std::unique_ptr<common::reader> source;  // Same reader rules as sync.
+  bool complete{false};  // Final response ready to send in order.
+  bool close{false};     // Close when this reply reaches the wire front.
+  bool source_sent{false};  // Keep owner until the terminal reader drains.
 };
 }  // namespace martianlabs::doba::protocol::http::v11::detail
 

@@ -37,8 +37,8 @@ using martianlabs::doba::tests::unit::test_helper;
 // +---------------------------------------------------------------------------+
 // | [>] run_probe                                                ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test helper with the specified arguments and       |
-// | timeout. It captures the output and sets the test context accordingly.    |
+// | Run the helper with these arguments and timeout; attach its output as     |
+// | test context.                                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 test_helper_result run_probe(

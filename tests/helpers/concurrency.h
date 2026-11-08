@@ -57,8 +57,8 @@ class scope_exit {
   F cleanup_;
 };
 
-// Open is idempotent and also releases awaiters that arrive after cleanup.
-// Keep the event alive until the server and all test threads have stopped.
+// Opening twice is fine, and late awaiters must escape cleanup too. Keep the
+// event alive until the server and test threads stop.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] manual_event                                                ( class ) |

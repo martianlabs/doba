@@ -114,9 +114,9 @@ class task_execution {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  task<void>::handle_type handle_;  // Sole owner of the suspended frame.
-  bool ready_{true};               // Initial entry or a requested yield.
-  std::optional<clock::time_point> deadline_;  // Positive sleep, if pending.
+  task<void>::handle_type handle_;  // Only owner of the suspended frame.
+  bool ready_{true};               // First entry or requested yield.
+  std::optional<clock::time_point> deadline_;  // Pending positive sleep.
 };
 }  // namespace martianlabs::doba::common
 

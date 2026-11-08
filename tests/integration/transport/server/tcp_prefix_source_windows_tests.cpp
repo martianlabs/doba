@@ -55,14 +55,14 @@ using namespace std::chrono_literals;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct source_state {
-  // Backing owner must return to one reference before the next engine input.
+  // Return the backing owner to one reference before the next engine input.
   std::shared_ptr<const std::string> bytes{
       std::make_shared<const std::string>(8 * 1024 * 1024, 's')};
-  // Number of serialized input calls made by the transport.
+  // Count serialized input calls from the transport.
   std::atomic<int> calls{0};
   // Set false if a new receive overtakes the terminal reader.
   std::atomic<bool> source_released{true};
-  // 0: valid reader; 1: later inline bytes; 2: a second reader.
+  // 0: valid reader; 1: inline bytes after it; 2: a second reader.
   int incompatible{0};
 };
 
@@ -108,9 +108,9 @@ struct source_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Application-owned observations and reader backing storage.
+  // The application owns these observations and reader bytes.
   std::shared_ptr<source_state> state;
-  // Synchronous transport output callback.
+  // Synchronous transport send callback.
   send_delegate output;
   // Synchronous transport close callback.
   std::function<void()> close;
@@ -144,8 +144,8 @@ void exercise(int incompatible) {
     DOBA_EXPECT(client.send_all("first"));
     DOBA_EXPECT(wait_count(state->calls, 1));
     if (!incompatible) {
-      // Send new input before reading the large body. Its delivery must wait
-      // for reader retirement, regardless of when the kernel accepts bytes.
+      // Send more input before reading the large body. Delivery must wait for
+      // reader retirement, even if the kernel already accepted the bytes.
       DOBA_EXPECT(client.send_all("next"));
       const std::string expected = "head" + *state->bytes + "done";
       const auto bytes = client.receive(expected.size(), 15s);
@@ -156,7 +156,8 @@ void exercise(int incompatible) {
       DOBA_EXPECT_EQUAL(state->calls.load(), 2);
     } else {
       const auto bytes = client.receive_until_close(32, 5s);
-      // EOF or reset proves closure. A receive-limit failure is not closure.
+      // Require EOF or reset to prove closure; a receive-limit failure doesn't
+      // prove it.
       DOBA_EXPECT((bytes && bytes->empty()) || client.connection_reset());
       DOBA_EXPECT(client.error() != "timeout");
       DOBA_EXPECT_EQUAL(state->calls.load(), 1);

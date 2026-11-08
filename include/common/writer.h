@@ -37,12 +37,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] writer                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a writer interface for writing bytes to               |
-// | a byte_storage backend. It supports writing from a pointer, a             |
-// | string_view,                                                              |
-// | or a span of bytes. It also provides methods to finish the writing        |
-// | process                                                                   |
-// | and check the state of the writer.                                        |
+// | Write bytes to storage, then finish the writer before reading them back.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class writer {

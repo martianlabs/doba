@@ -44,8 +44,8 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] linux_transport                                             ( class ) |
 // +---------------------------------------------------------------------------+
-// | Worker-owned TCP. Configuration/start/stop are external owner operations. |
 // | Each worker owns its listener, connections and one reader per socket.     |
+// | Configure, start and stop from the external owner.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
@@ -154,15 +154,15 @@ class linux_transport {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Configuration is immutable for the transport's lifetime.
+  // Don't change settings during the transport's lifetime.
   const tcp_policies configuration_;
-  // Creates each connection's independent protocol engine.
+  // Create a separate engine for each connection.
   const FAty factory_;
-  // Optional connection notification, fixed before start.
+  // Optional arrival callback; set it before start.
   std::function<void()> connected_;
-  // Optional disconnection notification, fixed before start.
+  // Optional departure callback; set it before start.
   std::function<void()> disconnected_;
-  // Independent workers; clear joins them before releasing shared callbacks.
+  // Join workers before releasing their shared callbacks.
   std::vector<std::unique_ptr<linux_worker<ENty, FAty>>> workers_;
 };
 }  // namespace martianlabs::doba::transport::server::detail

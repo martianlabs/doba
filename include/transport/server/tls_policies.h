@@ -37,30 +37,30 @@ namespace martianlabs::doba::transport::server {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct tls_policies : tcp_policies {
-  // Encrypted socket input capacity per connection, in bytes.
+  // Default encrypted RX capacity per connection, in bytes.
   static constexpr std::size_t kDefaultEncryptedReceiveBufferCapacity =
       17 * 1024;
-  // Capacity of each direction of the bounded TLS BIO pair, in bytes.
+  // Default byte capacity in each direction of the bounded BIO pair.
   static constexpr std::size_t kDefaultNetworkBioBufferCapacity = 17 * 1024;
-  // Default encoded batch limit, including handshake and record overhead.
+  // Default encrypted-batch cap, handshake and record overhead included.
   static constexpr std::size_t kDefaultBufferedCiphertextBytes =
       2 * 1024 * 1024;
-  // Path to the server certificate chain in PEM format.
+  // Server certificate chain path, in PEM format.
   std::string certificate_file;
-  // Path to the matching unencrypted private key in PEM format.
+  // Matching unencrypted private-key path, in PEM format.
   std::string private_key_file;
-  // Encrypted receive capacity per connection (must be positive).
+  // Encrypted RX byte capacity per connection; must be positive.
   std::size_t encrypted_receive_buffer_capacity =
       kDefaultEncryptedReceiveBufferCapacity;
-  // Inherited RX capacity limits decrypted blocks delivered to the engine.
-  // Inherited TX budget includes inline bytes AND a synchronously read source.
-  // Network BIO capacity per direction (positive, at most INT_MAX).
+  // Inherited RX caps decrypted blocks sent to the engine. Inherited TX counts
+  // inline bytes and synchronously read sources. This BIO byte capacity applies
+  // per direction; positive and at most INT_MAX.
   std::size_t network_bio_buffer_capacity = kDefaultNetworkBioBufferCapacity;
-  // Maximum encoded bytes per TCP RX or processing turn (must be positive).
-  // This is also TCP's finite TX budget; it is separate from the plain budget.
+  // Cap encrypted bytes per TCP input/turn call; must be positive. Also TCP's
+  // finite TX budget, separate from the plaintext budget.
   std::size_t max_buffered_ciphertext_bytes = kDefaultBufferedCiphertextBytes;
-  // Optional single ALPN token, at most 255 bytes; empty disables negotiation.
-  // HTTP/1.1 applications may set this to "http/1.1". No token implies no ALPN.
+  // One optional ALPN token, at most 255 bytes. Empty means no negotiation;
+  // HTTP/1.1 can use http/1.1.
   std::string alpn_protocol;
 };
 }  // namespace martianlabs::doba::transport::server

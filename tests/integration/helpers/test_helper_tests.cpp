@@ -36,13 +36,8 @@ using martianlabs::doba::tests::integration::test_helper;
 // +---------------------------------------------------------------------------+
 // | [>] run_probe                                                ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test_helper with the specified arguments and       |
-// | timeout. It takes an initializer list of const char* as arguments and an  |
-// | optional timeout duration (defaulting to 3 seconds). The function calls   |
-// | run_test_helper from the martianlabs::doba::tests namespace, passing the  |
-// | arguments and timeout. It then sets the context of the test_helper with   |
-// | the output from the result and returns the test_helper_result containing  |
-// | the exit code, timeout status, and output of the test_helper execution.   |
+// | Run the helper with these arguments and deadline, then use its output as  |
+// | failure context. The default timeout is three seconds.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 test_helper_result run_probe(

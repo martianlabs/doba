@@ -43,11 +43,8 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a reader interface for reading bytes from a           |
-// | byte_storage backend. It supports reading into a span of bytes, fetching  |
-// | individual bytes, and checking the state of the reader (e.g., whether it  |
-// | has reached the end of the storage or encountered an error). It can also  |
-// | read all remaining bytes into a string.                                   |
+// | Read bytes from storage, a file or borrowed memory. Read a block, a byte, |
+// | or everything that's left.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader {
@@ -96,14 +93,14 @@ class reader {
   // +=========================================================================+
   // | [>] borrowed                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a non-owning reader over stable caller storage. The referenced  |
-  // | bytes must outlive this reader and every object to which it is moved.   |
+  // | Borrow stable bytes without owning them. Keep them alive until this     |
+  // | reader, including any moved-to reader, is gone.                         |
   // +-------------------------------------------------------------------------+
   static reader borrowed(std::span<const std::byte> source) noexcept {
     return reader(source, borrowed_tag{});
   }
-  // Retains the owner while reading a stable immutable slice. Each reader has
-  // an independent cursor. The span must refer into the supplied owner.
+  // Hold the owner while reading an immutable slice of its data. Readers have
+  // separate cursors; the span must point into that owner.
   // +-------------------------------------------------------------------------+
   // | [>] shared                                                   ( public ) |
   // +-------------------------------------------------------------------------+

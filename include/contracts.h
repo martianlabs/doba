@@ -35,7 +35,7 @@ namespace martianlabs::doba::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] http_server                                                 (concept) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 server composition contract.                                     |
+// | What an HTTP/1.1 server needs to fit together.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename ROty, typename ENty,

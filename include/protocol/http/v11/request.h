@@ -127,7 +127,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] request                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the http 1.1 request implementation.                 |
+// | Own a parsed HTTP/1.1 request and expose its fields.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class request {
@@ -269,16 +269,16 @@ class request {
   // +=========================================================================+
   // | [>] get_cookie                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Looks up a single cookie-pair by name in the (unparsed) Cookie header,  |
-  // | if present. Parsing is done on demand; nothing is cached, mirroring how |
-  // | headers_ and query_parameters_ are already accessed by linear scan.     |
+  // | Find a cookie by name, parsing Cookie on demand. Scan it like headers   |
+  // | and query parameters; don't cache the result.                           |
   // +-------------------------------------------------------------------------+
   std::optional<std::string_view> get_cookie(std::string_view name) const {
     std::string_view raw;
     if (!find_cookie_header(raw)) return std::nullopt;
     std::optional<std::string_view> found;
     for_each_cookie_pair(
-        raw, [&](std::string_view cookie_name, std::string_view cookie_value) {
+        raw, [name, &found](std::string_view cookie_name,
+                            std::string_view cookie_value) {
           if (found) return;
           if (cookie_name == name) found = cookie_value;
         });
@@ -287,8 +287,7 @@ class request {
   // +=========================================================================+
   // | [>] get_cookies                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns every cookie-pair present in the (unparsed) Cookie header,      |
-  // | or an empty vector when the header is absent.                           |
+  // | Read all cookie pairs, or return an empty vector if Cookie is absent.   |
   // +-------------------------------------------------------------------------+
   std::vector<std::pair<std::string_view, std::string_view>> get_cookies()
       const {
@@ -296,13 +295,14 @@ class request {
     std::string_view raw;
     if (!find_cookie_header(raw)) return cookies;
     for_each_cookie_pair(
-        raw, [&](std::string_view cookie_name, std::string_view cookie_value) {
+        raw, [&cookies](std::string_view cookie_name,
+                         std::string_view cookie_value) {
           cookies.emplace_back(cookie_name, cookie_value);
         });
     return cookies;
   }
 
-  // Async execution must own its bytes before calling user code.
+  // Own the bytes before calling async user code.
   // +-------------------------------------------------------------------------+
   // | [>] borrows_bytes                                            ( public ) |
   // +-------------------------------------------------------------------------+
@@ -313,11 +313,8 @@ class request {
   void make_owned() {
     if (!borrowed_) return;
     std::size_t size = 0;
-    auto count = [&](std::string_view text) {
-      if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
-        throw std::length_error("request bytes are too large");
-      }
-      size += text.size();
+    auto count = [&size](std::string_view text) {
+      count_bytes(size, text, "request bytes are too large");
     };
     count(method_);
     count(abs_path_);
@@ -336,12 +333,9 @@ class request {
     count(body_bytes_);
     std::vector<char> owned(size);
     std::size_t offset = 0;
-    auto copy = [&](std::string_view& text) {
+    auto copy = [&owned, &offset](std::string_view& text) {
       if (text.empty()) return;
-      char* target = owned.data() + offset;
-      std::memcpy(target, text.data(), text.size());
-      offset += text.size();
-      text = {target, text.size()};
+      text = copy_bytes(text, owned, offset);
     };
     copy(method_);
     copy(abs_path_);
@@ -366,7 +360,7 @@ class request {
   // | [>] rebase_bytes                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void rebase_bytes(std::uintptr_t previous, const char* current) noexcept {
-    auto rebase = [&](std::string_view& text) {
+    auto rebase = [previous, current](std::string_view& text) {
       if (!text.empty()) {
         const auto offset =
             reinterpret_cast<std::uintptr_t>(text.data()) - previous;
@@ -395,7 +389,8 @@ class request {
   // +-------------------------------------------------------------------------+
   std::size_t body_wire_size() const noexcept { return body_wire_size_; }
 
-  // Inline wire bytes stay in the decoder; larger bodies use existing storage.
+  // Keep inline wire bytes in decoder storage; use existing storage for larger
+  // bodies.
   // +-------------------------------------------------------------------------+
   // | [>] begin_body                                               ( public ) |
   // +-------------------------------------------------------------------------+
@@ -459,6 +454,28 @@ class request {
 
  private:
   // +=========================================================================+
+  // | [>] count_bytes                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  static void count_bytes(std::size_t& size, std::string_view text,
+                           const char* error) {
+    if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
+      throw std::length_error(error);
+    }
+    size += text.size();
+  }
+  // +=========================================================================+
+  // | [>] copy_bytes                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // Empty and borrowed fields stay with the caller; copy the rest in order.
+  static std::string_view copy_bytes(std::string_view text,
+                                     std::vector<char>& bytes,
+                                     std::size_t& offset) {
+    char* destination = bytes.data() + offset;
+    std::memcpy(destination, text.data(), text.size());
+    offset += text.size();
+    return std::string_view(destination, text.size());
+  }
+  // +=========================================================================+
   // | [>] find_cookie_header                                      ( private ) |
   // +-------------------------------------------------------------------------+
   bool find_cookie_header(std::string_view& out) const {
@@ -473,8 +490,8 @@ class request {
   // +=========================================================================+
   // | [>] for_each_cookie_pair                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Splits a Cookie header field-value on the exact "; " separator (RFC     |
-  // | 6265 S4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
+  // | Split Cookie on exactly '; ' and call fn(name, value) for each pair     |
+  // | (RFC 6265 S4.2.1).                                                      |
   // +-------------------------------------------------------------------------+
   template <typename FNty>
   static void for_each_cookie_pair(std::string_view raw, FNty&& fn) {
@@ -515,11 +532,8 @@ class request {
           bool wants_connection_close,
           std::optional<body::reader> body_reader, bool borrow_bytes) {
     std::size_t size = 0;
-    auto count = [&](std::string_view text) {
-      if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
-        throw std::length_error("request fields are too large");
-      }
-      size += text.size();
+    auto count = [&size](std::string_view text) {
+      count_bytes(size, text, "request fields are too large");
     };
     borrowed_ = borrow_bytes;
     if (!borrow_bytes) {
@@ -540,13 +554,10 @@ class request {
       head_bytes_.resize(size);
     }
     std::size_t offset = 0;
-    auto copy = [&](std::string_view text) {
+    auto copy = [this, borrow_bytes, &offset](std::string_view text) {
       if (text.empty()) return std::string_view{};
       if (borrow_bytes) return text;
-      char* destination = head_bytes_.data() + offset;
-      std::memcpy(destination, text.data(), text.size());
-      offset += text.size();
-      return std::string_view(destination, text.size());
+      return copy_bytes(text, head_bytes_, offset);
     };
     method_ = copy(method);
     abs_path_ = copy(abs_path);
@@ -595,24 +606,24 @@ class request {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
-  std::string_view abs_path_;         // absolute path from the request-target
+  std::string_view method_;           // Request method, such as GET or POST.
+  std::string_view abs_path_;         // Absolute path from the request target.
   std::vector<char> head_bytes_;
   std::optional<common::byte_storage> body_storage_;
   std::size_t body_wire_size_{0};
   std::size_t body_threshold_{0};
   std::string_view body_bytes_;
   bool borrowed_{false};
-  target target_ = target::kUnknown;  // request-target form
-  std::string_view host_;             // host from the Host header
-  std::string_view host_port_;        // port from the Host header
+  target target_ = target::kUnknown;  // Which request-target form was used.
+  std::string_view host_;             // Host from the Host header.
+  std::string_view host_port_;        // Port from the Host header.
   helpers::host_type host_type_ = helpers::host_type::kUnknown;
-  std::string_view ta_host_;  // target authority host
-  std::string_view ta_port_;  // target authority port
+  std::string_view ta_host_;  // Host from the target authority.
+  std::string_view ta_port_;  // Port from the target authority.
   helpers::host_type ta_type_ = helpers::host_type::kUnknown;
-  std::vector<header_view> headers_;                    // vector of headers
-  std::vector<query_parameter_view> query_parameters_;  // query parameters
-  bool wants_connection_close_ = false;  // protocol decided to close channel
+  std::vector<header_view> headers_;                    // Received headers.
+  std::vector<query_parameter_view> query_parameters_;  // Query pairs.
+  bool wants_connection_close_ = false;  // Protocol asked to close.
   mutable std::optional<body::reader> body_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

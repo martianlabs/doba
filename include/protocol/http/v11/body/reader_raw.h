@@ -38,18 +38,13 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Decodes a Content-Length-framed body by pulling wire bytes from a         |
-// | common::reader source and filling the caller-supplied output span.        |
+// | Read a Content-Length body from common::reader into the caller's output.  |
 // |                                                                           |
-// | Since a raw (Content-Length) body carries no wire framing of its own, the |
-// | decoded payload is identical to the source bytes: this reader simply      |
-// | copies bytes from src into output, up to the declared Content-Length. It  |
-// | exists to keep the reader API symmetrical with reader_chunked.            |
+// | Raw framing adds no wire bytes: copy payload up to Content-Length. Keep   |
+// | the same interface as the chunked reader.                                 |
 // |                                                                           |
-// | If src reaches definitive eof() before Content-Length is satisfied, this  |
-// | is a protocol error reported as reader_error::raw_incomplete. Once an     |
-// | error is reported, it is latched: every subsequent call returns the same  |
-// | has_error/error without touching src again.                               |
+// | EOF before Content-Length is raw_incomplete. Latch errors: later calls    |
+// | return the same error without reading the source again.                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader_raw {
@@ -61,9 +56,8 @@ class reader_raw {
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls up to (expected_ - accumulated_) bytes from src into output.      |
-  // | Returns immediately with complete=true when Content-Length is reached.  |
-  // | A zero Content-Length body completes on the first call with produced=0. |
+  // | Read up to the remaining Content-Length. At the limit, return complete  |
+  // | immediately; a zero-length body produces nothing.                       |
   // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;

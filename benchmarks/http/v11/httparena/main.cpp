@@ -75,8 +75,8 @@ namespace common = martianlabs::doba::common;
 using martianlabs::doba::protocol::http::helpers;
 
 #if DOBA_HTTPARENA_FULL
-// Each worker reuses zlib's allocations; reset starts an independent gzip
-// member for every response. No JSON or compressed response is cached.
+// Reuse zlib storage per worker, but start a fresh gzip member per response.
+// Never cache JSON or compressed responses here.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] gzip_context                                               ( struct ) |
@@ -133,7 +133,7 @@ bool encoding_weights(std::string_view value, std::array<int, 4>& quality) {
         }
         for (std::size_t j = 0; j < names.size(); ++j) {
           if (helpers::iequals(coding, names[j])) {
-            // Conflicting duplicates must not override a q=0 rejection.
+            // A duplicate must never undo q=0.
             quality[j] = quality[j] < 0 ? q : std::min(quality[j], q);
             break;
           }
@@ -189,7 +189,7 @@ bool read_query_sum(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] read_body_integer                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | Reads decoded bytes for Content-Length and chunked bodies.                |
+// | Read decoded bytes, whether the body uses Content-Length or chunks.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool read_body_integer(const request& req, std::int64_t& value) {
@@ -214,7 +214,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the HttpArena benchmark routes on TCP and TLS.                       |
+// | Run the HttpArena routes over TCP and TLS.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -256,8 +256,8 @@ int main() {
       std::cerr << "invalid CPU quota\n";
       return 1;
     }
-    // Match one worker per complete usable core, as Fulmine's automatic pool.
-    // A fractional quota still needs one worker, but not an extra full worker.
+    // Use one worker per whole usable core, like Fulmine. Round a fractional
+    // quota up to one worker, not one extra worker.
     const auto quota_workers = std::max<std::uint64_t>(1, quota / period);
     workers = static_cast<std::size_t>(
         std::min<std::uint64_t>(workers, quota_workers));
@@ -313,7 +313,7 @@ int main() {
         res.ok_200();
         res.add_header("Content-Type", "text/plain").set_body("ok");
       });
-  // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
+  // Parse every baseline value: HttpArena randomizes them to catch shortcuts.
   http_server.add_route(
       "GET", "/baseline11",
       [](const request& req, response& res) {
@@ -462,10 +462,9 @@ int main() {
   martianlabs::doba::https_server<> tls_server(tls_configuration,
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
-  // The framework owns representation selection, attribute validation and the
-  // bounded cache. Keep all workers under one declared budget; no file preload
-  // or per-worker maps in the adapter. Compressed siblings are selected on
-  // disk.
+  // Let doba pick and revalidate representations. Share one bounded cache
+  // across workers; no preloading or worker-local maps. Pick compressed
+  // siblings from disk.
   const common::cache_policies cache_configuration;
   static_file_policies static_configuration;
   static_configuration.precompressed = true;
@@ -493,7 +492,7 @@ int main() {
   std::cerr << "workers per listener: " << workers << "; HTTP port: " << port
             << "; TCP qualification build (not the full HttpArena image)\n";
 #endif
-  // The benchmark harness owns process shutdown.
+  // Let the benchmark harness stop the process.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

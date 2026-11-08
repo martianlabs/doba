@@ -48,8 +48,8 @@ struct context;
 // +---------------------------------------------------------------------------+
 // | [>] windows_processing_timer                                    ( class ) |
 // +---------------------------------------------------------------------------+
-// | One lazy thread-pool timer for an IOCP worker group. Its callback only    |
-// | publishes a generic wake packet. IOCP workers select due connections.     |
+// | Create one thread-pool timer per IOCP group, lazily. Its callback only    |
+// | posts a wake; IOCP workers pick due connections.                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -66,11 +66,14 @@ class windows_processing_timer {
   windows_processing_timer() = default;
   windows_processing_timer(const windows_processing_timer&) = delete;
   windows_processing_timer& operator=(const windows_processing_timer&) = delete;
-  ~windows_processing_timer() { stop(); reset(); }
+  ~windows_processing_timer() {
+    stop();
+    reset();
+  }
   // +=========================================================================+
   // | [>] start                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Administrative calls are sequential and surround the IOCP worker lifetime.
+  // Keep admin calls sequential, before and after IOCP worker execution.
   void start(HANDLE port) {
     std::lock_guard<std::mutex> lock(mutex_);
     port_ = port;
@@ -93,9 +96,13 @@ class windows_processing_timer {
       positions_.erase(old);
     }
     auto added = deadlines_.emplace(due, entry{owner, version});
-    try { positions_.emplace(owner.get(), added); }
-    catch (...) { deadlines_.erase(added); throw; }
-    arm_();
+    try {
+      positions_.emplace(owner.get(), added);
+    } catch (...) {
+      deadlines_.erase(added);
+      throw;
+    }
+    arm();
     return true;
   }
   // +=========================================================================+
@@ -107,12 +114,12 @@ class windows_processing_timer {
     if (found == positions_.end()) return;
     deadlines_.erase(found->second);
     positions_.erase(found);
-    arm_();
+    arm();
   }
   // +=========================================================================+
   // | [>] take_due                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // Release the timer lock before acquiring contexts or calling engines.
+  // Drop the timer lock before acquiring contexts or calling engines.
   std::array<entry, 64> take_due() {
     std::lock_guard<std::mutex> lock(mutex_);
     std::array<entry, 64> ready{};
@@ -126,13 +133,14 @@ class windows_processing_timer {
       ready[count++] = std::move(first->second);
       deadlines_.erase(first);
     }
-    arm_();
+    arm();
     return ready;
   }
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Disable producers before draining IOCP; callbacks never acquire contexts.
+  // Stop producers before draining IOCP. Timer callbacks never acquire
+  // contexts.
   void stop() {
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -148,7 +156,7 @@ class windows_processing_timer {
   // +=========================================================================+
   // | [>] reset                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Called only after IOCP workers have joined and all wake packets drained.
+  // Call only after workers join and every wake packet drains.
   void reset() {
     if (timer_) CloseThreadpoolTimer(timer_);
     timer_ = nullptr;
@@ -165,20 +173,20 @@ class windows_processing_timer {
     std::lock_guard<std::mutex> lock(self.mutex_);
     self.armed_.reset();
     if (self.stopped_ || self.posted_ || self.deadlines_.empty()) return;
-    // Publish all packet state first. Dequeue may precede API return; the
-    // consumer takes this same lock and the embedded packet is never deleted.
+    // Publish all state first: dequeue may beat the API return. The consumer
+    // takes this lock too; never delete the embedded packet.
     self.posted_ = true;
     if (!PostQueuedCompletionStatus(self.port_, 0, 0, &self.wake_)) {
       self.posted_ = false;
-      // Failed publication transfers no ownership. Keep registrations and
-      // retry through the one native timer; stop can always cancel the retry.
-      self.arm_();
+      // A failed post transfers no ownership. Keep the registrations and retry
+      // with the native timer; stop can cancel that retry.
+      self.arm();
     }
   }
   // +=========================================================================+
-  // | [>] arm_                                                    ( private ) |
+  // | [>] arm                                                     ( private ) |
   // +-------------------------------------------------------------------------+
-  void arm_() {
+  void arm() {
     if (!timer_ || stopped_ || posted_) return;
     if (deadlines_.empty()) {
       if (armed_) SetThreadpoolTimer(timer_, nullptr, 0, 0);
@@ -188,8 +196,8 @@ class windows_processing_timer {
     const auto due = deadlines_.begin()->first;
     if (armed_ && *armed_ == due) return;
     const auto now = clock::now();
-    // Keep bounded due batches on IOCP; a timer is only for future work or
-    // publication failure. Waiting for another timer tick throttles backlog.
+    // Keep due batches moving through IOCP. Use the timer for future work or
+    // post failures; another timer tick would throttle ready backlog.
     if (due <= now) {
       posted_ = true;
       if (PostQueuedCompletionStatus(port_, 0, 0, &wake_)) {
@@ -199,8 +207,8 @@ class windows_processing_timer {
       }
       posted_ = false;
     }
-    // Relative Windows ticks are 100 ns. Round up and use at least 1 ms for
-    // a failed publication retry, avoiding callback storms under contention.
+    // Windows ticks are 100 ns. Round up and wait at least 1 ms before retrying
+    // a failed post, so contention doesn't cause a callback storm.
     const auto delta = due > now ? due - now : clock::duration::zero();
     const auto nanos = std::chrono::duration_cast<
         std::chrono::nanoseconds>(delta).count();
@@ -220,22 +228,22 @@ class windows_processing_timer {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Protects only registration/publication, never protocol or socket execution.
+  // Lock registration/publication only, never protocol or socket execution.
   std::mutex mutex_;
-  // Group IOCP remains valid through producer stop, packet drain and join.
+  // Keep IOCP alive through producer stop, packet drain and worker join.
   HANDLE port_{nullptr};
-  // Created only on the first future-deadline registration.
+  // Create the timer only for the first future deadline.
   PTP_TIMER timer_{nullptr};
-  // Stable notification storage outlives every post and completion.
+  // Keep notification storage alive through every post and completion.
   overlapped_base wake_{io_type::kProcessingTimer};
-  // Ordered connection deadlines and an index for eager cancellation.
+  // Order deadlines and index them for immediate cancellation.
   deadlines deadlines_;
   std::unordered_map<context<ENty>*, typename deadlines::iterator> positions_;
-  // Cached absolute target avoids restarting an unchanged earliest deadline.
+  // Remember the absolute target; don't restart an unchanged earliest deadline.
   std::optional<clock::time_point> armed_;
-  // At most one timer notification is queued, independently of new deadlines.
+  // Queue at most one timer wake, even if new deadlines arrive.
   bool posted_{false};
-  // Set before waiting for callback producers and disabling registrations.
+  // Set before waiting for producers and disabling registrations.
   bool stopped_{true};
 };
 }  // namespace martianlabs::doba::transport::server::detail

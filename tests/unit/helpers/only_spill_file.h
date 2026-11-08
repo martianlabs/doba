@@ -32,8 +32,7 @@ namespace martianlabs::doba::tests {
 // +---------------------------------------------------------------------------+
 // | [>] only_spill_file                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns the path of the only spill file in the specified    |
-// | directory.                                                                |
+// | Find the only spill file in this directory.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::filesystem::path only_spill_file(

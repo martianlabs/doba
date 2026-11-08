@@ -36,13 +36,10 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] framer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Detects the Content-Length-framed body boundary within an already-wire-   |
-// | encoded input buffer.                                                     |
+// | Find a Content-Length body's end in the incoming wire bytes.              |
 // |                                                                           |
-// | The caller pushes incoming transport spans via consume(); each call       |
-// | returns a framer_state indicating how many bytes were consumed from the   |
-// | span and whether the body is complete. Bytes beyond the declared          |
-// | Content-Length are never touched - they belong to the next request.       |
+// | Feed bytes through consume(); it reports how much belongs to this body.   |
+// | Leave anything past Content-Length for the next request.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class framer_raw {
@@ -54,9 +51,8 @@ class framer_raw {
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Consumes up to (expected_ - accumulated_) bytes from input.             |
-  // | Returns immediately with complete=true when Content-Length is reached.  |
-  // | A zero Content-Length body completes on the first call with consumed=0. |
+  // | Consume up to the remaining Content-Length. At the limit, return        |
+  // | complete immediately; a zero-length body consumes nothing.              |
   // +-------------------------------------------------------------------------+
   framer_state consume(std::span<const std::byte> input) {
     framer_state result;

@@ -39,8 +39,7 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 // +---------------------------------------------------------------------------+
 // | [>] release                                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// |  This function releases the writer's buffer and reads it into a string.   |
-// | It is used to verify the wire output of the body writer.                  |
+// | Release the writer and read its bytes back for wire checks.               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string release(body_writer& value) {

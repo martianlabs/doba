@@ -33,25 +33,24 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] cache_policies                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Admission limits and expiration settings for the generic cache.           |
-// | Costs use caller-defined units; they do not measure allocator overhead.   |
+// | Set cache limits and expiry. Cost uses your units, not allocator          |
+// | overhead.                                                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct cache_policies {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Maximum resident entries (0 disables admission).
+  // Entry cap; 0 stops new entries.
   std::size_t max_entries = 1024;
-  // Maximum live declared cost, including reservations and retained values.
-  // Values pinned by consumers remain charged after eviction; 0 disables
-  // admission.
+  // Total cost cap, including reservations and pinned values after eviction. 0
+  // stops new entries.
   std::size_t max_cost = 512 * 1024 * 1024;
-  // Maximum concurrent loaders, including invalidated loads still running.
-  // A value of 0 disables admission.
+  // Cap running loaders, including invalidated ones still finishing. 0 stops
+  // new entries.
   std::size_t max_loads = 16;
-  // Entry lifetime from successful loading, in milliseconds.
-  // A value of 0 disables expiration; negative values are rejected by cache.
+  // Lifetime after loading, in milliseconds. 0 means no expiry; negative values
+  // are rejected.
   std::chrono::milliseconds ttl{1000};
 };
 }  // namespace martianlabs::doba::common

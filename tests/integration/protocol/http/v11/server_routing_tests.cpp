@@ -46,7 +46,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // | [>] socket workers                                           ( constant ) |
 // +---------------------------------------------------------------------------+
-// Exercise independent connection owners on both backends.
+// Use independent connection owners on both backends.
 constexpr std::size_t kSocketWorkers = 2;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -64,9 +64,7 @@ using martianlabs::doba::tests::integration::tcpip_client;
 // +---------------------------------------------------------------------------+
 // | [>] text_response                                            ( function ) |
 // +---------------------------------------------------------------------------+
-// | This funciton is a helper to send a simple text response with 200 OK      |
-// | status. It sets the response body to the provided text and marks the      |
-// | response as successful.                                                   |
+// | Reply with this text and a 200 OK status.                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void text_response(response& res, std::string_view text) {

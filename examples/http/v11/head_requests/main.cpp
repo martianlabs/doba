@@ -35,11 +35,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | It defines a resource handler for the "/resource" endpoint that responds  |
-// | to both GET and HEAD requests. The server is started, and the application |
-// | waits for termination signals.                                            |
+// | Serve /resource with GET and HEAD on port 8080.                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

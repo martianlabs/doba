@@ -43,10 +43,8 @@ namespace martianlabs::doba::tests::integration {
 // +---------------------------------------------------------------------------+
 // | [>] http_test_response                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct represents an HTTP response received from a server.           |
-// | It contains the status line, headers, trailers, body, and the raw wire    |
-// | body of the response. It also provides a method to retrieve a specific    |
-// | header value by name.                                                     |
+// | Keep a received response's status, headers, trailers, decoded body and    |
+// | raw wire body. Look up headers by name.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct http_test_response {
@@ -84,7 +82,7 @@ struct http_test_response {
 // +---------------------------------------------------------------------------+
 // | [>] valid_response_field_name                                ( function ) |
 // +---------------------------------------------------------------------------+
-// Independent test oracle: do not use the production header parser here.
+// Keep this oracle independent: don't use the production header parser.
 inline bool valid_response_field_name(std::string_view value) {
   if (value.empty()) return false;
   constexpr std::string_view symbols = "!#$%&'*+-.^_`|~";
@@ -111,11 +109,8 @@ inline bool valid_response_field_value(std::string_view value) {
 // +---------------------------------------------------------------------------+
 // | [>] receive_http_line                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function reads a single line from the TCP/IP client until it         |
-// | encounters a CRLF ("\r\n") sequence or reaches the specified              |
-// | maximum length. It returns an optional string containing the line         |
-// | without the CRLF, or std::nullopt if the maximum length is exceeded or    |
-// | the deadline is reached.                                                  |
+// | Read through CRLF, but leave CRLF out of the result. Return nullopt on    |
+// | the length cap or deadline.                                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::optional<std::string> receive_http_line(
@@ -140,13 +135,8 @@ inline std::optional<std::string> receive_http_line(
 // +---------------------------------------------------------------------------+
 // | [>] receive_http_response                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function receives an HTTP response from the given TCP/IP client.     |
-// | It reads the status line, headers, and body of the response, and          |
-// | constructs an `http_test_response` object. The function handles both      |
-// | regular and chunked transfer encoding, as well as various HTTP status     |
-// | codes. It returns an optional `http_test_response` object if the          |
-// | response is successfully received and parsed, or `std::nullopt` if        |
-// | there is an error or timeout.                                             |
+// | Read and independently parse one response, including chunked bodies and   |
+// | status-specific framing. Return nullopt on error or timeout.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::optional<http_test_response> receive_http_response(
@@ -306,11 +296,7 @@ inline std::optional<http_test_response> receive_http_response(
 // +---------------------------------------------------------------------------+
 // | [>] wait_for_http_count                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function waits for the given atomic value to reach the               |
-// | expected count. It repeatedly checks the value until it matches the       |
-// | expected count or the deadline is reached. The function returns true if   |
-// | the value reaches the expected count within the deadline,                 |
-// | or false otherwise.                                                       |
+// | Wait for the atomic count to match, up to the deadline.                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline bool wait_for_http_count(const std::atomic<std::size_t>& value,

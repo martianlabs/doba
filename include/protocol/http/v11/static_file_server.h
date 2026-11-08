@@ -45,9 +45,8 @@
 #include "protocol/http/v11/static_file_helpers.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
-// Immutable once published to a cache. The cache charges bytes.size() plus
-// sizeof(this type) and 66 ETag characters; allocator, key and control-block
-// overhead is excluded.
+// Freeze snapshots before caching. Charge bytes.size(), sizeof(this type) and
+// 66 ETag characters; don't include allocator, key or control-block overhead.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] static_file_representation                                 ( struct ) |
@@ -57,7 +56,7 @@ struct static_file_representation {
   std::string bytes;
   common::filesystem_metadata metadata;
   std::string etag;
-  // Zero-terminated HTTP date, formatted once when the snapshot is loaded.
+  // Format this zero-terminated HTTP date once, at load time.
   std::array<char, 40> last_modified{};
 };
 using static_file_cache =
@@ -69,7 +68,7 @@ using static_file_cache =
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct static_file_policies {
-  // Null preserves direct reads. Share a cache to coordinate a byte budget.
+  // No cache means direct reads. Share one cache to share its byte budget.
   std::shared_ptr<static_file_cache> cache{};
   std::size_t max_cached_file_size = 1024 * 1024;
   std::string cache_control = "no-cache";
@@ -86,7 +85,7 @@ struct static_file_policies {
 // +---------------------------------------------------------------------------+
 // | [>] static_file_server                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Server implementation.                                                    |
+// | Serve files with optional caching and HTTP validators.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class static_file_server {
@@ -151,20 +150,23 @@ class static_file_server {
     }
   }
 
-  // Relative decoded paths, without a leading slash. Active responses retain
-  // their representation; invalidation affects subsequent lookups/loads.
+  // Pass a decoded relative path, without a leading slash. Invalidate future
+  // lookups and loads; active replies keep their snapshots.
   // +-------------------------------------------------------------------------+
   // | [>] invalidate                                               ( public ) |
   // +-------------------------------------------------------------------------+
   void invalidate(std::string_view relative) const {
-    if (policies_.cache) for (std::string_view suffix : {"", ".br", ".gz"})
+    if (policies_.cache)
+      for (std::string_view suffix : {"", ".br", ".gz"})
         policies_.cache->erase(key_prefix_ + std::string(relative) +
                                std::string(suffix));
   }
   // +-------------------------------------------------------------------------+
   // | [>] clear_cache                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  void clear_cache() const { if (policies_.cache) policies_.cache->clear(); }
+  void clear_cache() const {
+    if (policies_.cache) policies_.cache->clear();
+  }
 
  private:
   // +=========================================================================+
@@ -184,7 +186,10 @@ class static_file_server {
     std::string relative(path.substr(prefix_.size()));
     const bool directory_path = relative.empty() || relative.back() == '/';
     if (directory_path) {
-      if (policies_.index_file.empty()) { result.not_found_404(); return; }
+      if (policies_.index_file.empty()) {
+        result.not_found_404();
+        return;
+      }
       relative += policies_.index_file;
     }
     std::error_code error;
@@ -260,7 +265,8 @@ class static_file_server {
   // +-------------------------------------------------------------------------+
   static void redirect(const request& req, response& result,
                        std::string_view path) {
-    // Re-encode the decoded path so a filename cannot change URI semantics.
+    // Escape the decoded path again so a filename can't change the URL's
+    // meaning.
     std::string location;
     constexpr char hex[] = "0123456789ABCDEF";
     for (unsigned char c : path) {
@@ -274,17 +280,19 @@ class static_file_server {
         location += hex[c & 15];
       }
     }
-    // Query views retain their original escaped spelling.
+    // Keep query values escaped exactly as received.
     for (std::size_t i = 0; i < req.get_query_parameters_length(); ++i) {
       const auto query = req.get_query_parameter(i);
       location += (i ? '&' : '?');
-      location += query.first; location += '='; location += query.second;
+      location += query.first;
+      location += '=';
+      location += query.second;
     }
     result.moved_permanently_301();
     result.set_header("Location", location);
   }
 
-  // Accept-Encoding selection, including identity;q=0 and wildcard exclusion.
+  // Choose an encoding, respecting identity;q=0 and wildcard exclusions.
   // +-------------------------------------------------------------------------+
   // | [>] quality                                                 ( private ) |
   // +-------------------------------------------------------------------------+
@@ -296,10 +304,12 @@ class static_file_server {
       auto item = fields.substr(0, comma);
       helpers::ows_trim(item);
       const auto semicolon = item.find(';');
-      auto name = item.substr(0, semicolon); helpers::ows_trim(name);
+      auto name = item.substr(0, semicolon);
+      helpers::ows_trim(name);
       int q = 1000;
       if (semicolon != item.npos) {
-        auto weight = item.substr(semicolon + 1); helpers::ows_trim(weight);
+        auto weight = item.substr(semicolon + 1);
+        helpers::ows_trim(weight);
         if (weight.starts_with("q=") || weight.starts_with("Q=")) {
           weight.remove_prefix(2);
           q = 0;
@@ -307,8 +317,12 @@ class static_file_server {
           else if (weight.starts_with("0.")) {
             int multiplier = 100;
             for (char c : weight.substr(2)) {
-              if (c < '0' || c > '9') { q = 0; break; }
-              q += (c - '0') * multiplier; multiplier /= 10;
+              if (c < '0' || c > '9') {
+                q = 0;
+                break;
+              }
+              q += (c - '0') * multiplier;
+              multiplier /= 10;
             }
           }
         }
@@ -339,8 +353,8 @@ class static_file_server {
       return opened.has_value();
     }
     const auto key = key_prefix_ + selected;
-    // Probe attributes before acquiring a data handle. Missing variants take
-    // only this confined query; no subscription, read open or failed load.
+    // Check attributes before opening for reads. A missing variant needs only
+    // this confined query, not a read handle or failed cache load.
     opened = common::filesystem_file::inspect(root_, selected, error);
     if (policies_.cache) {
       cached = policies_.cache->find(key);
@@ -357,19 +371,54 @@ class static_file_server {
   }
 
   // +-------------------------------------------------------------------------+
+  // | [>] read_representation                                     ( private ) |
+  // +-------------------------------------------------------------------------+
+  static std::shared_ptr<const static_file_representation> read_representation(
+      common::filesystem_file& file,
+      const common::filesystem_metadata& expected, std::error_code& error) {
+    auto value = std::make_shared<static_file_representation>();
+    value->bytes.resize(file.size());
+    std::size_t position = 0;
+    while (position < value->bytes.size()) {
+      const auto count = file.read(
+          std::as_writable_bytes(
+              std::span(value->bytes.data(), value->bytes.size()))
+              .subspan(position));
+      if (!count)
+        throw std::filesystem::filesystem_error(
+            "Static file read failed",
+            std::make_error_code(std::errc::io_error));
+      position += count;
+    }
+    auto after = file.metadata(error);
+    if (!after || expected != *after) return {};
+    value->metadata = *after;
+    value->etag = detail::static_file_etag(value->bytes);
+    const auto date =
+        detail::static_file_date(value->metadata.modified_seconds);
+    std::copy(date.begin(), date.end(), value->last_modified.begin());
+    return value;
+  }
+  // +-------------------------------------------------------------------------+
   // | [>] serve_file                                              ( private ) |
   // +-------------------------------------------------------------------------+
   void serve_file(const request& req, response& result, std::string relative,
                   std::string_view url_path) const {
-    struct variant { std::string_view suffix, coding; int q; };
+    struct variant {
+      std::string_view suffix, coding;
+      int q;
+    };
     const auto accept_encoding = field(req, "Accept-Encoding");
-    std::array<variant, 3> variants{
-        {{".br", "br",
-          policies_.precompressed ? quality(accept_encoding, "br") : 0},
-         {".gz", "gzip",
-          policies_.precompressed ? quality(accept_encoding, "gzip") : 0},
-         {"", "identity", quality(accept_encoding, "identity")}}};
-    // Stable three-element ordering without a temporary heap allocation.
+    const auto brotli_quality =
+        policies_.precompressed ? quality(accept_encoding, "br") : 0;
+    const auto gzip_quality =
+        policies_.precompressed ? quality(accept_encoding, "gzip") : 0;
+    const auto identity_quality = quality(accept_encoding, "identity");
+    std::array<variant, 3> variants{{
+        {".br", "br", brotli_quality},
+        {".gz", "gzip", gzip_quality},
+        {"", "identity", identity_quality}}};
+    // Sort three choices without a heap allocation.
     if (variants[1].q > variants[0].q) std::swap(variants[0], variants[1]);
     if (variants[2].q > variants[1].q) std::swap(variants[1], variants[2]);
     if (variants[1].q > variants[0].q) std::swap(variants[0], variants[1]);
@@ -384,9 +433,8 @@ class static_file_server {
       if (!variant.q) continue;
       acceptable = true;
       selected = relative + std::string(variant.suffix);
-      // Validate every hit without acquiring a content-reading handle.
-      // TTL controls retention; any observed attribute change retires the
-      // entry.
+      // Revalidate every hit without a content-read handle. TTL only controls
+      // retention; changed attributes retire the entry.
       if (open_file(selected, file, cached, opened, error)) {
         coding = variant.coding;
         break;
@@ -394,7 +442,8 @@ class static_file_server {
       if (error != std::errc::no_such_file_or_directory &&
           error != std::errc::not_a_directory) {
         if (variant.suffix.empty() && error == std::errc::is_a_directory) break;
-        file_error(result, error); return;
+        file_error(result, error);
+        return;
       }
     }
     if (!acceptable) {
@@ -414,7 +463,8 @@ class static_file_server {
       }
       if (error == std::errc::is_a_directory &&
           policies_.redirect_directories) {
-        redirect(req, result, std::string(url_path) + '/'); return;
+        redirect(req, result, std::string(url_path) + '/');
+        return;
       }
       if ((error == std::errc::no_such_file_or_directory ||
            error == std::errc::not_a_directory) &&
@@ -443,48 +493,33 @@ class static_file_server {
         cached = policies_.cache->try_get_or_load(
             key_prefix_ + selected,
             file.size() + sizeof(static_file_representation) + 66,
-            [&]() -> std::shared_ptr<const static_file_representation> {
+            [&loaded, &file, &opened, &error] {
               loaded = true;
-              auto value = std::make_shared<static_file_representation>();
-              value->bytes.resize(file.size());
-              std::size_t position = 0;
-              while (position < value->bytes.size()) {
-                const auto count = file.read(
-                    std::as_writable_bytes(
-                        std::span(value->bytes.data(), value->bytes.size()))
-                        .subspan(position));
-                if (!count)
-                  throw std::filesystem::filesystem_error(
-                      "Static file read failed",
-                      std::make_error_code(std::errc::io_error));
-                position += count;
-              }
-              auto after = file.metadata(error);
-              if (!after || *opened != *after) return {};
-              value->metadata = *after;
-              value->etag = detail::static_file_etag(value->bytes);
-              const auto date =
-                  detail::static_file_date(value->metadata.modified_seconds);
-              std::copy(date.begin(), date.end(), value->last_modified.begin());
-              return value;
+              return read_representation(file, *opened, error);
             });
-        // Another generation may have populated this key since we opened it.
-        // A response must never adopt bytes from a different observed file.
+        // Another load may have filled this key meanwhile. Never attach cached
+        // bytes from a different observed file.
         if (cached) {
           if (cached->metadata != *opened) {
             policies_.cache->erase(key_prefix_ + selected, cached);
             cached.reset();
           }
         }
-        if (error) { file_error(result, error); return; }
+        if (error) {
+          file_error(result, error);
+          return;
+        }
         if (!cached && loaded) {
-          // Invalidated/changed while loading: reopen securely for direct mode.
+          // Changed while loading? Reopen securely and use direct reads.
           if (!file.open(root_, selected, error)) {
             file_error(result, error);
             return;
           }
           auto current = file.metadata(error);
-          if (!current) { file_error(result, error); return; }
+          if (!current) {
+            file_error(result, error);
+            return;
+          }
           metadata = *current;
         }
       }
@@ -500,12 +535,11 @@ class static_file_server {
                      std::to_string(metadata.modified_nanoseconds) + '-' +
                      std::to_string(metadata.changed_seconds) + '-' +
                      std::to_string(metadata.changed_nanoseconds) + "\"";
-    const auto modified =
-        std::min(metadata.modified_seconds,
-                 std::chrono::duration_cast<std::chrono::seconds>(
-                     std::chrono::system_clock::now().time_since_epoch())
-                     .count());
-    const auto decorate = [&] {
+    const auto now = std::chrono::system_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        now.time_since_epoch());
+    const auto modified = std::min(metadata.modified_seconds, elapsed.count());
+    const auto decorate = [this, &result, &etag, &cached, modified, &metadata] {
       result.set_header("ETag", etag);
       if (cached && modified == metadata.modified_seconds &&
           cached->last_modified[0])
@@ -528,7 +562,9 @@ class static_file_server {
     } else if (auto date =
                    detail::static_file_time(field(req, "If-Unmodified-Since"));
                date && modified > *date) {
-      result.precondition_failed_412(); decorate(); return;
+      result.precondition_failed_412();
+      decorate();
+      return;
     }
     if (has_field(req, "If-None-Match")) {
       if (detail::static_file_tag_matches(none, etag, false)) {
@@ -539,17 +575,19 @@ class static_file_server {
     } else if (auto date =
                    detail::static_file_time(field(req, "If-Modified-Since"));
                date && modified <= *date) {
-      result.not_modified_304(); decorate(); return;
+      result.not_modified_304();
+      decorate();
+      return;
     }
     result.ok_200();
     std::size_t offset = 0, count = length;
     if (policies_.ranges) {
-      // Range is defined for GET; HEAD describes the full selected response.
+      // Ranges apply to GET; HEAD describes the full response.
       auto if_range = field(req, "If-Range");
       const bool allow = if_range.empty() ||
           (!etag.starts_with("W/") && if_range == etag);
-      // A filesystem timestamp cannot establish that no two versions existed
-      // in the same second. Date If-Range therefore gets the full response.
+      // A timestamp can't rule out two versions in one second. Send the full
+      // body for a date-based If-Range.
       if (req.get_method() == "GET" && allow) {
         const auto range =
             detail::static_file_parse_range(field(req, "Range"), length);
@@ -562,7 +600,8 @@ class static_file_server {
             return;
           }
           result.partial_content_206();
-          offset = range.offset; count = range.length;
+          offset = range.offset;
+          count = range.length;
           result.set_header("Content-Range",
                             "bytes " + std::to_string(offset) + '-' +
                                 std::to_string(offset + count - 1) + '/' +

@@ -37,21 +37,21 @@
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-// Isolated native API faults: failed submissions never post a completion.
+// Inject faults in isolation: failed submissions never post completions.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] fault                                                        ( enum ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class fault { kNone, kPort, kAccept, kAssociate, kReceive, kSend };
-// One armed failure is consumed atomically by the matching API.
+// The matching API consumes one armed failure atomically.
 std::atomic<fault> armed{fault::kNone};
-// The second AcceptEx fails after the first real operation was submitted.
+// Fail the second AcceptEx after submitting the first real one.
 std::atomic<unsigned> accepts{0};
-// Accepted socket whose ownership transfer is being checked.
+// Watch ownership transfer of this accepted socket.
 std::atomic<SOCKET> watched{INVALID_SOCKET};
 std::atomic<unsigned> closes{0};
-// Real entry point loaded before substituting the test-only accept function.
+// Keep the real entry point before replacing accept for this test.
 LPFN_ACCEPTEX native_accept = nullptr;
 
 // +---------------------------------------------------------------------------+
@@ -190,7 +190,7 @@ struct lifecycle_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Synchronous engine output; the transport owns the copied response bytes.
+  // Send synchronously; the transport owns its copied response bytes.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace
@@ -237,8 +237,8 @@ void check_fault(fault injected) {
     DOBA_EXPECT(armed.load() == fault::kNone);
     client.close();
   }
-  // A one-connection budget proves the failed context released its slot.
-  // Socket EOF can precede destruction of the reservation by a few cycles.
+  // With one connection slot, a healthy retry proves failure released its
+  // credit. EOF can beat reservation destruction by a few cycles.
   bool healthy = false;
   const auto deadline = std::chrono::steady_clock::now() + 5s;
   do {
@@ -250,7 +250,7 @@ void check_fault(fault injected) {
   } while (!healthy && std::chrono::steady_clock::now() < deadline);
   DOBA_EXPECT(healthy);
   if (injected == fault::kAssociate) DOBA_EXPECT_EQUAL(closes.load(), 1u);
-  // Stop with the healthy connection's real receive still pending.
+  // Stop while the healthy connection's real receive is still pending.
   watched = INVALID_SOCKET;
   transport.stop();
   client.close();

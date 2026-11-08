@@ -46,8 +46,8 @@ namespace martianlabs::doba::tests::tools {
 // +---------------------------------------------------------------------------+
 // | [>] process                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// Output goes to private files: even a verbose sanitizer child cannot fill a
-// pipe while its parent waits. Destruction always reaps an unfinished child.
+// Write child output to private files so verbose sanitizers can't block on a
+// full pipe. Always reap an unfinished child on destruction.
 class process {
   temporary_directory directory_;
   int code_{-1};
@@ -179,7 +179,7 @@ class process {
     for (const auto& item : command) arguments.push_back(
       const_cast<char*>(item.c_str()));
     arguments.push_back(nullptr);
-    // Resolve PATH in the parent. The child only calls async-signal-safe APIs.
+    // Resolve PATH before forking; the child uses async-signal-safe APIs only.
     fs::path executable = command.front();
     if (command.front().find('/') == std::string::npos) {
       std::istringstream paths(variables["PATH"]);
@@ -219,7 +219,7 @@ class process {
       input_ = -1;
       throw std::runtime_error("Cannot fork child");
     }
-    // Native peers also use MSG_NOSIGNAL; stdin writes need this safeguard.
+    // Peers use MSG_NOSIGNAL too, but stdin writes need this protection.
     signal(SIGPIPE, SIG_IGN);
 #endif
   }

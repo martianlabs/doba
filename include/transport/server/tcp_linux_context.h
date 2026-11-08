@@ -45,9 +45,9 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] linux_context                                               ( class ) |
 // +---------------------------------------------------------------------------+
-// | One worker owns the engine, RX, TX and optional output reader.            |
-// | Callbacks run only inside serialized input/processing turns.              |
-// | The worker owns the socket and destroys this context outside callbacks.   |
+// | One worker owns the engine, RX, TX and optional reader. Run callbacks     |
+// | only inside serialized input/processing turns. The worker owns the socket |
+// | and destroys the context outside callbacks.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -79,7 +79,7 @@ class linux_context {
   // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // Fresh bytes are borrowed by the engine only until this call returns.
+  // The engine borrows these bytes only until this call returns.
   bool receive() {
     ssize_t size;
     do {
@@ -126,7 +126,8 @@ class linux_context {
   // +=========================================================================+
   // | [>] flush                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // At most one send per turn; a reader fills TX after its prefix drains.
+  // Send at most once per turn. Read the source into TX after its prefix
+  // drains.
   bool flush() {
     if (failed_) return false;
     if (output_.empty() && source_) {
@@ -167,7 +168,7 @@ class linux_context {
   // +=========================================================================+
   // | [>] append                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  // A reader is terminal for nonempty output; empty calls are no-ops.
+  // A reader ends nonempty output; empty sends do nothing.
   void append(std::string_view prefix, std::string_view body,
               std::unique_ptr<common::reader> source) noexcept {
     if (failed_) return;
@@ -190,29 +191,29 @@ class linux_context {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Socket borrowed from the owning worker.
+  // Borrow the socket from the owning worker.
   const int socket_;
-  // Maximum bytes read from the socket in one turn.
+  // Cap socket reads per turn.
   const std::size_t receive_capacity_;
-  // Maximum bytes held in the output buffer.
+  // Cap buffered output bytes.
   const std::size_t send_limit_;
-  // Reusable storage for fresh incoming bytes.
+  // Reuse this storage for fresh input.
   std::unique_ptr<char[]> receive_;
-  // Protocol state, accessed exclusively by this connection's worker.
+  // Only this connection's worker touches protocol state.
   ENty engine_;
-  // Ordered output bytes; capacity is reused after complete sends.
+  // Keep output ordered and reuse capacity after complete sends.
   std::string output_;
-  // First unsent byte in output_.
+  // Next byte to send from output_.
   std::size_t offset_{0};
-  // Single reader following all bytes currently in output_.
+  // One reader, after all bytes already in output_.
   std::unique_ptr<common::reader> source_;
-  // Latest complete scheduling snapshot, meaningful only to the owner worker.
+  // Latest scheduling snapshot; only the owning worker uses it.
   protocol::processing_result progress_;
-  // True only during a serialized engine input or processing entry.
+  // True only while inside a serialized engine call.
   bool processing_{false};
-  // The engine requested closure after accepted output is sent.
+  // Close when the engine's accepted output has drained.
   bool closing_{false};
-  // Output contract violation or allocation failure requires closure.
+  // A broken output contract or allocation failure means close.
   bool failed_{false};
 };
 }  // namespace martianlabs::doba::transport::server::detail

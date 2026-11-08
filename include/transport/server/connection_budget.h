@@ -33,7 +33,7 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] connection_budget                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Shared Windows admission credit, retained by live connection owners.      |
+// | Share Windows admission credits across live connections.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct connection_budget {
@@ -44,9 +44,9 @@ struct connection_budget {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Maximum admitted contexts; zero preserves unlimited admission.
+  // Connection cap; 0 means unlimited.
   const std::size_t maximum;
-  // Reservations still owned, including native I/O after socket closure.
+  // Credits still held, including native I/O after socket closure.
   std::atomic<std::size_t> used{0};
 };
 }  // namespace martianlabs::doba::transport::server::detail

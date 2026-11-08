@@ -44,7 +44,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_file [linux]                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | Linux filesystem file implementation.                                     |
+// | Handle files on Linux.                                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class filesystem_file {
@@ -92,8 +92,8 @@ class filesystem_file {
   // +=========================================================================+
   // | [>] inspect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // Query attributes without opening the file for reading. Path resolution
-  // rejects links in every component, including a replaced root directory.
+  // Read attributes without a content-read handle. Reject links in every path
+  // component, even a replaced root.
   [[nodiscard]] static std::optional<filesystem_metadata> inspect(
       const std::filesystem::path& root, std::string_view path,
       std::error_code& error) {
@@ -132,8 +132,8 @@ class filesystem_file {
       return describe(info);
     }
     const auto code = errno;
-    // Older kernels/headers and sandbox profiles can lack openat2. Keep the
-    // component-by-component confined resolver as the compatibility path.
+    // No openat2 on this kernel or sandbox? Fall back to walking the path one
+    // directory at a time, still confined to the root.
     if (code != ENOSYS && code != EINVAL && code != E2BIG && code != EPERM) {
       error = code == ELOOP
                   ? std::make_error_code(std::errc::permission_denied)
@@ -186,7 +186,7 @@ class filesystem_file {
     }
     return describe(info);
   }
-  // Selects a bounded slice before moving the file into a reader.
+  // Pick a bounded slice before handing the file to a reader.
   // +-------------------------------------------------------------------------+
   // | [>] select                                                   ( public ) |
   // +-------------------------------------------------------------------------+
@@ -257,7 +257,7 @@ class filesystem_file {
     for (auto part = relative.begin(); part != relative.end(); ++part) {
       const bool last = std::next(part) == relative.end();
       filesystem_file next;
-      // Pin each directory and never follow a request-path symlink.
+      // Hold each directory open and never follow a request-path symlink.
       next.file_ =
           ::openat(current.file_, part->c_str(),
                    O_CLOEXEC | O_NOFOLLOW |

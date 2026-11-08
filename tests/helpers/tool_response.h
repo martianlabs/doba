@@ -41,8 +41,8 @@ struct wire_response {
   std::string body;
 };
 
-// Independent final Content-Length oracle. Read only the current response;
-// never consume the first bytes of its pipelined successor.
+// Independently check one final Content-Length response. Don't eat the next
+// pipelined reply's first bytes.
 template<class Stream>
 wire_response response(Stream& stream, bool unique_headers = false) {
   size_t total = 0;

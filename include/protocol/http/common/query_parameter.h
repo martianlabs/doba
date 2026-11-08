@@ -34,9 +34,8 @@ namespace martianlabs::doba::protocol::http {
 // +---------------------------------------------------------------------------+
 // | [>] query_parameter                                             ( using ) |
 // +---------------------------------------------------------------------------+
-// | A query parameter is a key-value pair of strings. The key is the          |
-// | parameter name (case-insensitive) and the value is the                    |
-// | parameter value (case-sensitive).                                         |
+// | A query parameter pairs a case-insensitive name with a case-sensitive     |
+// | value.                                                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using query_parameter = std::pair<std::string, std::string>;

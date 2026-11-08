@@ -33,7 +33,7 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] processing_result                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Describes processing turns requested by an engine, independently of I/O.  |
+// | Ask for processing turns without tying them to I/O.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct processing_result {
@@ -44,11 +44,11 @@ struct processing_result {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Requests a later serialized turn, never recursive execution.
+  // Ask for a later serialized turn, never a recursive call.
   bool turn_requested{false};
-  // Requests a turn at or after this monotonic deadline, if present.
+  // Ask for a turn at or after this monotonic deadline, if set.
   std::optional<clock::time_point> turn_at{};
-  // Requests a later turn once all accepted output, including readers, drains.
+  // Ask for a turn after all accepted output drains, readers included.
   bool turn_after_output_drained{false};
 };
 }  // namespace martianlabs::doba::protocol

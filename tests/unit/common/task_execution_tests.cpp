@@ -42,7 +42,7 @@ using martianlabs::doba::common::task_execution;
 using martianlabs::doba::common::yield;
 using clock_type = task_execution::clock;
 
-// Frame parameters must remain owned through final suspension.
+// Keep frame parameters owned through final suspension.
 task<> finish(std::shared_ptr<int>, int& steps) {
   ++steps;
   co_return;

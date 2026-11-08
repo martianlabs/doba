@@ -35,8 +35,8 @@ namespace martianlabs::doba::tests::tools {
 // +---------------------------------------------------------------------------+
 // | [>] json                                                        ( class ) |
 // +---------------------------------------------------------------------------+
-// Private tooling value. Reject ambiguous objects, malformed numbers, invalid
-// Unicode escapes, excessive nesting and trailing input instead of guessing.
+// Private tooling JSON: reject duplicate keys, bad numbers/Unicode, excessive
+// nesting and trailing input. Don't guess.
 class json {
  public:
   // +-------------------------------------------------------------------------+

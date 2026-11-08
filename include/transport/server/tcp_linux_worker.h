@@ -56,8 +56,8 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] linux_worker                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | Owns socket I/O and connection contexts on one thread.                    |
-// | The event descriptor carries only a stop signal, never application work.  |
+// | Own sockets and contexts on one thread. The event descriptor only wakes   |
+// | it to stop; it carries no application work.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty,
@@ -113,7 +113,7 @@ class linux_worker {
   // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Only the external owner calls stop; descriptors stay open until join.
+  // Only the external owner stops us. Keep descriptors open until join.
   void stop() {
     if (thread_.joinable()) {
       const std::uint64_t signal = 1;
@@ -162,8 +162,8 @@ class linux_worker {
                                     SOCK_NONBLOCK | SOCK_CLOEXEC);
       if (socket < 0) {
         if (errno == EINTR) continue;
-        // Resource/system failures end admission until an explicit restart.
-        // Keeping a readable listener here would spin without making progress.
+        // Resource failure stops admission until an explicit restart. Leaving
+        // this listener readable would just spin.
         if (errno != EAGAIN && errno != EWOULDBLOCK &&
             errno != ECONNABORTED && errno != EPROTO) {
           close_descriptor(listener_);
@@ -309,7 +309,7 @@ class linux_worker {
   bool arm_timer() noexcept {
     if (!processing_) return true;
     const auto next = processing_->next_deadline();
-    // A bounded promotion may leave due identities for the next poll turn.
+    // The bounded promotion can leave due IDs for the next poll turn.
     if (next && *next <= clock::now()) return true;
     if (next == armed_) return true;
     if (next && timer_ < 0) {
@@ -410,29 +410,29 @@ class linux_worker {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Immutable worker configuration, including its admission capacity.
+  // Fixed worker settings, including admission capacity.
   const tcp_policies configuration_;
-  // Engine factory, alive until the worker has joined.
+  // Keep the engine factory alive until the worker joins.
   const FAty& factory_;
-  // Optional connection notification executed by this worker.
+  // Run this optional arrival callback on the worker.
   const std::function<void()>& connected_;
-  // Optional notification after context destruction.
+  // Run this optional callback after destroying the context.
   const std::function<void()>& disconnected_;
-  // Readiness set, kept open until the worker has joined.
+  // Keep the readiness set open until the worker joins.
   int epoll_{-1};
-  // External owner writes here to wake and stop the worker.
+  // The external owner writes here to wake and stop us.
   int stop_{-1};
-  // Nonblocking listening socket.
+  // Listen without blocking.
   int listener_{-1};
-  // The sole owner of connection processing.
+  // Only owner of connection processing.
   std::thread thread_;
-  // Lifetime identities prevent stale epoll events from following FD reuse.
+  // Use lifetime IDs so stale epoll events can't follow reused descriptors.
   std::uint64_t next_identity_{3};
   std::unordered_map<std::uint64_t,
                      std::unique_ptr<linux_context<ENty>>> contexts_;
-  // Allocated only when a connection requests runnable work or a deadline.
+  // Allocate only when a connection asks for a turn or deadline.
   std::unique_ptr<linux_processing_queue> processing_;
-  // One monotonic timer descriptor, created only for future deadlines.
+  // Create one monotonic timer descriptor only when future deadlines need it.
   int timer_{-1};
   std::optional<clock::time_point> armed_;
 };

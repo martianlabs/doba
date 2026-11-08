@@ -40,15 +40,13 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] framer_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Validates a chunked Transfer-Encoding body.                               |
+// | Check chunked body framing.                                               |
 // |                                                                           |
-// | The caller pushes incoming transport spans via consume(). Each call       |
-// | validates the framing and counts all wire bytes, including chunk lines,   |
-// | extensions, trailers and the terminating CRLF.                            |
+// | Feed transport bytes through consume(). Count all wire bytes, including   |
+// | chunk sizes, extensions, trailers and the final CRLF.                     |
 // |                                                                           |
-// | framer_state::consumed reports the exact number of bytes belonging to     |
-// | this body that were taken from the input span. Any remaining bytes in the |
-// | span belong to the next request.                                          |
+// | consumed counts only bytes in this body. Anything left belongs to the     |
+// | next request.                                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class framer_chunked {
@@ -101,8 +99,8 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Validates the chunked framing in input. Returns bytes consumed and      |
-  // | whether the body is complete (last-chunk + terminating CRLF seen).      |
+  // | Check chunked framing and report bytes consumed. complete means the     |
+  // | last chunk and final CRLF arrived.                                      |
   // +-------------------------------------------------------------------------+
   framer_state consume(std::span<const std::byte> input) {
     framer_state result;
@@ -130,7 +128,7 @@ class framer_chunked {
       }
       switch (state_) {
         // +-------------------------------------------------------------------+
-        // | chunk_size: accumulate hex digits, handle extension and CR        |
+        // | Read hex size digits, then an optional extension and CR.          |
         // +-------------------------------------------------------------------+
         case state::chunk_size: {
           if (c == ';') {
@@ -151,14 +149,14 @@ class framer_chunked {
             state_ = state::extension_before_semicolon;
             break;
           }
-          int digit = hex_digit(c);
+          int digit = helpers::hex_value(c);
           if (digit < 0) {
-            // Invalid hex digit in chunk-size line!
+            // Not a hex digit in the chunk size.
             return fail(result, framer_error::invalid_chunk_size);
           }
           if (chunk_remaining_ >
               (std::numeric_limits<std::size_t>::max() >> 4)) {
-            // Overflow in chunk size accumulation!
+            // The chunk size won't fit.
             return fail(result, framer_error::chunk_size_overflow);
           }
           chunk_remaining_ =
@@ -306,11 +304,11 @@ class framer_chunked {
           return fail(result, framer_error::invalid_chunk_size);
         }
         // +-------------------------------------------------------------------+
-        // | size_lf: LF after chunk-size CR: decide data vs last-chunk        |
+        // | After the size's CRLF, choose data or the final chunk.            |
         // +-------------------------------------------------------------------+
         case state::size_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk-size CR!
+            // Expected LF after the chunk-size CR.
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           extension_size_ = 0;
@@ -323,7 +321,7 @@ class framer_chunked {
           break;
         }
         // +-------------------------------------------------------------------+
-        // | data: consume min(remaining, available) bytes                     |
+        // | Take as much chunk data as fits.                                  |
         // +-------------------------------------------------------------------+
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
@@ -337,17 +335,17 @@ class framer_chunked {
           i += to_take;
           chunk_remaining_ -= to_take;
           if (chunk_remaining_ == 0) {
-            // All chunk data consumed; expect post-data CRLF next.
+            // Chunk data is done; expect CRLF next.
             state_ = state::data_cr;
           }
-          continue;  // i already advanced - skip the single-byte path below
+          continue;  // Already advanced i; skip the single-byte path.
         }
         // +-------------------------------------------------------------------+
-        // | data_cr: Post-data CRLF                                           |
+        // | Expect CR after chunk data.                                       |
         // +-------------------------------------------------------------------+
         case state::data_cr: {
           if (c != '\r') {
-            // Invalid CR after chunk data!
+            // Expected CR after chunk data.
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           state_ = state::data_lf;
@@ -358,7 +356,7 @@ class framer_chunked {
         // +-------------------------------------------------------------------+
         case state::data_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk data CR!
+            // Expected LF after the chunk-data CR.
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           chunk_remaining_ = 0;
@@ -430,7 +428,7 @@ class framer_chunked {
         default:
           break;
       }
-      // Count every framing byte in the wire body.
+      // Count framing bytes too, not just payload.
       result.consumed += 1;
       i++;
     }
@@ -439,21 +437,6 @@ class framer_chunked {
   }
 
  private:
-  // +=========================================================================+
-  // | [>] hex_digit                                               ( private ) |
-  // +-------------------------------------------------------------------------+
-  static int hex_digit(char c) noexcept {
-    if (c >= '0' && c <= '9') {
-      return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-      return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-      return c - 'A' + 10;
-    }
-    return -1;
-  }
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
   // +-------------------------------------------------------------------------+

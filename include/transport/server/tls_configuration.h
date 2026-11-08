@@ -41,8 +41,8 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] tls_configuration                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Immutable settings shared by the TCP factory and every TLS session.       |
-// | Sessions retain this owner until TCP has released their contexts.         |
+// | Share immutable TLS settings across the factory and sessions. Each        |
+// | session retains them until TCP releases its context.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct tls_configuration {
@@ -91,12 +91,12 @@ struct tls_configuration {
       SSL_CTX_set_alpn_select_cb(context.get(), select_alpn, this);
     }
   }
-  // The ALPN callback borrows this address; configuration must not move.
+  // ALPN borrows this address, so don't move the configuration.
   tls_configuration(const tls_configuration&) = delete;
   // +=========================================================================+
   // | [>] select_alpn                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // No overlap is fatal; an absent ALPN extension remains permitted.
+  // No matching ALPN token is fatal; no ALPN extension is fine.
   static int select_alpn(SSL*, const unsigned char** selected,
                          unsigned char* size, const unsigned char* input,
                          unsigned int length, void* owner) noexcept {
@@ -121,9 +121,9 @@ struct tls_configuration {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Fixed connection limits, credentials and optional ALPN token.
+  // Fixed limits, credentials and optional ALPN token.
   const tls_policies policies;
-  // Shared server credentials; never mutated after construction.
+  // Share server credentials; don't change them after construction.
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context;
 };
 }  // namespace martianlabs::doba::transport::server::detail

@@ -60,7 +60,7 @@ foreach(suite IN LISTS suites)
   message(STATUS
     "Listing ${suite} tests (timeout: ${DOBA_CI_INVENTORY_TIMEOUT}s)")
   string(TIMESTAMP started "%s" UTC)
-  # Write directly to disk so a terminated process leaves its partial output.
+  # Write straight to disk so a killed probe leaves its partial output.
   execute_process(
     COMMAND "${binary}" --list
     RESULT_VARIABLE result

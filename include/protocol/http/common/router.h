@@ -47,11 +47,9 @@ namespace martianlabs::doba::protocol::http {
 // +---------------------------------------------------------------------------+
 // | [>] router                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the http 1.1 router implementation.                  |
+// | Match HTTP routes and call their handlers.                                |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
+// | RQty and RSty are the request and response types.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -72,8 +70,7 @@ class router {
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a route to the router with the specified HTTP method, route path,  |
-  // | and handler.                                                            |
+  // | Add a handler for this method and path.                                 |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires detail::router_handler_lambda<Hty>
@@ -150,15 +147,16 @@ class router {
         throw std::invalid_argument(
             "The route parameters and handler arguments do not match");
       }
-      parametrized_handler_type data = [&]() -> parametrized_handler_type {
-        if constexpr (asynchronous) {
-          return signature::template make_parametrized_async<RQty, RSty>(
-              route, std::move(handler));
-        } else {
-          return signature::template make_parametrized<RQty, RSty>(
-              route, std::move(handler));
-        }
-      }();
+      parametrized_handler_type data =
+          [route, &handler]() -> parametrized_handler_type {
+            if constexpr (asynchronous) {
+              return signature::template make_parametrized_async<RQty, RSty>(
+                  route, std::move(handler));
+            } else {
+              return signature::template make_parametrized<RQty, RSty>(
+                  route, std::move(handler));
+            }
+          }();
       for (auto& [parametrized_method, handlers] : parametrized_handlers_) {
         if (parametrized_method == method) {
           handlers.push_back({std::move(data), std::move(authenticate)});
@@ -173,8 +171,7 @@ class router {
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a controller to the router. The controller must implement          |
-  // | the 'register_routes' method to register its routes with the router.    |
+  // | Register a controller's routes through its register_routes method.      |
   // +-------------------------------------------------------------------------+
   template <typename CTty, typename... Args>
   void add_controller(Args&&... args) {
@@ -208,7 +205,7 @@ class router {
   // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Matches the given HTTP method and path against the registered routes.   |
+  // | Find the handler for this method and path.                              |
   // +-------------------------------------------------------------------------+
   [[nodiscard]]
   router_match_result<RQty, RSty> match(std::string_view method,
@@ -267,8 +264,7 @@ class router {
   // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns a comma-separated string of allowed HTTP methods for the given  |
-  // | path.                                                                   |
+  // | List the path's allowed methods, separated by commas.                   |
   // +-------------------------------------------------------------------------+
   [[nodiscard]]
   std::string allowed_methods(std::string_view path) const {

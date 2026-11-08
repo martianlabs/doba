@@ -30,8 +30,7 @@
 // | [>] platform                                                   ( header ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// Platform selection belongs here. Helpers include their selected backend
-// without introducing operating-system branches in shared test code.
+// Choose platforms here; let shared tests include a helper without OS branches.
 #define DOBA_TEST_PLATFORM_STRING_IMPL(value) #value
 #define DOBA_TEST_PLATFORM_STRING(value) DOBA_TEST_PLATFORM_STRING_IMPL(value)
 #if defined(_WIN32)

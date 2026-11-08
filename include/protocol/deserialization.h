@@ -30,13 +30,13 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] deserialization_status                                 ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | This enum class holds the result code on protocol deserialization.        |
+// | How decoding went.                                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class deserialization_status {
-  kSucceeded,        // everything went fine.
-  kInvalidSource,    // source data is invalid.
-  kMoreBytesNeeded,  // more bytes are needed to perform de-serialization.
+  kSucceeded,        // All good.
+  kInvalidSource,    // These bytes aren't valid.
+  kMoreBytesNeeded,  // Need more bytes to decode.
 };
 }  // namespace martianlabs::doba::protocol
 

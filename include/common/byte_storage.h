@@ -51,10 +51,7 @@ struct byte_storage_options {
 // +---------------------------------------------------------------------------+
 // | [>] byte_storage                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a storage backend for bytes, with optional spilling   |
-// | to disk when a threshold is exceeded. It supports reading and             |
-// | writing bytes, and can be used in scenarios where large amounts of        |
-// | data need to be temporarily stored without consuming too much memory.     |
+// | Keep bytes in memory; spill to disk past the configured limit.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class byte_storage {
@@ -102,7 +99,7 @@ class byte_storage {
     }
     if (spilled_) {
       if (!file_.write(ptr, len)) {
-        // An I/O error occurred while writing to the file!
+        // The file write failed.
         io_error_ = true;
         return false;
       }
@@ -115,7 +112,7 @@ class byte_storage {
   // | [>] spill                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   bool spill() { return spilled_ || spill_to_file(); }
-  // The open handle remains readable after removing the temporary name.
+  // Removing the temporary name doesn't close our readable handle.
   // +-------------------------------------------------------------------------+
   // | [>] unlink_file                                              ( public ) |
   // +-------------------------------------------------------------------------+
@@ -134,7 +131,7 @@ class byte_storage {
     finished_ = true;
     if (spilled_) {
       if (!file_.flush()) {
-        // An I/O error occurred while flushing the file!
+        // Flushing the file failed.
         io_error_ = true;
         return;
       }

@@ -106,10 +106,11 @@ class request_processor_async {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  RQty request_;                    // Owned before handler invocation.
-  RSty response_;                   // Independent of reusable sync storage.
-  std::shared_ptr<void> parameters_;  // Typed route arguments, when needed.
-  // Destroy the frame before its borrowed request/response/route arguments.
+  RQty request_;                    // Own it before invoking the handler.
+  RSty response_;                   // Separate from reused sync storage.
+  std::shared_ptr<void> parameters_;  // Typed route arguments, if needed.
+  // Destroy the frame first; it may borrow request, response and route
+  // arguments.
   std::optional<common::task_execution> execution_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::detail

@@ -39,7 +39,7 @@ using protocol::http::v11::response;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | TCP workers supply serialized turns; handlers own their waits.            |
+// | TCP workers provide the turns, one at a time. Handlers own their waits.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int count, char** args) {

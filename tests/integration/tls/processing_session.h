@@ -40,8 +40,8 @@ namespace martianlabs::doba::tests::tls {
 // +---------------------------------------------------------------------------+
 // | [>] processing_session                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Verified memory-BIO client and real TLS adapter; no native scheduling.    |
-// | Tests supply turns and can hold ciphertext to model occupied TCP output.  |
+// | Pair a verified memory-BIO client with the real TLS adapter. Supply turns |
+// | manually and hold ciphertext to model busy TCP output.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -92,7 +92,8 @@ class processing_session {
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Decrypted input is borrowed; overwrite every delivered encrypted fragment.
+  // Decrypted input is borrowed; overwrite each encrypted fragment after
+  // delivery.
   void write(std::string_view plaintext, std::size_t fragment = 8192) {
     std::size_t size = 0;
     ERR_clear_error();
@@ -211,16 +212,16 @@ class processing_session {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Verified client context and session own both memory BIOs.
+  // The verified client context/session own both memory BIOs.
   context_owner context_;
   std::unique_ptr<SSL, decltype(&SSL_free)> client_;
-  // Same TLS adapter used by both real native transports.
+  // The TLS adapter both native transports use.
   transport::server::detail::tls_engine<ENty> server_;
-  // Encoded output waiting for simulated TCP completion/client delivery.
+  // Hold encrypted output until simulated TCP completion and client delivery.
   std::string ciphertext_;
-  // Complete last return, observed even for partial/control-only input.
+  // Keep the last full result, even for partial or control-only input.
   protocol::processing_result progress_{};
-  // Captures the adapter's existing synchronous close callback.
+  // Capture the adapter's synchronous close callback.
   bool closed_{false};
 };
 }  // namespace martianlabs::doba::tests::tls

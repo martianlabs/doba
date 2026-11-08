@@ -49,8 +49,8 @@ struct resilience_resources {
 #include DOBA_TEST_PLATFORM_HEADER(resilience_resources)
 
 namespace martianlabs::doba::tests::integration {
-// Tests execute sequentially in this runner. Change the environment only before
-// starting server/client threads and restore it after their destruction.
+// Tests run sequentially here. Change the environment before starting threads,
+// then restore it after server/client destruction.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] resilience_temp_directory                                   ( class ) |
@@ -77,7 +77,7 @@ class resilience_temp_directory {
   }
   ~resilience_temp_directory() {
     set(present_ ? previous_.c_str() : nullptr);
-    // A leaked file is evidence: leave a nonempty directory for inspection.
+    // A leaked file is evidence: leave the nonempty directory for inspection.
     std::error_code ignored;
     std::filesystem::remove(path, ignored);
   }

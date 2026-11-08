@@ -42,11 +42,9 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Holds a borrowed buffer or an owned file with the body decoder.           |
-// | (reader_chunked or reader_raw) matching the encoding actually used by the |
-// | request (Transfer-Encoding: chunked vs Content-Length). This lets callers |
-// | pull already-decoded payload bytes via read() without ever having to know |
-// | which framing produced them.                                              |
+// | Pair a borrowed buffer or owned file with the request's body decoder.     |
+// | read() gives callers payload, without exposing chunked or Content-Length  |
+// | framing.                                                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader {
@@ -64,10 +62,8 @@ class reader {
   // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a chunked Transfer-Encoding from a borrowed        |
-  // | span source. The extension_limit and trailer_limit parameters set the   |
-  // | maximum number of bytes allowed for chunk extensions and trailers,      |
-  // | respectively. A limit of zero means no limit.                           |
+  // | Read a chunked body from borrowed bytes. Limit extension and trailer    |
+  // | bytes separately; 0 means unlimited.                                    |
   // +-------------------------------------------------------------------------+
   static reader chunked(
       std::span<const std::byte> source,
@@ -82,10 +78,8 @@ class reader {
   // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a chunked Transfer-Encoding from a file source.    |
-  // | The extension_limit and trailer_limit parameters set the                |
-  // | maximum number of bytes allowed for chunk extensions and trailers,      |
-  // | respectively. A limit of zero means no limit.                           |
+  // | Read a chunked body from a file. Limit extension and trailer bytes      |
+  // | separately; 0 means unlimited.                                          |
   // +-------------------------------------------------------------------------+
   static reader chunked(
       common::filesystem_file&& source,
@@ -100,9 +94,7 @@ class reader {
   // +=========================================================================+
   // | [>] raw                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a raw Transfer-Encoding from a borrowed            |
-  // | span source. The content_length parameter sets the                      |
-  // | maximum number of bytes allowed for the raw content.                    |
+  // | Read up to content_length payload bytes from a borrowed span.           |
   // +-------------------------------------------------------------------------+
   static reader raw(std::span<const std::byte> source,
                     std::size_t content_length) {
@@ -113,9 +105,7 @@ class reader {
   // +=========================================================================+
   // | [>] raw                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a raw Transfer-Encoding from a file source.        |
-  // | The content_length parameter sets the                                   |
-  // | maximum number of bytes allowed for the raw content.                    |
+  // | Read up to content_length payload bytes from a file.                    |
   // +-------------------------------------------------------------------------+
   static reader raw(common::filesystem_file&& source,
                     std::size_t content_length) {
@@ -126,9 +116,8 @@ class reader {
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls wire bytes from the owned source, decodes them using the encoding |
-  // | selected at construction time, and writes the decoded payload into      |
-  // | output. See reader_chunked::read/reader_raw::read for semantics.        |
+  // | Read wire bytes, remove the chosen framing and fill output with         |
+  // | payload. See the raw and chunked readers for details.                   |
   // +-------------------------------------------------------------------------+
   reader_state read(std::span<std::byte> output) {
     return std::visit(
@@ -145,7 +134,7 @@ class reader {
     return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
   }
 
-  // Takes ownership of wire bytes, including any temporary backing file.
+  // Take ownership of wire bytes and any temporary backing file.
   static reader raw(common::byte_storage source, std::size_t length) {
     return reader(common::reader(std::move(source)), reader_raw(length));
   }

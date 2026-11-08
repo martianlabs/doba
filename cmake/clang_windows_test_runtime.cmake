@@ -1,5 +1,5 @@
-# Keep native Clang verification executables independent of an unrelated
-# Visual Studio ASan DLL earlier on PATH. Instrumentation remains target-local.
+# Use this Clang's runtime, not a stray Visual Studio ASan DLL on PATH.
+# Keep instrumentation local to each target.
 function(doba_clang_windows_test_runtime target)
   if(NOT WIN32)
     return()
@@ -15,9 +15,8 @@ function(doba_clang_windows_test_runtime target)
   file(TO_CMAKE_PATH "${runtime_directory}" runtime_directory)
   file(TO_CMAKE_PATH "${resource_directory}" resource_directory)
   get_filename_component(compiler_directory "${CMAKE_CXX_COMPILER}" DIRECTORY)
-  # Some LLVM Windows installers report a target-triple runtime directory
-  # while shipping compiler-rt under the resource directory's lib/windows.
-  # Stay within this compiler's installation, never an unrelated DLL on PATH.
+  # Some installers report a target-triple path but ship lib/windows instead.
+  # Check only this compiler's installation, never an unrelated PATH entry.
   set(runtime_candidates "${runtime_directory}"
     "${resource_directory}/lib/windows" "${compiler_directory}")
   list(REMOVE_DUPLICATES runtime_candidates)

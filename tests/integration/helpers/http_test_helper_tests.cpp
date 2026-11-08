@@ -37,7 +37,7 @@ using namespace martianlabs::doba::tests::integration;
 // +---------------------------------------------------------------------------+
 // | [>] parse_wire                                               ( function ) |
 // +---------------------------------------------------------------------------+
-// | Exercise the response oracle with an independent raw TCP peer.            |
+// | Check the response oracle against a separate raw TCP peer.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::optional<http_test_response> parse_wire(std::string_view fields,

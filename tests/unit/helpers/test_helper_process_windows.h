@@ -40,16 +40,14 @@ namespace martianlabs::doba::tests {
 // +---------------------------------------------------------------------------+
 // | [>] run_test_helper                                           ( function) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test helper process with the specified             |
-// | command-line arguments and waits for its completion or a timeout.         |
-// | It captures the exit code, whether the process timed out, and the output  |
-// | written to stdout and stderr.                                             |
+// | Run the probe with a timeout and capture its exit code, timeout flag,     |
+// | stdout and stderr.                                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline test_helper_result run_test_helper(
     std::initializer_list<const char*> arguments,
     std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
-  // Reap the probe and close its pipes even when output allocation fails.
+  // Reap the probe and close its pipes even if allocating output fails.
   struct process {
     HANDLE read{nullptr};
     HANDLE write{nullptr};

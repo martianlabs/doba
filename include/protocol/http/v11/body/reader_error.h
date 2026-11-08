@@ -32,19 +32,14 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader_error                                           ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | Error codes shared by reader_raw and reader_chunked.                      |
+// | Errors shared by the raw and chunked readers.                             |
 // |                                                                           |
-// | Actively produced by these classes:                                       |
-// | io_error, invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,    |
-// | invalid_trailer, chunked_incomplete, raw_incomplete,                      |
-// | chunk_extension_size_limit_exceeded, trailer_size_limit_exceeded.         |
+// | Produced here: io_error, invalid_chunk_size, chunk_size_overflow,         |
+// | invalid_chunk_crlf, invalid_trailer, chunked_incomplete, raw_incomplete,  |
+// | chunk_extension_size_limit_exceeded and trailer_size_limit_exceeded.      |
 // |                                                                           |
-// | Reserved (declared for API parity / future use, never produced here):     |
-// | raw_size_limit_exceeded - Content-Length vs. policy limits are enforced   |
-// | (or should be) at the header/policy layer before                          |
-// | a body reader is ever constructed, since these                            |
-// | classes never see more bytes than the already                             |
-// | agreed-upon Content-Length.                                               |
+// | raw_size_limit_exceeded is reserved. Check Content-Length against policy  |
+// | before building a reader; it never sees bytes beyond the agreed length.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class reader_error : std::uint8_t {

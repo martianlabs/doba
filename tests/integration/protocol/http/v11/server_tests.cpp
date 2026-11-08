@@ -50,8 +50,7 @@ using martianlabs::doba::tests::integration::wait_for_http_count;
 // +---------------------------------------------------------------------------+
 // | [>] echo_request                                             ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function reads the entire body of an HTTP request and echoes it back |
-// | in the response.                                                          |
+// | Read the whole request body and echo it back.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void echo_request(const request& req, response& res) {

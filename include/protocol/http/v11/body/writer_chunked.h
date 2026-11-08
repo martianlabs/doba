@@ -38,12 +38,9 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] writer_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Encodes an outgoing chunked Transfer-Encoding body. Each call to write()  |
-// | wraps the caller-supplied raw payload into a single chunk:                |
-// | <hex-size>\r\n<payload>\r\n                                               |
-// | A zero-length payload is skipped (it would otherwise be mistaken for the  |
-// | terminating chunk). Call end() once, after the last write(), to emit the  |
-// | terminating "0\r\n\r\n" sequence (no trailers are produced).              |
+// | Wrap each nonempty write in one chunk: <hex-size>\r\n<payload>\r\n.       |
+// | Ignore empty writes; only end() emits the final 0\r\n\r\n. No trailers    |
+// | here.                                                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class writer_chunked {
@@ -51,7 +48,7 @@ class writer_chunked {
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Encodes payload as a single chunk and writes it into dst.               |
+  // | Wrap this payload in one chunk and write it to dst.                     |
   // +-------------------------------------------------------------------------+
   bool write(std::span<const std::byte> payload, common::writer& dst) {
     if (ended_) return false;
@@ -72,8 +69,7 @@ class writer_chunked {
   // +=========================================================================+
   // | [>] end                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Emits the terminating chunk (no trailers). Idempotent: subsequent calls |
-  // | are no-ops.                                                             |
+  // | Emit the final chunk once, without trailers. Later calls do nothing.    |
   // +-------------------------------------------------------------------------+
   bool end(common::writer& dst) {
     if (ended_) return true;

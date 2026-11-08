@@ -86,7 +86,7 @@ DOBA_TEST("Linux output drain can be ready without a future socket edge") {
   queue.reconcile(3, {false, {}, true}, true, origin);
   DOBA_EXPECT_EQUAL(queue.take_ready(), 3U);
   DOBA_EXPECT(!queue.take_ready());
-  // A new request during delivery belongs to a later queued turn.
+  // A turn requested during delivery must wait for a later queued turn.
   queue.reconcile(3, {false, {}, true}, true, origin);
   DOBA_EXPECT_EQUAL(queue.ready_count(), 1U);
   queue.cancel(3);

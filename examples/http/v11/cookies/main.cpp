@@ -36,15 +36,8 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/cookies" that responds to GET requests.   |
-// | When a request is made to this route, the server checks for a "session"   |
-// | cookie and returns its value in the response body. If the cookie is not   |
-// | provided, it indicates that in the response. Additionally, the server     |
-// | lists all cookies present in the request and sets two cookies in the      |
-// | response: "session" and "theme". The server runs until it receives a      |
-// | termination signal, at which point it stops gracefully.                   |
+// | Read the session cookie, list the cookies we received, then set session   |
+// | and theme cookies in the reply.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -53,7 +46,7 @@ int main() {
       "GET", "/cookies", [](const request& req, response& res) {
         res.ok_200();
         std::string body = "session: ";
-        // Cookie lookup parses the Cookie field on demand.
+        // Look up a cookie when needed; the Cookie field is parsed on demand.
         const auto session = req.get_cookie("session");
         body.append(session ? *session : "not provided");
         body.append("\n\nall cookies:\n");
@@ -64,7 +57,7 @@ int main() {
           body.push_back('\n');
         }
         res.add_header("Content-Type", "text/plain; charset=utf-8")
-            // Keep each Set-Cookie value as a separate header field.
+            // Give each Set-Cookie value its own header field.
             .add_header("Set-Cookie", "session=doba; Path=/; HttpOnly")
             .add_header("Set-Cookie", "theme=dark; Path=/; SameSite=Lax")
             .set_body(body);

@@ -33,7 +33,7 @@ namespace martianlabs::doba::common::detail {
 // +---------------------------------------------------------------------------+
 // | [>] ascii_to_lower                                           ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function converts an ASCII uppercase character to lowercase.         |
+// | Lowercase ASCII letters; leave other bytes alone.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 static constexpr unsigned char ascii_to_lower(unsigned char value) noexcept {
@@ -47,8 +47,7 @@ static constexpr unsigned char ascii_to_lower(unsigned char value) noexcept {
 // +---------------------------------------------------------------------------+
 // | [>] base_hash                                                  ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct is needed for the hash_set/hash_map helpers.                  |
-// | It performs an ASCII case-insensitive hash.                               |
+// | Hash keys without caring about ASCII case.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct base_hash {
@@ -83,8 +82,7 @@ struct base_hash {
 // +---------------------------------------------------------------------------+
 // | [>] base_equal                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct is needed for the hash_set/hash_map helpers.                  |
-// | It performs an ASCII case-insensitive comparison.                         |
+// | Compare keys without caring about ASCII case.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct base_equal {

@@ -37,7 +37,7 @@
 namespace {
 using martianlabs::doba::protocol::processing_result;
 namespace detail = martianlabs::doba::transport::server::detail;
-// The SSL_CTX callback retains its configuration's address for its lifetime.
+// SSL_CTX borrows this configuration's address, so keep it stable and alive.
 static_assert(!std::is_copy_constructible_v<detail::tls_configuration>);
 static_assert(!std::is_move_constructible_v<detail::tls_configuration>);
 // /////////////////////////////////////////////////////////////////////////////
@@ -86,11 +86,11 @@ struct echo {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Echoes plaintext exclusively during its input call.
+  // Echo plaintext only during input.
   martianlabs::doba::protocol::send_delegate output;
-  // Reports the same complete processing snapshot on each plaintext delivery.
+  // Return the same full processing snapshot on each plaintext delivery.
   processing_result progress{};
-  // Counts every delivered plaintext byte, including partial input.
+  // Count every plaintext byte, even from partial input.
   std::shared_ptr<std::size_t> received;
 };
 
@@ -98,7 +98,7 @@ struct echo {
 // +---------------------------------------------------------------------------+
 // | [>] exercise                                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | Uses the same adapter as both native backends, without a network socket.  |
+// | Use the real TLS adapter without a network socket.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void exercise(const char* certificate, const char* key, int version,
@@ -195,8 +195,8 @@ void exercise(const char* certificate, const char* key, int version,
     exchange();
     exchange();
   }
-  // Corrupt a real authenticated application record after a verified handshake.
-  // A fatal record must deliver zero plaintext, even in partial RX blocks.
+  // After a verified handshake, corrupt an authenticated record. Even
+  // fragmented RX must deliver zero plaintext from that bad record.
   *received = 0;
   constexpr std::string_view forbidden = "unauthenticated plaintext";
   std::size_t written = 0;
@@ -211,14 +211,14 @@ void exercise(const char* certificate, const char* key, int version,
     corrupt.append(block.data(), static_cast<std::size_t>(size));
   }
   require(!corrupt.empty());
-  // Authentication tag/MAC failure in a real record.
+  // Break a real record's auth tag/MAC.
   corrupt.back() ^= 1;
   auto result = server.on_bytes_received(corrupt);
   require(closed && close_calls >= 1 && *received == 0);
   require(!result.turn_requested && !result.turn_at &&
           !result.turn_after_output_drained);
-  // Defensive late entry must not resurrect plaintext or scheduling. Close
-  // requests may repeat; TCP's contract stops engine entry once closing starts.
+  // A late call must not revive plaintext or scheduling. Close may repeat, but
+  // TCP stops engine entry once closing starts.
   server.on_bytes_received(corrupt);
   result = server.on_processing_turn(true);
   require(closed && *received == 0 && !result.turn_requested &&

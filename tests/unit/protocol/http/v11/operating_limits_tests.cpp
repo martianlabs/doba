@@ -87,7 +87,7 @@ DOBA_TEST(
 }
 
 DOBA_TEST("pending HTTP bytes enforce exact boundaries before copying") {
-  // Establish the exact serialized size with the same deterministic headers.
+  // Measure the exact wire size using the same fixed headers.
   router routes;
   routes.add("GET", "/wait", [](const request&, response&) -> task<> {
     co_await sleep_for(1h);

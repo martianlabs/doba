@@ -53,7 +53,7 @@ int WSAAPI cleanup() {
 }
 }  // namespace
 
-// A separate executable prevents mixing substituted and native definitions.
+// Keep substituted and real native definitions in separate executables.
 #define WSAStartup startup
 #define WSACleanup cleanup
 #include "network/environment_windows.h"

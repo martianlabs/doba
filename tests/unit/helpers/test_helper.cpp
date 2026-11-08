@@ -41,7 +41,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // | [>] test_case                                                  ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Test case data.                                                           |
+// | One registered test's details.                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct test_case {
@@ -55,8 +55,7 @@ struct test_case {
 // +---------------------------------------------------------------------------+
 // | [>] relative_test_path                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a relative path for the given file, stripping the   |
-// | leading directories. It is used to make test output more readable.        |
+// | Shorten source paths so test failures are easier to read.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string_view relative_test_path(std::string_view file) {
@@ -72,7 +71,7 @@ std::string_view relative_test_path(std::string_view file) {
 // +---------------------------------------------------------------------------+
 // | [>] tests                                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to the static vector of test cases.     |
+// | Get the runner's test registry.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::vector<test_case>& tests() {
@@ -84,9 +83,7 @@ std::vector<test_case>& tests() {
 // +---------------------------------------------------------------------------+
 // | [>] failures                                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to the static count of failed           |
-// | assertions. It is used to track the number of failed assertions across    |
-// | all test cases.                                                           |
+// | Get the shared failed-assertion count.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::atomic<std::size_t>& failures() {
@@ -98,7 +95,7 @@ std::atomic<std::size_t>& failures() {
 // +---------------------------------------------------------------------------+
 // | [>] diagnostics_mutex                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | Serialize failure diagnostics and context changes made by test workers.   |
+// | Keep failure messages and worker context changes serialized.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::mutex& diagnostics_mutex() {
@@ -110,11 +107,7 @@ std::mutex& diagnostics_mutex() {
 // +---------------------------------------------------------------------------+
 // | [>] context                                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to the static string that holds the     |
-// | current test context. It is used to provide additional information about  |
-// | the test case being executed, especially when an assertion fails.         |
-// | The context can be set and retrieved using the set_context method of the  |
-// | test_helper class.                                                        |
+// | Keep the current test context for extra detail in failure messages.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string& context() {
@@ -127,11 +120,8 @@ std::string& context() {
 // +---------------------------------------------------------------------------+
 // | [>] add                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function adds a new test case to the static vector of test cases.    |
-// | It takes the file name, line number, test name, and a function pointer    |
-// | to the test function. The file name is converted to a relative path       |
-// | for better readability in test output. The function returns true to       |
-// | indicate that the test case was successfully added.                       |
+// | Register the test with its name and shortened source location. Return     |
+// | true once added.                                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::add(std::string_view file, int line, std::string_view name,
@@ -144,13 +134,8 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 // +---------------------------------------------------------------------------+
 // | [>] expect                                                   ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function checks a condition and reports a failed assertion if the    |
-// | condition is false. It takes the condition to check, the expression as a  |
-// | string, the file name, and the line number. If the condition is false, it |
-// | increments the failure count, prints an error message to stderr with      |
-// | the file name, line number, and expression, and includes the current      |
-// | test context if available. The function returns true if the condition is  |
-// | true and false if it is false.                                            |
+// | On a failed check, count it and print the expression, location and        |
+// | optional context. Return the condition's result.                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::expect(bool condition, std::string_view expression,
@@ -173,12 +158,7 @@ bool test_helper::expect(bool condition, std::string_view expression,
 // +---------------------------------------------------------------------------+
 // | [>] set_context                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function sets the current test context to the provided value.        |
-// | The context is a string that can be used to provide additional            |
-// | information about the test case being executed, especially when an        |
-// | assertion fails. The context can be retrieved using the context function. |
-// | This function is typically called before running a test case to set the   |
-// | context for that specific test.                                           |
+// | Set the context shown in later failure messages.                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
@@ -190,12 +170,8 @@ void test_helper::set_context(std::string_view value) {
 // +---------------------------------------------------------------------------+
 // | [>] run                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the unit tests based on the provided command-line      |
-// | arguments. It processes the arguments to determine which tests to run,    |
-// | whether to list them, and any exclusions. It then executes the selected   |
-// | tests, tracks failures, and outputs the results to the console.           |
-// | The function returns an integer status code indicating success or         |
-// | failure of the test run.                                                  |
+// | Select, list or exclude tests from the command line, then run them and    |
+// | report failures through the exit code.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int test_helper::run(int argc, char** argv) {
@@ -359,7 +335,7 @@ int test_helper::run(int argc, char** argv) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                   ( entry-pint ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the unit test framework.                       |
+// | Run the unit tests.                                                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv) {

@@ -41,15 +41,12 @@ namespace detail {
 // +---------------------------------------------------------------------------+
 // | [>] CONSTANTs                                                  ( public ) |
 // +---------------------------------------------------------------------------+
-// | This struct holds for the http 1.1 helper functions.                      |
+// | Shared HTTP parsing helpers.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | Each bit encodes one RFC character-class predicate for a byte value.      |
-// | kCharFlags[c] is a bitmask; is_X(c) reduces to a single table lookup and  |
-// | a bitmask test (2 instructions) instead of a chain of comparisons.        |
-// | The table is 256 * 2 = 512 bytes; fits in one L1 cache line group and     |
-// | is shared across all hot parse loops in helpers, request and checkers.    |
+// | Look up a byte's RFC character classes in one bitmask. The 512-byte table |
+// | keeps hot parse loops off long comparison chains.                         |
 // +---------------------------------------------------------------------------+
 static constexpr std::uint16_t kF_token = 0x0001;
 static constexpr std::uint16_t kF_vchar = 0x0002;
@@ -69,8 +66,7 @@ static constexpr std::uint16_t kF_unreserv = 0x2000;
 // +---------------------------------------------------------------------------+
 // | [>] build_char_flags                                         ( function ) |
 // +---------------------------------------------------------------------------+
-// | The table is built at compile time, so the compiler can                   |
-// | optimize it into a static data segment.                                   |
+// | Build the table at compile time; no startup work needed.                  |
 // +---------------------------------------------------------------------------+
 static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept {
   std::array<std::uint16_t, 256> t{};
@@ -144,7 +140,7 @@ static constexpr auto kCharFlags = build_char_flags();
 // +---------------------------------------------------------------------------+
 // | [>] helpers                                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct holds for the http 1.1 helper functions.                      |
+// | Shared HTTP parsing helpers.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct helpers {
@@ -172,10 +168,9 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | 1*DIGIT                                                                 |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a non-empty run of decimal digits.    |
-  // | This is the syntactic shape shared by delta-seconds (RFC 9111 S1.2.2)   |
-  // | and Content-Length (RFC 9110 S8.6). Any overflow handling is semantic   |
-  // | processing and does not affect this purely syntactic predicate.         |
+  // | Check a nonempty run of digits, nothing more. Overflow belongs to       |
+  // | numeric parsing; this check only covers syntax (RFC 9111 S1.2.2, RFC    |
+  // | 9110 S8.6).                                                             |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_digits(std::string_view sv) noexcept {
     if (sv.empty()) return false;
@@ -189,14 +184,9 @@ struct helpers {
   // +=========================================================================+
   // | RFC 9110 S5.6.1 S 1*DIGIT                                               |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv is a non-empty run of decimal digits (exactly like    |
-  // | is_digits) and, on success, converts it to a std::size_t in out. This   |
-  // | is the producing counterpart of the purely syntactic is_digits and is   |
-  // | shared by the Content-Length (RFC 9110 S8.6) and Max-Forwards (RFC 9110 |
-  // | S7.6.2) producer overloads. Returns false on a non-1*DIGIT value or     |
-  // | when the value would overflow std::size_t, in which case out is left    |
-  // | unspecified; the overflow guard is the one place where a syntactically  |
-  // | valid number is rejected for representability.                          |
+  // | Parse a nonempty run of digits into size_t. Reject other bytes and      |
+  // | overflow; don't use out after failure. Content-Length and Max-Forwards  |
+  // | share this parser (RFC 9110 S8.6, S7.6.2).                              |
   // +-------------------------------------------------------------------------+
   static constexpr bool parse_size_t(std::string_view sv,
                                      std::size_t& out) noexcept {
@@ -220,15 +210,25 @@ struct helpers {
   // |                                                                         |
   // | DIGIT  = %x30-39   ; "0" - "9"                                          |
   // +-------------------------------------------------------------------------+
-  // | Note: In HTTP (RFC 9110 / RFC 9112), hexadecimal parsing is             |
-  // | case-insensitive. Therefore, implementations typically also accept      |
-  // | lowercase "a" - "f" (i.e., %x61-66).                                    |
+  // | HTTP accepts hex digits in either case, including a-f (RFC 9110 / RFC   |
+  // | 9112).                                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_hex_digit(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_hexdig) != 0;
   }
   static constexpr bool is_hex_digit(char c) noexcept {
     return is_hex_digit(static_cast<unsigned char>(c));
+  }
+  // +=========================================================================+
+  // | [>] hex_value                                                ( public ) |
+  // +=========================================================================+
+  // | Read either hex case; return -1 for anything else.                      |
+  // +-------------------------------------------------------------------------+
+  static constexpr int hex_value(char c) noexcept {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
   }
   // +=========================================================================+
   // | [>] is_alpha                                                 ( public ) |
@@ -270,10 +270,8 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | token = 1*tchar                                                         |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one token: non-empty, with    |
-  // | every character satisfying tchar. Unlike consume_token(), which         |
-  // | greedily consumes only the tchar prefix of sv, this rejects any         |
-  // | trailing bytes that are not part of the token.                          |
+  // | Check one whole, nonempty token. Unlike consume_token(), reject         |
+  // | trailing bytes that aren't tchar.                                       |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_token(std::string_view sv) noexcept {
     if (sv.empty()) return false;
@@ -360,8 +358,7 @@ struct helpers {
   // | SP       = %x20                                                         |
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
-  // | Note: DQUOTE (%x22) and "\" (%x5C) are excluded and only allowed        |
-  // | via quoted-pair.                                                        |
+  // | DQUOTE and backslash need quoted-pair escaping here.                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_qdtext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_qdtext) != 0;
@@ -376,8 +373,7 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
-  // | Note: obs-text represents obsolete text allowed for backward            |
-  // | compatibility with legacy implementations.                              |
+  // | Allow obs-text for compatibility with older senders.                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_obs_text(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_obs_text) != 0;
@@ -396,9 +392,8 @@ struct helpers {
   // | SP       = %x20                                                         |
   // | obs-text = %x80-FF                                                      |
   // +-------------------------------------------------------------------------+
-  // | Note: "(" (%x28), ")" (%x29), and "\" (%x5C) are excluded; inside a     |
-  // | comment they are only allowed structurally (nested comment) or          |
-  // | via quoted-pair.                                                        |
+  // | Parentheses handle nesting; backslash handles quoted-pair escapes. None |
+  // | belongs to plain ctext.                                                 |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ctext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_ctext) != 0;
@@ -414,9 +409,8 @@ struct helpers {
   // | atext = ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / |
   // | "-" / "/" / "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~"         |
   // +-------------------------------------------------------------------------+
-  // | The atom character set used by dot-atom-text and atom (RFC 5322         |
-  // | S3.2.3),                                                                |
-  // | imported into HTTP via the From "mailbox" grammar (RFC 9110 S10.1.2).   |
+  // | The atom bytes used by dot-atom-text and atom, imported by HTTP's From  |
+  // | mailbox grammar (RFC 5322 S3.2.3, RFC 9110 S10.1.2).                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_atext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_atext) != 0;
@@ -431,11 +425,8 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | dtext = %d33-90 / %d94-126 / obs-dtext                                  |
   // +-------------------------------------------------------------------------+
-  // | The unquoted character set allowed inside a domain-literal. "[" (%d91), |
-  // | "\" (%d92), and "]" (%d93) are excluded; inside a domain-literal they   |
-  // | are only allowed structurally (the delimiters) or via quoted-pair.      |
-  // | obs-text (%x80-FF) covers the obs-dtext octet allowance in the HTTP     |
-  // | parsing context.                                                        |
+  // | Inside a domain-literal, keep brackets as delimiters and backslash as   |
+  // | an escape. obs-text covers obs-dtext in this HTTP context.              |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_dtext(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_dtext) != 0;
@@ -481,11 +472,9 @@ struct helpers {
   // +=========================================================================+
   // | RFC 6265 S4.1.1 S <any CHAR except CTLs or ";">                         |
   // +-------------------------------------------------------------------------+
-  // | Both path-value and extension-av are defined as any CHAR except CTLs or |
-  // | a ";". CHAR is %x01-7F and CTLs are %x00-1F / %x7F, so the octet class  |
-  // | reduces to %x20-7E excluding ";" (%x3B). This is deliberately broad: it |
-  // | admits SP, comma, "=", and DQUOTE, which is why an Expires date such as |
-  // | "Wed, 09 Jun 2021 10:18:14 GMT" is a syntactically valid cookie-av.     |
+  // | Allow visible ASCII and spaces, except semicolons. Cookie attribute     |
+  // | meaning is checked later; even an Expires date fits this broad syntax   |
+  // | (RFC 6265 S4.1.1).                                                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_av_octet(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_cookie_av) != 0;
@@ -502,14 +491,13 @@ struct helpers {
   // | weak       = %s"W/"                                                     |
   // | opaque-tag = DQUOTE *etagc DQUOTE                                       |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv is exactly one entity-tag (optionally weak),          |
-  // | consuming the whole of sv. The "W/" prefix is case-sensitive, as %s     |
-  // | denotes a case-sensitive string in the ABNF.                            |
+  // | Check one whole entity-tag, weak or strong. The optional W/ prefix is   |
+  // | case-sensitive.                                                         |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_entity_tag(std::string_view sv) noexcept {
     if (sv.empty()) return false;
     std::size_t off = 0;
-    // Optional case-sensitive weak indicator "W/".
+    // Allow the case-sensitive W/ prefix.
     if (sv.size() >= 2 && sv[0] == 'W' && sv[1] == '/') off = 2;
     // opaque-tag = DQUOTE *etagc DQUOTE
     if (off >= sv.size() || sv[off] != '"') return false;
@@ -520,7 +508,7 @@ struct helpers {
     }
     if (off >= sv.size() || sv[off] != '"') return false;
     off++;
-    // The closing DQUOTE must be the last character of sv.
+    // The closing quote must end the value.
     return off == sv.size();
   }
   // +=========================================================================+
@@ -533,7 +521,7 @@ struct helpers {
   // | SP   = %x20                                                             |
   // | HTAB = %x09                                                             |
   // +-------------------------------------------------------------------------+
-  // | Note: OWS is allowed only where explicitly defined by the ABNF.         |
+  // | Allow OWS only where the grammar says so.                               |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ows(unsigned char c) noexcept {
     return (detail::kCharFlags[c] & detail::kF_ows) != 0;
@@ -550,7 +538,7 @@ struct helpers {
   static constexpr bool is_qvalue(std::string_view sv) noexcept {
     if (sv.empty() || sv.size() > 5) return false;
     if (sv[0] != '0' && sv[0] != '1') return false;
-    if (sv.size() == 1) return true;  // "0" or "1" (valid ones)
+    if (sv.size() == 1) return true;  // A lone 0 or 1 is fine.
     if (sv[1] != '.') return false;
     for (std::size_t i = 2; i < sv.size(); ++i) {
       if (!is_digit(sv[i]) || (sv[0] == '1' && sv[i] != '0')) return false;
@@ -564,34 +552,33 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | weight = OWS ";" OWS "q=" qvalue                                        |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv is exactly one weight parameter (the case-insensitive |
-  // | "q" name, no whitespace around "="), consuming the whole of sv.         |
+  // | Check one complete weight: q ignores case, but no spaces around '='.    |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_weight(std::string_view sv) noexcept {
     std::size_t i = 0;
-    // OWS before ';'.
+    // Skip OWS before ';'.
     while (i < sv.size() && is_ows(sv[i])) i++;
-    // A ';' is mandatory before the weight parameter.
+    // Require ';' before the weight.
     if (i >= sv.size() || sv[i++] != ';') return false;
-    // OWS after ';'.
+    // Skip OWS after ';'.
     while (i < sv.size() && is_ows(sv[i])) i++;
-    // The case-insensitive "q" parameter is mandatory.
+    // Require q, ignoring case.
     if (i >= sv.size()) return false;
     const std::string_view name = consume_token(sv.substr(i));
     if (name.empty() || !iequals(name, "q")) return false;
     i += name.size();
-    // No whitespace is permitted around '='.
+    // No spaces around '='.
     if (i >= sv.size() || sv[i++] != '=') return false;
     if (i >= sv.size()) return false;
     const std::string_view qvalue = consume_token(sv.substr(i));
     if (qvalue.empty() || !is_qvalue(qvalue)) return false;
-    // The qvalue must consume the remainder of sv.
+    // The qvalue must reach the end.
     return i + qvalue.size() == sv.size();
   }
   // +=========================================================================+
   // | [>] tolower_ascii                                            ( public ) |
   // +=========================================================================+
-  // | Converts character to its lower-case version.                           |
+  // | Lowercase an ASCII character.                                           |
   // +-------------------------------------------------------------------------+
   static constexpr unsigned char tolower_ascii(unsigned char c) noexcept {
     return (c >= 'A' && c <= 'Z') ? c + 32 : c;
@@ -602,7 +589,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] ows_ltrim                                                ( public ) |
   // +=========================================================================+
-  // | Performs OWS trimming on the left side of the provided string_view.     |
+  // | Trim OWS from the left.                                                 |
   // +-------------------------------------------------------------------------+
   static constexpr void ows_ltrim(std::string_view& sv) noexcept {
     while (!sv.empty() && helpers::is_ows(sv.front())) {
@@ -612,7 +599,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] ows_rtrim                                                ( public ) |
   // +=========================================================================+
-  // | Performs OWS trimming on the right side of the provided string_view.    |
+  // | Trim OWS from the right.                                                |
   // +-------------------------------------------------------------------------+
   static constexpr void ows_rtrim(std::string_view& sv) noexcept {
     while (!sv.empty() && helpers::is_ows(sv.back())) {
@@ -622,8 +609,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] ows_trim                                                 ( public ) |
   // +=========================================================================+
-  // | Performs OWS trimming on left & right sides of the provided             |
-  // | string_view.                                                            |
+  // | Trim OWS from both ends.                                                |
   // +-------------------------------------------------------------------------+
   static constexpr void ows_trim(std::string_view& sv) noexcept {
     ows_ltrim(sv);
@@ -711,13 +697,9 @@ struct helpers {
   // | / "2" %x30-34 DIGIT     ; 200-249                                       |
   // | / "25" %x30-35          ; 250-255                                       |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one canonical dec-octet: a    |
-  // | decimal integer in the range 0..255 with no leading zeroes (except the  |
-  // | single value "0"). This is the RFC 3986 IPv4 octet shape and is also    |
-  // | the syntactic shape of a Sec-WebSocket-Version value (RFC 6455          |
-  // | S11.3.5).                                                               |
-  // | Unlike the positional overload, this checks digit-ness of every byte    |
-  // | and rejects any value outside 0..255 or with a leading zero.            |
+  // | Check one canonical IPv4 octet: 0..255, digits only, no leading zeroes  |
+  // | except 0 itself. Sec-WebSocket-Version shares this shape (RFC 3986, RFC |
+  // | 6455 S11.3.5).                                                          |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_dec_octet(std::string_view sv) noexcept {
     const std::size_t sv_size = sv.size();
@@ -725,13 +707,13 @@ struct helpers {
     for (const auto c : sv) {
       if (!is_digit(c)) return false;
     }
-    // A single digit (0-9) is always a canonical dec-octet.
+    // One digit is always in range.
     if (sv_size == 1) return true;
-    // Multi-digit values MUST NOT have a leading zero.
+    // No leading zeroes on multi-digit values.
     if (sv[0] == '0') return false;
-    // Two digits with a non-zero leader are 10-99, always in range.
+    // Two digits starting at 1..9 are always in range.
     if (sv_size == 2) return true;
-    // Three digits: enforce the 0..255 upper bound.
+    // For three digits, cap the value at 255.
     if (sv[0] == '1') return true;                     // 100-199
     if (sv[0] == '2') {                                // 200-255
       if (sv[1] < '5') return true;                    // 200-249
@@ -748,7 +730,7 @@ struct helpers {
   static constexpr bool is_ip_v_future(std::string_view sv) {
     if (sv.empty()) return false;
     if (sv.front() != 'v' && sv.front() != 'V') return false;
-    // [1*HEXDIG "."] part..
+    // Read the hex version and its dot first.
     std::size_t hex_digits_found = 0;
     std::size_t off = 1;
     while (off < sv.size() && sv[off] != '.') {
@@ -757,7 +739,7 @@ struct helpers {
       off++;
     }
     if (off++ == sv.size() || !hex_digits_found) return false;
-    // [1*( unreserved / sub-delims / ":" )] part..
+    // Now check the address characters.
     std::size_t subparts_found = 0;
     while (off < sv.size()) {
       if (!helpers::is_unreserved(sv[off]) && !helpers::is_sub_delim(sv[off]) &&
@@ -790,13 +772,13 @@ struct helpers {
   // | [>] is_ip_v6_address                                         ( public ) |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_v6_address(std::string_view sv) {
-    // first character must be either ':' or hex-digit..
+    // Start with ':' or a hex digit.
     std::size_t sep = sv.find("::");
     std::string_view head;
     std::string_view tail;
     if (sep == std::string_view::npos) {
       // +---------------------------------------------------------------------+
-      // | no-compression case!                                                |
+      // | No '::' compression here.                                           |
       // +---------------------------------------------------------------------+
       // | 6( h16 ":" ) ls32                                                   |
       // +---------------------------------------------------------------------+
@@ -812,7 +794,7 @@ struct helpers {
       return true;
     } else if (sv.find("::", sep + 1) == std::string_view::npos) {
       // +---------------------------------------------------------------------+
-      // | compression case!                                                   |
+      // | Handle '::' compression.                                            |
       // +---------------------------------------------------------------------+
       // | "::" 5( h16 ":" ) ls32                                              |
       // | / [ h16 ] "::" 4( h16 ":" ) ls32                                    |
@@ -884,7 +866,7 @@ struct helpers {
   // | IP-literal     | "[" ( IPv6address / IPvFuture ) "]"                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_ip_literal(std::string_view sv) {
-    if (sv.size() < 2) return false;  // at least two characters..
+    if (sv.size() < 2) return false;  // Need room for both brackets.
     if (sv.front() != '[') return false;
     if (sv.back() != ']') return false;
     sv.remove_prefix(1);
@@ -923,10 +905,8 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | token68 = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="  |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one token68: a non-empty run  |
-  // | of unreserved characters plus "+"/"/", followed by any number (possibly |
-  // | zero) of "=" padding characters. At least one leading (non-"=")         |
-  // | character is required, and no other bytes may follow the "=" run.       |
+  // | Check a whole token68: nonempty data, then optional '=' padding.        |
+  // | Nothing else may follow the padding.                                    |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_token68(std::string_view sv) noexcept {
     if (sv.empty()) return false;
@@ -936,10 +916,10 @@ struct helpers {
            (is_unreserved(sv[i]) || sv[i] == '+' || sv[i] == '/')) {
       i++;
     }
-    // At least one non-"=" character is mandatory before the padding.
+    // Need some data before '=' padding.
     if (i == 0) return false;
     while (i < sv_size && sv[i] == '=') i++;
-    // No bytes are allowed after the "=" padding run.
+    // Nothing may follow the padding.
     return i == sv_size;
   }
   // +=========================================================================+
@@ -964,25 +944,20 @@ struct helpers {
   // | / ( 3base64-character "=" )                                             |
   // | base64-character       = ALPHA / DIGIT / "+" / "/"                      |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a non-empty canonical base64 value:   |
-  // | a positive multiple of four characters, where every four-character      |
-  // | group except possibly the last is pure base64-character data, and the   |
-  // | last group is either pure base64-character data or a single padding     |
-  // | group ("??==" or "???="). "=" may appear only in the final group. This  |
-  // | is the standard-alphabet base64 shape (no URL-safe "-"/"_") shared by   |
-  // | WebSocket handshake fields such as Sec-WebSocket-Key (RFC 6455 S4.1).   |
-  // | The decoded byte length is a semantic concern and is not checked here.  |
+  // | Check nonempty standard-alphabet base64 in groups of four. Only the     |
+  // | last group may contain '=': either xx== or xxx=. Decoded size is        |
+  // | checked elsewhere; this is syntax only.                                 |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_base64_value(std::string_view sv) noexcept {
     const std::size_t sv_size = sv.size();
-    // base64-value-non-empty is non-empty and always a multiple of four.
+    // Need at least one complete group of four.
     if (sv_size == 0 || sv_size % 4 != 0) return false;
-    // Every group but the last must be four pure base64-characters.
+    // All but the last group must be plain base64 data.
     const std::size_t last = sv_size - 4;
     for (std::size_t i = 0; i < last; i++) {
       if (!is_base64_char(sv[i])) return false;
     }
-    // The final group is pure data or a "??=="/"???=" padding group.
+    // The last group is data, xx== or xxx=.
     const char a = sv[last];
     const char b = sv[last + 1];
     const char c = sv[last + 2];
@@ -1023,9 +998,7 @@ struct helpers {
   // | quoted-string = DQUOTE *( qdtext / quoted-pair ) DQUOTE                 |
   // | quoted-pair   = "\" ( HTAB / SP / VCHAR / obs-text )                    |
   // +-------------------------------------------------------------------------+
-  // | Consumes a quoted-string from the provided string_view, validating that |
-  // | every unescaped character is qdtext and every escaped character is a    |
-  // | valid quoted-pair octet.                                                |
+  // | Consume a quoted string, checking plain qdtext and quoted-pair escapes. |
   // +-------------------------------------------------------------------------+
   static constexpr std::string_view consume_quoted_string(
       std::string_view sv) noexcept {
@@ -1042,7 +1015,7 @@ struct helpers {
         if (!is_ows(escaped) && !is_vchar(escaped) && !is_obs_text(escaped)) {
           return {};
         }
-        end_index += 2;  // Skip the escaped character
+        end_index += 2;  // Skip the escaped byte.
         continue;
       } else if (!is_qdtext(sv[end_index])) {
         return {};
@@ -1060,15 +1033,9 @@ struct helpers {
   // | comment     = "(" *( ctext / quoted-pair / comment ) ")"                |
   // | quoted-pair = "\" ( HTAB / SP / VCHAR / obs-text )                      |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single comment from the front of sv and returns the consumed |
-  // | prefix (including the surrounding parentheses), or an empty string_view |
-  // | if sv does not begin with a well-formed comment. Comments nest, so a    |
-  // | depth counter tracks unescaped "(" / ")" pairs; a "\" introduces a      |
-  // | quoted-pair whose escaped octet (HTAB/SP/VCHAR/obs-text) is skipped and |
-  // | never affects nesting. Any other octet must be ctext. An unterminated   |
-  // | comment (depth never returns to zero) is rejected. A valid comment is   |
-  // | never empty (minimum "()"), so an empty result unambiguously signals    |
-  // | failure.                                                                |
+  // | Consume one balanced comment, parentheses included. Track nesting, skip |
+  // | quoted-pair escapes, and require ctext elsewhere. Empty output means    |
+  // | malformed input; even () is a valid nonempty comment.                   |
   // +-------------------------------------------------------------------------+
   static constexpr std::string_view consume_comment(
       std::string_view sv) noexcept {
@@ -1078,7 +1045,7 @@ struct helpers {
     while (i < sv.size()) {
       const char c = sv[i];
       if (c == '\\') {
-        // A quoted-pair escapes exactly one following HTAB/SP/VCHAR/obs-text.
+        // An escape consumes exactly one HTAB, SP, VCHAR or obs-text byte.
         if (i + 1 >= sv.size()) return {};
         const unsigned char escaped = static_cast<unsigned char>(sv[i + 1]);
         if (!is_ows(escaped) && !is_vchar(escaped) && !is_obs_text(escaped)) {
@@ -1097,7 +1064,7 @@ struct helpers {
       }
       i++;
     }
-    // Reached the end without closing every open comment.
+    // Ran out of bytes before all comments closed.
     return {};
   }
   // +=========================================================================+
@@ -1109,14 +1076,9 @@ struct helpers {
   // | FWS  = ([*WSP CRLF] 1*WSP) / obs-FWS                                    |
   // | WSP  = SP / HTAB                                                        |
   // +-------------------------------------------------------------------------+
-  // | Consumes an optional run of folding whitespace and comments starting at |
-  // | sv[i], advancing i past it. Because HTTP field values are already       |
-  // | normalized (no CR/LF, no surrounding OWS), FWS collapses to runs of WSP |
-  // | (SP / HTAB, i.e. is_ows), so CFWS reduces to any interleaving of WSP    |
-  // | and RFC 5322 comments (parsed via consume_comment, which is byte-       |
-  // | compatible in this context). CFWS is optional, so consuming nothing is  |
-  // | success; the only failure is a "(" that does not begin a well-formed    |
-  // | comment, which returns false. On success returns true with i advanced.  |
+  // | Skip whitespace and nested comments, advancing i. HTTP has already      |
+  // | removed CR/LF, so FWS here is just SP/HTAB. Consuming nothing is fine;  |
+  // | a malformed comment isn't.                                              |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_cfws(std::string_view sv,
                                      std::size_t& i) noexcept {
@@ -1141,22 +1103,17 @@ struct helpers {
   // | dot-atom      = [CFWS] dot-atom-text [CFWS]                             |
   // | dot-atom-text = 1*atext *( "." 1*atext )                                |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single dot-atom starting at sv[i], advancing i past it, and  |
-  // | returns true on success. Optional leading CFWS is consumed first (via   |
-  // | consume_cfws), then dot-atom-text: one or more atext (is_atext) runs    |
-  // | separated by single "." characters. A leading, trailing, or doubled     |
-  // | "." is rejected because every "." must be both preceded and followed by |
-  // | at least one atext. Optional trailing CFWS is consumed last. Returns    |
-  // | false when no atext is present, a "." is misplaced, or a CFWS comment   |
-  // | is malformed.                                                           |
+  // | Consume a dot-atom with optional CFWS on both sides. Each dot needs     |
+  // | nonempty atext on both sides; reject leading, trailing or doubled dots  |
+  // | and malformed comments.                                                 |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_dot_atom(std::string_view sv,
                                          std::size_t& i) noexcept {
     if (!consume_cfws(sv, i)) return false;
-    // dot-atom-text: the first atext run is mandatory.
+    // Start with a nonempty atext run.
     if (i >= sv.size() || !is_atext(sv[i])) return false;
     while (i < sv.size() && is_atext(sv[i])) i++;
-    // Subsequent runs are each introduced by a single ".".
+    // A single dot separates each later run.
     while (i < sv.size() && sv[i] == '.') {
       i++;
       if (i >= sv.size() || !is_atext(sv[i])) return false;
@@ -1171,13 +1128,9 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | domain-literal = [CFWS] "[" *([FWS] dtext) [FWS] "]" [CFWS]             |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single domain-literal starting at sv[i], advancing i past it |
-  // | and returning true on success. Optional leading CFWS is consumed first, |
-  // | then a mandatory "[", then any run of dtext (is_dtext) interleaved with |
-  // | FWS which, in the normalized HTTP field-value context, collapses to WSP |
-  // | (is_ows), then a mandatory closing "]", then optional trailing CFWS.    |
-  // | Returns false when the brackets are missing/unterminated, an interior   |
-  // | octet is neither dtext nor WSP, or a CFWS comment is malformed.         |
+  // | Consume a bracketed domain-literal with optional CFWS around it. Allow  |
+  // | dtext and SP/HTAB inside; reject missing brackets, other bytes or       |
+  // | malformed comments.                                                     |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_domain_literal(std::string_view sv,
                                                std::size_t& i) noexcept {
@@ -1198,14 +1151,9 @@ struct helpers {
   // | local-part = dot-atom / quoted-string / obs-local-part                  |
   // | domain     = dot-atom / domain-literal / obs-domain                     |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single addr-spec starting at sv[i], advancing i past it and  |
-  // | returning true on success. The local-part is either a quoted-string     |
-  // | (when the first non-CFWS octet is DQUOTE, consumed via                  |
-  // | consume_quoted_string with the RFC 5322 optional CFWS consumed around   |
-  // | its core) or a dot-atom (via consume_dot_atom). A mandatory "@" then    |
-  // | separates it from the domain, which is either a domain-literal (when    |
-  // | the first non-CFWS octet is "[") or a dot-atom. Returns false when any  |
-  // | required production is missing or malformed.                            |
+  // | Consume local-part@domain and advance i. The local part is a quoted     |
+  // | string or dot-atom; the domain is a bracketed literal or dot-atom.      |
+  // | Allow CFWS where the grammar permits it; reject incomplete input.       |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_addr_spec(std::string_view sv,
                                           std::size_t& i) noexcept {
@@ -1241,12 +1189,8 @@ struct helpers {
   // | atom          = [CFWS] 1*atext [CFWS]                                   |
   // | quoted-string = [CFWS] DQUOTE *([FWS] qcontent) [FWS] DQUOTE [CFWS]     |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single word starting at sv[i], advancing i past it and       |
-  // | returning true on success. A word is either a quoted-string (when the   |
-  // | first non-CFWS octet is DQUOTE, consumed via consume_quoted_string with |
-  // | the RFC 5322 optional CFWS consumed around its core) or an atom (one or |
-  // | more atext, is_atext, surrounded by optional CFWS). Returns false when  |
-  // | neither production matches or a CFWS comment is malformed.              |
+  // | Consume a quoted string or atom, with optional CFWS around it. Reject   |
+  // | malformed comments or a missing word.                                   |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_word(std::string_view sv,
                                      std::size_t& i) noexcept {
@@ -1273,25 +1217,19 @@ struct helpers {
   // | display-name = phrase                                                   |
   // | phrase       = 1*word                                                   |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one mailbox. This is the      |
-  // | single-mailbox value form imported by the From header (RFC 9110         |
-  // | S10.1.2); From is not a list field, so no comma-separated mailboxes are |
-  // | accepted. Two forms are tried, each of which must consume the entire    |
-  // | input: (1) name-addr, an optional display-name (zero or more words via  |
-  // | consume_word) followed by an angle-addr ([CFWS] "<" addr-spec ">"       |
-  // | [CFWS]); (2) a bare addr-spec (via consume_addr_spec). Returns true iff |
-  // | one form matches the whole input.                                       |
+  // | Check one whole mailbox, not a comma-separated list (RFC 9110 S10.1.2). |
+  // | Try an optional display name plus <addr-spec>, then a bare addr-spec.   |
+  // | Either form must consume all input.                                     |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_mailbox(std::string_view sv) noexcept {
-    // Form 1: name-addr = [display-name] angle-addr.
+    // Try an optional display name and <addr-spec> first.
     {
       std::size_t i = 0;
-      // display-name = phrase = 1*word, but it is optional in name-addr, so
-      // zero words are allowed here (that reduces name-addr to angle-addr).
+      // No display name is fine: <addr-spec> stands on its own.
       while (i < sv.size() && sv[i] != '<') {
         const std::size_t before = i;
         if (!consume_word(sv, i)) break;
-        // A word must make progress; otherwise stop to avoid an infinite loop.
+        // Stop if a word consumes nothing; don't loop forever.
         if (i == before) break;
       }
       // angle-addr = [CFWS] "<" addr-spec ">" [CFWS].
@@ -1303,7 +1241,7 @@ struct helpers {
         }
       }
     }
-    // Form 2: bare addr-spec.
+    // Now try a bare addr-spec.
     {
       std::size_t i = 0;
       if (consume_addr_spec(sv, i) && i == sv.size()) return true;
@@ -1317,10 +1255,8 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | value = token / quoted-string                                           |
   // +-------------------------------------------------------------------------+
-  // | Consumes a quoted-string (via consume_quoted_string) when sv starts     |
-  // | with DQUOTE, or a token (via consume_token) otherwise. Returns an       |
-  // | empty string_view when neither production matches (e.g., an empty       |
-  // | token or an unterminated/invalid quoted-string).                        |
+  // | Consume a quoted string if it starts with a quote, otherwise a token.   |
+  // | Empty output means neither form matched.                                |
   // +-------------------------------------------------------------------------+
   static constexpr std::string_view consume_token_or_quoted_string(
       std::string_view sv) noexcept {
@@ -1334,24 +1270,20 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )          |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one cookie-value, the shared  |
-  // | value form of the Cookie (RFC 6265 S4.2.1) and Set-Cookie (RFC 6265     |
-  // | S4.1.1) cookie-pair. The value is either a (possibly empty) run of      |
-  // | cookie-octets, or the same run wrapped in a pair of DQUOTE delimiters.  |
-  // | The surrounding DQUOTEs are literal cookie-value syntax rather than an  |
-  // | HTTP quoted-string, so no backslash escaping is recognised and the      |
-  // | inner characters are restricted to cookie-octets (DQUOTE excluded).     |
+  // | Check cookie-octets, optionally wrapped in literal quotes. Empty values |
+  // | are fine. These quotes aren't HTTP quoted-string syntax: no backslash   |
+  // | escapes.                                                                |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_value(std::string_view sv) noexcept {
-    // Optionally the value is wrapped in a pair of literal DQUOTE delimiters.
+    // Allow a pair of literal quotes around the value.
     if (sv.size() >= 2 && sv.front() == '"' && sv.back() == '"') {
       sv.remove_prefix(1);
       sv.remove_suffix(1);
     } else if (!sv.empty() && (sv.front() == '"' || sv.back() == '"')) {
-      // A single, unbalanced DQUOTE is not a valid cookie-value.
+      // A lone quote isn't a valid value.
       return false;
     }
-    // The (unwrapped) value must be a run of cookie-octets; it may be empty.
+    // Check cookie-octets after unwrapping; empty is fine.
     for (const char c : sv) {
       if (!is_cookie_octet(c)) return false;
     }
@@ -1366,20 +1298,16 @@ struct helpers {
   // | cookie-name  = token                                                    |
   // | cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )          |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one cookie-pair, the shared   |
-  // | pair form of the Cookie (RFC 6265 S4.2.1) and Set-Cookie (RFC 6265      |
-  // | S4.1.1) fields. A non-empty token cookie-name and a mandatory "=" (with |
-  // | no surrounding whitespace) are required, and the remainder must be a    |
-  // | valid cookie-value (which may be empty). Any trailing bytes after the   |
-  // | cookie-value cause rejection.                                           |
+  // | Check one whole cookie-pair: a nonempty token name, '=', then a         |
+  // | cookie-value. No spaces around '=' and no trailing bytes.               |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_pair(std::string_view sv) noexcept {
-    // A non-empty token cookie-name starts the pair.
+    // Start with a nonempty token name.
     const std::string_view name = consume_token(sv);
     if (name.empty()) return false;
-    // A "=" is mandatory after the name, with no surrounding whitespace.
+    // Require '=' right after the name.
     if (name.size() >= sv.size() || sv[name.size()] != '=') return false;
-    // The remainder (possibly empty) must be a valid cookie-value.
+    // Check the rest as a cookie-value; empty is fine.
     return is_cookie_value(sv.substr(name.size() + 1));
   }
   // +=========================================================================+
@@ -1391,15 +1319,9 @@ struct helpers {
   // | secure-av / httponly-av / extension-av                                  |
   // | extension-av = <any CHAR except CTLs or ";">                            |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one cookie-av of a Set-Cookie |
-  // | field (RFC 6265 S4.1.1). Every named alternative (Expires, Max-Age,     |
-  // | Domain, Path, Secure, HttpOnly) is subsumed by extension-av, which is   |
-  // | the catch-all "any CHAR except CTLs or ';'"; at the syntactic ABNF      |
-  // | level a cookie-av is therefore just a non-empty run of cookie-av-       |
-  // | octets. Per-attribute semantics (RFC 6265 S5.2) are applied by the      |
-  // | recipient after parsing and are intentionally outside this check, so a  |
-  // | value such as "Max-Age=abc" remains a valid extension-av. Every cookie- |
-  // | av alternative is non-empty, so an empty sv is rejected.                |
+  // | Check a nonempty cookie attribute using extension-av's broad syntax.    |
+  // | Attribute meaning is handled by the recipient later, so Max-Age=abc is  |
+  // | still syntactically valid (RFC 6265 S4.1.1, S5.2).                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_cookie_av(std::string_view sv) noexcept {
     if (sv.empty()) return false;
@@ -1415,15 +1337,10 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | directive = token [ "=" ( token / quoted-string ) ]                     |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one parameterized directive:  |
-  // | a non-empty token optionally followed by "=" and a token or quoted-     |
-  // | string argument, with no surrounding whitespace around "=". This is the |
-  // | shared shape of cache-directive (RFC 9111 S5.2) and extension-pragma    |
-  // | (RFC 9111 S5.4); "no-cache" is itself a token and is therefore covered  |
-  // | by the token alternative. Since directive and extension-param share the |
-  // | same grammar, validation delegates to consume_extension_parameter and   |
-  // | then requires that the whole sv was consumed. Any trailing bytes after  |
-  // | the directive cause rejection.                                          |
+  // | Check one complete directive: a token, optionally followed by '=' and a |
+  // | token or quoted string. No spaces around '=' or trailing bytes. Cache   |
+  // | directives and extension pragmas share this shape (RFC 9111 S5.2,       |
+  // | S5.4).                                                                  |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_directive(std::string_view sv) noexcept {
     std::size_t bytes_used = 0;
@@ -1439,13 +1356,10 @@ struct helpers {
   // | parameter-name  = token                                                 |
   // | parameter-value = ( token / quoted-string )                             |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single parameter starting at the beginning of sv, reporting  |
-  // | the number of bytes consumed via bytes_used. A non-empty token name, a  |
-  // | mandatory "=", and a non-empty token-or-quoted-string value are all     |
-  // | required. When allow_bws is true, optional whitespace (OWS/BWS) is      |
-  // | tolerated around the "=", as permitted for transfer-parameter and t-    |
-  // | ranking parameters; when false, no whitespace is allowed around "=".    |
-  // | bytes_used is set to 0 and false is returned on any failure.            |
+  // | Consume name=value and report bytes_used. The name must be a token, the |
+  // | value a nonempty token or quoted string. allow_bws permits OWS around   |
+  // | '='; otherwise it doesn't. Failure returns false with bytes_used set to |
+  // | 0.                                                                      |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_parameter(std::string_view sv,
                                           std::size_t& bytes_used,
@@ -1455,17 +1369,17 @@ struct helpers {
     const std::string_view name = consume_token(sv);
     if (name.empty()) return false;
     i += name.size();
-    // Optional BWS before "=" (only when allowed).
+    // Skip BWS before '=' only when allowed.
     if (allow_bws) {
       while (i < sv.size() && is_ows(sv[i])) i++;
     }
-    // A "=" is mandatory after the parameter name.
+    // Require '=' after the name.
     if (i >= sv.size() || sv[i++] != '=') return false;
-    // Optional BWS after "=" (only when allowed).
+    // Skip BWS after '=' only when allowed.
     if (allow_bws) {
       while (i < sv.size() && is_ows(sv[i])) i++;
     }
-    // A parameter value is mandatory after "=".
+    // Require a value after '='.
     if (i >= sv.size()) return false;
     const std::string_view value = consume_token_or_quoted_string(sv.substr(i));
     if (value.empty()) return false;
@@ -1479,14 +1393,9 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | extension-param = token [ "=" ( token / quoted-string ) ]               |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single extension parameter starting at the beginning of sv,  |
-  // | reporting the number of bytes consumed via bytes_used. A non-empty      |
-  // | token name is mandatory, but unlike consume_parameter() the value is    |
-  // | optional: when a "=" follows the name (with no surrounding whitespace)  |
-  // | a non-empty token-or-quoted-string value is required, otherwise the     |
-  // | parameter is just the bare name. This is the shared shape of extension- |
-  // | param (RFC 6455 S9.1) and directive (RFC 9111 S5.2 / S5.4). bytes_used  |
-  // | is set to 0 and false is returned on any failure.                       |
+  // | Consume a token name with an optional '=value'. If '=' is present,      |
+  // | require a nonempty token or quoted string, with no surrounding spaces.  |
+  // | Report bytes_used; failure returns false and 0 bytes.                   |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_extension_parameter(
       std::string_view sv, std::size_t& bytes_used) noexcept {
@@ -1494,12 +1403,12 @@ struct helpers {
     const std::string_view name = consume_token(sv);
     if (name.empty()) return false;
     std::size_t i = name.size();
-    // The value is optional: a bare parameter name is a complete parameter.
+    // A bare name is fine; the value is optional.
     if (i >= sv.size() || sv[i] != '=') {
       bytes_used = i;
       return true;
     }
-    // A "=" is present, so a value is mandatory (no whitespace around "=").
+    // Found '=': now a value is required, with no spaces around '='.
     ++i;
     if (i >= sv.size()) return false;
     const std::string_view value = consume_token_or_quoted_string(sv.substr(i));
@@ -1514,17 +1423,10 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | parameters = *( OWS ";" OWS [ parameter ] )                             |
   // +-------------------------------------------------------------------------+
-  // | Iterates the ";"-delimited parameters that follow a value (media-type,  |
-  // | media-range, transfer-coding, t-codings, expectation, ...), trimming    |
-  // | OWS around each ";". A ";" is mandatory before every parameter. When    |
-  // | require_parameter is false, empty parameter slots and a trailing ";"    |
-  // | are tolerated (as in media-type/media-range/expectation parameters);    |
-  // | when true, a parameter is mandatory after every ";" (as in transfer-    |
-  // | parameters and t-codings parameters). For every parameter slot the      |
-  // | callable consume(remaining, bytes_used) is invoked with the sub-view    |
-  // | starting at the parameter; it must return true and set bytes_used to    |
-  // | the number of bytes it consumed. The whole sequence is rejected as soon |
-  // | as consume rejects a parameter or reports an out-of-range bytes_used.   |
+  // | Walk semicolon-delimited parameters and trim OWS. require_parameter     |
+  // | rejects empty slots and a trailing ';'; otherwise they're allowed.      |
+  // | consume reports bytes_used for each slot. Stop on rejection or an       |
+  // | out-of-range byte count.                                                |
   // +-------------------------------------------------------------------------+
   template <typename ParameterConsumer>
   static constexpr bool for_each_parameter(std::string_view sv,
@@ -1532,18 +1434,18 @@ struct helpers {
                                            ParameterConsumer&& consume) {
     std::size_t i = 0;
     while (i < sv.size()) {
-      // OWS before ";".
+      // Skip OWS before ';'.
       while (i < sv.size() && is_ows(sv[i])) i++;
-      // A ";" is mandatory before every parameter.
+      // Require ';' before each parameter.
       if (i >= sv.size() || sv[i++] != ';') return false;
-      // OWS after ";".
+      // Skip OWS after ';'.
       while (i < sv.size() && is_ows(sv[i])) i++;
       if (i >= sv.size()) {
-        // Nothing follows the ";".
+        // Nothing left after ';'.
         if (require_parameter) return false;
         return true;
       }
-      // An empty parameter slot is only allowed when not required.
+      // Allow empty slots only when the parameter is optional.
       if (sv[i] == ';') {
         if (require_parameter) return false;
         continue;
@@ -1562,16 +1464,10 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | forwarded-element = [ forwarded-pair ] *( ";" [ forwarded-pair ] )      |
   // +-------------------------------------------------------------------------+
-  // | Iterates the ";"-delimited pairs of a single forwarded-element. Unlike  |
-  // | for_each_parameter (RFC 9110 S5.6.6 parameters), no OWS is permitted    |
-  // | around ";" and the first pair is not preceded by ";", matching the      |
-  // | RFC 7239 grammar exactly. Every pair slot is optional, so empty slots   |
-  // | (a leading ";", consecutive ";;", or a trailing ";") are tolerated and  |
-  // | an entirely empty sv is accepted. For every non-empty pair slot the     |
-  // | callable consume(remaining, bytes_used) is invoked with the sub-view    |
-  // | starting at the pair; it must return true and set bytes_used to the     |
-  // | number of bytes it consumed. The whole element is rejected as soon as   |
-  // | consume rejects a pair or reports an out-of-range bytes_used.           |
+  // | Walk a Forwarded element's semicolon-separated pairs. No OWS around     |
+  // | ';', and empty slots are fine, even an empty element (RFC 7239).        |
+  // | consume reports bytes_used for each nonempty pair; reject failures or   |
+  // | out-of-range counts.                                                    |
   // +-------------------------------------------------------------------------+
   template <typename PairConsumer>
   static constexpr bool for_each_forwarded_pair(std::string_view sv,
@@ -1579,14 +1475,13 @@ struct helpers {
     std::size_t i = 0;
     bool first = true;
     while (i < sv.size()) {
-      // A ";" separates pairs and is mandatory before every pair except the
-      // first; no OWS is permitted around it.
+      // Require ';' between pairs, with no surrounding OWS.
       if (!first) {
         if (sv[i] != ';') return false;
         ++i;
       }
       first = false;
-      // Each pair slot is optional, so a ";" or the end of sv may follow.
+      // A pair is optional; another ';' or the end is fine.
       if (i >= sv.size() || sv[i] == ';') continue;
       std::size_t bytes = 0;
       if (!consume(sv.substr(i), bytes)) return false;
@@ -1602,15 +1497,9 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | #element = [ element ] *( OWS "," OWS [ element ] )                     |
   // +-------------------------------------------------------------------------+
-  // | Iterates the comma-separated elements of a list-based field value,      |
-  // | trimming OWS around each element and skipping empty list elements, as   |
-  // | recipients are required to do (RFC 9110 S5.6.1). A comma occurring      |
-  // | inside a quoted-string (RFC 9110 S5.6.4) is treated as part of that     |
-  // | quoted-string rather than as a list separator; an unterminated quoted-  |
-  // | string or a dangling escape at the end of sv is rejected.               |
-  // | For every non-empty trimmed element, invokes consume_element(element).  |
-  // | The whole list is rejected as soon as one element is                    |
-  // | rejected by consume_element. |                                          |
+  // | Walk a comma-separated list, trimming OWS and ignoring empty elements.  |
+  // | Quoted commas stay inside their element; reject unfinished quotes or    |
+  // | escapes. Stop if consume_element rejects an element (RFC 9110 S5.6.1).  |
   // +-------------------------------------------------------------------------+
   template <typename ElementConsumer>
   static constexpr bool for_each_list_element(
@@ -1620,20 +1509,20 @@ struct helpers {
     std::size_t last = 0;
     bool inside_string = false;
     while (i < sv.size()) {
-      // We need to handle quoted strings and escaped characters properly.
+      // Track quotes and escapes so their commas don't split the list.
       if (sv[i] == '"') {
         inside_string = !inside_string;
         i++;
         continue;
       }
-      // Handle escaped characters inside quoted strings.
+      // Skip the escaped byte inside the quoted string.
       if (sv[i] == '\\') {
         if (!inside_string || i + 1 >= sv.size()) return false;
         i += 2;
         continue;
       }
       if (sv[i] == ',' && !inside_string) {
-        // We found an element, let's parse it.
+        // Got an element; pass it to the parser.
         std::string_view element = sv.substr(last, i++ - last);
         if (follows_separator) ows_ltrim(element);
         ows_rtrim(element);
@@ -1644,9 +1533,9 @@ struct helpers {
       }
       i++;
     }
-    // Check if we ended inside a quoted string, which would be invalid.
+    // An unfinished quoted string isn't valid.
     if (inside_string) return false;
-    // Last element after the last comma (or the only one if no commas).
+    // Handle the tail after the last comma, or the only element.
     std::string_view element = sv.substr(last);
     if (follows_separator) ows_ltrim(element);
     if (!element.empty() && !consume_element(element)) return false;
@@ -1660,14 +1549,9 @@ struct helpers {
   // | Authentication-Info = #auth-param                                       |
   // | auth-param          = token BWS "=" BWS ( token / quoted-string )       |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a "#auth-param" list: a comma-        |
-  // | separated sequence of auth-param name/value pairs. This is the shared   |
-  // | shape of the Authentication-Info (RFC 9110 S11.6.3) header field value  |
-  // | and of the "#auth-param" argument of a single credentials/challenge     |
-  // | (RFC 9110 S11.4 / S11.6.1). Every non-empty list element must be a      |
-  // | complete auth-param, with BWS tolerated around "=". Since the rule is   |
-  // | "#auth-param" (not "1#auth-param"), an empty list is permitted and      |
-  // | empty list elements are ignored.                                        |
+  // | Check a whole #auth-param list. Allow BWS around '='; each nonempty     |
+  // | element must be a complete pair. An empty list and empty elements are   |
+  // | fine.                                                                   |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_auth_param_list(std::string_view sv) noexcept {
     return for_each_list_element(sv, [](std::string_view element) {
@@ -1675,7 +1559,7 @@ struct helpers {
       if (!consume_parameter(element, bytes_used, /*allow_bws=*/true)) {
         return false;
       }
-      // The auth-param must consume the whole trimmed list element.
+      // Each auth-param must consume its whole trimmed element.
       return bytes_used == element.size();
     });
   }
@@ -1688,35 +1572,25 @@ struct helpers {
   // | auth-scheme = token                                                     |
   // | auth-param  = token BWS "=" BWS ( token / quoted-string )               |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one credentials production,   |
-  // | the shared shape of the Authorization (RFC 9110 S11.6.2) and Proxy-     |
-  // | Authorization (RFC 9110 S11.7.1) header field values. A mandatory       |
-  // | auth-scheme token is consumed first; when nothing follows, the optional |
-  // | group is absent and the credentials consist of the bare scheme.         |
-  // | Otherwise exactly one or more SP (%x20, never HTAB) separates the       |
-  // | scheme from its argument, and the remainder must be either a single     |
-  // | token68 or a "#auth-param" list. The token68 alternative is tried       |
-  // | first so that a bare token argument (a valid token68 but not a valid    |
-  // | auth-param) is accepted; otherwise the remainder is validated as a      |
-  // | comma-separated auth-param list via for_each_list_element, where every  |
-  // | non-empty element must be a complete auth-param (BWS around "=" is      |
-  // | tolerated). Since the rule is "#auth-param" (not "1#auth-param"), an    |
-  // | empty list is permitted, and empty list elements are ignored.           |
+  // | Check one complete credentials value. Start with an auth-scheme; a bare |
+  // | scheme is fine. Otherwise require SP, never HTAB, then token68 or a     |
+  // | #auth-param list. Try token68 first; the list may be empty and ignores  |
+  // | empty elements.                                                         |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_credentials(std::string_view sv) noexcept {
-    // A mandatory auth-scheme token starts the credentials.
+    // Start with an auth-scheme token.
     const std::string_view scheme = consume_token(sv);
     if (scheme.empty()) return false;
-    // When nothing follows the scheme, the optional group is absent.
+    // A bare scheme is fine.
     if (scheme.size() == sv.size()) return true;
-    // At least one SP (%x20 only, never HTAB) must separate scheme and arg.
+    // Require SP between scheme and argument, never HTAB.
     std::size_t i = scheme.size();
     if (sv[i] != ' ') return false;
     while (i < sv.size() && sv[i] == ' ') i++;
     const std::string_view rest = sv.substr(i);
-    // The argument is either a single token68 ...
+    // Try a single token68 argument...
     if (is_token68(rest)) return true;
-    // ... or a "#auth-param" list (empty list permitted).
+    // ...then an auth-param list, which may be empty.
     return check_auth_param_list(rest);
   }
   // +=========================================================================+
@@ -1724,23 +1598,19 @@ struct helpers {
   // +=========================================================================+
   // | RFC 9110 S11.6.1 S helper for #challenge parsing                        |
   // +-------------------------------------------------------------------------+
-  // | Given a single, already-trimmed challenge element that is known to be a |
-  // | valid challenge (i.e. check_credentials(element) is true), reports      |
-  // | whether that challenge opens a "#auth-param" list, meaning that later   |
-  // | comma-separated auth-param elements may still belong to it. This is the |
-  // | case only when the challenge has a "1*SP" argument region whose content |
-  // | is an auth-param rather than a token68; a scheme-only challenge or a    |
-  // | token68 challenge does not accept trailing auth-params.                 |
+  // | For an already-valid challenge, check whether later auth-params can     |
+  // | still belong to it. Only an auth-param argument opens that list; a bare |
+  // | scheme or token68 doesn't.                                              |
   // +-------------------------------------------------------------------------+
   static constexpr bool challenge_opens_param_list(
       std::string_view element) noexcept {
     const std::string_view scheme = consume_token(element);
-    // A scheme-only challenge has no argument region and no auth-param list.
+    // A bare scheme has no auth-param list.
     if (scheme.empty() || scheme.size() == element.size()) return false;
     std::size_t i = scheme.size();
-    // The scheme is separated from its argument by 1*SP (%x20 only).
+    // Require SP between scheme and argument, never HTAB.
     while (i < element.size() && element[i] == ' ') i++;
-    // A token68 argument is a single value and opens no auth-param list.
+    // A token68 is one value, not the start of an auth-param list.
     return !is_token68(element.substr(i));
   }
   // +=========================================================================+
@@ -1754,37 +1624,25 @@ struct helpers {
   // | auth-scheme       = token                                               |
   // | auth-param        = token BWS "=" BWS ( token / quoted-string )         |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a "#challenge" list, the shared shape |
-  // | of the WWW-Authenticate (RFC 9110 S11.6.1) and Proxy-Authenticate (RFC  |
-  // | 9110 S11.7.2) header field values. The list is comma-separated, but so  |
-  // | is the inner "#auth-param" list of each challenge, which makes commas   |
-  // | ambiguous; the field is therefore scanned left-to-right, resolving each |
-  // | top-level (quoted-string-aware) element greedily. Every non-empty       |
-  // | element is either an auth-param that continues the current challenge or |
-  // | the start of a new challenge. An element that parses fully as an        |
-  // | auth-param ("token [BWS] = value") continues the current challenge, but |
-  // | only when that challenge previously opened a "#auth-param" list; a bare |
-  // | "token = value" is otherwise not a valid challenge and is rejected.     |
-  // | Any other element must itself be a complete challenge (validated with   |
-  // | check_credentials), which begins a new challenge and may reopen an      |
-  // | auth-param list. Since the rule is "#challenge" (not "1#challenge"), an |
-  // | empty list is permitted and empty list elements are ignored.            |
+  // | Check a whole challenge list. Resolve each quoted-string-aware element  |
+  // | left to right: auth-params may continue an open list; otherwise require |
+  // | a complete new challenge. Reject orphan auth-params. Empty lists and    |
+  // | empty elements are fine.                                                |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_challenge_list(std::string_view sv) noexcept {
-    // in_param_list tracks whether the current challenge still accepts
-    // trailing auth-param elements (i.e. it opened a "#auth-param" list).
+    // Track whether this challenge still accepts auth-params.
     bool in_param_list = false;
     return for_each_list_element(
         sv, [&in_param_list](std::string_view element) {
-          // An element that fully parses as an auth-param continues the current
-          // challenge, but only when that challenge opened an auth-param list.
+          // An auth-param can continue only a challenge that opened a parameter
+          // list.
           std::size_t bytes_used = 0;
           if (consume_parameter(element, bytes_used, /*allow_bws=*/true) &&
               bytes_used == element.size()) {
             return in_param_list;
           }
-          // Otherwise the element must itself be a complete challenge, which
-          // starts a new challenge and may (re)open an auth-param list.
+          // Otherwise start a new, complete challenge, possibly opening a new
+          // parameter list.
           if (!check_credentials(element)) return false;
           in_param_list = challenge_opens_param_list(element);
           return true;
@@ -1798,18 +1656,15 @@ struct helpers {
   // | product         = token [ "/" product-version ]                         |
   // | product-version = token                                                 |
   // +-------------------------------------------------------------------------+
-  // | Consumes a single product from the front of sv and returns the consumed |
-  // | prefix, or an empty string_view if sv does not begin with a product. A  |
-  // | product is a non-empty token, optionally followed by a "/" and a non-   |
-  // | empty product-version token; a trailing "/" with no version is invalid. |
-  // | A valid product is never empty, so an empty result signals failure.     |
+  // | Consume a product token with an optional /version. A slash needs a      |
+  // | nonempty version; empty output means failure.                           |
   // +-------------------------------------------------------------------------+
   static constexpr std::string_view consume_product(
       std::string_view sv) noexcept {
     const std::string_view name = consume_token(sv);
     if (name.empty()) return {};
     std::size_t i = name.size();
-    // An optional "/" must be followed by a non-empty product-version token.
+    // A slash needs a nonempty version token.
     if (i < sv.size() && sv[i] == '/') {
       const std::string_view version = consume_token(sv.substr(i + 1));
       if (version.empty()) return {};
@@ -1825,27 +1680,21 @@ struct helpers {
   // | product-list = product *( RWS ( product / comment ) )                   |
   // | RWS          = 1*( SP / HTAB )                                          |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is exactly one product list, the shared  |
-  // | shape of the User-Agent (RFC 9110 S10.1.5) and Server (RFC 9110         |
-  // | S10.2.4) header field values. The value MUST begin with a product, so   |
-  // | an empty value, a leading comment, or leading whitespace is rejected.   |
-  // | Each subsequent product or comment MUST be preceded by RWS (at least    |
-  // | one SP/HTAB); adjacent items with no RWS, and trailing RWS with no      |
-  // | following item, are rejected. This is not an RFC 9110 S5.6.1 "#" list:  |
-  // | commas carry no structural meaning and are only valid inside token or   |
-  // | comment syntax.                                                         |
+  // | Check one whole product list. Start with a product; separate later      |
+  // | products or comments with SP/HTAB. Reject leading whitespace/comments   |
+  // | and trailing whitespace. Commas aren't separators here.                 |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_product_list(std::string_view sv) noexcept {
-    // The list MUST begin with a product (no leading comment or whitespace).
+    // Start with a product, not whitespace or a comment.
     const std::string_view first = consume_product(sv);
     if (first.empty()) return false;
     std::size_t i = first.size();
     while (i < sv.size()) {
-      // Every subsequent item MUST be preceded by RWS (1*( SP / HTAB )).
+      // Separate later items with SP/HTAB.
       const std::size_t rws_start = i;
       while (i < sv.size() && is_ows(sv[i])) i++;
       if (i == rws_start) return false;
-      // RWS must be followed by a product or comment, never left trailing.
+      // Whitespace needs a following product or comment.
       if (i >= sv.size()) return false;
       const std::string_view rest = sv.substr(i);
       if (rest.front() == '(') {
@@ -1867,15 +1716,15 @@ struct helpers {
   // | uri-host       | IP-literal / IPv4address / reg-name                    |
   // +-------------------------------------------------------------------------+
   static host_type check_uri_host(std::string_view sv) {
-    // if the provided field-value is empty then we assume it to be regname..
+    // An empty host can still be a reg-name.
     if (sv.empty()) return host_type::kRegName;
-    // check [ip-literal] host..
+    // Try a bracketed IP literal.
     if (helpers::is_ip_literal(sv)) return host_type::kIpLiteral;
-    // check [ip-v4-address] host..
+    // Try an IPv4 address.
     if (helpers::is_ip_v4_address(sv)) return host_type::kIpV4Address;
-    // check [reg-name] host..
+    // Try a registered name.
     if (helpers::is_reg_name(sv)) return host_type::kRegName;
-    // default [unknown] host type..
+    // None matched: host type unknown.
     return host_type::kUnknown;
   }
   // +=========================================================================+
@@ -1885,12 +1734,9 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )                     |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a bare URI scheme name (no trailing   |
-  // | ":"). This is the shared shape of a URI scheme (RFC 3986 S3.1), of the  |
-  // | "proto" parameter value of the Forwarded header (RFC 7239 S5.4), and of |
-  // | an X-Forwarded-Proto list element. Returns false on an empty value, a   |
-  // | non-ALPHA first character, or any subsequent character outside          |
-  // | ALPHA / DIGIT / "+" / "-" / ".".                                        |
+  // | Check a bare URI scheme, without ':'. Start with a letter, then allow   |
+  // | letters, digits, '+', '-' and '.'. Forwarded proto values share this    |
+  // | syntax.                                                                 |
   // +-------------------------------------------------------------------------+
   static constexpr bool is_uri_scheme(std::string_view sv) noexcept {
     if (sv.empty() || !is_alpha(sv[0])) return false;
@@ -1909,14 +1755,12 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )                     |
   // +-------------------------------------------------------------------------+
-  // | Detects an optional leading "scheme ':'" prefix. On success, advances   |
-  // | 'i' past the ':' and returns true; otherwise leaves 'i' untouched and   |
-  // | returns false (the value is then treated as a relative reference). The  |
-  // | scheme portion is validated with is_uri_scheme.                         |
+  // | Try a leading scheme and ':'. On success, advance i past ':'; otherwise |
+  // | leave i alone and treat the input as relative.                          |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_uri_scheme(std::string_view sv,
                                            std::size_t& i) noexcept {
-    // A URI scheme is delimited by the mandatory ":" separator.
+    // A scheme needs its ':' separator.
     const std::size_t colon_at = sv.find(':');
     if (colon_at == std::string_view::npos) return false;
     if (!is_uri_scheme(sv.substr(0, colon_at))) return false;
@@ -1930,8 +1774,8 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | pct-encoded = "%" HEXDIG HEXDIG                                         |
   // +-------------------------------------------------------------------------+
-  // | Assumes sv[i] == '%'. On success, advances 'i' past the two HEXDIGs     |
-  // | and returns true; otherwise returns false.                              |
+  // | Starting at '%', check the next two hex digits and advance i on         |
+  // | success.                                                                |
   // +-------------------------------------------------------------------------+
   static constexpr bool consume_uri_pct_encoded(std::string_view sv,
                                                 std::size_t& i) noexcept {
@@ -1945,29 +1789,16 @@ struct helpers {
   // +=========================================================================+
   // | RFC 3986 S2.1 S pct-encoded (validation)                                |
   // +-------------------------------------------------------------------------+
-  // | Read-only counterpart of 'percent_decode_in_place'. Scans every         |
-  // | well-formed "%HH" pct-encoded triplet within 'sv' and checks that its   |
-  // | decoded byte is never NUL (0x00), which is never valid within a path,   |
-  // | without writing back into (or otherwise mutating) the source buffer.    |
-  // | Assumes 'sv' was already validated as syntactically well-formed (every  |
-  // | '%' is followed by two HEXDIGs), as guaranteed by the URI parsing       |
-  // | helpers upstream. Returns true if no triplet decodes to NUL, false      |
-  // | otherwise.                                                              |
+  // | Check that no %HH triplet decodes to NUL, without changing the bytes.   |
+  // | URI syntax must already be valid: every '%' needs two hex digits.       |
   // +=========================================================================+
   static constexpr bool percent_decode_validate(std::string_view sv) noexcept {
     const std::size_t len = sv.size();
     for (std::size_t r = 0; r < len;) {
       if (sv[r] == '%' && r + 2 < len && is_hex_digit(sv[r + 1]) &&
           is_hex_digit(sv[r + 2])) {
-        auto hex_val = [](char h) -> unsigned char {
-          if (h >= '0' && h <= '9') return static_cast<unsigned char>(h - '0');
-          if (h >= 'a' && h <= 'f') {
-            return static_cast<unsigned char>(h - 'a' + 10);
-          }
-          return static_cast<unsigned char>(h - 'A' + 10);
-        };
         unsigned char decoded = static_cast<unsigned char>(
-            (hex_val(sv[r + 1]) << 4) | hex_val(sv[r + 2]));
+            (hex_value(sv[r + 1]) << 4) | hex_value(sv[r + 2]));
         if (decoded == 0x00) return false;
         r += 3;
         continue;
@@ -1981,50 +1812,26 @@ struct helpers {
   // +=========================================================================+
   // | RFC 3986 S2.1 S pct-encoded (decoding)                                  |
   // +-------------------------------------------------------------------------+
-  // | Decodes every well-formed "%HH" pct-encoded triplet within 'sv' back    |
-  // | into its raw byte, writing the result back into the very same           |
-  // | underlying buffer and shrinking 'sv' to the decoded length (mirroring   |
-  // | how ows_ltrim/ows_rtrim mutate their string_view argument in place).    |
-  // | This is safe because a decoded string is never longer than its encoded  |
-  // | source, so a simple two-pointer (read/write) pass suffices with no      |
-  // | extra allocation. The '/' character is copied as-is and never produced  |
-  // | as a decoding result of a "%2F"/"%2f" triplet being treated as a        |
-  // | separator; decoding happens uniformly, segment boundaries are the       |
-  // | caller's responsibility to (re-)establish only on literal '/' bytes     |
-  // | that were present before decoding.                                      |
-  // | Assumes 'sv' was already validated as syntactically well-formed (every  |
-  // | '%' is followed by two HEXDIGs) and semantically valid (no triplet      |
-  // | decodes to NUL), as guaranteed by 'percent_decode_validate' upstream,   |
-  // | and that it points into a buffer the caller owns and is allowed to      |
-  // | mutate. Does not re-check for NUL bytes, to avoid doing that work       |
-  // | twice; callers that have not already validated 'sv' must call           |
-  // | 'percent_decode_validate' beforehand.                                   |
+  // | Decode %HH in the caller's writable buffer and shrink sv in place.      |
+  // | Validate syntax and reject decoded NULs with percent_decode_validate    |
+  // | first. No allocation or second NUL check here. Decode uniformly;        |
+  // | callers must keep track of which slashes were literal separators before |
+  // | decoding.                                                               |
   // +=========================================================================+
   static constexpr void percent_decode_in_place(
       std::string_view& sv) noexcept {
-    // Fast path: the overwhelming majority of requests carry no "%" in the
-    // path at all. Detect that up front and return immediately without
-    // touching a single byte of the buffer, avoiding an O(n) self-copy loop
-    // on every request for the (dominant) case where there is nothing to
-    // decode.
+    // No '%' means nothing to decode. Skip the scan-and-copy work entirely.
     const std::size_t pct_at = sv.find('%');
     if (pct_at == std::string_view::npos) return;
     char* data = const_cast<char*>(sv.data());
     const std::size_t len = sv.size();
-    // Bytes before the first '%' are already known to need no rewriting.
+    // Leave bytes before the first '%' alone.
     std::size_t r = pct_at, w = pct_at;
     while (r < len) {
       if (data[r] == '%' && r + 2 < len && is_hex_digit(data[r + 1]) &&
           is_hex_digit(data[r + 2])) {
-        auto hex_val = [](char h) -> unsigned char {
-          if (h >= '0' && h <= '9') return static_cast<unsigned char>(h - '0');
-          if (h >= 'a' && h <= 'f') {
-            return static_cast<unsigned char>(h - 'a' + 10);
-          }
-          return static_cast<unsigned char>(h - 'A' + 10);
-        };
         unsigned char decoded = static_cast<unsigned char>(
-            (hex_val(data[r + 1]) << 4) | hex_val(data[r + 2]));
+            (hex_value(data[r + 1]) << 4) | hex_value(data[r + 2]));
         data[w++] = static_cast<char>(decoded);
         r += 3;
         continue;
@@ -2062,22 +1869,12 @@ struct helpers {
   // | host = IP-literal / IPv4address / reg-name                              |
   // | port = *DIGIT                                                           |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a uri-host optionally followed by a   |
-  // | ":" port. This is the userinfo-free portion of an authority, shared by  |
-  // | the Host header (RFC 9110 S7.2), an authority-form request-target, and  |
-  // | the serialized-origin of the Origin header (RFC 6454 S7). An IP-literal |
-  // | host keeps its bracketed colons intact (via split_authority_host_port), |
-  // | and both an empty reg-name host and an empty port are syntactically     |
-  // | valid because each uses the "*" repetition operator. Returns false only |
-  // | on an unterminated IP-literal, an unknown host form, a missing ":"      |
-  // | before a port, or a non-DIGIT port.                                     |
+  // | Check a whole host with an optional :port, without userinfo. Keep IPv6  |
+  // | brackets and colons intact. Empty reg-names and ports are valid here;   |
+  // | reject malformed hosts or nondigit ports.                               |
   // +-------------------------------------------------------------------------+
-  // | The producer overload additionally exposes the parsed pieces on         |
-  // | success: uri_host receives the uri-host substring (bracketed colons of  |
-  // | an IP-literal kept intact), port receives the raw *DIGIT run after the  |
-  // | ":" (empty when no port is present), and type classifies the host. On   |
-  // | failure the out-parameters are left unspecified. Both overloads share   |
-  // | the same parsing so the syntactic and producing paths never diverge.    |
+  // | Also return the host view, raw port digits and host type. Don't use     |
+  // | those outputs after failure. Both overloads share the parser.           |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_host_port(std::string_view sv,
                                         std::string_view& uri_host,
@@ -2085,13 +1882,13 @@ struct helpers {
                                         host_type& type) noexcept {
     std::size_t colon_at;
     if (!split_authority_host_port(sv, uri_host, colon_at)) return false;
-    // host can be empty because reg-name = *( ... ).
+    // A reg-name can be empty.
     type = uri_host.empty() ? host_type::kRegName : check_uri_host(uri_host);
     if (type == host_type::kUnknown) return false;
     port = {};
     if (colon_at < sv.size()) {
       if (sv[colon_at] != ':') return false;
-      // port = *DIGIT, so an empty port is syntactically valid.
+      // An empty port is allowed by *DIGIT.
       port = sv.substr(colon_at + 1);
       if (!is_port(port)) return false;
     }
@@ -2110,22 +1907,18 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   // | serialized-origin = scheme "://" host [ ":" port ]                      |
   // +-------------------------------------------------------------------------+
-  // | Validates that sv, as a whole, is a single serialized origin: a URI     |
-  // | scheme, the literal "://", and a userinfo-free "host [ ":" port ]". A   |
-  // | serialized origin has no path, query, fragment, trailing slash, or      |
-  // | userinfo. This is the shared shape of an Origin list element (RFC 6454  |
-  // | S7) and of the non-"*"/"null" alternative of Access-Control-Allow-      |
-  // | Origin (WHATWG Fetch S3.3.4). Returns false on a missing/invalid        |
-  // | scheme, a scheme not followed by "//", or an invalid host/port.         |
+  // | Check one origin: scheme://host[:port], without userinfo, path, query,  |
+  // | fragment or trailing slash. Origin and Access-Control-Allow-Origin      |
+  // | share this form (RFC 6454, WHATWG Fetch).                               |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_serialized_origin(std::string_view sv) noexcept {
     std::size_t i = 0;
-    // consume_uri_scheme validates "scheme :" and advances past the colon.
+    // Consume the scheme and its ':'.
     if (!consume_uri_scheme(sv, i)) return false;
-    // The scheme's colon must be followed by "//".
+    // Require '//' after ':'.
     if (i + 1 >= sv.size() || sv[i] != '/' || sv[i + 1] != '/') return false;
     i += 2;
-    // The remainder is a userinfo-free "host [ ":" port ]".
+    // Check the rest as host[:port], with no userinfo.
     return check_host_port(sv.substr(i));
   }
   // +=========================================================================+
@@ -2142,7 +1935,7 @@ struct helpers {
       if (!check_uri_userinfo(sv.substr(0, at_pos))) return false;
       rest = sv.substr(at_pos + 1);
     }
-    // The remainder is the userinfo-free "host [ ":" port ]" portion.
+    // Check the rest as host[:port], with no userinfo.
     return check_host_port(rest);
   }
   // +=========================================================================+
@@ -2160,21 +1953,17 @@ struct helpers {
   // | query         = *( pchar / "/" / "?" )                                  |
   // | fragment      = *( pchar / "/" / "?" )                                  |
   // +-------------------------------------------------------------------------+
-  // | Validates a whole, normalized field value (no surrounding OWS). When    |
-  // | 'allow_fragment' is false the grammar is restricted to                  |
-  // | "absolute-URI / partial-URI" (used by Content-Location), so an          |
-  // | unencoded "#" is rejected. When 'allow_fragment' is true the optional   |
-  // | "#" fragment component is accepted (used by Location).                  |
+  // | Check the whole normalized value, with no surrounding OWS.              |
+  // | allow_fragment permits '#fragment' for Location; otherwise reject it,   |
+  // | as Content-Location requires.                                           |
   // +-------------------------------------------------------------------------+
   static constexpr bool check_uri_reference(std::string_view sv,
                                             bool allow_fragment) noexcept {
-    // An empty value is syntactically permitted by relative-ref (path-empty).
+    // A relative reference can have an empty path.
     if (sv.empty()) return true;
     std::size_t i = 0;
-    // Consume "scheme ':'" if present. When it is not, we are dealing with a
-    // relative reference, which forbids ':' in the first (schemeless) path
-    // segment. When it is, the hier-part allows ':' in path-rootless without
-    // any ambiguity.
+    // Try scheme: first. Without it, the first path segment can't contain ':';
+    // with it, a rootless path can.
     const bool has_scheme = consume_uri_scheme(sv, i);
     // hier-part / relative-part:
     //   "//" authority path-abempty
@@ -2194,7 +1983,7 @@ struct helpers {
       }
       has_authority = true;
     }
-    // Consume the path, validating "/" separators, pchar, and pct-encoded.
+    // Check path bytes, '/' separators and percent escapes.
     const std::size_t path_start = i;
     while (i < sv.size() && sv[i] != '?' && sv[i] != '#') {
       if (sv[i] == '%') {
@@ -2204,15 +1993,14 @@ struct helpers {
       if (sv[i] != '/' && !is_pchar(sv[i])) return false;
       i++;
     }
-    // RFC 3986 S3.3: when neither a scheme nor an authority is present, the
-    // first path segment MUST NOT contain a colon (path-noscheme); otherwise
-    // it would be indistinguishable from a scheme-prefixed reference.
+    // Without a scheme or authority, ':' can't appear in the first segment: it
+    // would look like a scheme (RFC 3986 S3.3).
     if (!has_scheme && !has_authority) {
       const std::string_view path = sv.substr(path_start, i - path_start);
       const std::string_view first_segment = path.substr(0, path.find('/'));
       if (first_segment.find(':') != std::string_view::npos) return false;
     }
-    // Optional query: "?" query, where query = *( pchar / "/" / "?" ).
+    // Allow an optional ?query.
     if (i < sv.size() && sv[i] == '?') {
       i++;
       while (i < sv.size() && sv[i] != '#') {
@@ -2224,10 +2012,8 @@ struct helpers {
         i++;
       }
     }
-    // Optional fragment: "#" fragment, where fragment = *( pchar / "/" / "?" ).
-    // Only URI-reference (allow_fragment) accepts it; for the restricted
-    // "absolute-URI / partial-URI" grammar an unencoded "#" is invalid, so the
-    // loops above stop at it and the final length check below fails.
+    // Allow #fragment only for URI-reference. The restricted form rejects an
+    // unescaped '#'.
     if (allow_fragment && i < sv.size() && sv[i] == '#') {
       i++;
       while (i < sv.size()) {
@@ -2244,25 +2030,14 @@ struct helpers {
   // +=========================================================================+
   // | [>] split_authority_host_port                                ( public ) |
   // +=========================================================================+
-  // | Splits a "uri-host [ ':' port ]" sequence into its uri-host substring   |
-  // | and the position of the uri-host/port separator ':', recognizing        |
-  // | IP-literal hosts (e.g. "[::1]") so that colons nested inside "[...]"    |
-  // | are never mistaken for that separator.                                  |
+  // | Split host[:port], keeping bracketed IPv6 colons inside the host.       |
   // +-------------------------------------------------------------------------+
-  // | Returns false only when sv begins with an unterminated IP-literal (an   |
-  // | opening "[" with no matching "]"); callers decide whether that means    |
-  // | "invalid" (whole-value checks) or "more bytes needed" (streaming        |
-  // | parsers).                                                               |
+  // | Only an unclosed '[' fails here. Callers decide whether that's invalid  |
+  // | input or a reason to wait for more bytes.                               |
   // +-------------------------------------------------------------------------+
-  // | On success, uri_host receives the uri-host substring. colon_at          |
-  // | receives:                                                               |
-  // | - for a non-IP-literal uri-host, the index of ':' within sv, or         |
-  // | std::string_view::npos if sv contains no ':' at all;                    |
-  // | - for an IP-literal uri-host, the index right past the closing "]",     |
-  // | which callers MUST bounds-check (it may equal sv.size()) and            |
-  // | compare against sv[colon_at] themselves before treating what            |
-  // | follows as a port, since that position may hold a character other       |
-  // | than ':'.                                                               |
+  // | Return the host view and separator position. For bracketed hosts,       |
+  // | colon_at is just after ']': bounds-check it and confirm ':' before      |
+  // | reading a port. Otherwise it's the ':' index, or npos when absent.      |
   // +-------------------------------------------------------------------------+
   static constexpr bool split_authority_host_port(
       std::string_view sv, std::string_view& decoded_uri_host,
@@ -2305,20 +2080,16 @@ struct helpers {
   // | | "," / ";" / "="                                                       |
   // +-------------------------------------------------------------------------+
   // +-------------------------------------------------------------------------+
-  // | On success, uri_host, port, and type additionally expose the parsed     |
-  // | uri-host substring, the raw port digits (empty when none follow the     |
-  // | ":"), and the host classification, mirroring what check_host_port       |
-  // | exposes, so the caller never has to re-parse them.                      |
+  // | Also return the host view, raw port digits and host type, just like     |
+  // | check_host_port. No need to parse them again.                           |
   // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_authority_form(
       std::string_view sv, std::string_view& uri_host, std::string_view& port,
       host_type& type, std::size_t& bytes_used) noexcept {
     bytes_used = 0;
     if (sv.empty()) return deserialization_status::kMoreBytesNeeded;
-    // uri-host may be an IP-literal (e.g., "[::1]"), whose embedded colons
-    // must not be mistaken for the uri-host/port separator. Since reg-name
-    // and IPv4address characters never include ":", the first unbracketed
-    // ":" reliably marks the uri-host/port separator.
+    // Only an unbracketed ':' separates host and port; IPv6 keeps its inner
+    // colons.
     std::string_view sv_uri_host;
     std::size_t colon_at;
     if (!split_authority_host_port(sv, sv_uri_host, colon_at)) {
@@ -2331,14 +2102,11 @@ struct helpers {
     if (type == host_type::kUnknown) {
       return deserialization_status::kInvalidSource;
     }
-    // For the IP-literal branch, colon_at was not confirmed to hold ':' yet;
-    // for the non-bracket branch, split_authority_host_port already
-    // guarantees it (colon_at can only be npos there, already handled above).
+    // After ']', confirm the next byte is ':'. The unbracketed path already
+    // checked it.
     if (colon_at >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[colon_at] != ':') return deserialization_status::kInvalidSource;
-    // port = *DIGIT (self-delimiting: greedily consume digits and let the
-    // caller decide whether what follows is a valid request-target
-    // terminator).
+    // Consume port digits; let the caller check what follows.
     std::size_t i = colon_at + 1;
     while (i < sv.size() && is_digit(sv[i])) i++;
     uri_host = sv_uri_host;
@@ -2356,8 +2124,7 @@ struct helpers {
   // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_asterisk_form(
       std::string_view sv, std::size_t& bytes_used) noexcept {
-    // asterisk-form only ever occupies a single octet within request-target;
-    // trailing content (e.g., " HTTP/1.1") is left for the caller to parse.
+    // Consume just '*'; leave the rest of the request line to the caller.
     if (sv.empty()) return deserialization_status::kMoreBytesNeeded;
     if (sv.front() != '*') return deserialization_status::kInvalidSource;
     bytes_used = 1;
@@ -2380,10 +2147,7 @@ struct helpers {
         try_to_deserialize_as_absolute_path(sv, tmp_path, i);
     if (result != deserialization_status::kSucceeded) return result;
     if (i < sv_size && sv[i] == '?') {
-      // The "?" is a literal separator external to the query production
-      // (query = *( pchar / "/" / "?" )), so it must be skipped before
-      // delegating to try_to_deserialize_as_query; otherwise it would be
-      // consumed as if it were part of the query content itself.
+      // Skip the query's leading '?'; it's a separator, not query data.
       std::size_t bytes = 0;
       result = try_to_deserialize_as_query(sv.substr(i + 1), tmp_query, bytes);
       if (result != deserialization_status::kSucceeded) return result;
@@ -2397,10 +2161,8 @@ struct helpers {
   // +=========================================================================+
   // | [>] default_port_for_scheme                                  ( public ) |
   // +=========================================================================+
-  // | RFC 9110 S4.2.1 / S4.2.2 S returns the default port a scheme normalizes |
-  // | to when the authority omits one ("80" for "http", "443" for "https",    |
-  // | matched case-insensitively). Any other (or empty) scheme has no known   |
-  // | default and yields an empty view.                                       |
+  // | Use port 80 for http and 443 for https, ignoring scheme case. Unknown   |
+  // | or empty schemes have no default (RFC 9110 S4.2.1, S4.2.2).             |
   // +=========================================================================+
   static constexpr std::string_view default_port_for_scheme(
       std::string_view scheme) noexcept {
@@ -2411,12 +2173,8 @@ struct helpers {
   // +=========================================================================+
   // | [>] ports_equivalent                                         ( public ) |
   // +=========================================================================+
-  // | True when two port views denote the same effective port for "scheme".   |
-  // | Equal raw digit runs are always equivalent. Otherwise, an omitted       |
-  // | (empty                                                                  |
-  // | ) port is normalized to the scheme default before comparing, so e.g.    |
-  // | "http" with "" and "80" compare equal while "" and "8080" do not. When  |
-  // | the scheme has no known default, only exact string equality qualifies.  |
+  // | Compare raw ports first, then fill an omitted port with the scheme's    |
+  // | default. Without a known default, only identical strings match.         |
   // +=========================================================================+
   static constexpr bool ports_equivalent(std::string_view scheme,
                                          std::string_view a,
@@ -2459,13 +2217,9 @@ struct helpers {
   // | | "," / ";" / "="                                                       |
   // +-------------------------------------------------------------------------+
   // +-------------------------------------------------------------------------+
-  // | When the "//" authority path-abempty branch is taken, has_authority is  |
-  // | set and uri_host, port, and type additionally expose the parsed         |
-  // | authority pieces (mirroring check_host_port), so the caller never has   |
-  // | to re-parse them; otherwise has_authority is left false and uri_host /  |
-  // | port / type are left unspecified. "scheme" always exposes the parsed    |
-  // | scheme substring (lower/upper-case as received), enabling default-port  |
-  // | normalization of the authority against the scheme.                      |
+  // | Return the scheme as received. With an authority, also set              |
+  // | has_authority and return host, port and type. Without one, leave        |
+  // | has_authority false and don't use those outputs.                        |
   // +-------------------------------------------------------------------------+
   static constexpr deserialization_status try_to_deserialize_as_absolute_form(
       std::string_view sv, std::string_view& consumed_path,
@@ -2496,8 +2250,8 @@ struct helpers {
       i++;
     }
     if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
-    scheme = sv.substr(0, i);  // scheme text, excluding the ':' terminator.
-    i++;  // skip ':'
+    scheme = sv.substr(0, i);  // Keep the scheme text, without ':'.
+    i++;  // Skip ':'.
     // -------------------------------------------------------------------------
     // hier-part = "//" authority path-abempty
     //           / path-absolute / path-rootless / path-empty
@@ -2507,7 +2261,7 @@ struct helpers {
       // "//" authority path-abempty
       i += 2;
       const std::size_t authority_start = i;
-      // Scan authority: stop at '/', '?', or any non-authority character.
+      // Scan the authority up to '/', '?' or a byte it can't contain.
       while (i < sv_size) {
         const char c = sv[i];
         if (c == '/' || c == '?') break;
@@ -2522,20 +2276,20 @@ struct helpers {
         // Valid authority chars: unreserved / sub-delims / : / @ / [ / ]
         if (!is_unreserved(c) && !is_sub_delim(c) &&
             c != ':' && c != '@' && c != '[' && c != ']') {
-          break;  // Non-authority char (e.g., space) ends authority.
+          break;  // A non-authority byte, such as a space, ends the scan.
         }
         i++;
       }
       const std::string_view authority =
           sv.substr(authority_start, i - authority_start);
-      // Validate authority: [ userinfo "@" ] host [ ":" port ]
+      // Check the authority's optional userinfo, host and port.
       const std::size_t at_pos = authority.find('@');
       std::string_view host_port;
       if (at_pos != std::string_view::npos) {
         const std::string_view userinfo = authority.substr(0, at_pos);
         for (std::size_t j = 0; j < userinfo.size();) {
           if (userinfo[j] == '%') {
-            // pct-encoded already validated during authority scan.
+            // The authority scan already checked percent escapes.
             j += 3;
             continue;
           }
@@ -2580,7 +2334,7 @@ struct helpers {
           i += 3;
           continue;
         }
-        if (sv[i] != '/' && !is_pchar(sv[i])) break;  // Non-path char.
+        if (sv[i] != '/' && !is_pchar(sv[i])) break;  // Not a path byte.
         i++;
       }
     } else {
@@ -2594,7 +2348,7 @@ struct helpers {
           i += 3;
           continue;
         }
-        if (sv[i] != '/' && !is_pchar(sv[i])) break;  // Non-path char.
+        if (sv[i] != '/' && !is_pchar(sv[i])) break;  // Not a path byte.
         i++;
       }
     }
@@ -2603,7 +2357,7 @@ struct helpers {
     // [ "?" query ]
     // -------------------------------------------------------------------------
     if (i < sv_size && sv[i] == '?') {
-      i++;  // skip '?'
+      i++;  // Skip '?'.
       std::size_t query_bytes = 0;
       std::string_view tmp_query;
       const deserialization_status result =
@@ -2695,7 +2449,7 @@ struct helpers {
   // +=========================================================================+
   // | [>] iequals                                                  ( public ) |
   // +=========================================================================+
-  // | Compares two string_views for case-insensitive equality.                |
+  // | Compare two string views, ignoring ASCII case.                          |
   // +-------------------------------------------------------------------------+
   static constexpr bool iequals(std::string_view a, std::string_view b) {
     return a.size() == b.size() &&
@@ -2706,21 +2460,10 @@ struct helpers {
   // +=========================================================================+
   // | [>] split_query_parameters                                   ( public ) |
   // +=========================================================================+
-  // | Splits a raw query string (the query component already stripped of its  |
-  // | leading '?') into key/value pairs following the application/x-www-form- |
-  // | urlencoded convention:                                                  |
-  // | query      = pair *( "&" pair )                                         |
-  // | pair       = key [ "=" value ]                                          |
-  // | key/value  = *( any char except "&" ; value also except first "=" )     |
-  // | Rules: pairs are separated by '&'; the first '=' inside a pair          |
-  // | separates                                                               |
-  // | key from value; a pair without '=' yields an empty value; empty pairs   |
-  // | (e.g. produced by "a&&b" or a leading/trailing '&') are skipped. Every  |
-  // | emitted view is zero-copy over 'query', so the caller must keep the     |
-  // | backing buffer alive (or copy the spans, as request.h does). Writes at  |
-  // | most out_keys.size() entries into the caller-provided spans and returns |
-  // | the number of pairs written (excess pairs are dropped, matching the     |
-  // | fixed-capacity policy already used for headers).                        |
+  // | Split a query without its leading '?' on '&', then on the first '='.    |
+  // | Skip empty pairs; a name without '=' has an empty value. Return         |
+  // | borrowed views, so keep the backing bytes alive. Stop at                |
+  // | out_keys.size(); drop excess pairs.                                     |
   // +=========================================================================+
   static constexpr std::size_t split_query_parameters(
       std::string_view query, std::span<std::string_view> out_keys,
@@ -2730,10 +2473,10 @@ struct helpers {
     std::size_t i = 0;
     const std::size_t size = query.size();
     while (i < size && count < max_pairs) {
-      // Find the end of the current pair (delimited by '&' or end-of-input).
+      // Find the next '&' or the end of input.
       std::size_t pair_end = i;
       while (pair_end < size && query[pair_end] != '&') pair_end++;
-      // Skip empty pairs ("&&", leading/trailing '&').
+      // Skip empty pairs from leading, trailing or repeated '&'.
       if (pair_end != i) {
         std::string_view pair = query.substr(i, pair_end - i);
         std::size_t eq = pair.find('=');
@@ -2746,7 +2489,7 @@ struct helpers {
         }
         count++;
       }
-      // Advance past the pair and its '&' delimiter (if any).
+      // Move past this pair and its '&', if present.
       i = (pair_end < size) ? pair_end + 1 : pair_end;
     }
     return count;

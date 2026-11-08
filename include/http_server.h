@@ -47,7 +47,7 @@ namespace martianlabs::doba {
 // +---------------------------------------------------------------------------+
 // | [>] http_server                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Composes a TCP HTTP/1.1 routing with a protocol engine and transport.     |
+// | Wire the HTTP/1.1 router, engine and TCP transport together.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = protocol::http::v11::request,
@@ -90,8 +90,7 @@ class http_server
                 std::move(engine_configuration), this->router_)},
         authentication_(std::move(authentication)) {
     // +-----------------------------------------------------------------------+
-    // | Let's set 'on_starting' callback that will be used to start the date  |
-    // | server when the HTTP server starts.                                   |
+    // | Start the date server along with HTTP.                                |
     // +-----------------------------------------------------------------------+
     this->set_on_starting([this]() {
       {
@@ -101,8 +100,7 @@ class http_server
       common::date_server::get().start();
     });
     // +-----------------------------------------------------------------------+
-    // | Let's set 'on_start_failed' callback that will be used to stop the    |
-    // | date server when the HTTP server fails to start.                      |
+    // | If HTTP startup fails, stop the date server too.                      |
     // +-----------------------------------------------------------------------+
     this->set_on_start_failed([this]() {
       common::date_server::get().stop();
@@ -110,8 +108,7 @@ class http_server
       registration_closed_ = false;
     });
     // +-----------------------------------------------------------------------+
-    // | Let's set 'on_stopped' callback that will be used to stop the date    |
-    // | server when the HTTP server stops.                                    |
+    // | Stop the date server when HTTP stops.                                 |
     // +-----------------------------------------------------------------------+
     this->set_on_stopped([this]() {
       common::date_server::get().stop();
@@ -123,7 +120,7 @@ class http_server
   // +=========================================================================+
   // | [>] add_route                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a route to the server's router.                                    |
+  // | Add a route to the router.                                              |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires protocol::http::detail::router_handler_lambda<Hty>
@@ -161,7 +158,7 @@ class http_server
   // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Adds a controller to the server's router.                               |
+  // | Register a controller's routes.                                         |
   // +-------------------------------------------------------------------------+
   template <typename CTty, typename... Args>
   http_server& add_controller(Args&&... args) {

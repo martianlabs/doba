@@ -95,11 +95,11 @@ struct custom_protocol {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Protocol line limit, including the newline, independent of socket RX.
+  // Cap a protocol line, newline included, separately from socket RX.
   static constexpr std::size_t kMaximumLineSize = 4096;
-  // Incomplete line retained by the engine between input calls.
+  // Keep the unfinished line between input calls.
   std::string input_;
-  // Synchronous output and closure supplied by the transport.
+  // The transport supplies synchronous send and close callbacks.
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;
 };
@@ -109,7 +109,7 @@ struct custom_protocol {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs a line-based protocol on doba's TCP transport.                       |
+// | Run a line-based protocol over doba TCP.                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

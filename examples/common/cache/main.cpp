@@ -35,7 +35,7 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Demonstrates generic loading, invalidation and retained cache values.     |
+// | Load a value, invalidate it, and keep an old snapshot alive.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

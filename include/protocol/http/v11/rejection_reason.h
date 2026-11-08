@@ -30,8 +30,8 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] rejection_reason                                       ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | Why a verdict::kReject (or a syntactic kInvalidSource) happened, at the   |
-// | granularity the HTTP/1.1 layer needs to pick a status code.               |
+// | Keep the rejection reason specific enough to choose an HTTP status,       |
+// | whether rejection came from syntax or semantics.                          |
 // +---------------------------------------------------------------------------+
 // | kNone                 | no rejection (or reason not tracked yet).         |
 // +---------------------------------------------------------------------------+
@@ -62,15 +62,15 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class rejection_reason {
-  kNone,                  // no rejection (or reason not tracked yet).
-  kSyntax,                // malformed message; maps to 400 Bad Request.
-  kPayloadTooLarge,       // policy size limit exceeded; maps to 413.
-  kUnsupportedFeature,    // valid feature disabled by policy; maps to 501.
-  kVersionNotSupported,   // HTTP version above what is spoken; maps to 505.
-  kUriTooLong,            // request-target too long; maps to 414.
-  kHeaderFieldsTooLarge,  // header section too large; maps to 431.
-  kHandlerError,          // user handler threw an exception; maps to 500.
-  kExpectationFailed,     // unsupported Expect expectation; maps to 417.
+  kNone,                  // No rejection, or no reason recorded yet.
+  kSyntax,                // Malformed message: 400 Bad Request.
+  kPayloadTooLarge,       // Message too large for policy: 413.
+  kUnsupportedFeature,    // Valid but disabled feature: 501.
+  kVersionNotSupported,   // We don't speak this higher HTTP version: 505.
+  kUriTooLong,            // Request target too long: 414.
+  kHeaderFieldsTooLarge,  // Too many header bytes: 431.
+  kHandlerError,          // The handler threw: 500.
+  kExpectationFailed,     // Can't meet this Expect value: 417.
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

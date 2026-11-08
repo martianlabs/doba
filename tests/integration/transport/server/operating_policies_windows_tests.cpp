@@ -181,7 +181,7 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   for (auto &thread : burst)
     thread.join();
   DOBA_EXPECT_EQUAL(rejected.load(), 8);
-  // A separate instance still admits while this instance has no credit.
+  // One full instance must not block admission in another.
   auto independent_configuration = p;
   const auto independent_port = probe.find_available_port();
   independent_configuration.port = std::to_string(independent_port);

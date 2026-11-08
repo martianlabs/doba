@@ -50,9 +50,9 @@ using namespace std::chrono_literals;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct observations {
-  // Gate for the engine deliberately held on a separate connection.
+  // Gate an engine on a separate connection on purpose.
   martianlabs::doba::tests::manual_event held, release;
-  // Records any overlapping engine calls on the same connection.
+  // Record any overlapping calls into one engine.
   std::atomic<bool> overlap{false};
 };
 
@@ -104,11 +104,11 @@ struct serial_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Shared test observations; each engine keeps its own entry guard.
+  // Share test observations; give each engine its own entry guard.
   std::shared_ptr<observations> state;
-  // Per-engine overlap detection independent of transport synchronization.
+  // Detect engine overlap without relying on transport locks.
   std::atomic<bool> active{false};
-  // Synchronous output callback supplied by the transport.
+  // Synchronous send callback from the transport.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace

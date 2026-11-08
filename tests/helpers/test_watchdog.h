@@ -51,7 +51,7 @@ inline bool parse_test_timeout(std::string_view text,
   return true;
 }
 
-// One watchdog per runner, including the cleanup performed inside each test.
+// One watchdog covers each runner, including test cleanup.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] test_watchdog                                               ( class ) |
@@ -120,7 +120,8 @@ class test_watchdog {
                    static_cast<int>(file_.size()), file_.data(), line_,
                    static_cast<int>(name_.size()), name_.data());
       std::fflush(stderr);
-      // A hung test cannot safely unwind. Avoid abort dialogs and core dumps.
+      // A hung test can't unwind safely. Exit without abort dialogs or core
+      // dumps.
       std::_Exit(124);
     }
   }

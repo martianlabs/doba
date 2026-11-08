@@ -27,9 +27,8 @@ find_package(
   REQUIRED
 )
 
-# The official standalone/Docker build always defaults to all profiles. The
-# library's portable CI keeps its existing dependency-free TCP qualification
-# target; enabling full adapter checks there is an explicit build option.
+# Standalone/Docker builds use all profiles by default. Portable library CI
+# keeps its dependency-free TCP target; opt into full adapter checks there.
 set(_httparena_full_default ON)
 if(TARGET doba_headers)
   set(_httparena_full_default OFF)
@@ -76,8 +75,8 @@ source_group(
   FILES "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
 )
 
-# Root test builds also inherit doba's compiler warnings and register a
-# correctness check, not a load test. Full mode enables TLS on this target only.
+# Inherit doba's warnings and add a correctness check, not a load test.
+# Full mode enables TLS on this target only.
 if(TARGET doba_headers)
   target_link_libraries(doba_httparena_http_v11 PRIVATE doba_headers)
 endif()

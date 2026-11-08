@@ -4,8 +4,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   project(doba_qualification LANGUAGES CXX)
 endif()
 
-# Standalone bootstrap stays uninstrumented. Root builds also qualify these
-# tools under the selected compiler and sanitizer without exporting any API.
+# Keep standalone bootstrap uninstrumented. Root builds check these tools
+# with the chosen compiler/sanitizer; don't export a tooling API.
 find_package(Threads REQUIRED)
 add_library(doba_native_tools INTERFACE)
 target_compile_features(doba_native_tools INTERFACE cxx_std_20)

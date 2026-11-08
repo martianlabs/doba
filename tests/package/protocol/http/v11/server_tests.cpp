@@ -34,7 +34,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] package_controller                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
+// | Controller for this package test.                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class package_controller {
@@ -61,10 +61,8 @@ class package_controller {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is a simple example of how to use the HTTP/1.1 server with a package |
-// | controller and a static file server. It sets up routes for both the       |
-// | package controller and the static file server, and starts the server to   |
-// | listen for incoming requests.                                             |
+// | Check that a package consumer can run a controller and a static-file      |
+// | server together.                                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

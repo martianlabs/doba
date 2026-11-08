@@ -6,7 +6,7 @@ file(
   CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_LIST_DIR}/*_tests.cpp"
 )
-# Native implementation tests are separate translation units.
+# Give native implementation tests their own translation units.
 if(WIN32)
   list(FILTER INTEGRATION_TEST_SOURCES EXCLUDE REGEX "_linux_tests\\.cpp$")
 else()
@@ -39,7 +39,7 @@ add_test(
 )
 
 if(WIN32)
-  # A separate process gives resource measurements an isolated, warmed baseline.
+  # Use a separate process for an isolated, warmed resource baseline.
   add_executable(doba_resilience_tests
     "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
     "${integration_http_dir}/server_resilience_windows_tests.cpp")
@@ -121,7 +121,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 if(WIN32)
-  # Isolate native API interception from all other transport instantiations.
+  # Keep native API interception away from other transport instantiations.
   set(DOBA_IOCP_TEST_DIR "${CMAKE_CURRENT_LIST_DIR}/transport/server")
   add_executable(doba_iocp_completion_tests
     "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
@@ -134,7 +134,7 @@ if(WIN32)
 endif()
 
 if(WIN32)
-  # Keep API fault injection separate from normal transport instantiations.
+  # Inject API faults separately from normal transport instantiations.
   add_executable(doba_windows_lifecycle_tests
     "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
     "${DOBA_IOCP_TEST_DIR}/tcp_lifecycle_windows_probe.cpp")
@@ -176,7 +176,7 @@ if(DOBA_BUILD_EXAMPLES)
   set_tests_properties(doba_processing_examples_tests PROPERTIES TIMEOUT 30)
 endif()
 
-# A focused sanitizer/repetition target with independent wire oracles.
+# Run focused sanitizer/repeat checks with independent wire oracles.
 add_executable(doba_stream_integrity_tests
   "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/helpers/http_test_helper_tests.cpp"

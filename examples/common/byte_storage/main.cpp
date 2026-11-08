@@ -32,9 +32,7 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is a simple example of how to use the byte_storage class. It writes  |
-// | some data to the storage, finishes it, and then reads it back and prints  |
-// | it to the console.                                                        |
+// | Write a few bytes, finish the storage, then read them back.               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

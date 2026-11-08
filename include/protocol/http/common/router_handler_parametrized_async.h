@@ -43,9 +43,7 @@ namespace martianlabs::doba::protocol::http::detail {
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_parametrized_async                           ( class ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
+// | RQty and RSty are the request and response types.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -84,20 +82,17 @@ class router_handler_parametrized_async {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::string pattern_;     // The route pattern to match against.
-  matcher_type matcher_;    // The function to match the route pattern against.
-  callback_type callback_;  // The function to invoke when there's a match.
+  std::string pattern_;     // Pattern this handler matches.
+  matcher_type matcher_;    // Check whether the path matches.
+  callback_type callback_;  // Call this when the path matches.
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] make_router_handler_parametrized_async                     (function) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
-// | Args - route parameters being used                                        |
-// | Hty - handler being used                                                  |
+// | RQty/RSty are request/response types; Args are path parameters; Hty is    |
+// | the handler.                                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>

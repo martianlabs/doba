@@ -41,7 +41,7 @@ static constexpr DWORD kAcceptAddressBytes =
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_accept                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Windows overlapped accept operation.                                      |
+// | One Windows overlapped accept.                                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct overlapped_accept : overlapped_base {
@@ -63,7 +63,7 @@ struct overlapped_accept : overlapped_base {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Owned until context construction succeeds and takes the socket.
+  // Own the socket until a successfully built context takes it.
   SOCKET socket{INVALID_SOCKET};
   CHAR addresses[(kAcceptAddressBytes * 2)]{0};
 };

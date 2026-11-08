@@ -35,9 +35,8 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] writer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Encodes an outgoing Content-Length-framed body: the raw framing is a      |
-// | pure passthrough, so this simply forwards the caller-supplied payload     |
-// | bytes verbatim into the destination common::writer.                       |
+// | Raw Content-Length framing adds nothing. Forward payload bytes unchanged  |
+// | to the destination writer.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class writer_raw {
@@ -45,7 +44,7 @@ class writer_raw {
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Writes the given raw payload bytes into dst, unchanged.                 |
+  // | Write these payload bytes to dst unchanged.                             |
   // +-------------------------------------------------------------------------+
   static bool write(std::span<const std::byte> payload, common::writer& dst) {
     return dst.write(payload);
@@ -59,8 +58,8 @@ class writer_raw {
   // +=========================================================================+
   // | [>] end                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Raw (Content-Length) framing has no terminating sequence; provided for  |
-  // | API symmetry with writer_chunked so callers can treat both uniformly.   |
+  // | Raw framing has no final marker; keep end() as a no-op to match the     |
+  // | chunked API.                                                            |
   // +-------------------------------------------------------------------------+
   static bool end(common::writer&) { return true; }
 };

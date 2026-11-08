@@ -63,9 +63,7 @@ using martianlabs::doba::tests::integration::drain_state;
 // +---------------------------------------------------------------------------+
 // | [>] wait_count                                               ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function waits for an atomic integer to reach a specific value       |
-// | within a 5-second timeout. It returns true if the expected value is       |
-// | reached, false otherwise.                                                 |
+// | Wait up to five seconds for the atomic value to match.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool wait_count(const std::atomic<int>& value, int expected) {
@@ -77,13 +75,8 @@ bool wait_count(const std::atomic<int>& value, int expected) {
 // +---------------------------------------------------------------------------+
 // | [>] check_drain                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function tests the behavior of a TCP transport engine with respect   |
-// | to draining connections. It sets up a TCP server and clients, sends data, |
-// | and verifies that the engine correctly handles the draining process,      |
-// | including connection closure and data integrity. The function takes two   |
-// | boolean parameters: `destroy`, which indicates whether to destroy the     |
-// | transport or stop it gracefully, and `active_callback`, which determines  |
-// | if the callback should be active during the test.                         |
+// | Check inline-output draining and byte integrity when stopping or          |
+// | destroying TCP, with or without an active callback.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void check_drain(bool destroy, bool active_callback) {
@@ -135,7 +128,7 @@ void check_drain(bool destroy, bool active_callback) {
     clients[i].close();
   }
   stopped.get();
-  // A completed socket send need not wait for the peer to read it.
+  // Socket send completion doesn't mean the peer has read the bytes.
   if (active_callback) DOBA_EXPECT(waited);
   DOBA_EXPECT(rejects_connections);
   DOBA_EXPECT(intact);
@@ -240,15 +233,8 @@ struct reader_engine {
 // +---------------------------------------------------------------------------+
 // | [>] check_reader_drain                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function tests the behavior of a TCP transport engine with respect   |
-// | to draining connections when using a reader engine. It sets up a TCP      |
-// | server and client, sends data, and verifies that the engine correctly     |
-// | handles the draining process, including connection closure and data       |
-// | integrity. The function takes three boolean parameters: `destroy`, which  |
-// | indicates whether to destroy the transport or stop it gracefully;         |
-// | `close`, which indicates whether to close the connection after sending;   |
-// | and `empty`, which determines if empty deliveries should be sent          |
-// | during the test.                                                          |
+// | Check reader-output draining when stopping or destroying TCP. Vary        |
+// | close-after-send and empty deliveries too; verify bytes and closure.      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void check_reader_drain(bool destroy, bool close, bool empty = false) {
@@ -370,7 +356,7 @@ DOBA_TEST("stop rejects new engine input") {
   transport.set_on_connection([]() {});
   transport.set_on_disconnection([]() {});
   std::future<void> stopped;
-  // Release/abort before the future or transport destructors can wait.
+  // Release or abort before future/transport destructors can wait.
   scope_exit release([&] { state->release = true; client.abort(); });
   transport.start();
   DOBA_EXPECT(client.connect(port));
@@ -381,7 +367,7 @@ DOBA_TEST("stop rejects new engine input") {
   const auto deadline = std::chrono::steady_clock::now() + 5s;
   while (std::chrono::steady_clock::now() < deadline) {
     tcpip_client probe;
-    // Winsock can take about two seconds to report loopback refusal.
+    // Winsock may take about two seconds to report loopback refusal.
     if (!probe.connect(port, 3s) &&
         probe.native_error() == WSAECONNREFUSED) {
       listener_closed = true;
@@ -491,7 +477,7 @@ DOBA_TEST("source failure closes after accepted prefix and source bytes") {
     const std::string error(client.error());
     client.close();
     transport.stop();
-    // Aborting a failed source may reset the socket before its prefix drains.
+    // A failed source can reset the socket before its prefix drains.
     DOBA_EXPECT(bytes.has_value() || error == "socket");
     if (bytes) {
       const std::string expected = source_error == 1
@@ -838,7 +824,7 @@ DOBA_TEST("close discards input after draining output") {
     if (bytes) DOBA_EXPECT_EQUAL(*bytes, std::string(state->size, 'a'));
     DOBA_EXPECT(client.wait_for_close(5s));
     DOBA_EXPECT_EQUAL(disconnected.load(), 0);
-    // The peer can still send after observing the server's write shutdown.
+    // The peer can still send after seeing the server shut down TX.
     DOBA_EXPECT(client.send_all("later input"));
     if (stop) {
       transport.stop();

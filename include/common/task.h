@@ -83,7 +83,7 @@ class task {
     std::function<void(std::exception_ptr)> completion;
     std::exception_ptr error;
     task_scheduler scheduler;
-    bool controlled{false};  // Retain the frame for its serialized owner.
+    bool controlled{false};  // Keep the frame for its serialized owner.
   };
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |

@@ -36,15 +36,13 @@ namespace martianlabs::doba::transport::server::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] transport                                                 ( concept ) |
 // +---------------------------------------------------------------------------+
-// | Structural transport interface. Runtime rules for bundled TCP:            |
-// | configure and administer from one sequential external owner, outside      |
-// | worker callbacks. Notify connections outside transport locks.             |
-// | Serialize input/turns per connection; copy accepted inline output before  |
-// | the send callback returns. Transfer reader ownership; allow               |
-// | only one terminal reader and keep socket buffers alive during I/O.        |
-// | Engine close drains accepted output. Linux administrative stop cancels    |
-// | pending output; Windows drains it before joining its IOCP workers.        |
-// | Engines own coroutine frames and ordering; TCP delivers generic turns.    |
+// | Administer bundled TCP from one external caller, never a worker callback. |
+// | Notify connections outside transport locks. Serialize input/turns per     |
+// | connection; copy inline sends before returning. Own the single terminal   |
+// | reader and keep socket buffers alive during I/O. Engine close drains      |
+// | output; Linux administrative stop cancels it, Windows drains it before    |
+// | joining IOCP workers. Engines own coroutines and reply order; TCP         |
+// | supplies generic turns.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename TRty, typename ENty, typename FNty>
@@ -53,13 +51,13 @@ concept transport =
     std::constructible_from<TRty, typename TRty::policies_type, FNty> &&
     requires(TRty& tr, std::function<void()> callback) {
       typename TRty::policies_type;
-      // Set the callback for when a connection is established
+      // Call this when a connection arrives.
       { tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
-      // Set the callback for when a connection is disconnected
+      // Call this when a connection leaves.
       { tr.set_on_disconnection(std::move(callback)) } -> std::same_as<void>;
-      // Start the transport
+      // Start the transport.
       { tr.start() } -> std::same_as<void>;
-      // Stop the transport
+      // Stop the transport.
       { tr.stop() } -> std::same_as<void>;
     };
 }  // namespace martianlabs::doba::transport::server::contracts

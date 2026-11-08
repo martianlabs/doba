@@ -44,10 +44,7 @@ namespace detail {
 // +---------------------------------------------------------------------------+
 // | [>] router_controller_routes                                    ( class ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
-// | CTty - controller being registered                                        |
+// | RQty/RSty are the request/response types; CTty is the controller.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename CTty>

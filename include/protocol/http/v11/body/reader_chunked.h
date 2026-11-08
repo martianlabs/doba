@@ -41,22 +41,15 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Decodes a chunked Transfer-Encoding body (as accumulated verbatim by      |
-// | framer_chunked) by pulling wire bytes on demand from a common::reader     |
-// | source and filling the caller-supplied output span.                       |
+// | Pull chunked wire bytes from common::reader and decode them into the      |
+// | caller's output.                                                          |
 // |                                                                           |
-// | The caller pulls decoded payload via read(). Each call walks the same     |
-// | chunked framing grammar as framer_chunked, but chunk-size lines,          |
-// | extensions, CRLFs and trailers are wire framing, not payload: they are    |
-// | consumed from src and discarded, never written to output.                 |
+// | Give callers payload only. Consume and discard chunk sizes, extensions,   |
+// | CRLFs and trailers; they aren't body data.                                |
 // |                                                                           |
-// | reader_state::produced reports the exact number of decoded payload bytes  |
-// | written into output during this call. If src is only temporarily          |
-// | exhausted (more bytes may still arrive), read() returns early with        |
-// | complete=false and no error; the caller may invoke it again once more     |
-// | wire bytes are available in src. If src reaches definitive eof() before   |
-// | the body reaches state::complete, this is a protocol error reported as    |
-// | reader_error::chunked_incomplete.                                         |
+// | produced counts decoded bytes written this call. If the source is         |
+// | temporarily empty, return incomplete without an error and try again       |
+// | later. Final EOF before completion is chunked_incomplete.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader_chunked {
@@ -104,10 +97,8 @@ class reader_chunked {
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls wire bytes from src, walking the chunked framing, and writes only |
-  // | chunk-data bytes into output. Returns the number of decoded payload     |
-  // | bytes produced and whether the body is complete (last-chunk +           |
-  // | terminating CRLF seen).                                                 |
+  // | Read chunk framing and copy only payload to output. Report produced     |
+  // | bytes; complete means the final chunk and CRLF arrived.                 |
   // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;
@@ -123,11 +114,11 @@ class reader_chunked {
     std::size_t out_pos = 0;
     while (true) {
       // -----------------------------------------------------------------------
-      // Chunk-data: bulk-copy payload bytes directly from src into output
+      // Copy chunk payload straight into output.
       // -----------------------------------------------------------------------
       if (state_ == state::data) {
         std::size_t room = output.size() - out_pos;
-        if (room == 0) break;  // output full - stop here for this call
+        if (room == 0) break;  // Output is full; stop this read.
         std::size_t to_take = std::min(room, chunk_remaining_);
         if (to_take > 0) {
           std::size_t got = src.read(output.subspan(out_pos, to_take));
@@ -140,22 +131,22 @@ class reader_chunked {
               result.produced = out_pos;
               return fail(result, reader_error::chunked_incomplete);
             }
-            break;  // src exhausted for now - resume on next call
+            break;  // Nothing available yet; try on the next call.
           }
           out_pos += got;
           chunk_remaining_ -= got;
           if (chunk_remaining_ == 0) {
-            // All chunk data consumed; expect post-data CRLF next.
+            // Chunk data is done; expect CRLF next.
             state_ = state::data_cr;
           }
           continue;
         }
-        // chunk_remaining_ == 0: move on to the post-data CRLF immediately.
+        // No chunk data left; move straight to its CRLF.
         state_ = state::data_cr;
         continue;
       }
       // ---------------------------------------------------------------------
-      // All other states consume a single wire byte from src (framing only)
+      // Other states consume one framing byte at a time.
       // ---------------------------------------------------------------------
       std::byte b;
       if (!src.fetch(b)) {
@@ -167,7 +158,7 @@ class reader_chunked {
           result.produced = out_pos;
           return fail(result, reader_error::chunked_incomplete);
         }
-        break;  // src exhausted for now - resume on next call
+        break;  // Nothing available yet; try on the next call.
       }
       const char c = static_cast<char>(b);
       if (state_ >= state::extension_before_semicolon &&
@@ -184,7 +175,7 @@ class reader_chunked {
       }
       switch (state_) {
         // +-------------------------------------------------------------------+
-        // | chunk_size: accumulate hex digits, handle extension and CR        |
+        // | Read hex size digits, then an optional extension and CR.          |
         // +-------------------------------------------------------------------+
         case state::chunk_size: {
           if (c == ';') {
@@ -207,15 +198,15 @@ class reader_chunked {
             state_ = state::extension_before_semicolon;
             break;
           }
-          int digit = hex_digit(c);
+          int digit = helpers::hex_value(c);
           if (digit < 0) {
-            // Invalid hex digit in chunk-size line!
+            // Not a hex digit in the chunk size.
             result.produced = out_pos;
             return fail(result, reader_error::invalid_chunk_size);
           }
           if (chunk_remaining_ >
               (std::numeric_limits<std::size_t>::max() >> 4)) {
-            // Overflow in chunk size accumulation!
+            // The chunk size won't fit.
             result.produced = out_pos;
             return fail(result, reader_error::chunk_size_overflow);
           }
@@ -373,11 +364,11 @@ class reader_chunked {
           return fail(result, reader_error::invalid_chunk_size);
         }
         // +-------------------------------------------------------------------+
-        // | size_lf: decide data vs last-chunk                                |
+        // | After the size's LF, choose data or the final chunk.              |
         // +-------------------------------------------------------------------+
         case state::size_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk-size CR!
+            // Expected LF after the chunk-size CR.
             result.produced = out_pos;
             return fail(result, reader_error::invalid_chunk_crlf);
           }
@@ -391,11 +382,11 @@ class reader_chunked {
           break;
         }
         // +-------------------------------------------------------------------+
-        // | data_cr: post data CR                                             |
+        // | Expect CR after chunk data.                                       |
         // +-------------------------------------------------------------------+
         case state::data_cr: {
           if (c != '\r') {
-            // Invalid CR after chunk data!
+            // Expected CR after chunk data.
             result.produced = out_pos;
             return fail(result, reader_error::invalid_chunk_crlf);
           }
@@ -403,11 +394,11 @@ class reader_chunked {
           break;
         }
         // +-------------------------------------------------------------------+
-        // | data_lf: post data LF                                             |
+        // | Expect LF after the chunk-data CR.                                |
         // +-------------------------------------------------------------------+
         case state::data_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk data CR!
+            // Expected LF after the chunk-data CR.
             result.produced = out_pos;
             return fail(result, reader_error::invalid_chunk_crlf);
           }
@@ -492,21 +483,6 @@ class reader_chunked {
   }
 
  private:
-  // +=========================================================================+
-  // | [>] hex_digit                                               ( private ) |
-  // +-------------------------------------------------------------------------+
-  static int hex_digit(char c) noexcept {
-    if (c >= '0' && c <= '9') {
-      return c - '0';
-    }
-    if (c >= 'a' && c <= 'f') {
-      return c - 'a' + 10;
-    }
-    if (c >= 'A' && c <= 'F') {
-      return c - 'A' + 10;
-    }
-    return -1;
-  }
   // +=========================================================================+
   // | [>] fail                                                    ( private ) |
   // +-------------------------------------------------------------------------+

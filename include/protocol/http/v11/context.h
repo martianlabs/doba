@@ -37,51 +37,39 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] context                                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | The aggregated view the transversal rules operate on. Where an intra-     |
-// | header interpreter sees a single header in isolation, a rule needs to     |
-// | reason across several: whether a header was present at all, how two       |
-// | headers combine, and the connection/policy state the interpreters already |
-// | derived. deserialize() fills this context during its single header pass   |
-// | (each modelled header parsed once and interpreted in place) and then      |
-// | applies the transversal rules over it.                                    |
+// | Give cross-header rules the whole picture: presence flags, parsed values, |
+// | connection state and policy. deserialize() fills this in its one header   |
+// | pass, then applies the rules.                                             |
 // |                                                                           |
-// | The connection member is the mutable hop-by-hop state (already populated  |
-// | by the intra-header interpreters); policies is the read-only inbound      |
-// | configuration. The remaining members are the cross-header signals that    |
-// | are NOT hop-by-hop and therefore do not belong on the connection state:   |
-// | presence flags and the few parsed values a rule must compare directly.    |
+// | Keep mutable hop-by-hop state in connection and read-only settings in     |
+// | policies. Other flags and values are only for comparisons across headers. |
 // |                                                                           |
-// | Every std::string_view is zero-copy and points back into the request's    |
-// | field-value buffer, which MUST outlive this context.                      |
+// | Views borrow the request's field-value buffer; keep it alive through this |
+// | context.                                                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct context {
-  // Policies coming from the inbound configuration;
-  // they are not derived from the request.
+  // Inbound policy settings, not values from the request.
   struct policies policies;
-  // The mutable hop-by-hop connection state derived from the request.
+  // Hop-by-hop state derived from the request.
   v11::connection connection;
-  // Content-Length and Transfer-Encoding are mutually exclusive; the rules
-  // check for their presence and the number of Content-Length headers. The
-  // parsed Content-Length value is stored for the rules to reason about it.
+  // Track Content-Length and Transfer-Encoding presence, duplicate lengths and
+  // the parsed length for cross-header checks.
   bool has_content_length = false;
   bool multiple_content_length = false;
   std::size_t content_length = 0;
   bool has_transfer_encoding = false;
-  // Host and Target-Authority are mutually exclusive; the rules check for their
-  // presence and the number of Host headers. The parsed values are stored for
-  // the rules to reason about them.
+  // Track Host and Target-Authority presence, Host count and parsed values for
+  // cross-header checks.
   bool has_host = false;
   bool multiple_host = false;
   parsed_host_port host;
   bool has_target_authority = false;
   parsed_host_port target_authority;
-  // The number of forwarding hops across Via / Forwarded / X-Forwarded-For.
+  // Forwarding hop counts from Via, Forwarded and X-Forwarded-For.
   std::size_t forwarding_hops = 0;
-  // Why the last verdict::kReject happened, at the granularity the HTTP/1.1
-  // layer needs to pick a status code. Set by the interpreter/checker that
-  // rejects the request; left at kNone for syntactic errors, which default to
-  // 400 Bad Request.
+  // Why a semantic check rejected the request, so HTTP can pick a status. kNone
+  // leaves syntax errors at 400 Bad Request.
   martianlabs::doba::protocol::http::v11::rejection_reason rejection_reason =
       martianlabs::doba::protocol::http::v11::rejection_reason::kNone;
 };

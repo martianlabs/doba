@@ -260,7 +260,7 @@ jobs:
           retention-days: 14
 
   sanitizer:
-    # Keep required-check names stable; Linux currently validates TCP only.
+    # Don't rename required checks; keep this Linux job's existing TCP scope.
     name: Ubuntu (${{ matrix.name }} Release TLS)
     runs-on: ubuntu-latest
 
@@ -351,7 +351,7 @@ jobs:
           retention-days: 14
 
   windows-asan:
-    # Keep required-check names stable; the current scope validates TCP.
+    # Don't rename required checks; keep this job's existing TCP scope.
     name: Windows (${{ matrix.name }} Release TLS)
     runs-on: windows-latest
     strategy:
@@ -615,8 +615,8 @@ jobs:
             out/fuzz-corpus/${{ matrix.harness }} 2>&1 |
             tee out/fuzz-artifacts/campaign.log
 
-      # Keep the established required-check names. Decoder jobs also gate the
-      # stateful mixed-handler engine model on both operating systems.
+      # Keep required-check names. Decoder jobs also check the mixed-handler
+      # engine model on both systems.
       - name: Build and replay engine state model
         if: matrix.harness == 'decoder'
         shell: bash

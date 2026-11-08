@@ -49,7 +49,7 @@ namespace detail = martianlabs::doba::transport::server::detail;
 // +---------------------------------------------------------------------------+
 // | [>] byte_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Test engine follows the synchronous transport callback contract.          |
+// | Keep this engine within the synchronous callback contract.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_engine {
@@ -57,9 +57,9 @@ struct byte_engine {
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
-  // Test behavior is invoked only by on_bytes_received.
+  // Run test behavior only from on_bytes_received.
   std::function<void(byte_engine&, std::string_view)> action;
-  // Output and closure callbacks supplied by the transport.
+  // Send and close callbacks from the transport.
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
   // +=========================================================================+
@@ -87,7 +87,7 @@ struct byte_engine {
   processing_result on_processing_turn(bool output_idle) {
     return on_turn ? on_turn(*this, output_idle) : processing_result{};
   }
-  // Turn snapshots and behavior are owned by the serialized engine.
+  // The serialized engine owns these snapshots and this behavior.
   processing_result progress{};
   std::function<processing_result(byte_engine&, bool)> on_turn{};
 };
@@ -96,7 +96,7 @@ struct byte_engine {
 // +---------------------------------------------------------------------------+
 // | [>] socket_pair                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Nonblocking endpoints force partial sends without timing assumptions.     |
+// | Use nonblocking endpoints to force partial sends without timing guesses.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class socket_pair {
@@ -139,7 +139,7 @@ class socket_pair {
     }
     return result;
   }
-  // Endpoints are owned by the fixture, not by the context under test.
+  // The fixture owns both endpoints, not the context under test.
   std::array<int, 2> sockets{};
 };
 

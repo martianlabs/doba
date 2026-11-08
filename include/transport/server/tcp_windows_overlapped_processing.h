@@ -39,7 +39,7 @@ struct context;
 // +---------------------------------------------------------------------------+
 // | [>] overlapped_processing                                      ( struct ) |
 // +---------------------------------------------------------------------------+
-// | One generic immediate turn; ownership precedes publication to IOCP.       |
+// | One immediate turn. Establish ownership before posting to IOCP.           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -52,7 +52,7 @@ struct overlapped_processing : overlapped_base {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // The queued packet keeps this exact connection alive through delivery.
+  // Keep this exact connection alive until the queued packet is delivered.
   std::shared_ptr<context<ENty>> ctx;
 };
 }  // namespace martianlabs::doba::transport::server::detail

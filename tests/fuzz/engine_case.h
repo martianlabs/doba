@@ -46,7 +46,7 @@ namespace doba_fuzz {
 // +---------------------------------------------------------------------------+
 // | [>] engine_case                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | A bounded independent model of ordered mixed HTTP response streams.       |
+// | Independently model a bounded, ordered mix of HTTP replies.               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class engine_case {
@@ -110,7 +110,7 @@ class engine_case {
   // +=========================================================================+
   // | [>] asynchronous                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  // The owner is a coroutine parameter: it survives final_suspend too.
+  // Pass the owner into the coroutine so it survives final_suspend too.
   task asynchronous(const request& req, response& res, std::string_view text,
                     std::shared_ptr<int> retained) {
     const auto initial = req.get_header("X-Seq");
@@ -124,7 +124,7 @@ class engine_case {
           "initial identity");
     mark(initial_id);
     int id = -1;
-    // Parameter and header views must remain valid after suspension.
+    // Keep parameter and header views valid across suspension.
     co_await martianlabs::doba::common::yield();
     const auto parsed = std::from_chars(text.data(),
                                         text.data() + text.size(), id);
@@ -245,7 +245,7 @@ class engine_case {
   // +=========================================================================+
   // | [>] verify                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  // Parse the wire independently; never obtain expected bytes from serialize().
+  // Parse the wire independently; don't get expected bytes from serialize().
   void verify() const {
     std::string_view remaining(wire_);
     for (std::size_t id = 0; id < expected_; ++id) {
@@ -299,18 +299,18 @@ class engine_case {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Caller-owned immutable control bytes.
+  // Immutable control bytes owned by the caller.
   std::span<const std::uint8_t> input_;
   std::size_t count_{0}, valid_{0}, expected_{0};
   unsigned mode_{0}, close_calls_{0};
   std::array<std::shared_ptr<const std::string>, 12> bodies_;
   std::array<bool, 12> invoked_{};
   std::shared_ptr<int> frame_owner_{std::make_shared<int>(0)};
-  std::string wire_;  // Independently checked response stream.
-  std::unique_ptr<reader> held_;  // Deliberately delayed source consumption.
+  std::string wire_;  // Response stream checked by an independent parser.
+  std::unique_ptr<reader> held_;  // Delay reading the source on purpose.
   progress state_;
   router routes_;
-  std::unique_ptr<engine> engine_;  // Destroy before all borrowed model state.
+  std::unique_ptr<engine> engine_;  // Destroy before borrowed model state.
 };
 }  // namespace doba_fuzz
 

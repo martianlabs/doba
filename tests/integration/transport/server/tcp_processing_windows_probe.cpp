@@ -40,7 +40,7 @@ namespace {
 using namespace std::chrono_literals;
 using martianlabs::doba::transport::server::detail::io_type;
 using martianlabs::doba::transport::server::detail::overlapped_base;
-// Only this executable intercepts native APIs. No production test hooks exist.
+// Intercept native APIs in this executable only; no production test hooks.
 std::atomic<unsigned> timer_creations{0}, timer_arms{0};
 std::atomic<bool> watch{false}, immediate_seen{false}, timer_seen{false};
 std::atomic<bool> timed_out{false};
@@ -77,8 +77,8 @@ PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
 void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
                          DWORD window) {
   if (due) ++timer_arms;
-  // Force a queued wake for the cancellation test without assuming that a
-  // one-millisecond logical deadline survives context reconciliation.
+  // Force a queued wake for cancellation. Don't assume a 1 ms deadline stays in
+  // the future through context reconciliation.
   FILETIME forced{0xffffffffU, 0xffffffffU};
   ::SetThreadpoolTimer(timer, due && hold_timer ? &forced : due,
                        period, window);
@@ -165,7 +165,7 @@ namespace tr = transport::server;
 // +---------------------------------------------------------------------------+
 // | [>] publication_engine                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Generic connection-turn probe; it contains no coroutine execution.        |
+// | Probe generic connection turns, without running coroutines.               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct publication_engine {
@@ -263,8 +263,8 @@ DOBA_TEST("Windows timer wake can dequeue before publication returns") {
       INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
   std::array<decltype(timer)::entry, 64> ready{};
   bool dequeued = false;
-  // The consumer observes the embedded packet before taking the timer lock.
-  // Its bounded wait and lifetime surround every producer/publication path.
+  // Observe the embedded packet before taking the timer lock. Keep its bounded
+  // wait and lifetime around every publication path.
   std::jthread consumer([&] {
     DWORD bytes = 0;
     ULONG_PTR key = 0;
@@ -296,7 +296,7 @@ DOBA_TEST("Windows keeps deadlines after a failed timer wake publication") {
   auto ctx = std::make_shared<detail::context<publication_engine>>(
       INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
   const auto previous = timer_posts.load();
-  // Fail the initial overdue post and then the native callback's retry.
+  // Fail the overdue post and the timer callback's first retry.
   DOBA_EXPECT(timer.replace(ctx, clock_type::now() - 1ms, 19));
   DWORD bytes = 0;
   ULONG_PTR key = 0;
@@ -398,8 +398,8 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
     DOBA_EXPECT(timer.replace(ctx, clock_type::now() - 1ms, i + 1));
   }
   std::size_t total = 0;
-  // Drain notifications after producer stop as well, keeping embedded storage
-  // and the IOCP alive for every packet, including early callback publication.
+  // After stopping producers, drain notifications too. Keep IOCP and embedded
+  // storage alive for all packets, even early callback publications.
   for (const auto expected : {64U, 1U}) {
     DWORD bytes = 0;
     ULONG_PTR key = 0;
@@ -417,7 +417,7 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
     total += count;
   }
   DOBA_EXPECT_EQUAL(total, 65U);
-  // Already-due batches must not wait for another native timer tick.
+  // Already-due batches must not wait for another timer tick.
   DOBA_EXPECT_EQUAL(timer_arms.load(), previous_arms);
 }
 

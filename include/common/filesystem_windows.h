@@ -41,7 +41,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_file [windows]                                   ( class ) |
 // +---------------------------------------------------------------------------+
-// | Windows filesystem file implementation.                                   |
+// | Handle files on Windows.                                                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class filesystem_file {
@@ -109,7 +109,7 @@ class filesystem_file {
   // +=========================================================================+
   // | [>] inspect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // Preserve the confined resolver and reparse-point checks on Windows.
+  // Keep resolution confined and reject reparse points on Windows too.
   [[nodiscard]] static std::optional<filesystem_metadata> inspect(
       const std::filesystem::path& root, std::string_view path,
       std::error_code& error) {

@@ -34,8 +34,7 @@ namespace martianlabs::doba::protocol::http {
 // +---------------------------------------------------------------------------+
 // | [>] header                                                      ( using ) |
 // +---------------------------------------------------------------------------+
-// | A header is a key-value pair of strings. The key is the header name       |
-// (case-insensitive) and the value is the header field-value (case-sensitive).|
+// | A header pairs a case-insensitive name with a case-sensitive value.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using header = std::pair<std::string, std::string>;

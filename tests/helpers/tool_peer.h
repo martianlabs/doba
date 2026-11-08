@@ -25,7 +25,7 @@
 #ifndef martianlabs_doba_tests_helpers_tool_peer_h
 #define martianlabs_doba_tests_helpers_tool_peer_h
 
-// Winsock must precede windows.h, including indirect process helper includes.
+// Include Winsock before windows.h, even through process helpers.
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -57,9 +57,9 @@ namespace martianlabs::doba::tests::tools {
 // +---------------------------------------------------------------------------+
 // | [>] peer                                                        ( class ) |
 // +---------------------------------------------------------------------------+
-// Independent loopback peer. Blocking operations have a socket deadline; TLS
-// uses memory BIOs so encrypted fragmentation is testable without production
-// transport machinery or OpenSSL's socket-descriptor narrowing on Windows.
+// Use an independent loopback peer with socket deadlines. Memory BIOs let us
+// fragment TLS without production transports or Windows socket-descriptor
+// narrowing.
 class peer {
 #ifdef _WIN32
   using socket_type = SOCKET;
@@ -369,7 +369,7 @@ class peer {
           return data;
         }
         if (error == SSL_ERROR_ZERO_RETURN) return {};
-        // Some deliberate rejection tests close without close_notify.
+        // Some rejection tests deliberately skip close_notify.
         if (error != SSL_ERROR_WANT_READ && eof) return {};
         require(error == SSL_ERROR_WANT_READ && clock::now() < deadline,
           "TLS read failed before peer EOF");

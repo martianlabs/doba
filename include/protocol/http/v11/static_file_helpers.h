@@ -71,8 +71,8 @@ inline std::string static_file_date(std::int64_t seconds) {
   return output;
 }
 
-// Accept IMF-fixdate and both obsolete HTTP-date formats. Do not use the
-// process locale/time zone; reject impossible calendar dates.
+// Accept all three HTTP date formats. Ignore process locale/time zone, and
+// reject impossible dates.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] static_file_time                                         ( function ) |
@@ -82,10 +82,11 @@ inline std::optional<std::int64_t> static_file_time(std::string_view input) {
   if (!::martianlabs::doba::protocol::http::headers::date::check(input))
     return {};
   const bool old = input.find('-') != input.npos;
-  const char* format =
-      old ? "%A, %d-%b-%y %H:%M:%S GMT"
-          : (input.find(',') != input.npos ? "%a, %d %b %Y %H:%M:%S GMT"
-                                           : "%a %b %d %H:%M:%S %Y");
+  const char* format = "%a %b %d %H:%M:%S %Y";
+  if (old)
+    format = "%A, %d-%b-%y %H:%M:%S GMT";
+  else if (input.find(',') != input.npos)
+    format = "%a, %d %b %Y %H:%M:%S GMT";
   std::istringstream stream{std::string(input)};
   stream.imbue(std::locale::classic());
   std::tm value{};
@@ -104,14 +105,14 @@ inline std::optional<std::int64_t> static_file_time(std::string_view input) {
   if (!date.ok() || value.tm_hour > 23 || value.tm_min > 59 ||
       value.tm_sec > 59)
     return {};
-  return duration_cast<seconds>((sys_days(date) + hours(value.tm_hour) +
-                                 minutes(value.tm_min) + seconds(value.tm_sec))
-                                    .time_since_epoch())
-      .count();
+  const auto timestamp = sys_days(date) + hours(value.tm_hour) +
+                         minutes(value.tm_min) + seconds(value.tm_sec);
+  const auto elapsed = duration_cast<seconds>(timestamp.time_since_epoch());
+  return elapsed.count();
 }
 
-// SHA-256 over the exact cached bytes: independent of file timestamps, names
-// and reload generations. This helper is not a public cryptography API.
+// Hash the exact cached bytes with SHA-256, independent of timestamps and
+// reloads. This isn't a public crypto API.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] static_file_etag                                         ( function ) |
@@ -135,19 +136,22 @@ inline std::string static_file_etag(std::string_view bytes) {
                                  0x1f83d9ab, 0x5be0cd19};
   const std::size_t blocks =
       bytes.size() / 64 + (bytes.size() % 64 < 56 ? 1 : 2);
+  const auto padded_size = blocks * 64;
   const auto bits = static_cast<std::uint64_t>(bytes.size()) * 8;
   for (std::size_t block = 0; block < blocks; ++block) {
     std::array<std::uint32_t, 64> w{};
+    const auto block_offset = block * 64;
     for (std::size_t i = 0; i < 64; ++i) {
-      const auto pos = block * 64 + i;
+      const auto pos = block_offset + i;
       unsigned char byte = 0;
       if (pos < bytes.size())
         byte = static_cast<unsigned char>(bytes[pos]);
       else if (pos == bytes.size())
         byte = 0x80;
-      else if (pos >= blocks * 64 - 8)
-        byte =
-            static_cast<unsigned char>(bits >> ((blocks * 64 - 1 - pos) * 8));
+      else if (pos >= padded_size - 8) {
+        const auto shift = (padded_size - 1 - pos) * 8;
+        byte = static_cast<unsigned char>(bits >> shift);
+      }
       w[i / 4] |= std::uint32_t(byte) << (24 - (i % 4) * 8);
     }
     for (int i = 16; i < 64; ++i) {
@@ -261,7 +265,7 @@ struct static_file_range {
 // /////////////////////////////////////////////////////////////////////////////
 inline static_file_range static_file_parse_range(std::string_view text,
                                                  std::size_t size) {
-  // Unsupported units and multiple ranges are deliberately ignored.
+  // Ignore unsupported units and multiple ranges.
   if (text.size() < 6 || !helpers::iequals(text.substr(0, 6), "bytes=") ||
       text.find(',') != text.npos)
     return {};

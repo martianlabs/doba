@@ -45,7 +45,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // | [>] socket workers                                           ( constant ) |
 // +---------------------------------------------------------------------------+
-// Exercise independent connection owners on both backends.
+// Use independent connection owners on both backends.
 constexpr std::size_t kSocketWorkers = 2;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;

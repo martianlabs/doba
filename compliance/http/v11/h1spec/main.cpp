@@ -36,12 +36,12 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the h1spec compliance routes on port 8080.                           |
+// | Serve the h1spec routes on port 8080.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  // h1spec expects successful routes to echo the decoded request body.
+  // Echo the decoded body; that's what h1spec checks on successful routes.
   const auto echo_body = [](const request& req, response& res) {
     res.ok_200();
     std::string body;
@@ -65,7 +65,7 @@ int main() {
     http_server.add_route(method, "/", echo_body);
   }
   http_server.start();
-  // The test harness owns process shutdown; wait after the server starts.
+  // Start the server, then wait: the harness handles shutdown.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

@@ -34,7 +34,7 @@
 #include "platform.h"
 
 namespace martianlabs::doba::common {
-// Metadata read from the open handle, not by resolving its path again.
+// Read metadata from the open handle; don't resolve the path again.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_metadata                                        ( struct ) |
@@ -48,9 +48,9 @@ struct filesystem_metadata {
   std::uint64_t identity = 0;
   std::int64_t changed_seconds = 0;
   std::uint32_t changed_nanoseconds = 0;
-  // Native file flags on Windows; file type and permission bits on Linux.
+  // Windows file flags, or Linux file type and permission bits.
   std::uint32_t attributes = 0;
-  // Number of hard links to the opened file.
+  // Hard links to this open file.
   std::uint64_t links = 0;
   bool operator==(const filesystem_metadata&) const = default;
 };
@@ -58,9 +58,8 @@ struct filesystem_metadata {
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_root                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | Returns the canonical path of the given directory, or an empty path if    |
-// | the directory does not exist or is not a directory. The error code is     |
-// | set to indicate the reason for failure.                                   |
+// | Resolve a directory to its canonical path. Return an empty path and set   |
+// | error on failure.                                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::filesystem::path filesystem_root(const std::filesystem::path& path,
@@ -80,8 +79,7 @@ namespace detail {
 // +---------------------------------------------------------------------------+
 // | [>] filesystem_relative_path                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | Returns true if the given path is a valid relative path, false otherwise. |
-// | The error code is set to indicate the reason for failure.                 |
+// | Check that a path is relative and safe to use. Set error if it isn't.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline bool filesystem_relative_path(std::string_view path,

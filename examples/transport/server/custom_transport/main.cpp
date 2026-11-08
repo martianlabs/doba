@@ -89,7 +89,7 @@ class custom_transport {
         "GET /hello HTTP/1.1\r\nHost: example.com\r\n"
         "Connection: close\r\n\r\n";
     const auto progress = connection_->on_bytes_received(request);
-    // This synchronous example does not provide a processing event loop.
+    // This synchronous example has no processing event loop.
     if (progress.turn_requested || progress.turn_at ||
         progress.turn_after_output_drained) {
       close_requested_ = true;
@@ -125,7 +125,7 @@ class custom_transport {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs doba's HTTP/1.1 server on an in-memory transport.                    |
+// | Run HTTP/1.1 through an in-memory transport.                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

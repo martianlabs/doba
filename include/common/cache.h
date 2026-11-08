@@ -44,16 +44,15 @@
 #include "common/cache_statistics.h"
 
 namespace martianlabs::doba::common {
-// Thread-safe, cost-bounded LRU with single-flight loading per key.
-// Values must be immutable through ALL aliases supplied by the loader.
-// The cache must outlive concurrent calls; returned values may outlive it.
-// Hash/equality and clock operations must support concurrent calls and must
-// not throw or reenter the cache. Concurrent hits may coalesce LRU promotions.
+// Share one load per key and keep LRU cost bounded. Values must stay immutable
+// through every alias. Keep the cache alive during calls; returned values can
+// outlive it. Hash, equality and clock operations must be thread-safe,
+// nonthrowing and non-reentrant. Overlapping hits may share an LRU promotion.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] cache                                                       ( class ) |
 // +---------------------------------------------------------------------------+
-// | Generic concurrent cache with bounded cost and shared immutable values.   |
+// | Share immutable values in a concurrent cache with a hard cost budget.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename KEty, typename VAty,
@@ -82,8 +81,7 @@ class cache {
   // +=========================================================================+
   // | [>] find                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // Expired entries are removed lazily. Hits promote without waiting for LRU
-  // writes.
+  // Drop expired entries on lookup. Hits don't wait for LRU writes.
   value_type find(const KEty& key) {
     value_type value;
     {
@@ -96,8 +94,8 @@ class cache {
       std::lock_guard lock(mutex_);
       return find_locked(key);
     }
-    // Readers never queue behind one another for an LRU write. Sequential
-    // hits promote exactly; overlapping hits may coalesce recency updates.
+    // Don't make readers queue for LRU writes. Sequential hits promote exactly;
+    // overlapping hits may share a recency update.
     std::unique_lock lock(mutex_, std::try_to_lock);
     if (lock.owns_lock()) {
       auto found = entries_.find(key);
@@ -110,7 +108,7 @@ class cache {
   // +=========================================================================+
   // | [>] get_or_load                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // Shares an in-progress load, waiting for its result or exception.
+  // Join the current load and wait for its value or exception.
   template <typename LDty>
   value_type get_or_load(const KEty& key, std::size_t cost, LDty&& loader) {
     return load(key, cost, std::forward<LDty>(loader), true);
@@ -118,8 +116,8 @@ class cache {
   // +=========================================================================+
   // | [>] try_get_or_load                                          ( public ) |
   // +-------------------------------------------------------------------------+
-  // Returns null instead of waiting when this key is already being loaded.
-  // An admitted loader still executes synchronously outside the cache lock.
+  // If this key is already loading, return null instead of waiting. An admitted
+  // loader still runs synchronously, outside the cache lock.
   template <typename LDty>
   value_type try_get_or_load(const KEty& key, std::size_t cost, LDty&& loader) {
     return load(key, cost, std::forward<LDty>(loader), false);
@@ -141,7 +139,7 @@ class cache {
   // +=========================================================================+
   // | [>] erase                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Removes only the observed value; leaves newer entries and loads untouched.
+  // Erase this exact value only; leave newer entries and loads alone.
   bool erase(const KEty& key, const value_type& expected) {
     std::lock_guard lock(mutex_);
     auto found = entries_.find(key);
@@ -238,12 +236,10 @@ class cache {
   // +=========================================================================+
   // | [>] load                                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  // Loader returns shared_ptr<const VAty> (null means not found).
-  // cost must upper-bound the resources retained by the returned value.
-  // Null is also returned on capacity rejection or concurrent invalidation.
-  // Exceptions reach all callers waiting on that load. No failures are cached.
-  // Do not recursively load this cache from a loader. Same-key recursion
-  // throws.
+  // Return shared_ptr<const VAty> from the loader; null means not found. cost
+  // must cover everything the value retains. Rejection or invalidation also
+  // returns null. Share exceptions with waiters, but don't cache failures.
+  // Don't load this cache recursively; same-key recursion throws.
   template <typename LDty>
   value_type load(const KEty& key, std::size_t cost, LDty&& loader,
                   bool wait_for_load) {
@@ -258,7 +254,7 @@ class cache {
         if (job->owner == std::this_thread::get_id())
           throw std::logic_error("Recursive cache load");
         ++waiters_;
-        job->changed.wait(lock, [&] {
+        job->changed.wait(lock, [&job] {
           return job->done;
         });
         --waiters_;
@@ -269,8 +265,8 @@ class cache {
           !policies_.max_loads || loads_ >= policies_.max_loads ||
           cost > policies_.max_cost)
         return {};
-      // Expiration and eviction release only the cache's ownership. Pins held
-      // by callers stay charged and may prevent admission of a new value.
+      // Eviction drops our reference, not the caller's. Pinned values still use
+      // budget and may keep new values out.
       while (!lru_.empty() && (entries_.size() >= policies_.max_entries ||
                                cost > policies_.max_cost - live_->load())) {
         remove_locked(entries_.find(lru_.back()));
@@ -323,8 +319,8 @@ class cache {
         job->done = true;
         job->changed.notify_all();
       } else {
-        // erase/clear already released waiters. An obsolete load cannot
-        // republish, return its old value, or erase a newer flight.
+        // erase/clear already woke the waiters. This stale load must not
+        // publish or return its old value, or erase a newer load.
         result.reset();
         error = {};
       }

@@ -70,7 +70,7 @@ struct clock_stub {
 // +---------------------------------------------------------------------------+
 // | [>] parallel_clock                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Gate two lookups inside now() to verify overlapping read access.          |
+// | Hold two lookups inside now() to check overlapping reads.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct parallel_clock {
@@ -82,11 +82,11 @@ struct parallel_clock {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Enabled only after the initial value has been admitted.
+  // Enable only after the initial value enters the cache.
   static inline std::atomic<bool> gated{false};
-  // Number of concurrent calls that reached the gate.
+  // Calls that reached the gate together.
   static inline std::atomic<unsigned> arrivals{0};
-  // Test-owned events, valid until all lookup threads have joined.
+  // Keep these test events alive until lookup threads join.
   static inline manual_event* entered = nullptr;
   static inline manual_event* release = nullptr;
   // +=========================================================================+

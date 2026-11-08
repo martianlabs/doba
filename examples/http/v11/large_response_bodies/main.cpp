@@ -39,20 +39,15 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/large" that responds to GET requests.     |
-// | The response body is generated using a body writer that can spill to a    |
-// | temporary file if the in-memory threshold is exceeded. The response is    |
-// | sent with a "Content-Type" of "application/octet-stream". The server      |
-// | runs until a termination signal is received.                              |
+// | Build a large /large response with a writer that spills to disk when      |
+// | needed.                                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route("GET", "/large", [](const request&, response& res) {
     res.ok_200();
-    // Storage spills to a temporary file after this in-memory threshold.
+    // Once this many bytes are in memory, spill to a temporary file.
     byte_storage_options options{
         .spill_to_disk_threshold = 1024, .spill_dir = {}};
     auto writer = body::body_writer::raw(options);
@@ -64,7 +59,7 @@ int main() {
       }
     }
     res.add_header("Content-Type", "application/octet-stream")
-        // The response adopts the writer and its storage.
+        // Hand the writer and its storage to the response.
         .set_body(std::move(writer));
     return;
   });

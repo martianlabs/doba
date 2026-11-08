@@ -322,8 +322,8 @@ DOBA_TEST(
   DOBA_EXPECT(port != 0);
   protocol::http::v11::policies http;
   http.request_body_memory_threshold = 64;
-  // This fixture pipelines inline replies. Readers are terminal and tested
-  // separately with constrained receive windows and multiworker IOCP.
+  // Pipeline inline replies here. Test terminal readers separately with tight
+  // receive windows and multiple IOCP workers.
   http.response_body_memory_threshold = 64 * 1024;
   observed_server<http_server<>> server(
       {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},

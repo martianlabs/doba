@@ -37,7 +37,7 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] connection_reservation                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | One admission credit. Moves transfer its sole release obligation.         |
+// | Own one admission credit; moving it transfers the duty to release it.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class connection_reservation {
@@ -86,7 +86,7 @@ class connection_reservation {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Retains the shared counter until this credit is released or transferred.
+  // Keep the shared counter alive until this credit is released or moved.
   std::shared_ptr<connection_budget> budget_;
 };
 }  // namespace martianlabs::doba::transport::server::detail

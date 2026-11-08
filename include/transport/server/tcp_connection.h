@@ -37,11 +37,10 @@ namespace martianlabs::doba::transport::server::detail {
 // +---------------------------------------------------------------------------+
 // | [>] tcp_connection                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Owns the engine and its fixed socket receive buffer. Fresh blocks are     |
-// | delivered synchronously; incomplete messages remain protocol-owned.       |
+// | Own the engine and its fixed RX buffer. Deliver fresh bytes               |
+// | synchronously; the protocol keeps unfinished messages.                    |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | ENty - engine type being used.                                            |
+// | ENty is the protocol engine.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -57,7 +56,7 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] process                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Processes the received bytes in the input buffer using the engine.      |
+  // | Hand the received bytes to the engine.                                  |
   // +-------------------------------------------------------------------------+
   // +-------------------------------------------------------------------------+
   // | [>] receive_buffer                                           ( public ) |
@@ -77,11 +76,11 @@ struct tcp_connection {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Protocol engine, invoked only by serialized receive processing.
+  // Call this engine only from serialized receive processing.
   ENty engine;
-  // Fixed storage reused after each synchronous engine call returns.
+  // Reuse this buffer once the engine call returns.
   std::unique_ptr<char[]> buffer;
-  // Socket receive block capacity, independent of protocol message limits.
+  // Socket RX block size, separate from protocol message limits.
   const std::size_t capacity;
 };
 }  // namespace martianlabs::doba::transport::server::detail

@@ -40,7 +40,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] counter_controller                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
+// | Count requests and echo an optional ID.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class counter_controller {
@@ -89,13 +89,8 @@ class counter_controller {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has two controllers registered: one for the "/first" route     |
-// | and another for the "/second" route. Each controller is an instance of    |
-// | the counter_controller class, which maintains a count of requests and     |
-// | can echo back an ID provided in the request. The server runs until a      |
-// | termination signal is received, at which point it stops gracefully.       |
+// | Run two counters on port 8080: /first and /second. Each keeps its own     |
+// | count and can echo a request ID.                                          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

@@ -45,11 +45,11 @@ namespace tr = martianlabs::doba::transport::server;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct factory_probe {
-  // Factory calls and completed disconnection notifications.
+  // Count factory calls and completed disconnection notifications.
   std::atomic<unsigned> created{0}, disconnected{0};
-  // Application state configured before the first transport entry.
+  // Configure application state before the first transport call.
   std::string expected;
-  // All receive entries must observe that same factory-owned state.
+  // Every receive must see the same state supplied by the factory.
   std::atomic<bool> preserved{true};
 };
 
@@ -57,7 +57,7 @@ struct factory_probe {
 // +---------------------------------------------------------------------------+
 // | [>] factory_engine                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Requires only the current protocol contract, with no execution hooks.     |
+// | Use the protocol contract without extra execution hooks.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct factory_engine {
@@ -90,11 +90,11 @@ struct factory_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Test-owned state outlives the transport and all context callbacks.
+  // Keep test state alive through transport destruction and context callbacks.
   std::shared_ptr<factory_probe> probe;
-  // Value supplied only by the application factory.
+  // Only the application factory supplies this value.
   std::string marker;
-  // Current transport output callback, valid only inside serialized entries.
+  // Call the transport's send callback only inside serialized engine entries.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace

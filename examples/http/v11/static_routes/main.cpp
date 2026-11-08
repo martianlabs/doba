@@ -36,18 +36,12 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server registers four routes for the "/resources" path, each handling |
-// | a different HTTP method (GET, POST, PUT, DELETE).                         |
-// | Each route has a corresponding lambda function that constructs an         |
-// | appropriate response with different HTTP status codes and headers.        |
-// | The server runs until a termination signal is received.                   |
+// | Give GET, POST, PUT and DELETE their own /resources handlers.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  // A path can expose an independent handler for each HTTP method.
+  // One path can have a different handler for each method.
   http_server.add_route(
       method_names::kGet, "/resources", [](const request&, response& res) {
         res.ok_200();
@@ -70,8 +64,7 @@ int main() {
   http_server.add_route(method_names::kDelete, "/resources",
                         [](const request&, response& res) {
                           res.no_content_204();
-                          // no_content_204() leaves the response without a
-                          // message body.
+                          // no_content_204() leaves the body empty.
                           return;
                         });
   http_server.start();

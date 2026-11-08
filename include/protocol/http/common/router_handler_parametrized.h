@@ -47,14 +47,10 @@ inline constexpr bool dependent_false_v = false;
 // +---------------------------------------------------------------------------+
 // | [>] extract_route_parameters                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | N - number of route parameters to extract                                 |
+// | N is the number of path parameters to extract.                            |
 // +---------------------------------------------------------------------------+
-// | This function parses route parameters from the provided string view into  |
-// | the appropriate types and stores them in the output array.                |
-// | It returns true if all parameters were successfully parsed, and false     |
-// | otherwise. If the number of parameters does not match N, it returns       |
-// | false.                                                                    |
+// | Parse exactly N path parameters into the output array. Return false if a  |
+// | value or the parameter count doesn't match.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <std::size_t N>
@@ -92,14 +88,10 @@ bool extract_route_parameters(std::string_view pattern, std::string_view path,
 // +---------------------------------------------------------------------------+
 // | [>] parse_route_parameter                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | T - type of the route parameter being parsed                              |
+// | T is the parameter type to parse.                                         |
 // +---------------------------------------------------------------------------+
-// | This function parses a route parameter from the provided string view into |
-// | the appropriate type and stores it in the output parameter.               |
-// | It returns true if the parameter was successfully parsed, and false       |
-// | otherwise. If the type T is not supported, a static assertion will        |
-// | fail at compile time.                                                     |
+// | Parse one path parameter into out. Return false on a bad value;           |
+// | unsupported types fail at compile time.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename T>
@@ -135,12 +127,9 @@ bool parse_route_parameter(std::string_view input, T& output) {
 // +---------------------------------------------------------------------------+
 // | [>] matches_route_parameter                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | T - route parameter type being used                                       |
+// | T is the expected path parameter type.                                    |
 // +---------------------------------------------------------------------------+
-// | This function checks if the route parameter from the provided string view |
-// | matches the expected type. It returns true if the parameter matches, and  |
-// | false otherwise.                                                          |
+// | Check that the path parameter fits the expected type.                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename T>
@@ -158,12 +147,9 @@ bool matches_route_parameter(std::string_view input) {
 // +---------------------------------------------------------------------------+
 // | [>] match_route_parameters_                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | Args - route parameters being used                                        |
+// | Args are the path parameter types.                                        |
 // +---------------------------------------------------------------------------+
-// | This function checks if the route parameters from the provided array of   |
-// | string views match the expected types. It returns true if all parameters  |
-// | match, and false otherwise.                                               |
+// | Check each path parameter against its expected type.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename... Args, std::size_t... I>
@@ -177,12 +163,9 @@ bool match_route_parameters_(
 // +---------------------------------------------------------------------------+
 // | [>] match_route_parameters                                   ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | Args - route parameters being used                                        |
+// | Args are the path parameter types.                                        |
 // +---------------------------------------------------------------------------+
-// | This function checks if the route parameters from the provided array of   |
-// | string views match the expected types. It returns true if all parameters  |
-// | match, and false otherwise.                                               |
+// | Check each path parameter against its expected type.                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename... Args>
@@ -197,13 +180,9 @@ bool match_route_parameters(std::string_view pattern, std::string_view path) {
 // +---------------------------------------------------------------------------+
 // | [>] parse_route_parameters_                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | Args - route parameters being used                                        |
+// | Args are the path parameter types.                                        |
 // +---------------------------------------------------------------------------+
-// | This function parses the route parameters from the provided array of      |
-// | string views into the appropriate types and stores them in the provided   |
-// | tuple. It returns true if all parameters were successfully parsed, and    |
-// | false otherwise.                                                          |
+// | Parse the path parameters into the tuple; return false if any don't fit.  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename... Args, std::size_t... I>
@@ -217,14 +196,11 @@ bool parse_route_parameters_(
 // +---------------------------------------------------------------------------+
 // | [>] invoke_route_handler                                     ( function ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | Hty - handler being used                                                  |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
-// | Args - route parameters being used                                        |
+// | Hty is the handler; RQty/RSty are request/response types; Args are path   |
+// | parameters.                                                               |
 // +---------------------------------------------------------------------------+
-// | Invokes the handler with the request and parsed route parameters.         |
-// | Throws if the path or parameters do not match.                            |
+// | Call the handler with the request and parsed parameters. Throw if the     |
+// | path or parameters don't match.                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty, typename RQty, typename RSty, typename... Args>
@@ -249,9 +225,7 @@ void invoke_route_handler(Hty& handler, const RQty& req, RSty& res,
 // +---------------------------------------------------------------------------+
 // | [>] router_handler_parametrized                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
+// | RQty and RSty are the request and response types.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
@@ -288,25 +262,19 @@ class router_handler_parametrized {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::string pattern_;     // The route pattern to match against.
-  matcher_type matcher_;    // The function to match the route pattern against.
-  callback_type callback_;  // The function to invoke when there's a matche.
+  std::string pattern_;     // Pattern this handler matches.
+  matcher_type matcher_;    // Check whether the path matches.
+  callback_type callback_;  // Call this when the path matches.
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] make_router_handler_parametrized                           (function) |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
-// | Args - route parameters being used                                        |
-// | Hty - handler being used                                                  |
+// | RQty/RSty are request/response types; Args are path parameters; Hty is    |
+// | the handler.                                                              |
 // +---------------------------------------------------------------------------+
-// | This function creates a router_handler_parametrized object for a          |
-// | synchronous route handler. It takes a pattern and a handler as input,     |
-// | and returns a router_handler_parametrized object that can be used to      |
-// | match and invoke the handler with the request and parsed parameters.      |
+// | Wrap a synchronous handler with its route pattern and typed parameters.   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename... Args, typename Hty>

@@ -40,10 +40,10 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] send_delegate                                              ( public ) |
 // +---------------------------------------------------------------------------+
-// | Sends head, body and an optional source, in that order. Bundled TCP       |
-// | copies inline bytes before returning and takes ownership of the reader.   |
-// | Invoke only inside a serialized engine input or processing turn.          |
-// | A reader is terminal; later nonempty output is a contract violation.      |
+// | Send head, body, then the optional reader. TCP copies inline bytes before |
+// | returning and takes ownership of the reader. Call only during a           |
+// | serialized input or processing turn. A reader ends output: no nonempty    |
+// | sends after it.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using send_delegate = std::function<void(std::string_view, std::string_view,
@@ -55,13 +55,11 @@ namespace martianlabs::doba::protocol::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      (concept) |
 // +---------------------------------------------------------------------------+
-// | Input and processing turns never overlap for one engine instance.         |
-// | Input bytes are immutable and borrowed only until that call returns;      |
-// | they are all discarded by the transport, regardless of the result.        |
-// | The engine owns any data it retains. Send/close callbacks run only        |
-// | inside these turns and must not escape for cross-thread invocation.       |
-// | Results describe processing needs, not RX control or input consumption.   |
-// | output_idle is a snapshot taken before the processing turn begins.        |
+// | Give each engine one turn at a time. Input is borrowed, immutable and     |
+// | discarded when the call returns, whatever the result; keep your own copy  |
+// | if needed. Send/close callbacks stay inside these turns, never on other   |
+// | threads. Results ask for processing, not RX control or partial            |
+// | consumption. output_idle is the snapshot from before the processing turn. |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
@@ -81,8 +79,8 @@ concept engine = requires(ENty& engine, std::string_view input,
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |
 // +---------------------------------------------------------------------------+
-// | Creates an independent engine per connection. Calls for different         |
-// | connections may overlap on different workers; shared state must be safe.  |
+// | Create one engine per connection. Different workers may call different    |
+// | engines at once, so protect shared state.                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty, typename ENty>

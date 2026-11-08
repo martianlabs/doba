@@ -37,7 +37,7 @@ namespace martianlabs::doba {
 // +---------------------------------------------------------------------------+
 // | [>] https_server                                                ( class ) |
 // +---------------------------------------------------------------------------+
-// | Composes a TLS HTTP/1.1 routing with a protocol engine and transport.     |
+// | Wire the HTTP/1.1 router, engine and TLS transport together.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty = protocol::http::v11::request,
@@ -74,7 +74,7 @@ class https_server
   // +=========================================================================+
   // | [>] configure                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // HTTP composition owns ALPN; the generic TLS transport remains agnostic.
+  // HTTP chooses ALPN; the TLS transport doesn't need to know the protocol.
   static transport::server::tls_policies configure(
       transport::server::tls_policies configuration) {
     if (!configuration.alpn_protocol.empty() &&

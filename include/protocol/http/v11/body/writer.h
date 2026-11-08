@@ -41,12 +41,9 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] body_writer                                                 ( class ) |
 // +---------------------------------------------------------------------------+
-// | Owns the wire-level common::writer sink together with the body encoder    |
-// | (writer_chunked or writer_raw) matching the framing chosen for the        |
-// | outgoing response (Transfer-Encoding: chunked vs Content-Length). This    |
-// | lets callers push raw payload bytes via write() without ever having to    |
-// | know which framing will encode them, mirroring body::reader on the        |
-// | request side.                                                             |
+// | Own the output storage and its raw or chunked encoder. Callers write      |
+// | payload; the chosen encoder handles framing, just as body::reader hides   |
+// | it on input.                                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class body_writer {
@@ -76,8 +73,7 @@ class body_writer {
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Encodes the caller-supplied raw payload using the framing selected at   |
-  // | construction time and appends it into the owned sink.                   |
+  // | Frame the payload and append it to our storage.                         |
   // +-------------------------------------------------------------------------+
   bool write(std::span<const std::byte> payload) {
     if (!std::visit(
@@ -107,8 +103,7 @@ class body_writer {
   // +=========================================================================+
   // | [>] end                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Finalizes the body framing (emits the terminating chunk for chunked     |
-  // | encoding; a no-op for raw). Idempotent.                                 |
+  // | Finish framing once: add the final chunk, or do nothing for raw output. |
   // +-------------------------------------------------------------------------+
   bool end() {
     return std::visit([this](auto& encoder) { return encoder.end(sink_); },
@@ -117,8 +112,8 @@ class body_writer {
   // +=========================================================================+
   // | [>] release                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Finalizes the framing and the underlying storage, then hands over the   |
-  // | accumulated (possibly spilled to disk) body bytes to the caller.        |
+  // | Finish framing and storage, then hand the accumulated bytes to the      |
+  // | caller, spill file included.                                            |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] common::byte_storage release() {
     end();
@@ -127,9 +122,8 @@ class body_writer {
   // +=========================================================================+
   // | [>] is_chunked                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Reports whether this instance was constructed via chunked() (as opposed |
-  // | to raw()). Lets callers that receive an already-built/used body_writer  |
-  // | (e.g. response::set_body) pick the matching wire framing headers.       |
+  // | Say whether this writer uses chunking, so a response can choose         |
+  // | matching headers.                                                       |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] bool is_chunked() const noexcept {
     return std::holds_alternative<writer_chunked>(encoder_);
@@ -137,10 +131,8 @@ class body_writer {
   // +=========================================================================+
   // | [>] bytes_written                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the total number of raw payload bytes passed to write() so far  |
-  // | (i.e. before framing overhead). Lets callers that receive an already-   |
-  // | used raw body_writer (e.g. response::set_body) derive Content-Length    |
-  // | without tracking it themselves.                                         |
+  // | Count payload bytes before framing overhead. A response can use this as |
+  // | Content-Length for an already-used raw writer.                          |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] std::size_t bytes_written() const noexcept {
     return bytes_written_;

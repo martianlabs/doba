@@ -53,15 +53,15 @@ using namespace std::chrono_literals;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policy_state {
-  // Number of engines constructed, including engines of closed connections.
+  // Count all created engines, including closed connections.
   std::atomic<int> created{0};
-  // Number of input calls; fragmentation must remain inside the RX bound.
+  // Count input calls; each fragment must fit the RX bound.
   std::atomic<int> calls{0};
-  // False if the transport delivers a block exceeding the copied RX policy.
+  // Set false if any delivered block exceeds the copied RX policy.
   std::atomic<bool> bounded{true};
-  // Expected immutable RX capacity, set before starting workers.
+  // Fixed RX capacity, set before starting workers.
   std::size_t receive_limit{4096};
-  // Select exact/overflow output instead of ordinary echo before startup.
+  // Select normal echo, exact-limit or overflow output before startup.
   bool fixed_output{false};
 };
 
@@ -106,11 +106,11 @@ struct policy_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Observations shared with the external test owner.
+  // Share observations with the external test owner.
   std::shared_ptr<policy_state> state;
-  // Synchronous transport output callback.
+  // Synchronous transport send callback.
   send_delegate send;
-  // Synchronous transport closure callback.
+  // Synchronous transport close callback.
   std::function<void()> close;
 };
 

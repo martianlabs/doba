@@ -102,7 +102,7 @@ stream decode(std::string_view wire, bool fragmented,
                                 pos - input.size());
         } else if (decoded.code == status::kInvalidSource) {
           result.rejected = true;
-          break;  // An invalid stream is terminal; never decode its successor.
+          break;  // Invalid input ends the stream; never decode its successor.
         } else {
           check(!decoded.request.has_value(),
                 "incomplete decoder has no request");
@@ -110,10 +110,10 @@ stream decode(std::string_view wire, bool fragmented,
           break;
         }
       }
-      // Expose dependencies on caller-owned storage before the next fragment.
+      // Expose borrowed-buffer bugs before feeding the next fragment.
       std::fill(piece.begin(), piece.end(), '\x5a');
     }
-  }  // Owned requests must also survive destruction of the decoder.
+  }  // Owned requests must survive the decoder too.
   for (auto& [request, boundary] : retained) {
     message snapshot{
         {std::string(request.get_method()),
@@ -183,8 +183,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   check(whole == decode(wire, true, policy),
         "HTTP memory/disk storage equivalence");
 
-  // Differential rejection alone could miss a parser rejecting every input.
-  // Build a valid pipeline with a known binary body and exact boundaries too.
+  // Rejection alone could let a parser reject everything. Also build a valid
+  // pipeline with a known binary body and exact boundaries.
   const auto payload = wire.substr(0, 512);
   const std::string body =
       size % 2 ? doba_fuzz::chunked_wire(payload) : std::string(payload);

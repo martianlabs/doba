@@ -129,11 +129,9 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] decoder                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the http 1.1 decoder implementation.                 |
+// | Decode HTTP/1.1 requests a piece at a time.                               |
 // +---------------------------------------------------------------------------+
-// | Template parameters:                                                      |
-// | RQty - request being used.                                                |
-// | RSty - response being used.                                               |
+// | RQty and RSty are the request and response types.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <contracts::request RQty, contracts::response RSty>
@@ -165,7 +163,7 @@ class decoder {
   // +=========================================================================+
   // | [>] deserialize                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Consume one message, retaining only an unfinished message across calls. |
+  // | Consume one message; keep only an unfinished one between calls.         |
   // +-------------------------------------------------------------------------+
   deserialization_result<RQty, RSty> deserialize(std::string_view& input) {
     if (!reminder_active_) reminder_.clear();
@@ -208,8 +206,8 @@ class decoder {
         (reminder_.size() >= context_.policies.max_request_head_size ||
          std::string_view(reminder_.data(), reminder_.size())
                  .find("\r\n\r\n") != std::string_view::npos)) {
-      // A complete head cannot need more syntax bytes. In particular, a
-      // malformed CONNECT target must not wait for a colon in later data.
+      // A complete head can't need more syntax bytes. Don't wait for a later
+      // colon to fix a malformed CONNECT target.
       if (reminder_.size() >= context_.policies.max_request_head_size)
         context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
       result.code = deserialization_status::kInvalidSource;
@@ -289,13 +287,13 @@ class decoder {
   // +=========================================================================+
   // | [>] configuration                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the decoder's configuration.                                    |
+  // | Get the decoder settings.                                               |
   // +-------------------------------------------------------------------------+
   const policies& configuration() const noexcept { return context_.policies; }
   // +=========================================================================+
   // | [>] make_response                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a response that owns its bytes, with the configured limits.     |
+  // | Build a response that owns its bytes and uses these limits.             |
   // +-------------------------------------------------------------------------+
   RSty make_response() {
     return RSty::from(context_.policies.max_response_head_size,
@@ -308,8 +306,7 @@ class decoder {
   }
 
  private:
-  // Find the first head terminator, including one crossing the receive
-  // boundary.
+  // Find the first head terminator, even across input calls.
   // +-------------------------------------------------------------------------+
   // | [>] head_fragment_size                                       ( public ) |
   // +-------------------------------------------------------------------------+
@@ -342,7 +339,7 @@ class decoder {
     // | request-line = method SP request-target SP HTTP-version               |
     // +-----------------------------------------------------------------------+
     // +-----------------------------------------------------------------------+
-    // | [method] part!                                                        |
+    // | Read the method.                                                      |
     // +-----------------------------------------------------------------------+
     if (sv.empty()) return deserialization_status::kMoreBytesNeeded;
     method_ = helpers::consume_token(sv);
@@ -352,7 +349,7 @@ class decoder {
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     head_request_ = method_ == method_names::kHead;
     // +-----------------------------------------------------------------------+
-    // | [request-target] part!                                                |
+    // | Read the request target.                                              |
     // +-----------------------------------------------------------------------+
     // | request-target = origin-form                                          |
     // | / absolute-form                                                       |
@@ -363,8 +360,7 @@ class decoder {
     deserialization_status status;
     std::size_t bytes_used = 0;
     if (method_ == method_names::kConnect) {
-      // Let's try to parse the request-target as authority-form, which is the
-      // only valid form for the CONNECT method.
+      // CONNECT needs authority-form.
       std::string_view authority_host, authority_port;
       helpers::host_type authority_type;
       status = helpers::try_to_deserialize_as_authority_form(
@@ -377,24 +373,20 @@ class decoder {
             authority_host, authority_port, authority_type, {}};
       }
     } else if (method_ == method_names::kOptions && sv[i] == '*') {
-      // Let's try to parse the request-target as asterisk-form, which is the
-      // only valid form for the OPTIONS method with "*".
+      // OPTIONS * needs asterisk-form.
       status = helpers::try_to_deserialize_as_asterisk_form(sv.substr(i),
                                                             bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kAsteriskForm;
       }
     } else {
-      // Let's try to parse the request-target as origin-form, which is the most
-      // common form for all other methods.
+      // Try origin-form for the usual request path.
       status = helpers::try_to_deserialize_as_origin_form(
           sv.substr(i), absolute_path_, query_, bytes_used);
       if (status == deserialization_status::kSucceeded) {
         target_ = target::kOriginForm;
       } else if (status == deserialization_status::kInvalidSource) {
-        // If we couldn't parse the request-target as origin-form, let's try to
-        // parse it as absolute-form, which is the only other valid form for all
-        // other methods.
+        // Not origin-form? Try absolute-form next.
         bool has_authority = false;
         std::string_view authority_host, authority_port, authority_scheme;
         helpers::host_type authority_type;
@@ -412,11 +404,8 @@ class decoder {
       }
     }
     if (status != deserialization_status::kSucceeded) return status;
-    // Validate that every "%HH" triplet in the path decodes to a non-NUL
-    // byte. The decoder never mutates the transport's source buffer; the
-    // actual decoding into the resulting path happens later, once ownership
-    // has moved to a buffer the 'request' instance controls (see
-    // 'request::request').
+    // Reject paths with a %HH escape for NUL. Don't change the transport
+    // buffer; decode later into the request's own storage.
     if (!absolute_path_.empty() &&
         !helpers::percent_decode_validate(absolute_path_)) {
       context_.rejection_reason = rejection_reason::kSyntax;
@@ -426,7 +415,7 @@ class decoder {
     if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
     if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
-    // | [HTTP-version] part!                                                  |
+    // | Read the HTTP version.                                                |
     // +-----------------------------------------------------------------------+
     // | HTTP-version   | HTTP-name "/" DIGIT "." DIGIT                        |
     // | HTTP-name      | %s"HTTP"                                             |
@@ -446,11 +435,8 @@ class decoder {
       return deserialization_status::kMoreBytesNeeded;
     }
     if (sv[i + 5] != '1' || sv[i + 7] != '1') {
-      // The grammar is well-formed but the version is not HTTP/1.1. A
-      // numerically higher version (e.g. 1.2, 2.0) is a request this server
-      // simply does not speak yet, which maps to 505 HTTP Version Not
-      // Supported. Anything at or below HTTP/1.0 is out of scope for now and
-      // stays a plain 400.
+      // We don't speak versions above 1.1, so return 505. HTTP/1.0 and lower
+      // are also out of scope, but get 400.
       if (sv[i + 5] > '1' || (sv[i + 5] == '1' && sv[i + 7] > '1')) {
         context_.rejection_reason = rejection_reason::kVersionNotSupported;
       }
@@ -465,7 +451,7 @@ class decoder {
     }
     i += 2;
     // +-----------------------------------------------------------------------+
-    // | [headers] part!                                                       |
+    // | Read the headers.                                                     |
     // +-----------------------------------------------------------------------+
     // +-----------------------------------------------------------------------+
     // | Rule            | Definition                                          |
@@ -491,17 +477,14 @@ class decoder {
             return deserialization_status::kMoreBytesNeeded;
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
-          // Every modelled header was already parsed once and interpreted in
-          // place during the loop above, populating ctx and the connection
-          // state. All that remains is to apply the transversal rules that no
-          // single header can decide, over the fully populated context. Any
-          // rejection fails the whole deserialization.
+          // Headers have already been parsed and interpreted into ctx. Now
+          // check the rules that need more than one header; any rejection fails
+          // decoding.
           if (headers::rules::framing::apply(context_) == verdict::kReject ||
               headers::rules::routing::apply(context_) == verdict::kReject ||
               headers::rules::directives::apply(context_) == verdict::kReject ||
               headers::rules::policy::apply(context_) == verdict::kReject) {
-            // If any of the transversal rules reject the request, then the
-            // source is invalid and we cannot parse the request!
+            // A cross-header rule rejected the request; stop decoding.
             return deserialization_status::kInvalidSource;
           }
           if (!store_head(sv.substr(0, i))) {
@@ -509,7 +492,7 @@ class decoder {
           }
           head_end_ = i;
           source.remove_prefix(i);
-          // Check for a body and select its framing.
+          // Check for a body and choose its framing.
           bool body_expected =
               context_.connection.chunked ||
               (context_.has_content_length && context_.content_length > 0);
@@ -540,7 +523,7 @@ class decoder {
           return result;
         }
         if (sv[i] == '\n') return deserialization_status::kInvalidSource;
-        // [field-name] decoding..
+        // Read the field name.
         if (sv[i] != ':') {
           if (!helpers::is_token(sv[i++])) {
             return deserialization_status::kInvalidSource;
@@ -551,7 +534,7 @@ class decoder {
         }
         continue;
       }
-      // [field-value] decoding..
+      // Read the field value.
       if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
       if (sv[i++] != ':') return deserialization_status::kInvalidSource;
       std::string_view field_name = sv.substr(fn_start, i - 1 - fn_start);
@@ -560,8 +543,7 @@ class decoder {
         if (sv[i] == '\r') break;
         if (!helpers::is_vchar(sv[i]) && !helpers::is_obs_text(sv[i]) &&
             !helpers::is_ows(sv[i])) {
-          // If the next character is not a valid field-value character, then
-          // the source is invalid because we have an incomplete header field!
+          // An invalid byte here leaves the field incomplete; reject it.
           return deserialization_status::kInvalidSource;
         }
         i++;
@@ -572,10 +554,9 @@ class decoder {
       }
       std::string_view field_value = sv.substr(fv_start, i - fv_start);
       helpers::ows_trim(field_value);
-      // Single pass: the dispatcher validates the field's syntax and, for a
-      // modelled header, produces its parsed_T once and runs the intra-header
-      // interpreter, recording any cross-header signal into ctx. A semantic
-      // rejection fails deserialization.
+      // Check syntax once, parse modelled headers once, then run their
+      // interpreters and record cross-header state in ctx. Reject semantic
+      // failures.
       auto const itr_dispatch = header_dispatchers_.find(field_name);
       if (itr_dispatch != header_dispatchers_.end()) {
         if (itr_dispatch->second(field_value, context_) == verdict::kReject) {
@@ -638,8 +619,7 @@ class decoder {
       context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
       return false;
     }
-    // Only if the query part is not empty, we will split it into key-value
-    // pairs and set it in the request.
+    // Split a nonempty query into name/value pairs for the request.
     query_parameters_.clear();
     if (!query_.empty()) {
       constexpr std::size_t kQueryParameterStackCapacity = 129;
@@ -766,12 +746,9 @@ class decoder {
   // +=========================================================================+
   // | [>] dispatch                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  // | The dispatcher for every header the semantic layer does not model. It   |
-  // | runs the header's single syntactic checker and never touches the        |
-  // | context: a value the checker rejects fails deserialization, otherwise   |
-  // | it                                                                      |
-  // | is accepted as-is. One template instantiation per checker keeps each    |
-  // | registry entry a direct, inlinable call.                                |
+  // | For unmodelled headers, check syntax and leave ctx alone. Reject bad    |
+  // | values; accept the rest as-is. Each checker gets a direct, inlinable    |
+  // | dispatcher.                                                             |
   // +-------------------------------------------------------------------------+
   template <typename CHty>
   static constexpr verdict dispatch(std::string_view sv, context&) {
@@ -780,12 +757,9 @@ class decoder {
   // +=========================================================================+
   // | [>] dispatch_conditional_date                               ( private ) |
   // +-------------------------------------------------------------------------+
-  // | The dispatcher for every conditional date header the semantic layer     |
-  // | does not model. It runs the header's single syntactic checker and never |
-  // | touches the context: a value the checker rejects fails deserialization, |
-  // | otherwise it is accepted as-is. One template instantiation per checker  |
-  // | keeps each registry entry a direct, inlinable call. The semantic layer  |
-  // | ignores any invalid conditional date, as per RFC 9110 S13.1.3/S13.1.4.  |
+  // | For unmodelled conditional dates, leave ctx alone and ignore invalid    |
+  // | dates as RFC 9110 S13.1.3/S13.1.4 requires. Keep a direct dispatcher    |
+  // | per checker.                                                            |
   // +-------------------------------------------------------------------------+
   static constexpr verdict dispatch_conditional_date(std::string_view,
                                                      context&) {
@@ -994,135 +968,135 @@ class decoder {
   // +-------------------------------------------------------------------------+
   static const inline common::hash_map<std::string_view, header_dispatch>
       header_dispatchers_ = {
-          {"Host",  // check & interpret!
+          {"Host",  // Check syntax and interpret.
            &dispatch_host},
-          {"Content-Length",  // check & interpret!
+          {"Content-Length",  // Check syntax and interpret.
            &dispatch_content_length},
-          {"Transfer-Encoding",  // check & interpret!
+          {"Transfer-Encoding",  // Check syntax and interpret.
            &dispatch_transfer_encoding},
-          {"Connection",  // check & interpret!
+          {"Connection",  // Check syntax and interpret.
            &dispatch_connection},
-          {"TE",  // check & interpret!
+          {"TE",  // Check syntax and interpret.
            &dispatch_te},
-          {"Trailer",  // check & interpret!
+          {"Trailer",  // Check syntax and interpret.
            &dispatch_trailer},
-          {"Expect",  // check & interpret!
+          {"Expect",  // Check syntax and interpret.
            &dispatch_expect},
-          {"Upgrade",  // check & interpret!
+          {"Upgrade",  // Check syntax and interpret.
            &dispatch_upgrade},
-          {"Content-Type",  // check only!
+          {"Content-Type",  // Syntax only.
            &dispatch<http::headers::content_type>},
-          {"Content-Encoding",  // check only!
+          {"Content-Encoding",  // Syntax only.
            &dispatch<http::headers::content_encoding>},
-          {"Date",  // check only!
+          {"Date",  // Syntax only.
            &dispatch<http::headers::date>},
-          {"Accept",  // check only!
+          {"Accept",  // Syntax only.
            &dispatch<http::headers::accept>},
-          {"Accept-Encoding",  // check only!
+          {"Accept-Encoding",  // Syntax only.
            &dispatch<http::headers::accept_encoding>},
-          {"Accept-Language",  // check only!
+          {"Accept-Language",  // Syntax only.
            &dispatch<http::headers::accept_language>},
-          {"Content-Language",  // check only!
+          {"Content-Language",  // Syntax only.
            &dispatch<http::headers::content_language>},
-          {"Content-Location",  // check only!
+          {"Content-Location",  // Syntax only.
            &dispatch<http::headers::content_location>},
-          {"Range",  // check only!
+          {"Range",  // Syntax only.
            &dispatch<http::headers::range>},
-          {"Content-Range",  // check only!
+          {"Content-Range",  // Syntax only.
            &dispatch<http::headers::content_range>},
-          {"Accept-Ranges",  // check only!
+          {"Accept-Ranges",  // Syntax only.
            &dispatch<http::headers::accept_ranges>},
-          {"If-Range",  // check only!
+          {"If-Range",  // Syntax only.
            &dispatch<http::headers::if_range>},
-          {"ETag",  // check only!
+          {"ETag",  // Syntax only.
            &dispatch<http::headers::etag>},
-          {"Last-Modified",  // check only!
+          {"Last-Modified",  // Syntax only.
            &dispatch<http::headers::last_modified>},
-          {"If-Match",  // check only!
+          {"If-Match",  // Syntax only.
            &dispatch<http::headers::if_match>},
-          {"If-None-Match",  // check only!
+          {"If-None-Match",  // Syntax only.
            &dispatch<http::headers::if_none_match>},
           {"If-Modified-Since", &dispatch_conditional_date},
           {"If-Unmodified-Since", &dispatch_conditional_date},
-          {"Cache-Control",  // check only!
+          {"Cache-Control",  // Syntax only.
            &dispatch<http::headers::cache_control>},
-          {"Vary",  // check only!
+          {"Vary",  // Syntax only.
            &dispatch<http::headers::vary>},
-          {"Age",  // check only!
+          {"Age",  // Syntax only.
            &dispatch<http::headers::age>},
-          {"Expires",  // check only!
+          {"Expires",  // Syntax only.
            &dispatch<http::headers::expires>},
-          {"Pragma",  // check only!
+          {"Pragma",  // Syntax only.
            &dispatch<http::headers::pragma>},
-          {"Location",  // check only!
+          {"Location",  // Syntax only.
            &dispatch<http::headers::location>},
-          {"Allow",  // check only!
+          {"Allow",  // Syntax only.
            &dispatch<http::headers::allow>},
-          {"Retry-After",  // check only!
+          {"Retry-After",  // Syntax only.
            &dispatch<http::headers::retry_after>},
-          {"Authorization",  // check only!
+          {"Authorization",  // Syntax only.
            &dispatch<http::headers::authorization>},
-          {"WWW-Authenticate",  // check only!
+          {"WWW-Authenticate",  // Syntax only.
            &dispatch<http::headers::www_authenticate>},
-          {"Authentication-Info",  // check only!
+          {"Authentication-Info",  // Syntax only.
            &dispatch<http::headers::authentication_info>},
-          {"Cookie",  // check only!
+          {"Cookie",  // Syntax only.
            &dispatch<http::headers::cookie>},
-          {"Set-Cookie",  // check only!
+          {"Set-Cookie",  // Syntax only.
            &dispatch<http::headers::set_cookie>},
-          {"User-Agent",  // check only!
+          {"User-Agent",  // Syntax only.
            &dispatch<http::headers::user_agent>},
-          {"Server",  // check only!
+          {"Server",  // Syntax only.
            &dispatch<http::headers::server>},
-          {"Referer",  // check only!
+          {"Referer",  // Syntax only.
            &dispatch<http::headers::referer>},
-          {"Max-Forwards",  // check only!
+          {"Max-Forwards",  // Syntax only.
            &dispatch_max_forwards},
-          {"From",  // check only!
+          {"From",  // Syntax only.
            &dispatch<http::headers::from>},
-          {"Accept-Charset",  // check only!
+          {"Accept-Charset",  // Syntax only.
            &dispatch<http::headers::accept_charset>},
-          {"Origin",  // check only!
+          {"Origin",  // Syntax only.
            &dispatch<http::headers::origin>},
-          {"Access-Control-Request-Method",  // check only!
+          {"Access-Control-Request-Method",  // Syntax only.
            &dispatch<http::headers::access_control_request_method>},
-          {"Access-Control-Request-Headers",  // check only!
+          {"Access-Control-Request-Headers",  // Syntax only.
            &dispatch<http::headers::access_control_request_headers>},
-          {"Access-Control-Allow-Origin",  // check only!
+          {"Access-Control-Allow-Origin",  // Syntax only.
            &dispatch<http::headers::access_control_allow_origin>},
-          {"Access-Control-Allow-Methods",  // check only!
+          {"Access-Control-Allow-Methods",  // Syntax only.
            &dispatch<http::headers::access_control_allow_methods>},
-          {"Access-Control-Allow-Headers",  // check only!
+          {"Access-Control-Allow-Headers",  // Syntax only.
            &dispatch<http::headers::access_control_allow_headers>},
-          {"Access-Control-Allow-Credentials",  // check only!
+          {"Access-Control-Allow-Credentials",  // Syntax only.
            &dispatch<http::headers::access_control_allow_credentials>},
-          {"Access-Control-Expose-Headers",  // check only!
+          {"Access-Control-Expose-Headers",  // Syntax only.
            &dispatch<http::headers::access_control_expose_headers>},
-          {"Access-Control-Max-Age",  // check only!
+          {"Access-Control-Max-Age",  // Syntax only.
            &dispatch<http::headers::access_control_max_age>},
-          {"Sec-WebSocket-Key",  // check only!
+          {"Sec-WebSocket-Key",  // Syntax only.
            &dispatch<http::headers::sec_websocket_key>},
-          {"Sec-WebSocket-Accept",  // check only!
+          {"Sec-WebSocket-Accept",  // Syntax only.
            &dispatch<http::headers::sec_websocket_accept>},
-          {"Sec-WebSocket-Version",  // check only!
+          {"Sec-WebSocket-Version",  // Syntax only.
            &dispatch<http::headers::sec_websocket_version>},
-          {"Sec-WebSocket-Protocol",  // check only!
+          {"Sec-WebSocket-Protocol",  // Syntax only.
            &dispatch<http::headers::sec_websocket_protocol>},
-          {"Sec-WebSocket-Extensions",  // check only!
+          {"Sec-WebSocket-Extensions",  // Syntax only.
            &dispatch<http::headers::sec_websocket_extensions>},
-          {"Via",  // check & interpret!
+          {"Via",  // Check syntax and interpret.
            &dispatch_via},
-          {"Forwarded",  // check & interpret!
+          {"Forwarded",  // Check syntax and interpret.
            &dispatch_forwarded},
-          {"X-Forwarded-For",  // check & interpret!
+          {"X-Forwarded-For",  // Check syntax and interpret.
            &dispatch_x_forwarded_for},
-          {"X-Forwarded-Host",  // check & interpret!
+          {"X-Forwarded-Host",  // Check syntax and interpret.
            &dispatch_x_forwarded_host},
-          {"X-Forwarded-Proto",  // check & interpret!
+          {"X-Forwarded-Proto",  // Check syntax and interpret.
            &dispatch_x_forwarded_proto},
-          {"Keep-Alive",  // check only!
+          {"Keep-Alive",  // Syntax only.
            &dispatch<http::headers::x_keep_alive>},
-          {"Proxy-Connection",  // check only!
+          {"Proxy-Connection",  // Syntax only.
            &dispatch<http::headers::x_proxy_connection>},
   };
   // +=========================================================================+

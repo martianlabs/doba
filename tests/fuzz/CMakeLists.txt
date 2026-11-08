@@ -23,8 +23,8 @@ foreach(harness decoder chunked engine)
   target_link_options(fuzz_${harness} PRIVATE
     -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined)
   if(WIN32)
-    # libFuzzer on Windows requires the static CRT and non-incremental linking.
-    # Prebuilt libFuzzer uses the unannotated MSVC STL container ABI.
+    # Windows libFuzzer needs static CRT and non-incremental linking.
+    # Match its prebuilt, unannotated MSVC STL container ABI.
     target_compile_definitions(fuzz_${harness} PRIVATE
       _DISABLE_STRING_ANNOTATION _DISABLE_VECTOR_ANNOTATION)
   endif()

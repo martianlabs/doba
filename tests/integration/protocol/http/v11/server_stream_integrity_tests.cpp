@@ -125,7 +125,7 @@ DOBA_TEST("HTTP pipelines retain binary readers under default limits") {
                   std::to_string(bodies[id]->size()) ||
               reply->body != (head ? std::string{} : *bodies[id])) return false;
         }
-        // EOF must be clean and immediate after the final exact body.
+        // Require clean EOF immediately after the exact final body.
         const auto extra = peer.receive_until_close(1);
         return extra && extra->empty() && peer.error() != "timeout";
       }));

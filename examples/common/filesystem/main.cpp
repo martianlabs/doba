@@ -37,12 +37,8 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is a simple example of how to use the common filesystem and reader   |
-// | classes to read a file from a given root directory and relative path. The |
-// | program takes two command-line arguments: the root directory and the      |
-// | relative file path. It opens the file, reads its contents in blocks,      |
-// | and writes them to standard output. If any error occurs during the        |
-// | process, it prints an error message and returns a non-zero exit code.     |
+// | Read a relative file under the supplied root and stream it to stdout.     |
+// | Report any error and exit with a failure code.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
