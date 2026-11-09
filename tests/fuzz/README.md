@@ -13,10 +13,10 @@ and check that valid messages still mean the same thing when delivered in
 pieces. libFuzzer supplies the bytes; explicit property checks stay active
 in optimized Release builds, including when assertions are disabled.
 
-The canonical corpus contains **27 decoder seeds and 13 chunked seeds**:
+The canonical corpus contains **35 decoder seeds and 13 chunked seeds**:
 valid pipelines, incomplete messages, conflicting framing, overflow,
-extensions, trailers, query limits, and body/head limits. Generated valid
-messages provide known answers alongside arbitrary input.
+extensions, trailers, query limits, body/head limits and fragmented URI targets.
+Generated valid messages provide known answers alongside arbitrary input.
 
 There are also **12 engine-model seeds**. `fuzz_engine` shares an independent
 state model with `doba_security_model_tests` (144 deterministic configurations).

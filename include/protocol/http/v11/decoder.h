@@ -403,7 +403,14 @@ class decoder {
         }
       }
     }
-    if (status != deserialization_status::kSucceeded) return status;
+    if (status != deserialization_status::kSucceeded) {
+      // Until the target's space arrives, URI prefixes can change meaning.
+      if (status == deserialization_status::kInvalidSource &&
+          sv.find(' ', i) == std::string_view::npos) {
+        return deserialization_status::kMoreBytesNeeded;
+      }
+      return status;
+    }
     // Reject paths with a %HH escape for NUL. Don't change the transport
     // buffer; decode later into the request's own storage.
     if (!absolute_path_.empty() &&
