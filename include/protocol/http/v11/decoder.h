@@ -411,7 +411,17 @@ class decoder {
         }
       }
     }
-    if (status != deserialization_status::kSucceeded) return status;
+    if (status != deserialization_status::kSucceeded) {
+      // Until the target's space arrives, URI prefixes can change meaning.
+      if (status == deserialization_status::kInvalidSource &&
+          sv.find(' ', i) == std::string_view::npos) {
+        return deserialization_status::kMoreBytesNeeded;
+      }
+      return status;
+    }
+    i += bytes_used;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
+    if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // Validate that every "%HH" triplet in the path decodes to a non-NUL
     // byte. The decoder never mutates the transport's source buffer; the
     // actual decoding into the resulting path happens later, once ownership
@@ -422,9 +432,6 @@ class decoder {
       context_.rejection_reason = rejection_reason::kSyntax;
       return deserialization_status::kInvalidSource;
     }
-    i += bytes_used;
-    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
-    if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | [HTTP-version] part!                                                  |
     // +-----------------------------------------------------------------------+

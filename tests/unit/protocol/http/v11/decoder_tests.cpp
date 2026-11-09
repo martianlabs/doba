@@ -3812,6 +3812,90 @@ DOBA_TEST("decoder rejects complete malformed CONNECT heads at every split") {
   }
 }
 
+DOBA_TEST("decoder retains incomplete absolute URI userinfo at every split") {
+  for (const std::string_view authority : {
+           "user:pass@target.example", ":pass@target.example",
+           "user:p%40ss@target.example", "user:p:a@target.example:81",
+           "user:pass@[::1]:81", "user:pass@[v1.name]"}) {
+    const std::string first = "GET custom://" + std::string(authority) +
+        "/path?key=value HTTP/1.1\r\nHost: x\r\n\r\n";
+    const std::string second = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
+    const std::string wire = first + second;
+    for (std::size_t split = 0; split <= wire.size(); ++split) {
+      decoder<request, response> value({});
+      std::size_t accepted = 0;
+      for (auto piece : {std::string_view(wire).substr(0, split),
+                         std::string_view(wire).substr(split)}) {
+        while (!piece.empty()) {
+          const auto before = piece.size();
+          auto result = value.deserialize(piece);
+          DOBA_EXPECT(result.code != deserialization_status::kInvalidSource);
+          if (result.code == deserialization_status::kMoreBytesNeeded) {
+            DOBA_EXPECT(!result.request.has_value());
+            DOBA_EXPECT(piece.empty());
+            break;
+          }
+          DOBA_EXPECT(result.request.has_value());
+          DOBA_EXPECT(piece.size() < before);
+          DOBA_EXPECT(accepted < 2);
+          DOBA_EXPECT_EQUAL(result.request->get_absolute_path(),
+                            accepted ? "/next" : "/path");
+          if (!accepted) {
+            DOBA_EXPECT_EQUAL(result.request->get_target(),
+                              target::kAbsoluteForm);
+            const auto query = result.request->get_query_parameter("key");
+            DOBA_EXPECT(query.has_value());
+            DOBA_EXPECT_EQUAL(query->second, "value");
+          }
+          ++accepted;
+        }
+      }
+      DOBA_EXPECT_EQUAL(accepted, 2U);
+    }
+  }
+}
+
+DOBA_TEST("decoder defers malformed URI prefixes until a delimiter or limit") {
+  for (const std::string_view wire : {
+           "GET custom://user:pass", "GET custom://:pass",
+           "POHost xpm://e*]***************%a",
+           "GET custom://[invalid]%a", "GET custom://host:x%a",
+           "GET /;twoV%00;two%0\r\n", "GET /%00",
+           "GET /%00%", "GET /%00%0", "GET /%00%gg",
+           "GET custom:/%00%0", "GET custom://host/%00%0",
+           "GET /%gg"}) {
+    for (std::size_t split = 0; split <= wire.size(); ++split) {
+      decoder<request, response> value({});
+      for (auto piece : {wire.substr(0, split), wire.substr(split)}) {
+        if (piece.empty()) continue;
+        const auto result = value.deserialize(piece);
+        DOBA_EXPECT_EQUAL(result.code,
+                          deserialization_status::kMoreBytesNeeded);
+        DOBA_EXPECT(!result.request.has_value());
+        DOBA_EXPECT(piece.empty());
+      }
+      std::string_view ending = " HTTP/1.1\r\nHost: x\r\n\r\n";
+      auto result = value.deserialize(ending);
+      DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+      DOBA_EXPECT(!result.request.has_value());
+      DOBA_EXPECT(result.response.has_value());
+      DOBA_EXPECT(result.response->serialize().head.starts_with(
+          "HTTP/1.1 400 Bad Request\r\n"));
+      DOBA_EXPECT(ending.empty());
+    }
+    martianlabs::doba::protocol::http::v11::policies policy;
+    policy.max_request_head_size = wire.size();
+    decoder<request, response> bounded(policy);
+    auto input = wire;
+    auto result = bounded.deserialize(input);
+    DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
+    DOBA_EXPECT(result.response.has_value());
+    DOBA_EXPECT(result.response->serialize().head.starts_with(
+        "HTTP/1.1 431 Request Header Fields Too Large\r\n"));
+    DOBA_EXPECT(input.empty());
+  }
+}
+
 DOBA_TEST("decoder replies own their bytes across reuse and destruction") {
   for (const bool interim : {false, true}) {
     std::optional<response> held;

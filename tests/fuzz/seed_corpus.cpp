@@ -116,6 +116,13 @@ int main(int argc, char** argv) {
          std::string("GET / HTTP/1.1\r\nHost: x\r\nX: a") + '\0' + "b\r\n\r\n"},
         {"missing-host", "GET / HTTP/1.1\r\n\r\n"},
         {"connect-missing-port", "CONNECT missing-port HTTP/1.1\r\n\r\n"},
+        {"authority-userinfo-prefix", "H gm://:e.F@"},
+        {"authority-incomplete-escape", "POHost xpm://e*]***************%a"},
+        {"nul-path-incomplete-escape", "GET /;twoV%00;two%0\r\n"},
+        {"authority-userinfo-pipeline",
+         "GET custom://user:" + std::string(64, 'p') +
+             "@target.example/path?key=value HTTP/1.1\r\nHost: x\r\n\r\n" +
+             successor},
         {"connect-fragmentation-regression",
          "CONNECT T- / HT\x94P" + std::string(10, '\xff') +
              "GETGET HPOS-EnT TTP/1.1\r\n\r\n\r\n"
