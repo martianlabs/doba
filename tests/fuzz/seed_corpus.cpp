@@ -117,6 +117,7 @@ int main(int argc, char** argv) {
         {"missing-host", "GET / HTTP/1.1\r\n\r\n"},
         {"connect-missing-port", "CONNECT missing-port HTTP/1.1\r\n\r\n"},
         {"authority-userinfo-prefix", "H gm://:e.F@"},
+        {"nul-path-incomplete-escape", "GET /;twoV%00;two%0\r\n"},
         {"authority-incomplete-escape", "POHost xpm://e*]***************%a"},
         {"authority-userinfo-pipeline",
          "GET custom://user:" + std::string(64, 'p') +

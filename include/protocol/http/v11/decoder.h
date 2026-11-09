@@ -411,16 +411,15 @@ class decoder {
       }
       return status;
     }
-    // Reject paths with a %HH escape for NUL. Don't change the transport
-    // buffer; decode later into the request's own storage.
+    i += bytes_used;
+    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
+    if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
+    // Reject escaped NULs only once the target is closed.
     if (!absolute_path_.empty() &&
         !helpers::percent_decode_validate(absolute_path_)) {
       context_.rejection_reason = rejection_reason::kSyntax;
       return deserialization_status::kInvalidSource;
     }
-    i += bytes_used;
-    if (i >= sv.size()) return deserialization_status::kMoreBytesNeeded;
-    if (sv[i++] != ' ') return deserialization_status::kInvalidSource;
     // +-----------------------------------------------------------------------+
     // | Read the HTTP version.                                                |
     // +-----------------------------------------------------------------------+

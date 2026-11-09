@@ -13,7 +13,7 @@ and check that valid messages still mean the same thing when delivered in
 pieces. libFuzzer supplies the bytes; explicit property checks stay active
 in optimized Release builds, including when assertions are disabled.
 
-The canonical corpus contains **35 decoder seeds and 13 chunked seeds**:
+The canonical corpus contains **36 decoder seeds and 13 chunked seeds**:
 valid pipelines, incomplete messages, conflicting framing, overflow,
 extensions, trailers, query limits, body/head limits and fragmented URI targets.
 Generated valid messages provide known answers alongside arbitrary input.

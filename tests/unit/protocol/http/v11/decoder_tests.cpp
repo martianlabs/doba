@@ -3849,6 +3849,9 @@ DOBA_TEST("decoder defers malformed URI prefixes until a delimiter or limit") {
            "GET custom://user:pass", "GET custom://:pass",
            "POHost xpm://e*]***************%a",
            "GET custom://[invalid]%a", "GET custom://host:x%a",
+           "GET /;twoV%00;two%0\r\n", "GET /%00",
+           "GET /%00%", "GET /%00%0", "GET /%00%gg",
+           "GET custom:/%00%0", "GET custom://host/%00%0",
            "GET /%gg"}) {
     for (std::size_t split = 0; split <= wire.size(); ++split) {
       decoder<request, response> value({});
