@@ -43,7 +43,9 @@ using martianlabs::doba::protocol::processing_result;
 // | [>] fault                                                        ( enum ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-enum class fault { kNone, kPort, kAccept, kAssociate, kReceive, kSend };
+enum class fault {
+  kNone, kPort, kSocket, kBind, kListen, kAccept, kAssociate, kReceive, kSend
+};
 // One armed failure is consumed atomically by the matching API.
 std::atomic<fault> armed{fault::kNone};
 // The second AcceptEx fails after the first real operation was submitted.
@@ -81,6 +83,40 @@ HANDLE WINAPI tracked_port(HANDLE file, HANDLE port, ULONG_PTR key,
 int WSAAPI tracked_close(SOCKET socket) {
   if (socket == watched.load()) ++closes;
   return ::closesocket(socket);
+}
+
+// +---------------------------------------------------------------------------+
+// | [>] tracked_socket                                           ( function ) |
+// +---------------------------------------------------------------------------+
+SOCKET WSAAPI tracked_socket(int family, int type, int protocol,
+                            LPWSAPROTOCOL_INFOW info, GROUP group, DWORD flags) {
+  if (consume_fault(fault::kSocket)) {
+    WSASetLastError(WSAENOBUFS);
+    return INVALID_SOCKET;
+  }
+  return ::WSASocketW(family, type, protocol, info, group, flags);
+}
+
+// +---------------------------------------------------------------------------+
+// | [>] tracked_bind                                             ( function ) |
+// +---------------------------------------------------------------------------+
+int WSAAPI tracked_bind(SOCKET socket, const sockaddr* address, int length) {
+  if (consume_fault(fault::kBind)) {
+    WSASetLastError(WSAEADDRINUSE);
+    return SOCKET_ERROR;
+  }
+  return ::bind(socket, address, length);
+}
+
+// +---------------------------------------------------------------------------+
+// | [>] tracked_listen                                           ( function ) |
+// +---------------------------------------------------------------------------+
+int WSAAPI tracked_listen(SOCKET socket, int backlog) {
+  if (consume_fault(fault::kListen)) {
+    WSASetLastError(WSAENOBUFS);
+    return SOCKET_ERROR;
+  }
+  return ::listen(socket, backlog);
 }
 
 // +---------------------------------------------------------------------------+
@@ -144,6 +180,9 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
 
 #define CreateIoCompletionPort tracked_port
 #define closesocket tracked_close
+#define WSASocketW tracked_socket
+#define bind tracked_bind
+#define listen tracked_listen
 #define WSAIoctl tracked_ioctl
 #define WSARecv tracked_receive
 #define WSASend tracked_send
@@ -152,6 +191,9 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
 #undef WSARecv
 #undef WSAIoctl
 #undef closesocket
+#undef listen
+#undef bind
+#undef WSASocketW
 #undef CreateIoCompletionPort
 
 namespace {
@@ -220,7 +262,9 @@ void check_fault(fault injected) {
   accepts = closes = 0;
   watched = INVALID_SOCKET;
   armed = injected;
-  if (injected == fault::kPort || injected == fault::kAccept) {
+  if (injected == fault::kPort || injected == fault::kSocket ||
+      injected == fault::kBind || injected == fault::kListen ||
+      injected == fault::kAccept) {
     bool failed = false;
     try { transport.start(); } catch (...) { failed = true; }
     DOBA_EXPECT(failed);
@@ -271,6 +315,15 @@ void check_fault(fault injected) {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows restarts after IOCP creation failure") {
   check_fault(fault::kPort);
+}
+DOBA_TEST("Windows restarts after listener socket creation failure") {
+  check_fault(fault::kSocket);
+}
+DOBA_TEST("Windows restarts after listener bind failure") {
+  check_fault(fault::kBind);
+}
+DOBA_TEST("Windows releases the bound socket after listen failure") {
+  check_fault(fault::kListen);
 }
 DOBA_TEST("Windows drains a pending accept after partial startup failure") {
   check_fault(fault::kAccept);
