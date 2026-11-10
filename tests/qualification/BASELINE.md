@@ -56,6 +56,14 @@ Current source reports and gates are defined in [README.md](README.md),
 The original failed campaign is retained in local audit evidence; successful
 reruns follow a fixture correction, not an automatic retry policy.
 
+Header inventories were updated on 2026-11-10 after splitting declarations
+and moving the transports. `byte_storage_options.h` and `cache_entry.h` contain
+data declarations; `tcp.h` now only selects a platform. The Linux TCP wrapper
+inherits its constructor, while the Windows wrapper defines one. The Windows
+constructor is now tracked in `tcp_windows.h`, and `tls_factory.h` is tracked
+on both platforms. Platform alternatives remain unmapped. Coverage floors and
+the original measured totals above are unchanged.
+
 Local evidence: out/reliability/2026-11-04, including source hashes, original
 per-object LLVM exports, HTML, the failed run, fresh campaigns and validation.
 The first remote CI run is still pending. No Git operation or publication was
