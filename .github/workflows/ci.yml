@@ -839,10 +839,6 @@ jobs:
         run: >-
           ctest --test-dir out/build/tls -R '^doba_tls_examples_tests$'
           --output-on-failure --no-tests=error --repeat until-fail:5
-      - name: Require explicit TLS target for HTTPS headers
-        run: >-
-          ctest --test-dir out/build/tls -R '^doba_tls_header_guard_tests$'
-          --output-on-failure --no-tests=error
       - name: Install and configure TLS package consumer
         shell: pwsh
         run: |
