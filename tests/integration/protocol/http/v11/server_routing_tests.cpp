@@ -288,7 +288,7 @@ DOBA_TEST("HTTP/1.1 authenticates Basic and Bearer over persistent TCP") {
   doba::http_server<request, response,
                     doba::protocol::http::router<request, response>,
                     doba::protocol::http::v11::engine<request, response>,
-                    doba::transport::server::tcp, auth::basic, auth::bearer>
+                    doba::transport::tcp, auth::basic, auth::bearer>
       server({.ip = "127.0.0.1", .port = std::to_string(port)}, {},
              std::tuple{auth::basic{"demo",
                                     [](auto user, auto password) {
@@ -367,7 +367,7 @@ DOBA_TEST("HTTP/1.1 shares a Bearer provider across concurrent connections") {
   doba::http_server<request, response,
                     doba::protocol::http::router<request, response>,
                     doba::protocol::http::v11::engine<request, response>,
-                    doba::transport::server::tcp, auth::bearer>
+                    doba::transport::tcp, auth::bearer>
       server(
           {.worker_count = kSocketWorkers, .ip = "127.0.0.1",
            .port = std::to_string(port)},

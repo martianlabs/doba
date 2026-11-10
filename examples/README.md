@@ -24,7 +24,7 @@ request, response, or router, follow the
 
 The generic `server<...>` joins an engine and a transport without HTTP routing.
 The [custom protocol](protocol/custom_protocol/README.md) example pairs it
-with TCP. The [custom transport](transport/server/custom_transport/README.md)
+with TCP. The [custom transport](transport/custom_transport/README.md)
 example keeps HTTP/1.1 and runs it in memory. Explore these after the HTTP
 examples if you need to replace either side.
 
@@ -41,6 +41,6 @@ Linux and Windows TCP supply these turns natively; see
 [HTTPS example](http/v11/https_hello_world/README.md) includes an async route.
 A separate executor is not part of the engine interface.
 
-See the [TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract)
-and [policy reference](../docs/reference/transport/server/tcp_policies.md) for
+See the [TCP runtime contract](../docs/reference/transport/tcp.md#runtime-contract)
+and [policy reference](../docs/reference/transport/tcp_policies.md) for
 callback lifetime, a terminal prefix/source reader, hard limits and stop behavior.

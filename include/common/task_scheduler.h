@@ -26,7 +26,6 @@
 #define martianlabs_doba_common_task_scheduler_h
 
 #include <chrono>
-#include <coroutine>
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
@@ -39,9 +38,8 @@ struct task_scheduler {
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   void* owner{nullptr};
-  void (*post)(void*, std::coroutine_handle<>){nullptr};
-  void (*schedule)(void*, std::chrono::steady_clock::time_point,
-                   std::coroutine_handle<>){nullptr};
+  void (*post)(void*){nullptr};
+  void (*schedule)(void*, std::chrono::steady_clock::time_point){nullptr};
 };
 }  // namespace martianlabs::doba::common
 

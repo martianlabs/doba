@@ -26,7 +26,6 @@
 #define martianlabs_doba_common_task_execution_h
 
 #include <chrono>
-#include <coroutine>
 #include <exception>
 #include <optional>
 #include <stdexcept>
@@ -50,16 +49,15 @@ class task_execution {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit task_execution(task<void> value)
-      : handle_{std::exchange(value.handle_, {})} {
-    if (!handle_) throw std::invalid_argument("Empty task");
+      : handle_{std::move(value).release()} {
+    if (!handle_) {
+      throw std::invalid_argument("Empty task");
+    }
     auto& promise = handle_.promise();
-    promise.controlled = true;
     promise.scheduler = {
         this,
-        [](void* owner, std::coroutine_handle<>) {
-          static_cast<task_execution*>(owner)->ready_ = true;
-        },
-        [](void* owner, clock::time_point due, std::coroutine_handle<>) {
+        [](void* owner) { static_cast<task_execution*>(owner)->ready_ = true; },
+        [](void* owner, clock::time_point due) {
           static_cast<task_execution*>(owner)->deadline_ = due;
         }};
   }
@@ -75,7 +73,9 @@ class task_execution {
   // | [>] resume                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   bool resume(clock::time_point now = clock::now()) {
-    if (done() || (!ready_ && (!deadline_ || now < *deadline_))) return false;
+    if (done() || (!ready_ && (!deadline_ || now < *deadline_))) {
+      return false;
+    }
     ready_ = false;
     deadline_.reset();
     handle_.resume();
@@ -87,7 +87,9 @@ class task_execution {
   void cancel() noexcept {
     ready_ = false;
     deadline_.reset();
-    if (auto handle = std::exchange(handle_, {})) handle.destroy();
+    if (auto handle = std::exchange(handle_, {})) {
+      handle.destroy();
+    }
   }
   // +=========================================================================+
   // | [>] done                                                     ( public ) |
@@ -114,9 +116,9 @@ class task_execution {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  task<void>::handle_type handle_;  // Sole owner of the suspended frame.
-  bool ready_{true};               // Initial entry or a requested yield.
-  std::optional<clock::time_point> deadline_;  // Positive sleep, if pending.
+  task<void>::handle_type handle_;
+  bool ready_{true};
+  std::optional<clock::time_point> deadline_;
 };
 }  // namespace martianlabs::doba::common
 

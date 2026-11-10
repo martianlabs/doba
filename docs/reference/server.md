@@ -82,7 +82,7 @@ a sequential external owner outside worker callbacks. Linux cancels outstanding
 TX after the active call; Windows drains accepted output and real I/O before
 joining workers. Neither waits for application tasks or promises a stop timeout.
 A call while stopped has no effect. See the
-[TCP lifecycle contract](transport/server/tcp.md#runtime-contract).
+[TCP lifecycle contract](transport/tcp.md#runtime-contract).
 
 **Returns:** No value (`void`).
 

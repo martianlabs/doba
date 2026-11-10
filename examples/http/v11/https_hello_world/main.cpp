@@ -37,7 +37,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 int main(int count, char** arguments) {
   if (count < 3 || count > 4) return 1;
-  martianlabs::doba::transport::server::tls_policies policies;
+  martianlabs::doba::transport::tls_policies policies;
   policies.ip = "0.0.0.0";
   policies.port = count == 4 ? arguments[3] : "8443";
   policies.certificate_file = arguments[1];

@@ -39,15 +39,6 @@ if(TARGET https_hello_world AND TARGET tls_echo)
   set_tests_properties(doba_tls_examples_tests PROPERTIES TIMEOUT 45)
 endif()
 
-add_test(NAME doba_tls_header_guard_tests COMMAND "${CMAKE_COMMAND}"
-  -S "${CMAKE_CURRENT_LIST_DIR}/../../package/tls_guard"
-  -B "${CMAKE_CURRENT_BINARY_DIR}/header-guard"
-  -G "${CMAKE_GENERATOR}"
-  "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-  "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
-  "-DDOBA_INCLUDE_DIR=${DOBA_INCLUDE_DIR}")
-set_tests_properties(doba_tls_header_guard_tests PROPERTIES TIMEOUT 45)
-
 add_executable(doba_tls_processing processing.cpp)
 target_link_libraries(doba_tls_processing PRIVATE martianlabs::doba_tls)
 add_test(NAME doba_tls_processing_tests COMMAND doba_tls_processing

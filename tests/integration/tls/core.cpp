@@ -32,11 +32,11 @@
 #include <type_traits>
 
 #include "protocol/processing_result.h"
-#include "transport/server/tls_engine.h"
+#include "transport/tls_engine.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-namespace detail = martianlabs::doba::transport::server::detail;
+namespace detail = martianlabs::doba::transport::detail;
 // The SSL_CTX callback retains its configuration's address for its lifetime.
 static_assert(!std::is_copy_constructible_v<detail::tls_configuration>);
 static_assert(!std::is_move_constructible_v<detail::tls_configuration>);
@@ -107,7 +107,7 @@ void exercise(const char* certificate, const char* key, int version,
             << "; ready=" << progress.turn_requested
             << "; timed=" << progress.turn_at.has_value()
             << "; drain=" << progress.turn_after_output_drained << '\n';
-  martianlabs::doba::transport::server::tls_policies policies;
+  martianlabs::doba::transport::tls_policies policies;
   policies.certificate_file = certificate;
   policies.private_key_file = key;
   policies.network_bio_buffer_capacity = capacity;

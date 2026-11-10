@@ -26,79 +26,17 @@
 #define martianlabs_doba_common_task_awaiters_h
 
 #include <chrono>
-#include <coroutine>
-#include <stdexcept>
 
-#include "common/task_scheduler.h"
+#include "common/sleep_awaiter.h"
+#include "common/yield_awaiter.h"
 
 namespace martianlabs::doba::common {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] yield_awaiter                                              ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct yield_awaiter {
-  // +=========================================================================+
-  // | [>] await_ready                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool await_ready() const noexcept { return false; }
-  // +=========================================================================+
-  // | [>] await_suspend                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  template <typename Pty>
-  void await_suspend(std::coroutine_handle<Pty> handle) const {
-    const auto scheduler = handle.promise().scheduler;
-    if (!scheduler.post) throw std::runtime_error("No task scheduler");
-    scheduler.post(scheduler.owner, handle);
-  }
-  // +=========================================================================+
-  // | [>] await_resume                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_resume() const noexcept {}
-};
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] yield                                                    ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline yield_awaiter yield() noexcept { return {}; }
-
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] sleep_awaiter                                              ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct sleep_awaiter {
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  std::chrono::steady_clock::duration duration;
-  // +=========================================================================+
-  // | [>] await_ready                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool await_ready() const noexcept {
-    return duration <= std::chrono::steady_clock::duration::zero();
-  }
-  // +=========================================================================+
-  // | [>] await_suspend                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  template <typename Pty>
-  void await_suspend(std::coroutine_handle<Pty> handle) const {
-    const auto scheduler = handle.promise().scheduler;
-    if (!scheduler.schedule) throw std::runtime_error("No task scheduler");
-    using clock = std::chrono::steady_clock;
-    const auto now = clock::now();
-    const auto due = now > clock::time_point::max() - duration
-                         ? clock::time_point::max()
-                         : now + duration;
-    scheduler.schedule(scheduler.owner, due, handle);
-  }
-  // +=========================================================================+
-  // | [>] await_resume                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_resume() const noexcept {}
-};
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

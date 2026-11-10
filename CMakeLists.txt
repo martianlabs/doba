@@ -269,7 +269,7 @@ if(
     ${CMAKE_CURRENT_LIST_DIR}/examples/protocol/custom_protocol
   )
   add_subdirectory(
-    ${CMAKE_CURRENT_LIST_DIR}/examples/transport/server/custom_transport
+    ${CMAKE_CURRENT_LIST_DIR}/examples/transport/custom_transport
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/byte_storage
@@ -288,9 +288,6 @@ if(
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/cache
-  )
-  add_subdirectory(
-    ${CMAKE_CURRENT_LIST_DIR}/examples/common/console_logger
   )
   add_subdirectory(
     ${CMAKE_CURRENT_LIST_DIR}/examples/common/date_server

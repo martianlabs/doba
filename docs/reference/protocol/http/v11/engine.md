@@ -83,7 +83,7 @@ transport workers, so cooperative HTTP handlers and reader continuation work
 over plain TCP. No application executor or mode switch is required.
 TLS forwards the same snapshots and engine turns over both TCP backends.
 Its existing finite plaintext and ciphertext batch limits apply to each
-input/processing entry. See the [TLS contract](../../../transport/server/tls.md).
+input/processing entry. See the [TLS contract](../../../transport/tls.md).
 
 See [the compiled example](../../../../../examples/http/v11/processing_turns/README.md)
 and [the plan](../../../../../ASYNC.md).

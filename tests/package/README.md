@@ -62,7 +62,5 @@ These are consumption and construction checks. The consumer programs do
 not open listening sockets or exchange requests; those behaviors belong to
 the [integration suite](../integration/README.md).
 
-The [TLS header guard](tls_guard/CMakeLists.txt) is a negative compilation test.
-It requires the specific missing-TLS-target diagnostic, not just any compiler
-failure. TLS CI also consumes a TLS-enabled installation through the plain
-export while OpenSSL package discovery is explicitly disabled.
+TLS CI also consumes a TLS-enabled installation through the plain export
+while OpenSSL package discovery is explicitly disabled.

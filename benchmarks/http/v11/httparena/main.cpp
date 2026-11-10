@@ -59,7 +59,7 @@
 #include <zlib.h>
 #include "https_server.h"
 #include "protocol/http/v11/static_file_server.h"
-#include "transport/server/tls.h"
+#include "transport/tls.h"
 #endif
 
 #include "common/reader.h"
@@ -440,7 +440,7 @@ int main() {
         }
       };
   http_server.add_route("GET", "/json/:count", json_handler);
-  martianlabs::doba::transport::server::tls_policies tls_configuration;
+  martianlabs::doba::transport::tls_policies tls_configuration;
   tls_configuration.worker_count = workers;
   tls_configuration.ip = "0.0.0.0";
   tls_configuration.port = "8081";

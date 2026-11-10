@@ -30,19 +30,12 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] verdict                                                ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | The outcome of the semantic interpretation layer. Unlike the syntactic    |
-// | checkers (which only answer "is this well-formed?"), an interpreter or a  |
-// | transversal rule answers "should this message be served?" after taking    |
-// | the parsed values, the request as a whole, and the connection/policies    |
-// | state into account.                                                       |
-// +---------------------------------------------------------------------------+
-// | kAccept - the message is semantically valid and may be served.            |
-// | kReject - the message must not be served.                                 |
+// | Whether a header interpreter or rule accepts the request.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class verdict {
-  kAccept,  // the message is semantically valid and may be served.
-  kReject,  // the message must not be served.
+  kAccept,  // This check passed; continue processing.
+  kReject,  // Reject the request.
 };
 }  // namespace martianlabs::doba::protocol::http::v11
 

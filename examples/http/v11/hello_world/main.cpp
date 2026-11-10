@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/console_logger.h"
 #include "common/signaler.h"
 #include "http_server.h"
 

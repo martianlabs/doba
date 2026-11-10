@@ -33,7 +33,7 @@
 
 #include "common/date_server.h"
 #include "contracts.h"
-#include "transport/server/tcp.h"
+#include "transport/tcp.h"
 #include "protocol/http/common/auth/contracts.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/contracts.h"
@@ -55,7 +55,7 @@ template <typename RQty = protocol::http::v11::request,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcp,
+          template <typename, typename> class TRty = transport::tcp,
           typename... AUty>
   requires contracts::http_server<RQty, RSty, ROty, ENty, TRty> &&
            (protocol::http::auth::contracts::provider<AUty, RQty> && ...)

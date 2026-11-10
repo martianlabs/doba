@@ -74,6 +74,9 @@ DOBA_TEST("file and name filters select one test") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe body") != std::string::npos);
+  DOBA_EXPECT(result.output.find("running 1 integration tests") !=
+              std::string::npos);
+  DOBA_EXPECT(result.output.find("probe passes passed") != std::string::npos);
   DOBA_EXPECT(result.output.find("probe continued") == std::string::npos);
 }
 
@@ -95,6 +98,9 @@ DOBA_TEST("assertion failure reports expression and location") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("2 + 2 == 5") != std::string::npos);
+  DOBA_EXPECT(result.output.find("probe assertion fails failed") !=
+              std::string::npos);
+  DOBA_EXPECT(result.output.find("1 test(s) failed") != std::string::npos);
   const std::string marker{"test_helper_probe.cpp:"};
   const auto location = result.output.find(marker);
   DOBA_EXPECT(location != std::string::npos);

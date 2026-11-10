@@ -22,8 +22,8 @@ execute_process(COMMAND "${DOBA_MUTATION_COMPILER}" --version
   OUTPUT_FILE "${run}/compiler.txt" COMMAND_ERROR_IS_FATAL ANY)
 file(GLOB_RECURSE originals RELATIVE "${root}" "${root}/include/*.h")
 list(APPEND originals
-  "tests/unit/transport/server/operating_policies_tests.cpp"
-  "tests/unit/transport/server/policy_budget_audit_tests.cpp"
+  "tests/unit/transport/operating_policies_tests.cpp"
+  "tests/unit/transport/policy_budget_audit_tests.cpp"
   "tests/unit/protocol/http/v11/operating_limits_tests.cpp"
   "tests/unit/protocol/http/v11/policy_budget_audit_tests.cpp")
 foreach(path IN LISTS originals)
@@ -40,9 +40,9 @@ if(WIN32)
 endif()
 set(ids admission sources partial-batch http-bytes requests)
 set(headers
-  transport/server/connection_reservation.h
-  transport/server/send_state.h
-  transport/server/send_state.h
+  transport/connection_reservation.h
+  transport/send_state.h
+  transport/send_state.h
   protocol/http/v11/engine.h
   protocol/http/v11/engine.h)
 set(before_0 "if (budget->maximum && used >= budget->maximum)")

@@ -23,12 +23,12 @@
 // permissions and limitations under the License.
 
 #include <concepts>
-#include <exception>
 #include <functional>
 
 #include "protocol/http/common/router_handler_static_async.h"
 #include "router_empty_request.h"
 #include "router_empty_response.h"
+#include "common/task_execution.h"
 #include "test_helper.h"
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -38,6 +38,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 namespace {
 using martianlabs::doba::common::task;
+using martianlabs::doba::common::task_execution;
 using martianlabs::doba::protocol::http::detail::router_handler_static_async;
 using martianlabs::doba::tests::unit::router_empty_request;
 using martianlabs::doba::tests::unit::router_empty_response;
@@ -58,7 +59,9 @@ DOBA_TEST("asynchronous static alias accepts a coroutine") {
   };
   router_empty_request req;
   router_empty_response res;
-  auto work = handler(req, res);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution work(handler(req, res));
+  DOBA_EXPECT(work.resume());
+  DOBA_EXPECT(work.done());
+  DOBA_EXPECT(!work.error());
   DOBA_EXPECT(invoked);
 }

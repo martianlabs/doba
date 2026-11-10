@@ -12,7 +12,7 @@ prerequisites. New processing checks run inside those jobs.
 | Linux native processing | doba_linux_processing_tests alongside transport and accept-fault groups; transport and processing repeat under TSan. |
 | Windows native processing | Actual processing cases in the integration binary and doba_windows_processing_tests for forced early publication/cancellation/faults; repeated with IOCP/lifecycle probes under Windows sanitizers. |
 | TLS | Existing wire/core/configuration/header/example groups plus doba_tls_processing_tests and doba_tls_processing_wire_tests. Dedicated TLS jobs explicitly build doba_tls_processing and execute both new groups. |
-| Executable processing examples | doba_processing_examples_tests runs the standalone task owner, in-memory concurrent engine and native TCP example. Required when examples are enabled. |
+| Executable processing examples | doba_processing_examples_tests runs the task_execution example, in-memory concurrent engine and native TCP example. Required when examples are enabled. |
 | HttpArena driver | doba_httparena_tests checks metadata and actual baseline/pipelined/async behavior with dynamic values on isolated ports. It is always part of root test builds, not a throughput campaign. |
 | Existing broader gates | Minimum CMake, package/source consumers, fuzzers and private-copy mutation campaigns remain configured; final qualification belongs to async-plan block 10. |
 

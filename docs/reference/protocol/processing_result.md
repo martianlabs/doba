@@ -13,8 +13,8 @@ Coroutine frames remain engine-owned; no transport accepts application jobs
 or externally resumed handles.
 
 See [the implementation plan](../../../ASYNC.md) and the
-[Linux delivery design](../transport/server/tcp_linux_processing.md) and
-[Windows delivery design](../transport/server/tcp_windows_processing.md).
+[Linux delivery design](../transport/tcp_linux_processing.md) and
+[Windows delivery design](../transport/tcp_windows_processing.md).
 
 ## Entry points and ownership
 

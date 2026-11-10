@@ -51,8 +51,8 @@ class request_processor_sync {
         if (match.handler) {
           (*match.handler)(request, response);
         } else if (match.parametrized_handler) {
-          match.parametrized_handler->invoke(
-              request, response, request.get_absolute_path());
+          match.parametrized_handler->invoke(request, response,
+                                             request.get_absolute_path());
         } else {
           const std::string allowed =
               router.allowed_methods(request.get_absolute_path());

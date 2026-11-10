@@ -43,7 +43,7 @@ using protocol::processing_result;
 using clock_type = processing_result::clock;
 using tests::tls::processing_session;
 using namespace std::chrono_literals;
-namespace tr = transport::server;
+namespace tr = transport;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -190,7 +190,7 @@ void errors(tr::tls_policies settings, int version) {
         } else if (failure == 6) {
           current.send({}, {}, source(std::string(9000, 'c')));
         } else if (failure == 7) {
-          common::filesystem_file file;
+          common::filesystem file;
           std::byte byte{};
           file.read(std::span<std::byte>(&byte, 1));
           current.send("discard", {},

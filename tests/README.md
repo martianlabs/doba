@@ -128,7 +128,7 @@ A stuck test must leave something more useful than a spinning CI job.
 [integration runner](integration/README.md#when-a-test-goes-wrong).
 
 Native Linux and Windows transport coverage follows the
-[TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract).
+[TCP runtime contract](../docs/reference/transport/tcp.md#runtime-contract).
 Protocol-only async tests supply serialized processing turns and controlled
 eligibility times. Native TCP and TLS groups validate real-socket coroutine
 handlers, mixed ordered output, cancellation and independent connection progress.

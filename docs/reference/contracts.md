@@ -37,7 +37,7 @@ concept http_server =
     protocol::http::v11::contracts::router<ROty, RQty, RSty> &&
     std::constructible_from<ENty, const typename ENty::policies_type&,
                             const ROty&> &&
-    transport::server::contracts::transport<
+    transport::contracts::transport<
         TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>, ENty,
         protocol::http::v11::detail::engine_factory<ENty, ROty>>;
 ```

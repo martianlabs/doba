@@ -65,7 +65,7 @@ Inline-response pipelining is supported; an
 input batch can own only one terminal reader. Later nonempty output or another
 reader closes the connection. Empty sends without a reader are no-ops.
 
-See the [runtime contract](../../../docs/reference/transport/server/tcp.md#runtime-contract)
+See the [runtime contract](../../../docs/reference/transport/tcp.md#runtime-contract)
 for ownership and Linux/Windows differences.
 
 [processing_turns](processing_turns/README.md) demonstrates concurrent async

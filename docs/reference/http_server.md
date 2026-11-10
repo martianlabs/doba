@@ -11,7 +11,7 @@
 The bundled TCP server supports synchronous handlers and one terminal
 prefix/source reader. Use [https_server](https_server.md) for TLS; coroutine execution remains
 outside the transport.
-See the [TCP runtime contract](transport/server/tcp.md#runtime-contract).
+See the [TCP runtime contract](transport/tcp.md#runtime-contract).
 
 Combines an HTTP/1.1 router and protocol engine with a server transport. TCP is
 the default transport.
@@ -48,7 +48,7 @@ template <typename RQty = protocol::http::v11::request,
           typename ROty = protocol::http::router<RQty, RSty>,
           protocol::contracts::engine ENty =
               protocol::http::v11::engine<RQty, RSty, ROty>,
-          template <typename, typename> class TRty = transport::server::tcp,
+          template <typename, typename> class TRty = transport::tcp,
           typename... AUty>
   requires contracts::http_server<RQty, RSty, ROty, ENty, TRty> &&
            (protocol::http::auth::contracts::provider<AUty, RQty> && ...)
@@ -65,7 +65,7 @@ Combines routing, the HTTP/1.1 engine, and the selected transport in one server.
 - **RSty:** `typename RSty = protocol::http::v11::response`.
 - **ROty:** `typename ROty = protocol::http::router<RQty, RSty>`.
 - **ENty:** `protocol::contracts::engine ENty = protocol::http::v11::engine<RQty, RSty, ROty>`.
-- **TRty:** `template <typename, typename> class TRty = transport::server::tcp`.
+- **TRty:** `template <typename, typename> class TRty = transport::tcp`.
 - **AUty:** `typename... AUty`.
 
 **Source:** [include/http_server.h:62](../../include/http_server.h#L62)

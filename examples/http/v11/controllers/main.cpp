@@ -26,7 +26,6 @@
 #include <string>
 #include <utility>
 
-#include "common/console_logger.h"
 #include "common/signaler.h"
 #include "protocol/http/common/method_names.h"
 #include "http_server.h"

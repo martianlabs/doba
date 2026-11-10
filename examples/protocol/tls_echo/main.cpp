@@ -31,7 +31,7 @@
 #include "common/signaler.h"
 #include "protocol/contracts.h"
 #include "server.h"
-#include "transport/server/tls.h"
+#include "transport/tls.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -41,7 +41,7 @@ using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 namespace protocol = martianlabs::doba::protocol;
-namespace transport = martianlabs::doba::transport::server;
+namespace transport = martianlabs::doba::transport;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

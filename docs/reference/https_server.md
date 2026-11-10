@@ -12,7 +12,7 @@ HTTP/1.1 server using the separate TCP-based TLS transport on Linux and Windows.
 Link `martianlabs::doba_tls`, configure `tls_policies` with a PEM chain and key,
 and advertise only `http/1.1` through ALPN. Other configured tokens are
 rejected before transport construction. Route and engine APIs match
-[http_server](http_server.md). See the [TLS runtime contract](transport/server/tls.md)
+[http_server](http_server.md). See the [TLS runtime contract](transport/tls.md)
 for finite source limits, shutdown behavior and excluded features.
 
 ### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
@@ -43,7 +43,7 @@ template <typename RQty = protocol::http::v11::request,
               protocol::http::v11::engine<RQty, RSty, ROty>,
           typename... AUty>
 class https_server
-    : public http_server<RQty, RSty, ROty, ENty, transport::server::tls,
+    : public http_server<RQty, RSty, ROty, ENty, transport::tls,
                          AUty...> { ... };
 ```
 
@@ -51,7 +51,7 @@ HTTP/1.1 server using the separate TCP-based TLS transport on Linux and Windows.
 Link `martianlabs::doba_tls`, configure `tls_policies` with a PEM chain and key,
 and advertise only `http/1.1` through ALPN. Other configured tokens are
 rejected before transport construction. Route and engine APIs match
-[http_server](http_server.md). See the [TLS runtime contract](transport/server/tls.md)
+[http_server](http_server.md). See the [TLS runtime contract](transport/tls.md)
 for finite source limits, shutdown behavior and excluded features.
 
 **Template parameters:**
@@ -67,10 +67,10 @@ for finite source limits, shutdown behavior and excluded features.
 **Constructors:**
 
 ```cpp
-explicit https_server(transport::server::tls_policies configuration = {},
+explicit https_server(transport::tls_policies configuration = {},
                       typename ENty::policies_type engine_configuration = {})
   requires(sizeof...(AUty) == 0);
-https_server(transport::server::tls_policies configuration,
+https_server(transport::tls_policies configuration,
              typename ENty::policies_type engine_configuration,
              std::tuple<AUty...> authentication);
 ```

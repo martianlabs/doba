@@ -126,7 +126,7 @@ command, result and log. Default coverage includes:
 | Family | Checks exercised |
 | --- | --- |
 | Engine | Deterministic 144-case state model, mixed ordering, RX reuse, cancellation, deadlines and admission limits. |
-| Common ownership | Every registered cache, byte-storage and reader case, including failed loads, shared exceptions, spill, moves and cleanup. |
+| Common ownership | Every registered cache, byte-storage and reader case, including failed loads, invalidation races, spill, moves and cleanup. |
 | Linux | Every context case, partial sends/EAGAIN, source failure/budgets, descriptor exhaustion/partial startup, processing publication and cancellation probes. |
 | Windows | IOCP completion before API return, partial startup, immediate submission failures, timer publication/cancellation and stale wake probes. |
 | Winsock ownership | Three injected startup error codes, exact exception, no release after failed construction, successful retry and nested owner cleanup. |

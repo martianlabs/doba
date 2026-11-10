@@ -359,7 +359,7 @@ namespace {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 
 }  // namespace
 
@@ -374,7 +374,7 @@ DOBA_TEST("HTTP closes incomplete file responses before subsequent bytes") {
   DOBA_EXPECT(port != 0);
   http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
   value.add_route("GET", "/file", [&](const request&, response& res) {
-    filesystem_file file;
+    filesystem file;
     std::error_code error;
     if (!file.open(directory.path(), "file", error)) {
       throw std::runtime_error("Unable to open file");

@@ -40,10 +40,10 @@ namespace martianlabs::doba::protocol {
 // +---------------------------------------------------------------------------+
 // | [>] send_delegate                                              ( public ) |
 // +---------------------------------------------------------------------------+
-// | Sends head, body and an optional source, in that order. Bundled TCP       |
-// | copies inline bytes before returning and takes ownership of the reader.   |
-// | Invoke only inside a serialized engine input or processing turn.          |
-// | A reader is terminal; later nonempty output is a contract violation.      |
+// | Send head, body, then the optional reader.                                |
+// | TCP copies the bytes before returning and takes the reader.               |
+// | Call only during an engine turn.                                          |
+// | After a reader, do not send more bytes.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 using send_delegate = std::function<void(std::string_view, std::string_view,
@@ -55,13 +55,11 @@ namespace martianlabs::doba::protocol::contracts {
 // +---------------------------------------------------------------------------+
 // | [>] engine                                                      (concept) |
 // +---------------------------------------------------------------------------+
-// | Input and processing turns never overlap for one engine instance.         |
-// | Input bytes are immutable and borrowed only until that call returns;      |
-// | they are all discarded by the transport, regardless of the result.        |
-// | The engine owns any data it retains. Send/close callbacks run only        |
-// | inside these turns and must not escape for cross-thread invocation.       |
-// | Results describe processing needs, not RX control or input consumption.   |
-// | output_idle is a snapshot taken before the processing turn begins.        |
+// | Run one input or processing call at a time per engine.                    |
+// | Input is read-only and expires when the call returns. Copy what you keep. |
+// | TCP consumes all input; the result only asks for more processing.         |
+// | Call send/close only on the thread running the current turn.              |
+// | output_idle says whether output was idle when the turn began.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename ENty>
@@ -71,18 +69,20 @@ concept engine = requires(ENty& engine, std::string_view input,
   typename ENty::policies_type;
   { engine.set_on_send(std::move(output)) } -> std::same_as<void>;
   { engine.set_on_close(std::move(close)) } -> std::same_as<void>;
-  { engine.on_bytes_received(input) } ->
-      std::same_as<protocol::processing_result>;
-  { engine.on_processing_turn(output_idle) } ->
-      std::same_as<protocol::processing_result>;
+  {
+    engine.on_bytes_received(input)
+  } -> std::same_as<protocol::processing_result>;
+  {
+    engine.on_processing_turn(output_idle)
+  } -> std::same_as<protocol::processing_result>;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                              (concept) |
 // +---------------------------------------------------------------------------+
-// | Creates an independent engine per connection. Calls for different         |
-// | connections may overlap on different workers; shared state must be safe.  |
+// | Create a separate engine for each connection.                             |
+// | Workers can call it at the same time. Keep shared data safe.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty, typename ENty>

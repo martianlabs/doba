@@ -33,6 +33,7 @@
 #include <string>
 #include <thread>
 
+#include "common/date_server.h"
 #include "common/filesystem.h"
 #include "common/reader.h"
 #include "directory_link.h"
@@ -47,7 +48,8 @@ namespace {
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
+using martianlabs::doba::common::date_server;
 }  // namespace
 
 namespace {
@@ -233,16 +235,16 @@ DOBA_TEST("static invalidation removes all variants and preserves snapshots") {
   auto gzip = file_request(routes, "GET", "/asset",
                            "Accept-Encoding: gzip\r\n");
   auto unrelated = file_request(routes, "GET", "/unrelated");
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 4);
   const auto root_key = fs::canonical(directory.path()).generic_u8string();
   std::string key(root_key.begin(), root_key.end());
   key += '\0';
   const auto original = cache->find(key + "asset");
   const auto retained = cache->find(key + "unrelated");
+  DOBA_EXPECT(cache->find(key + "asset.br") != nullptr);
+  DOBA_EXPECT(cache->find(key + "asset.gz") != nullptr);
   DOBA_EXPECT(original != nullptr);
   DOBA_EXPECT(retained != nullptr);
   controller.invalidate("asset");
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
   for (std::string_view suffix : {"", ".br", ".gz"}) {
     DOBA_EXPECT(!cache->find(key + "asset" + std::string(suffix)));
   }
@@ -251,13 +253,14 @@ DOBA_TEST("static invalidation removes all variants and preserves snapshots") {
   const auto replacement = cache->find(key + "asset");
   DOBA_EXPECT(replacement != nullptr);
   DOBA_EXPECT(replacement != original);
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 2);
   static_file_server uncached("/", directory.path());
   uncached.invalidate("asset");
   uncached.clear_cache();
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 2);
+  DOBA_EXPECT(cache->find(key + "asset") == replacement);
+  DOBA_EXPECT(cache->find(key + "unrelated") == retained);
   controller.clear_cache();
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 0);
+  DOBA_EXPECT(!cache->find(key + "asset"));
+  DOBA_EXPECT(!cache->find(key + "unrelated"));
   DOBA_EXPECT_EQUAL(file_body(identity), "identity");
   DOBA_EXPECT_EQUAL(file_body(brotli), "brotli");
   DOBA_EXPECT_EQUAL(file_body(gzip), "gzip");
@@ -409,9 +412,7 @@ DOBA_TEST(
     "static file cache revalidates every request and retains old snapshots") {
   file_directory directory;
   directory.write("file.txt", "old");
-  auto cached = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cached = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cached});
@@ -437,9 +438,7 @@ DOBA_TEST(
     "static file cache observes replacements before conditional evaluation") {
   file_directory directory;
   directory.write("file.txt", "old");
-  auto cache = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});
@@ -477,9 +476,7 @@ DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
   directory.write("app.js", "identity");
   directory.write("app.js.br", "old");
   directory.write("fallback.html", "first");
-  auto cache = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{
@@ -516,9 +513,7 @@ DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
 DOBA_TEST("static file cache observes in-place size changes immediately") {
   file_directory directory;
   directory.write("file", "old");
-  auto cache = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});
@@ -565,9 +560,7 @@ DOBA_TEST(
     "static file cache reloads changed attributes even for identical bytes") {
   file_directory directory;
   directory.write("file", "same");
-  auto cache = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});
@@ -618,18 +611,20 @@ DOBA_TEST("static file cache rejects a directory link after warming") {
   routes.add_controller<static_file_server>(
       "/", directory.path(), static_file_policies{.cache = cache});
   auto warm = file_request(routes, "GET", "/sub/file");
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
+  const auto root = fs::canonical(directory.path()).generic_u8string();
+  const auto key = std::string(root.begin(), root.end()) + '\0' + "sub/file";
+  DOBA_EXPECT(cache->find(key) != nullptr);
   fs::rename(directory.path() / "sub", directory.path() / "previous");
   const auto link = directory.path() / "sub";
   martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
   auto denied = file_request(routes, "GET", "/sub/file");
   DOBA_EXPECT(file_status(denied).starts_with("HTTP/1.1 403"));
   DOBA_EXPECT_EQUAL(file_body(warm), "inside");
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 0);
+  DOBA_EXPECT(!cache->find(key));
   fs::remove(link);
 }
 
-DOBA_TEST("static file cache isolates roots and bypasses exhausted budgets") {
+DOBA_TEST("static file cache isolates roots and evicts within the resident budget") {
   file_directory a, b;
   a.write("file", "first"); b.write("file", "other");
   auto cached = std::make_shared<static_file_cache>(
@@ -643,11 +638,17 @@ DOBA_TEST("static file cache isolates roots and bypasses exhausted budgets") {
   auto first = file_request(routes, "GET", "/a/file");
   auto second = file_request(routes, "GET", "/b/file");
   DOBA_EXPECT(!first.get_header("ETag").second.starts_with("W/"));
-  DOBA_EXPECT(second.get_header("ETag").second.starts_with("W/"));
+  DOBA_EXPECT(!second.get_header("ETag").second.starts_with("W/"));
   DOBA_EXPECT_EQUAL(file_body(first), "first");
   DOBA_EXPECT_EQUAL(file_body(second), "other");
+  const auto root_a = fs::canonical(a.path()).generic_u8string();
+  const auto root_b = fs::canonical(b.path()).generic_u8string();
+  const auto key_a = std::string(root_a.begin(), root_a.end()) + '\0' + "file";
+  const auto key_b = std::string(root_b.begin(), root_b.end()) + '\0' + "file";
+  DOBA_EXPECT(!cached->find(key_a));
+  DOBA_EXPECT(cached->find(key_b) != nullptr);
   cached->clear();
-  DOBA_EXPECT_EQUAL(cached->statistics().live_cost, 0);
+  DOBA_EXPECT(!cached->find(key_b));
 }
 
 DOBA_TEST(
@@ -700,7 +701,7 @@ DOBA_TEST(
                     static_file_time("Sunday, 06-Nov-94 08:49:37 GMT"));
   DOBA_EXPECT_EQUAL(static_file_time("Sun, 06 Nov 1994 08:49:37 GMT"),
                     static_file_time("Sun Nov  6 08:49:37 1994"));
-  DOBA_EXPECT_EQUAL(static_file_date(784111777),
+  DOBA_EXPECT_EQUAL(date_server::format(784111777),
                     "Sun, 06 Nov 1994 08:49:37 GMT");
   DOBA_EXPECT_EQUAL(
       static_file_etag(""),
@@ -847,20 +848,21 @@ DOBA_TEST("static redirects escape paths and preserve encoded query values") {
                     "/files/a%20b/?q=one%20two&x=a%2Fb");
 }
 
-DOBA_TEST("static file cache expires and large files preserve direct reading") {
+DOBA_TEST(
+    "static file cache revalidates changes and large files preserve direct reading") {
   file_directory directory;
   directory.write("small", "old"); directory.write("large", "long");
-  auto cached = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::milliseconds(5)});
+  auto cached = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
       "/", directory.path(),
       static_file_policies{.cache = cached, .max_cached_file_size = 3});
   auto old = file_request(routes, "GET", "/small");
   const auto tag = old.get_header("ETag").second;
+  const auto timestamp = fs::last_write_time(directory.path() / "small");
   directory.write("small", "new");
-  std::this_thread::sleep_for(std::chrono::milliseconds(15));
+  fs::last_write_time(directory.path() / "small",
+                      timestamp + std::chrono::seconds(2));
   auto fresh = file_request(routes, "GET", "/small");
   DOBA_EXPECT(fresh.get_header("ETag").second != tag);
   DOBA_EXPECT_EQUAL(file_body(old), "old");
@@ -913,7 +915,6 @@ DOBA_TEST(
   for (int i = 0; i < 3; ++i) {
     auto plain = get(); DOBA_EXPECT_EQUAL(file_body(plain), "identity");
   }
-  DOBA_EXPECT_EQUAL(cache->statistics().entries, 1);
   directory.write("nested/asset.webp.gz", "gzip");
   auto gzip = get();
   DOBA_EXPECT_EQUAL(gzip.get_header("Content-Encoding").second, "gzip");

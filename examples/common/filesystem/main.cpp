@@ -54,13 +54,13 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::error_code error;
-  const auto root = filesystem_root(argv[1], error);
+  const auto root = filesystem::root(argv[1], error);
   if (error) {
     std::cerr << error.message() << '\n';
     return 1;
   }
   if (attributes) {
-    const auto value = filesystem_file::inspect(root, argv[2], error);
+    const auto value = filesystem::inspect(root, argv[2], error);
     if (!value) {
       std::cerr << error.message() << '\n';
       return 1;
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
               << "links: " << value->links << '\n';
     return std::cout ? 0 : 1;
   }
-  filesystem_file file;
+  filesystem file;
   if (!file.open(root, argv[2], error)) {
     std::cerr << error.message() << '\n';
     return 1;

@@ -87,7 +87,7 @@ Creates a reader for a chunked Transfer-Encoding from a borrowed span source. Th
 
 ```cpp
 static reader chunked(
-      common::filesystem_file&& source,
+      common::filesystem&& source,
       std::size_t extension_limit =
           reader_chunked::kDefaultMaxChunkExtensionSize,
       std::size_t trailer_limit =
@@ -98,7 +98,7 @@ Creates a reader for a chunked Transfer-Encoding from a file source. The extensi
 
 **Parameters:**
 
-- **source:** Source data or object to read from. Declaration: `common::filesystem_file&& source`.
+- **source:** Source data or object to read from. Declaration: `common::filesystem&& source`.
 - **extension_limit:** Maximum chunk-extension size in bytes. Declaration: `std::size_t extension_limit = reader_chunked::kDefaultMaxChunkExtensionSize`.
 - **trailer_limit:** Maximum trailer size in bytes. Declaration: `std::size_t trailer_limit = reader_chunked::kDefaultMaxTrailerSectionSize`.
 
@@ -139,7 +139,7 @@ Creates a reader for a raw Transfer-Encoding from a borrowed span source. The co
 **METHOD** · *protocol::http::v11::body::reader*
 
 ```cpp
-static reader raw(common::filesystem_file&& source,
+static reader raw(common::filesystem&& source,
                     std::size_t content_length);
 ```
 
@@ -147,7 +147,7 @@ Creates a reader for a raw Transfer-Encoding from a file source. The content_len
 
 **Parameters:**
 
-- **source:** Source data or object to read from. Declaration: `common::filesystem_file&& source`.
+- **source:** Source data or object to read from. Declaration: `common::filesystem&& source`.
 - **content_length:** Size or length limit for the named data. Declaration: `std::size_t content_length`.
 
 **Returns:** A `reader` configured for the selected body format.

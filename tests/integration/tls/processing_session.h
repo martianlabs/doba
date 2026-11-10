@@ -33,7 +33,7 @@
 #include <string_view>
 #include <utility>
 
-#include "transport/server/tls_engine.h"
+#include "transport/tls_engine.h"
 
 namespace martianlabs::doba::tests::tls {
 // /////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ class processing_session {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename Factory>
-  processing_session(transport::server::tls_policies policies,
+  processing_session(transport::tls_policies policies,
                      Factory factory, int version)
       : context_(client_context(policies.certificate_file, version)),
         client_(SSL_new(context_.get()), SSL_free),
@@ -171,7 +171,7 @@ class processing_session {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using configuration = transport::server::detail::tls_configuration;
+  using configuration = transport::detail::tls_configuration;
   using context_owner = std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)>;
   // +=========================================================================+
   // | [>] check                                                   ( private ) |
@@ -215,7 +215,7 @@ class processing_session {
   context_owner context_;
   std::unique_ptr<SSL, decltype(&SSL_free)> client_;
   // Same TLS adapter used by both real native transports.
-  transport::server::detail::tls_engine<ENty> server_;
+  transport::detail::tls_engine<ENty> server_;
   // Encoded output waiting for simulated TCP completion/client delivery.
   std::string ciphertext_;
   // Complete last return, observed even for partial/control-only input.

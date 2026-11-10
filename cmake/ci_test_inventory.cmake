@@ -189,7 +189,7 @@ if(DOBA_CI_REQUIRE_TLS)
     COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${DOBA_CI_BUILD_DIR}" -N
     OUTPUT_VARIABLE registered COMMAND_ERROR_IS_FATAL ANY)
   set(required_tls doba_tls_tests doba_tls_core_tests
-      doba_tls_configuration_tests doba_tls_header_guard_tests
+      doba_tls_configuration_tests
       doba_tls_processing_tests doba_tls_processing_wire_tests)
   if(configuration MATCHES "DOBA_BUILD_EXAMPLES:BOOL=ON(\n|$)")
     list(APPEND required_tls doba_tls_examples_tests)

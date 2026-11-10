@@ -33,12 +33,12 @@
 
 #include "protocol/processing_result.h"
 #include "https_server.h"
-#include "transport/server/tls.h"
+#include "transport/tls.h"
 #include "protocol/http/common/auth/basic.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-namespace tr = martianlabs::doba::transport::server;
+namespace tr = martianlabs::doba::transport;
 namespace common = martianlabs::doba::common;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -93,7 +93,7 @@ struct echo_engine {
             owner, std::as_bytes(std::span(*owner)))));
         if (owner.use_count() != 1) throw std::runtime_error("Reader retained");
       } else if (line == "failed") {
-        common::filesystem_file file;
+        common::filesystem file;
         std::byte byte{};
         file.read(std::span<std::byte>(&byte, 1));
         send("discard:", {}, std::make_unique<common::reader>(std::move(file)));

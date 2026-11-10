@@ -106,8 +106,8 @@ class request_processor_async {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  RQty request_;                    // Owned before handler invocation.
-  RSty response_;                   // Independent of reusable sync storage.
+  RQty request_;                      // Owned before handler invocation.
+  RSty response_;                     // Independent of reusable sync storage.
   std::shared_ptr<void> parameters_;  // Typed route arguments, when needed.
   // Destroy the frame before its borrowed request/response/route arguments.
   std::optional<common::task_execution> execution_;

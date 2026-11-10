@@ -43,11 +43,7 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class provides a reader interface for reading bytes from a           |
-// | byte_storage backend. It supports reading into a span of bytes, fetching  |
-// | individual bytes, and checking the state of the reader (e.g., whether it  |
-// | has reached the end of the storage or encountered an error). It can also  |
-// | read all remaining bytes into a string.                                   |
+// | Reads bytes from storage, a file or a block of memory.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader {
@@ -57,7 +53,7 @@ class reader {
   // +-------------------------------------------------------------------------+
   reader() = default;
   explicit reader(byte_storage storage) : storage_(std::move(storage)) {}
-  explicit reader(filesystem_file file) : file_(std::move(file)) {}
+  explicit reader(filesystem file) : file_(std::move(file)) {}
   reader(const reader&) = delete;
   reader(reader&& in) noexcept
       : storage_(std::move(in.storage_)),
@@ -96,16 +92,17 @@ class reader {
   // +=========================================================================+
   // | [>] borrowed                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a non-owning reader over stable caller storage. The referenced  |
-  // | bytes must outlive this reader and every object to which it is moved.   |
+  // | Reads the caller's bytes without owning them.                           |
+  // | Keep them alive while any reader still uses them.                       |
   // +-------------------------------------------------------------------------+
   static reader borrowed(std::span<const std::byte> source) noexcept {
     return reader(source, borrowed_tag{});
   }
-  // Retains the owner while reading a stable immutable slice. Each reader has
-  // an independent cursor. The span must refer into the supplied owner.
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] shared                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | The bytes must belong to the owner and stay unchanged.                  |
+  // | Keeps the owner alive; each reader has its own cursor.                  |
   // +-------------------------------------------------------------------------+
   static reader shared(std::shared_ptr<const void> owner,
                        std::span<const std::byte> source) {
@@ -114,7 +111,7 @@ class reader {
     result.owner_ = std::move(owner);
     return result;
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] rebind_borrowed                                          ( public ) |
   // +-------------------------------------------------------------------------+
   void rebind_borrowed(std::span<const std::byte> source) noexcept {
@@ -210,7 +207,7 @@ class reader {
   // +-------------------------------------------------------------------------+
   struct borrowed_tag {};
   // +=========================================================================+
-  // | [>] CONSTRUCTORs/DESTRUCTORs                                ( private ) |
+  // | [>] CONSTRUCTORs                                           ( private )  |
   // +-------------------------------------------------------------------------+
   reader(std::span<const std::byte> source, borrowed_tag) noexcept
       : borrowed_(source), is_borrowed_(true) {}
@@ -218,7 +215,7 @@ class reader {
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   byte_storage storage_;
-  std::optional<filesystem_file> file_;
+  std::optional<filesystem> file_;
   std::shared_ptr<const void> owner_;
   std::span<const std::byte> borrowed_;
   std::size_t borrowed_pos_{0};

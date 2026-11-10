@@ -30,7 +30,7 @@ a data-reading handle. Missing variants are not retained: directory timestamps
 can remain equal across rapid publications, so they cannot safely validate an
 absence. Newly added, removed and replaced variants are checked on the next request.
 
-TTL controls retention, not validation frequency. Active responses retain immutable
+Resident limits and LRU control retention. Active responses retain immutable
 snapshots. Before/after load attributes and concurrent cache results are validated.
 Attribute coherence depends on filesystem semantics and remote metadata caching;
 writes preserving every observed attribute cannot be detected. Prefer atomic
@@ -73,7 +73,7 @@ Variant preference uses stable stack ordering without allocation.
 ## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> static_file_cache
 
 ```cpp
-using static_file_cache = common::cache<std::string, static_file_representation>;
+using static_file_cache = common::cache<static_file_representation>;
 ```
 
 The [generic common cache](../../../common/cache.md) specialized for file representations. Keys contain canonical UTF-8 root, NUL separator and decoded filename including compression suffix. Shared caches coordinate budgets across mounts. Declared cost is payload length + sizeof(static_file_representation) + 66 ETag characters; keys, allocator/control-block overhead and excess string capacity are excluded.
@@ -90,7 +90,7 @@ struct static_file_policies { ... };
 | --- | --- | --- |
 | cache | null shared_ptr<static_file_cache> | Direct reads; supply a shared cache to enable snapshots. |
 | max_cached_file_size | std::size_t / 1048576 bytes (1 MiB) | Per-file admission threshold; larger files stream. |
-| cache_control | std::string / no-cache | HTTP policy independent of internal TTL; empty omits it. |
+| cache_control | std::string / no-cache | HTTP cache policy; empty omits it. |
 | deny_hidden | bool / true | Deny any component starting with a dot. |
 | ranges | bool / true | Simple GET byte ranges; HEAD describes the full representation. |
 | precompressed | bool / false | Negotiate .br/.gz siblings and send Vary: Accept-Encoding. |

@@ -30,7 +30,6 @@
 #include <bit>
 #include <charconv>
 #include <chrono>
-#include <cstdio>
 #include <cstdint>
 #include <ctime>
 #include <iomanip>
@@ -41,41 +40,16 @@
 #include <string>
 #include <string_view>
 
-#include "common/date_server_helpers.h"
 #include "protocol/http/common/headers/date.h"
 #include "protocol/http/common/helpers.h"
 
 namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] static_file_date                                         ( function ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-inline std::string static_file_date(std::int64_t seconds) {
-  const auto time = static_cast<std::time_t>(seconds);
-  std::tm value{};
-#ifdef _WIN32
-  if (common::detail::gm_time(&value, &time) != 0) return {};
-#else
-  if (!common::detail::gm_time(&value, &time)) return {};
-#endif
-  constexpr const char* days[] = {"Sun", "Mon", "Tue", "Wed",
-                                  "Thu", "Fri", "Sat"};
-  constexpr const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-  char output[40];
-  std::snprintf(output, sizeof(output), "%s, %02d %s %04d %02d:%02d:%02d GMT",
-                days[value.tm_wday], value.tm_mday, months[value.tm_mon],
-                value.tm_year + 1900, value.tm_hour, value.tm_min,
-                value.tm_sec);
-  return output;
-}
-
-// Accept IMF-fixdate and both obsolete HTTP-date formats. Do not use the
-// process locale/time zone; reject impossible calendar dates.
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
 // | [>] static_file_time                                         ( function ) |
+// +---------------------------------------------------------------------------+
+// | Parses all three HTTP date formats as Unix seconds in GMT.                |
+// | Ignores the process locale/time zone and rejects impossible dates.        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::optional<std::int64_t> static_file_time(std::string_view input) {
@@ -110,11 +84,11 @@ inline std::optional<std::int64_t> static_file_time(std::string_view input) {
       .count();
 }
 
-// SHA-256 over the exact cached bytes: independent of file timestamps, names
-// and reload generations. This helper is not a public cryptography API.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] static_file_etag                                         ( function ) |
+// +---------------------------------------------------------------------------+
+// | Builds a quoted SHA-256 ETag from the file bytes alone.                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::string static_file_etag(std::string_view bytes) {
@@ -192,9 +166,12 @@ inline std::string static_file_etag(std::string_view bytes) {
 // +---------------------------------------------------------------------------+
 // | [>] static_file_tag_matches                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// | Checks the tag against a list or *.                                       |
+// | Strong matching rejects weak tags; weak matching ignores the W/ prefix.   |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-inline bool static_file_tag_matches(std::string_view list,
-                                    std::string_view tag, bool strong) {
+inline bool static_file_tag_matches(std::string_view list, std::string_view tag,
+                                    bool strong) {
   helpers::ows_trim(list);
   if (list == "*") return true;
   while (!list.empty()) {
@@ -228,6 +205,8 @@ inline bool static_file_tag_matches(std::string_view list,
 // +---------------------------------------------------------------------------+
 // | [>] static_file_number                                       ( function ) |
 // +---------------------------------------------------------------------------+
+// | Parses unsigned decimal digits; empty on invalid input or overflow.       |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::optional<std::size_t> static_file_number(std::string_view text) {
   std::size_t value{};
@@ -243,25 +222,32 @@ inline std::optional<std::size_t> static_file_number(std::string_view text) {
 // +---------------------------------------------------------------------------+
 // | [>] static_file_range                                          ( struct ) |
 // +---------------------------------------------------------------------------+
+// | Distinguishes ignored ranges from ranges that cannot be served.           |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct static_file_range {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-
+  // True when this is a supported, well-formed range.
   bool applicable = false;
+  // True when the range selects bytes from the file.
   bool satisfiable = false;
+  // Use offset and length only when both flags are true.
   std::size_t offset = 0;
   std::size_t length = 0;
 };
+
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] static_file_parse_range                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// | Handles one byte range, including suffix and open-ended forms.            |
+// | Ignores malformed ranges, unsupported units and multiple ranges.          |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline static_file_range static_file_parse_range(std::string_view text,
                                                  std::size_t size) {
-  // Unsupported units and multiple ranges are deliberately ignored.
   if (text.size() < 6 || !helpers::iequals(text.substr(0, 6), "bytes=") ||
       text.find(',') != text.npos)
     return {};

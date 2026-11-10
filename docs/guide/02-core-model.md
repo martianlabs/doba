@@ -131,7 +131,7 @@ inside the current input or processing turn, on that calling thread. They must n
 cross-thread use. Windows may use another IOCP worker for the next serialized
 input call; serialization does not imply fixed thread affinity.
 
-See the [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+See the [TCP runtime contract](../reference/transport/tcp.md#runtime-contract)
 for ownership, close and deliberate Linux/Windows differences.
 
 <a name="transport-contract"></a>
@@ -144,7 +144,7 @@ for ownership, close and deliberate Linux/Windows differences.
   </a>
 </h2>
 
-The [transport contract](../../include/transport/server/contracts.h) checks
+The [transport contract](../../include/transport/contracts.h) checks
 how a transport is created and controlled:
 
 - **Policies.** *policies_type* names the transport's policy type. A value of
@@ -215,10 +215,10 @@ only implements the protocol contract; it does not need socket code.
 
 The [custom_transport example][custom-transport] keeps doba's HTTP/1.1 engine
 but trades TCP for an in-memory transport. Its
-[source](../../examples/transport/server/custom_transport/main.cpp) supplies
+[source](../../examples/transport/custom_transport/main.cpp) supplies
 that transport to the HTTP server:
 
-[custom-transport]: ../../examples/transport/server/custom_transport/README.md
+[custom-transport]: ../../examples/transport/custom_transport/README.md
 
 ```cpp
 using routes_type =

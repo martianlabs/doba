@@ -11,7 +11,6 @@ generic native processing turns; TCP and TLS support that path on both OSes.
 
 `cancel()` can instead destroy a suspended task without running the remaining
 body. All calls must be serialized with the coroutine. Only `yield()` and
-`sleep_for()` are supported under controlled ownership; ordinary `task::start`
-continues to support custom awaiters under its existing lifetime contract.
+`sleep_for()` are supported.
 
 See [the API contract](../../../docs/reference/common/task_execution.md).

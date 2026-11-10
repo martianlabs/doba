@@ -38,18 +38,8 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Decodes a Content-Length-framed body by pulling wire bytes from a         |
-// | common::reader source and filling the caller-supplied output span.        |
-// |                                                                           |
-// | Since a raw (Content-Length) body carries no wire framing of its own, the |
-// | decoded payload is identical to the source bytes: this reader simply      |
-// | copies bytes from src into output, up to the declared Content-Length. It  |
-// | exists to keep the reader API symmetrical with reader_chunked.            |
-// |                                                                           |
-// | If src reaches definitive eof() before Content-Length is satisfied, this  |
-// | is a protocol error reported as reader_error::raw_incomplete. Once an     |
-// | error is reported, it is latched: every subsequent call returns the same  |
-// | has_error/error without touching src again.                               |
+// | Reads a Content-Length body from a common::reader.                        |
+// | Stops at the declared length, leaving any later bytes untouched.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader_raw {
@@ -61,9 +51,9 @@ class reader_raw {
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls up to (expected_ - accumulated_) bytes from src into output.      |
-  // | Returns immediately with complete=true when Content-Length is reached.  |
-  // | A zero Content-Length body completes on the first call with produced=0. |
+  // | Copies body bytes into output and reports progress or errors.           |
+  // | Zero length completes without reading. Early EOF is raw_incomplete.     |
+  // | Errors persist on later calls.                                          |
   // +-------------------------------------------------------------------------+
   reader_state read(common::reader& src, std::span<std::byte> output) {
     reader_state result;
@@ -93,13 +83,16 @@ class reader_raw {
   // +=========================================================================+
   // | [>] take_view                                                ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns remaining bytes without copying; marks the body consumed.       |
+  // | Needs the whole body in source and a remainder no larger than maximum.  |
+  // | On failure, returns an empty optional without advancing.                |
+  // +-------------------------------------------------------------------------+
   std::optional<std::span<const std::byte>> take_view(
       std::span<const std::byte> source, std::size_t maximum) {
     if (has_error_ || source.size() < expected_ ||
         expected_ - accumulated_ > maximum)
       return std::nullopt;
-    const auto result =
-        source.subspan(accumulated_, expected_ - accumulated_);
+    const auto result = source.subspan(accumulated_, expected_ - accumulated_);
     accumulated_ = expected_;
     return result;
   }

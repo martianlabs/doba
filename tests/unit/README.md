@@ -44,8 +44,8 @@ response bytes that come out the other end.
   </a>
 </h2>
 
-The [cache tests](common/cache_tests.cpp) exercise bounded cost, expiration,
-shared loading and invalidation races independently of HTTP. The
+The [cache tests](common/cache_tests.cpp) exercise resident bounds, retained values,
+nonwaiting loading and invalidation races independently of HTTP. The
 [common tests](common) check readers, writers, filesystem operations,
 containers, and coroutine helpers. Storage cases exercise memory buffers,
 disk spill, moves, cleanup, and failed operations.
@@ -54,17 +54,17 @@ disk spill, moves, cleanup, and failed operations.
 frame ownership, final suspension, cancellation, exception inspection and
 rejection of foreign awaiters. Deadline boundaries are checked without real
 time delays. Serialized worker migration is tested with explicit joins.
-The existing standalone task tests remain enabled.
+The task tests also check lazy adoption and cleanup before adoption.
 
 Decoder cases also reuse or overwrite caller buffers and inspect owned
 requests after the decoder has gone away. A view that happens to point at
 something readable today isn't much of an ownership guarantee.
 
-[Transport tests](transport/server) check connection behavior and invalid
-policies. [Linux context tests](transport/server/tcp_context_linux_tests.cpp)
+[Transport tests](transport) check connection behavior and invalid
+policies. [Linux context tests](transport/tcp_context_linux_tests.cpp)
 cover bounded RX/TX, partial sends, EAGAIN, sources, empty sends and closure.
-The [Windows TX state](transport/server/send_state_tests.cpp) and
-[RX adapter](transport/server/tcp_connection_tests.cpp) are tested independently.
+The [Windows TX state](transport/send_state_tests.cpp) and
+[RX adapter](transport/tcp_connection_tests.cpp) are tested independently.
 These helper tests do not assert that Linux uses those Windows components.
 
 <a name="bad-timing-on-purpose"></a>
@@ -89,14 +89,14 @@ handler gates. They verify concurrent progress, ordered output, owned frames,
 callback counts and cancellation. Common task helpers are independently tested;
 no injected application executor is needed.
 
-[Operating helpers](transport/server/operating_policies_tests.cpp) test shared
+[Operating helpers](transport/operating_policies_tests.cpp) test shared
 Windows admission reservations and current TX limits/reader ownership.
 [HTTP budgets](protocol/http/v11/policy_budget_audit_tests.cpp) and
 [processing turns](protocol/http/v11/processing_turn_tests.cpp) exercise finite
 protocol credit, deferred input, ready deadlines and cooperative completion.
 Native turn delivery is covered by the integration suites on both backends.
 
-[Policy construction](transport/server/tcp_transport_tests.cpp) covers defaults,
+[Policy construction](transport/tcp_transport_tests.cpp) covers defaults,
 platform ranges and zero meanings. [Regression detectors](protocol/http/v11/regression_detection_tests.cpp)
 check framing/body budgets, ordered responses and terminal rejection. The
 [configured mutation campaign](../mutation/README.md) challenges eight selected

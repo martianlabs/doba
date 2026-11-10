@@ -242,7 +242,7 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
 
 namespace {
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 // +===========================================================================+
@@ -251,7 +251,7 @@ using martianlabs::doba::common::filesystem_file;
 DOBA_TEST("reader adopts and moves an open file with a shared read cursor") {
   file_directory directory;
   directory.write("file", "abcdef");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   reader source(std::move(file));

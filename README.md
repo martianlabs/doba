@@ -26,8 +26,8 @@ Both backends support TCP with cooperative engine turns, inline pipelining
 and one terminal
 prefix/source reader per connection. Linux uses independent SO_REUSEPORT
 workers; Windows uses IOCP. See the
-[TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
-and [policy limits](docs/reference/transport/server/tcp_policies.md).
+[TCP runtime contract](docs/reference/transport/tcp.md#runtime-contract)
+and [policy limits](docs/reference/transport/tcp_policies.md).
 
 TCP needs no external libraries. Optional TLS is a separate class over TCP,
 using OpenSSL and its own buffers. One HTTP engine handles sync and coroutine
@@ -162,7 +162,7 @@ target_link_libraries(application PRIVATE martianlabs::doba)
 For TLS, build with `DOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or newer. Consumers use
 `find_package(doba CONFIG REQUIRED COMPONENTS TLS)` and link
 `martianlabs::doba_tls`. The plain target retains no OpenSSL dependency.
-See [TLS contracts and source limits](docs/reference/transport/server/tls.md)
+See [TLS contracts and source limits](docs/reference/transport/tls.md)
 and the [HTTPS example](examples/http/v11/https_hello_world/README.md).
 
 Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a

@@ -39,7 +39,7 @@
 namespace martianlabs::doba::protocol::http::detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] router_handler_signature                       ( forward-declaration) |
+// | [>] router_handler_signature                      ( forward-declaration ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename>
@@ -50,15 +50,12 @@ struct router_handler_signature;
 // | [>] router_handler_signature_base                              ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// | LOty - return type of the handler                                         |
-// | LQty - type of the first argument of the handler (request)                |
-// | Args - types of the remaining arguments of the handler (routing)          |
+// |   LOty - handler result                                                   |
+// |   LQty - request argument                                                 |
+// |   LSty - response argument                                                |
+// |   Args - route parameter types                                            |
 // +---------------------------------------------------------------------------+
-// | This struct defines the return type, request type and parameter count.    |
-// | It also binds controller methods and creates parametrized handlers.       |
-// | provides a static method to create a parametrized router handler and a    |
-// | static method to check the types of the handler's arguments against the   |
-// | expected types.                                                           |
+// | Shares signature checks and handler creation across callable types.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename LOty, typename LQty, typename LSty, typename... Args>
@@ -73,21 +70,12 @@ struct router_handler_signature_base {
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   static constexpr std::size_t parameter_count = sizeof...(Args);
-  // Handler results are identical for every callable with this signature.
   static constexpr bool valid_return =
       std::same_as<LOty, void> || std::same_as<LOty, common::task<void>>;
   // +=========================================================================+
   // | [>] bind                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | This static method binds a controller instance and a member function to |
-  // | create a router handler. It returns a lambda that captures the instance |
-  // | and method, and when invoked, it calls the member function on the       |
-  // | instance with the provided request and routing arguments. The lambda is |
-  // | noexcept if the member function is noexcept when invoked with the       |
-  // | given arguments. The method uses std::invoke to call the member         |
-  // | function, allowing for both regular and pointer-to-member function      |
-  // | calls. The method also uses std::forward to perfectly forward the       |
-  // | request and routing arguments to the member function.                   |
+  // | Wraps a controller method as a handler and keeps the instance alive.    |
   // +-------------------------------------------------------------------------+
   template <typename Cty, typename Mty>
   static auto bind(std::shared_ptr<Cty> instance, Mty method) {
@@ -105,22 +93,19 @@ struct router_handler_signature_base {
   // +=========================================================================+
   // | [>] make_parametrized                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  // | This static method creates a parametrized router handler using the      |
-  // | provided pattern and handler. It takes a string_view pattern and a      |
-  // | handler of type Hty, and returns a router_handler_parametrized object   |
-  // | that is constructed with the given pattern and handler. The method uses |
-  // | std::forward to perfectly forward the handler argument to the           |
-  // | constructor of router_handler_parametrized.                             |
+  // | Builds a synchronous route handler using Args as its parameter types.   |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty, typename Hty>
   static auto make_parametrized(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
   }
-  template <typename RQty, typename RSty, typename Hty>
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] make_parametrized_async                                  ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Builds an async route handler using the same route parameter types.     |
+  // +-------------------------------------------------------------------------+
+  template <typename RQty, typename RSty, typename Hty>
   static auto make_parametrized_async(std::string_view pattern, Hty&& handler) {
     return make_router_handler_parametrized_async<RQty, RSty, Args...>(
         pattern, std::forward<Hty>(handler));
@@ -128,15 +113,13 @@ struct router_handler_signature_base {
   // +=========================================================================+
   // | [>] check                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // | This static method checks if the types of the handler's arguments match |
-  // | the expected types. It takes two template parameters, RQty and RSty,    |
-  // | which represent the expected request and response types. It requires    |
-  // | void(const RQty&, RSty&, ...).                                          |
+  // | Requires const RQty& and RSty&, returning void or task<void>.           |
+  // | A mismatch fails at compile time.                                       |
   // +-------------------------------------------------------------------------+
   template <typename RQty, typename RSty>
   static void check() {
-    static_assert(
-        valid_return, "The route handler must return void or task<void>");
+    static_assert(valid_return,
+                  "The route handler must return void or task<void>");
     static_assert(std::same_as<std::decay_t<LQty>, RQty>,
                   "The first route handler argument must be const RQty&");
     static_assert(std::is_lvalue_reference_v<LQty> &&
@@ -154,16 +137,13 @@ struct router_handler_signature_base {
 // | [>] router_handler_signature                                   ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// | Cty - class type of the handler                                           |
-// | Retty - return type of the handler                                        |
-// | Reqty - type of the first argument of the handler (request)               |
-// | Args - types of the remaining arguments of the handler (routing)          |
+// |   Cty - callable or controller class                                      |
+// |   Retty - handler result                                                  |
+// |   Reqty - request argument                                                |
+// |   Resty - response argument                                               |
+// |   Args - route parameter types                                            |
 // +---------------------------------------------------------------------------+
-// | This specialization of the router_handler_signature struct handles the    |
-// | case where the handler is a const member function. It inherits from the   |
-// | router_handler_signature_base struct and provides the same type aliases   |
-// | and static methods for creating parametrized router handlers and checking |
-// | argument types.                                                           |
+// | Reads member function signatures, with or without const and noexcept.     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Cty, typename Retty, typename Reqty, typename Resty,
@@ -186,15 +166,13 @@ struct router_handler_signature<Retty (Cty::*)(Reqty, Resty, Args...) noexcept>
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] router_handler_lambda                                      (concept ) |
+// | [>] router_handler_lambda                                     ( concept ) |
 // +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// | Hty - handler type being used                                             |
+// |   Hty - handler type being used                                           |
 // +---------------------------------------------------------------------------+
-// | This concept checks if a given handler type Hty is a valid router handler |
-// | lambda. It requires that the handler has a request_type defined in its    |
-// | signature, takes const request and mutable response references, and       |
-// | returns void or task<void>. Invalid signatures evaluate to false.         |
+// | Accepts callables with const request and mutable response references,     |
+// | returning void or task<void>.                                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty>

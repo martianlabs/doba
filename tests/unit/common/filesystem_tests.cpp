@@ -43,7 +43,7 @@ namespace {
 using martianlabs::doba::tests::file_directory;
 using martianlabs::doba::tests::unit::special_file_paths;
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 // +===========================================================================+
@@ -54,7 +54,7 @@ DOBA_TEST("filesystem reads binary blocks with a fixed size") {
   std::string input(256, '\0');
   for (std::size_t i = 0; i < input.size(); i++) input[i] = char(i);
   directory.write("bytes", input);
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "bytes", error));
   DOBA_EXPECT(!error);
@@ -81,7 +81,7 @@ DOBA_TEST("filesystem distinguishes empty missing directories and escapes") {
   file_directory directory;
   directory.write("empty", "");
   fs::create_directory(directory.path() / "sub");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "empty", error));
   DOBA_EXPECT(file.eof());
@@ -92,7 +92,7 @@ DOBA_TEST("filesystem distinguishes empty missing directories and escapes") {
   DOBA_EXPECT(error == std::errc::is_a_directory);
   for (std::string_view path :
        {"../x", "/x", "sub/../x", "sub/./x", "sub//x", "C:x", "sub\\x"}) {
-    DOBA_EXPECT(!filesystem_file::inspect(directory.path(), path, error));
+    DOBA_EXPECT(!filesystem::inspect(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
     DOBA_EXPECT(!file.open(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
@@ -107,20 +107,20 @@ DOBA_TEST("filesystem distinguishes empty missing directories and escapes") {
 // | [>] filesystem ownership moves                              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("filesystem moves preserve position and release prior resources") {
-  static_assert(!std::is_copy_constructible_v<filesystem_file>);
-  static_assert(!std::is_copy_assignable_v<filesystem_file>);
-  static_assert(std::is_nothrow_move_constructible_v<filesystem_file>);
+  static_assert(!std::is_copy_constructible_v<filesystem>);
+  static_assert(!std::is_copy_assignable_v<filesystem>);
+  static_assert(std::is_nothrow_move_constructible_v<filesystem>);
   file_directory directory;
   directory.write("one", "abc");
   directory.write("two", "xyz");
-  filesystem_file first;
+  filesystem first;
   std::error_code error;
   DOBA_EXPECT(first.open(directory.path(), "one", error));
   std::array<std::byte, 1> byte{};
   DOBA_EXPECT_EQUAL(first.read(byte), 1);
-  filesystem_file moved(std::move(first));
+  filesystem moved(std::move(first));
   DOBA_EXPECT(first.eof());
-  filesystem_file assigned;
+  filesystem assigned;
   DOBA_EXPECT(assigned.open(directory.path(), "two", error));
   assigned = std::move(moved);
   DOBA_EXPECT(moved.eof());
@@ -139,7 +139,7 @@ DOBA_TEST("filesystem moves preserve position and release prior resources") {
 DOBA_TEST("filesystem bounds growth and reports premature truncation") {
   file_directory directory;
   directory.write("file", "abc");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   directory.write("file", "abcdef");
@@ -161,7 +161,7 @@ DOBA_TEST("filesystem bounds growth and reports premature truncation") {
 DOBA_TEST("filesystem opens UTF8 names and clears prior errors") {
   file_directory directory;
   directory.write("caf\xc3\xa9.txt", "utf8");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(!file.open(directory.path(), "missing", error));
   DOBA_EXPECT(file.open(directory.path(), "caf\xc3\xa9.txt", error));
@@ -182,20 +182,20 @@ DOBA_TEST("filesystem resolves roots and clears errors") {
   file_directory directory;
   directory.write("file", "data");
   std::error_code error = std::make_error_code(std::errc::io_error);
-  const auto root = martianlabs::doba::common::filesystem_root(".", error);
+  const auto root = martianlabs::doba::common::filesystem::root(".", error);
   DOBA_EXPECT(!error);
   DOBA_EXPECT(root.is_absolute());
   DOBA_EXPECT_EQUAL(root, fs::canonical(fs::current_path()));
-  DOBA_EXPECT(martianlabs::doba::common::filesystem_root(
+  DOBA_EXPECT(martianlabs::doba::common::filesystem::root(
                   directory.path() / "missing", error)
                   .empty());
   DOBA_EXPECT(error == std::errc::no_such_file_or_directory);
-  DOBA_EXPECT(martianlabs::doba::common::filesystem_root(
+  DOBA_EXPECT(martianlabs::doba::common::filesystem::root(
                   directory.path() / "file", error)
                   .empty());
   DOBA_EXPECT(error == std::errc::not_a_directory);
   DOBA_EXPECT_EQUAL(
-      martianlabs::doba::common::filesystem_root(directory.path() / ".", error),
+      martianlabs::doba::common::filesystem::root(directory.path() / ".", error),
       fs::canonical(directory.path()));
   DOBA_EXPECT(!error);
 }
@@ -207,13 +207,13 @@ DOBA_TEST("filesystem validates complete bounded paths") {
   file_directory directory;
   directory.write("file", "data");
   directory.write("..file", "dots");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(!file.open(directory.path(), "", error));
   DOBA_EXPECT(error == std::errc::is_a_directory);
   for (std::string_view path :
        {".", "..", "/", "//", "file/", "file//", "./file", "file/."}) {
-    DOBA_EXPECT(!filesystem_file::inspect(directory.path(), path, error));
+    DOBA_EXPECT(!filesystem::inspect(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
     DOBA_EXPECT(!file.open(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
@@ -222,7 +222,7 @@ DOBA_TEST("filesystem validates complete bounded paths") {
   for (unsigned int value = 0; value <= 0x7f; value++) {
     if (value >= 0x20 && value != 0x7f) continue;
     path[2] = static_cast<char>(value);
-    DOBA_EXPECT(!filesystem_file::inspect(directory.path(), path, error));
+    DOBA_EXPECT(!filesystem::inspect(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
     DOBA_EXPECT(!file.open(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
@@ -243,7 +243,7 @@ DOBA_TEST("filesystem validates complete bounded paths") {
 DOBA_TEST("filesystem reopens after open and read failures") {
   file_directory directory;
   directory.write("file", "abc");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   std::array<std::byte, 1> byte{};
@@ -280,7 +280,7 @@ DOBA_TEST("filesystem reopens after open and read failures") {
 DOBA_TEST("filesystem moves preserve failed and closed states") {
   file_directory directory;
   directory.write("file", "abc");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   auto& same = file;
@@ -291,7 +291,7 @@ DOBA_TEST("filesystem moves preserve failed and closed states") {
   fs::resize_file(directory.path() / "file", 1);
   DOBA_EXPECT_EQUAL(file.read(byte), 0);
   DOBA_EXPECT(file.failed());
-  filesystem_file moved(std::move(file));
+  filesystem moved(std::move(file));
   DOBA_EXPECT(moved.failed());
   DOBA_EXPECT(!moved.eof());
   DOBA_EXPECT_EQUAL(moved.size(), 3);
@@ -319,7 +319,7 @@ DOBA_TEST("filesystem moves preserve failed and closed states") {
 DOBA_TEST("filesystem reads preserve buffer boundaries") {
   file_directory directory;
   directory.write("file", "abc");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   std::array<std::byte, 4> bytes;
@@ -352,10 +352,10 @@ DOBA_TEST("filesystem rejects directory links") {
   outside.write("secret", "outside");
   const auto link = directory.path() / "linked";
   martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(
-      !filesystem_file::inspect(directory.path(), "linked/secret", error));
+      !filesystem::inspect(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
   DOBA_EXPECT(!file.open(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
@@ -368,7 +368,7 @@ DOBA_TEST("filesystem rejects directory links") {
 DOBA_TEST("filesystem keeps an opened file after replacement") {
   file_directory directory;
   directory.write("data", "inside");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "data", error));
   fs::rename(directory.path() / "data", directory.path() / "original");
@@ -390,13 +390,13 @@ DOBA_TEST("filesystem rejects a replaced root") {
   directory.write("root/data", "inside");
   outside.write("data", "outside");
   std::error_code error;
-  const auto root = martianlabs::doba::common::filesystem_root(
+  const auto root = martianlabs::doba::common::filesystem::root(
       directory.path() / "root", error);
   DOBA_EXPECT(!error);
   fs::rename(root, directory.path() / "old");
   martianlabs::doba::tests::unit::create_directory_link(root, outside.path());
-  filesystem_file file;
-  DOBA_EXPECT(!filesystem_file::inspect(root, "data", error));
+  filesystem file;
+  DOBA_EXPECT(!filesystem::inspect(root, "data", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
   DOBA_EXPECT(!file.open(root, "data", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
@@ -411,11 +411,11 @@ DOBA_TEST("filesystem rejects native special paths") {
   file_directory outside;
   directory.write("file", "inside");
   outside.write("secret", "outside");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   for (std::string_view path :
        special_file_paths(directory.path(), outside.path())) {
-    DOBA_EXPECT(!filesystem_file::inspect(directory.path(), path, error));
+    DOBA_EXPECT(!filesystem::inspect(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
     DOBA_EXPECT(!file.open(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
@@ -426,7 +426,7 @@ DOBA_TEST(
     "filesystem metadata describes handles and selected slices stay bounded") {
   file_directory directory;
   directory.write("data", "0123456789");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "data", error));
   const auto before = file.metadata(error);
@@ -455,14 +455,14 @@ DOBA_TEST(
     "filesystem inspect matches handle attributes without moving a cursor") {
   file_directory directory;
   directory.write("data", "0123456789");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "data", error));
   const auto before = file.metadata(error);
   std::array<std::byte, 3> bytes{};
   DOBA_EXPECT_EQUAL(file.read(bytes), 3);
   error = std::make_error_code(std::errc::invalid_argument);
-  DOBA_EXPECT_EQUAL(filesystem_file::inspect(directory.path(), "data", error),
+  DOBA_EXPECT_EQUAL(filesystem::inspect(directory.path(), "data", error),
                     before);
   DOBA_EXPECT(!error);
   DOBA_EXPECT_EQUAL(file.read(bytes), 3);
@@ -471,7 +471,7 @@ DOBA_TEST(
   const auto timestamp = fs::last_write_time(directory.path() / "data");
   fs::last_write_time(directory.path() / "data",
                       timestamp + std::chrono::seconds(2));
-  auto changed = filesystem_file::inspect(directory.path(), "data", error);
+  auto changed = filesystem::inspect(directory.path(), "data", error);
   DOBA_EXPECT(changed.has_value());
   DOBA_EXPECT(changed != before);
   DOBA_EXPECT_EQUAL(changed, file.metadata(error));
@@ -479,7 +479,7 @@ DOBA_TEST(
   directory.write("data", "abcdefghij");
   fs::last_write_time(directory.path() / "data", timestamp);
   const auto replaced =
-      filesystem_file::inspect(directory.path(), "data", error);
+      filesystem::inspect(directory.path(), "data", error);
   DOBA_EXPECT(replaced.has_value());
   DOBA_EXPECT(replaced->identity != before->identity);
   DOBA_EXPECT_EQUAL(replaced->size, before->size);
@@ -497,14 +497,14 @@ DOBA_TEST(
   directory.write("file", "data");
   fs::create_directory(directory.path() / "sub");
   std::error_code error;
-  DOBA_EXPECT(!filesystem_file::inspect(directory.path(), "missing", error));
+  DOBA_EXPECT(!filesystem::inspect(directory.path(), "missing", error));
   DOBA_EXPECT(error == std::errc::no_such_file_or_directory);
-  DOBA_EXPECT(!filesystem_file::inspect(directory.path(), "sub", error));
+  DOBA_EXPECT(!filesystem::inspect(directory.path(), "sub", error));
   DOBA_EXPECT(error == std::errc::is_a_directory);
-  DOBA_EXPECT(!filesystem_file::inspect("relative", "file", error));
+  DOBA_EXPECT(!filesystem::inspect("relative", "file", error));
   DOBA_EXPECT(error == std::errc::invalid_argument);
   for (std::string_view path : {"../file", "sub/../file", "/file", "a:b"}) {
-    DOBA_EXPECT(!filesystem_file::inspect(directory.path(), path, error));
+    DOBA_EXPECT(!filesystem::inspect(directory.path(), path, error));
     DOBA_EXPECT(error == std::errc::permission_denied);
   }
 }
@@ -523,7 +523,7 @@ DOBA_TEST(
   DOBA_EXPECT(handle != INVALID_HANDLE_VALUE);
   std::error_code error;
   const auto attributes =
-      filesystem_file::inspect(directory.path(), "file", error);
+      filesystem::inspect(directory.path(), "file", error);
   CloseHandle(handle);
   DOBA_EXPECT(attributes.has_value());
   DOBA_EXPECT(!error);

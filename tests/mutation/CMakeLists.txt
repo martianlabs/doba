@@ -20,8 +20,8 @@ target_include_directories(detection_tests PRIVATE
   "${DOBA_MUTATION_HEADERS}" "${DOBA_MUTATION_ROOT}/tests/unit/helpers")
 if(DOBA_MUTATION_POLICY_TESTS)
   target_sources(detection_tests PRIVATE
-    "${mutation_unit_dir}/transport/server/operating_policies_tests.cpp"
-    "${mutation_unit_dir}/transport/server/policy_budget_audit_tests.cpp"
+    "${mutation_unit_dir}/transport/operating_policies_tests.cpp"
+    "${mutation_unit_dir}/transport/policy_budget_audit_tests.cpp"
     "${mutation_unit_dir}/protocol/http/v11/operating_limits_tests.cpp"
     "${mutation_unit_dir}/protocol/http/v11/policy_budget_audit_tests.cpp")
 endif()

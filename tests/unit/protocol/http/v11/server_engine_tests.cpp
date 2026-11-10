@@ -54,7 +54,7 @@ using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::common::reader;
 namespace protocol = martianlabs::doba::protocol;
 namespace http = martianlabs::doba::protocol::http::v11;
-namespace tr = martianlabs::doba::transport::server;
+namespace tr = martianlabs::doba::transport;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

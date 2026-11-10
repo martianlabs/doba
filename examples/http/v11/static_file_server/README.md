@@ -31,7 +31,7 @@ curl --path-as-is -i http://localhost:8080/assets/../hello.txt
 GET and HEAD share file length and validators. Cached snapshots have strong
 SHA-256 ETags; direct streams have weak metadata ETags. Both emit Last-Modified
 and, by default, Cache-Control: no-cache. That HTTP policy allows revalidation;
-it is independent of the internal cache's one-second retention TTL. Every cache
+the internal cache has no TTL. Every cache
 hit compares file identity, device, size, modification/change timestamps, flags
 and link count. Equal attributes reuse cached bytes without rereading the file.
 No subscriptions or background callbacks are used.
@@ -41,21 +41,24 @@ The example enables precompressed asset negotiation. Publish **hello.txt.br** or
 Variants have their own validators and include Vary: Accept-Encoding. doba does
 not create compressed files or verify their decoded contents.
 
-The default cache admits up to 1024 entries, 512 MiB of declared live cost and 16
-concurrent loads. Files above 1 MiB, or rejected by the budget, use direct
-streaming. A request coinciding with an active load also streams directly, without
-waiting for that loader. Expiration reloads on the next request. To invalidate immediately,
-retain the supplied shared cache and call clear(); controller invalidate(relative)
-also removes a filename and its compressed siblings. Invalidating does not revoke
-bytes already retained by a response. Evicted snapshots and reservations remain
-charged until their consumers/loaders release them. Declared cost excludes keys,
-allocator/control-block overhead and excess string capacity; it is not a process
-RSS limit.
+The default cache holds up to 1024 entries and 512 MiB of declared resident cost,
+with at most 16 concurrent cache loads. Files above 1 MiB, or exceeding the
+resident budget individually, use direct streaming. A request coinciding with an
+active same-key load or exhausted load slots also streams directly. Successful
+loads evict LRU entries to fit the resident limits.
+
+To invalidate explicitly, retain the supplied cache and call clear(); controller
+invalidate(relative) also removes a filename and its compressed siblings.
+Invalidation prevents an older load from publishing, without revoking bytes
+already retained by a response. Those evicted snapshots and loads in progress
+do not count toward the resident budget. Declared cost excludes keys,
+allocator/control-block overhead and excess string capacity; it is not a
+process RSS limit.
 
 Publish complete files by atomic replacement. Attributes are checked before and
 after a load and when adopting a concurrently cached value. In-flight responses
 retain their old snapshots. Missing compressed variants use confined attribute probes and are never cached;
-new variants are discovered without waiting for a directory timestamp or TTL.
+new variants are discovered on subsequent requests.
 Remote metadata caching or a write preserving all observed attributes can hide a
 change; filesystem semantics still apply. Direct streams own a handle, not a
 snapshot: concurrent writes can alter bytes, growth is ignored, and premature EOF

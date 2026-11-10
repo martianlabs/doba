@@ -42,7 +42,7 @@ using martianlabs::doba::common::task_execution;
 using martianlabs::doba::common::yield;
 using clock_type = task_execution::clock;
 
-// Frame parameters must remain owned through final suspension.
+// Keep the parameters alive until the owner releases the frame.
 task<> finish(std::shared_ptr<int>, int& steps) {
   ++steps;
   co_return;
@@ -255,20 +255,6 @@ DOBA_TEST("controlled task rejects foreign awaiters before invoking them") {
   }
 }
 
-DOBA_TEST("standalone task still accepts foreign awaiters") {
-  bool touched = false;
-  bool completed = false;
-  std::exception_ptr failure;
-  auto work = foreign(touched, true);
-  work.start([&](std::exception_ptr error) {
-    failure = error;
-    completed = true;
-  });
-  DOBA_EXPECT(touched);
-  DOBA_EXPECT(completed);
-  DOBA_EXPECT(!failure);
-}
-
 DOBA_TEST("controlled task skips nonpositive sleeps in the same turn") {
   for (auto duration : {clock_type::duration::zero(),
                         clock_type::duration(-1),
@@ -331,7 +317,7 @@ DOBA_TEST("controlled task permits serialized migration between workers") {
   DOBA_EXPECT(work.done());
 }
 
-DOBA_TEST("task rejects repeated transfer and empty controlled adoption") {
+DOBA_TEST("task rejects repeated transfer to an execution owner") {
   int steps = 0;
   auto value = finish({}, steps);
   task_execution work(std::move(value));
@@ -342,27 +328,8 @@ DOBA_TEST("task rejects repeated transfer and empty controlled adoption") {
     rejected = true;
   }
   DOBA_EXPECT(rejected);
-  rejected = false;
-  try {
-    value.start({});
-  } catch (const std::logic_error&) {
-    rejected = true;
-  }
-  DOBA_EXPECT(rejected);
   DOBA_EXPECT(work.resume());
   DOBA_EXPECT_EQUAL(steps, 1);
-  auto detached = finish({}, steps);
-  int completions = 0;
-  detached.start([&](std::exception_ptr) { ++completions; });
-  rejected = false;
-  try {
-    detached.start({});
-  } catch (const std::logic_error&) {
-    rejected = true;
-  }
-  DOBA_EXPECT(rejected);
-  DOBA_EXPECT_EQUAL(steps, 2);
-  DOBA_EXPECT_EQUAL(completions, 1);
 }
 
 DOBA_TEST("controlled task cleans body locals on cancellation and completion") {
@@ -393,32 +360,4 @@ DOBA_TEST("controlled task rejects operator co_await before it publishes") {
   DOBA_EXPECT(work.done());
   DOBA_EXPECT(work.error() != nullptr);
   DOBA_EXPECT(!touched);
-}
-
-DOBA_TEST("standalone task keeps operator co_await behavior") {
-  bool touched = false;
-  bool completed = false;
-  std::exception_ptr failure;
-  auto value = foreign_operator(touched);
-  value.start([&](std::exception_ptr error) {
-    completed = true;
-    failure = error;
-  });
-  DOBA_EXPECT(touched);
-  DOBA_EXPECT(completed);
-  DOBA_EXPECT(!failure);
-}
-
-DOBA_TEST("standalone task releases frame when completion throws") {
-  auto token = std::make_shared<int>(0);
-  int steps = 0;
-  int completions = 0;
-  auto value = finish(token, steps);
-  value.start([&](std::exception_ptr) {
-    ++completions;
-    throw std::runtime_error("callback failure");
-  });
-  DOBA_EXPECT_EQUAL(token.use_count(), 1);
-  DOBA_EXPECT_EQUAL(steps, 1);
-  DOBA_EXPECT_EQUAL(completions, 1);
 }

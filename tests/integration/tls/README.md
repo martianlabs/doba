@@ -11,7 +11,6 @@ required by the TLS test groups.
 | `doba_tls_processing_tests` | 90 in-memory cases: processing snapshots, KeyUpdate, busy TX, prefix/source, limits, failures, concurrent mixed HTTP and close; both TLS versions and BIO capacities 1/127/17408. |
 | `doba_tls_processing_wire_tests` | Native HTTPS turns, gated same-connection concurrency, ordered mixed/source output, failures, disconnect and stop cancellation with one worker; TLS 1.2/1.3. |
 | `doba_tls_configuration_tests` | Policies, invalid and mismatched credentials, encrypted-key rejection without prompting and excluded OpenSSL capabilities. Temporary files are removed individually. |
-| `doba_tls_header_guard_tests` | An isolated consumer must fail compilation with the explicit diagnostic when it uses HTTPS without the TLS target's definition. |
 | `doba_tls_examples_tests` | Both actual TLS example binaries, including an async HTTPS route, exchange data with verified clients. Registered when examples are enabled. Windows uses a hidden private console for the signal-based examples. |
 
 Every group has an external CTest deadline. Wire operations and child processes
@@ -35,6 +34,6 @@ the key for deployment. Clients verify the certificate and hostname. Generated
 mismatched/encrypted keys belong to unique temporary directories; cleanup is not
 recursive and never alters the source credentials.
 
-See the [contract coverage matrix](../../../docs/reference/transport/server/tls-validation.md).
+See the [contract coverage matrix](../../../docs/reference/transport/tls-validation.md).
 The tests do not claim a library timeout, mTLS, arbitrary source streaming,
 session resumption or authenticated raw TCP EOF notification.

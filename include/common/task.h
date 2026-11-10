@@ -25,114 +25,66 @@
 #ifndef martianlabs_doba_common_task_h
 #define martianlabs_doba_common_task_h
 
+#include <concepts>
 #include <coroutine>
-#include <exception>
-#include <functional>
-#include <stdexcept>
-#include <type_traits>
 #include <utility>
 
-#include "common/task_awaiters.h"
-#include "common/task_scheduler.h"
+#include "common/task_promise.h"
 
 namespace martianlabs::doba::common {
-class task_execution;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] task                                                        ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Tty = void>
+  requires std::same_as<Tty, void>
 class task {
-  static_assert(std::is_void_v<Tty>);
-
  public:
-  // +=========================================================================+
-  // | [>] TYPEs                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  struct promise_type {
-    task get_return_object() noexcept {
-      return task{handle_type::from_promise(*this)};
-    }
-    std::suspend_always initial_suspend() noexcept { return {}; }
-    struct final_awaiter {
-      promise_type& promise;
-      bool await_ready() noexcept {
-        if (promise.controlled) return false;
-        auto callback = std::move(promise.completion);
-        try {
-          if (callback) callback(promise.error);
-        } catch (...) {
-        }
-        return true;
-      }
-      void await_suspend(std::coroutine_handle<>) noexcept {}
-      void await_resume() noexcept {}
-    };
-    final_awaiter final_suspend() noexcept { return {*this}; }
-    void return_void() noexcept {}
-    void unhandled_exception() noexcept { error = std::current_exception(); }
-    template <typename Aty>
-    Aty&& await_transform(Aty&& awaiter) {
-      if constexpr (!std::is_same_v<std::remove_cvref_t<Aty>, yield_awaiter> &&
-                    !std::is_same_v<std::remove_cvref_t<Aty>, sleep_awaiter>) {
-        if (controlled) throw std::logic_error("Unsupported task awaiter");
-      }
-      return std::forward<Aty>(awaiter);
-    }
-    std::function<void(std::exception_ptr)> completion;
-    std::exception_ptr error;
-    task_scheduler scheduler;
-    bool controlled{false};  // Retain the frame for its serialized owner.
-  };
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
+  using promise_type = task_promise;
   using handle_type = std::coroutine_handle<promise_type>;
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  explicit task(handle_type handle) noexcept : handle_{handle} {}
+  explicit task(promise_type& promise) noexcept
+      : handle_{handle_type::from_promise(promise)} {}
   task(const task&) = delete;
   task(task&& other) noexcept : handle_{std::exchange(other.handle_, {})} {}
   ~task() {
-    if (handle_) handle_.destroy();
+    if (handle_) {
+      handle_.destroy();
+    }
   }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
   task& operator=(const task&) = delete;
-  task& operator=(task&& other) noexcept {
-    if (this == &other) return *this;
-    if (handle_) handle_.destroy();
-    handle_ = std::exchange(other.handle_, {});
-    return *this;
-  }
+  task& operator=(task&&) = delete;
   // +=========================================================================+
-  // | [>] start                                                    ( public ) |
+  // | [>] release                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  void start(std::function<void(std::exception_ptr)> completion) {
-    start(std::move(completion), {});
-  }
-  // +=========================================================================+
-  // | [>] start                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  void start(std::function<void(std::exception_ptr)> completion,
-             task_scheduler scheduler) {
-    if (!handle_) throw std::logic_error("Task already transferred");
-    auto handle = std::exchange(handle_, {});
-    handle.promise().completion = std::move(completion);
-    handle.promise().scheduler = scheduler;
-    handle.resume();
+  [[nodiscard]] handle_type release() && noexcept {
+    return std::exchange(handle_, {});
   }
 
  private:
-  friend class task_execution;
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   handle_type handle_;
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] get_return_object                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline task<void> task_promise::get_return_object() noexcept {
+  return task<void>{*this};
+}
 }  // namespace martianlabs::doba::common
 
 #endif

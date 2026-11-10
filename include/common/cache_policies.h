@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_common_cache_policies_h
 #define martianlabs_doba_common_cache_policies_h
 
-#include <chrono>
 #include <cstddef>
 
 namespace martianlabs::doba::common {
@@ -33,26 +32,22 @@ namespace martianlabs::doba::common {
 // +---------------------------------------------------------------------------+
 // | [>] cache_policies                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Admission limits and expiration settings for the generic cache.           |
-// | Costs use caller-defined units; they do not measure allocator overhead.   |
+// | How much we keep and how many loads we run at once.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct cache_policies {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Maximum resident entries (0 disables admission).
+  // How many entries we keep. Set to 0 to turn caching off.
   std::size_t max_entries = 1024;
-  // Maximum live declared cost, including reservations and retained values.
-  // Values pinned by consumers remain charged after eviction; 0 disables
-  // admission.
+  // Cost limit for stored entries. Set to 0 to turn caching off.
+  // Loads still running and values kept by responses don't count.
+  // Keys and allocation overhead aren't included either.
   std::size_t max_cost = 512 * 1024 * 1024;
-  // Maximum concurrent loaders, including invalidated loads still running.
-  // A value of 0 disables admission.
+  // How many loads can run at once. Set to 0 to turn caching off.
+  // Even discarded loads keep their slot until they finish.
   std::size_t max_loads = 16;
-  // Entry lifetime from successful loading, in milliseconds.
-  // A value of 0 disables expiration; negative values are rejected by cache.
-  std::chrono::milliseconds ttl{1000};
 };
 }  // namespace martianlabs::doba::common
 

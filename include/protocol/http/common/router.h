@@ -80,15 +80,14 @@ class router {
   void add(std::string_view method, std::string_view route, Hty handler) {
     add(method, route, std::move(handler), {});
   }
-
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename Hty>
     requires detail::router_handler_lambda<Hty>
-  void add(std::string_view method, std::string_view route, Hty handler,
-           std::function<auth::authentication_result(const RQty&)>
-               authenticate) {
+  void add(
+      std::string_view method, std::string_view route, Hty handler,
+      std::function<auth::authentication_result(const RQty&)> authenticate) {
     using signature = detail::router_handler_signature<
         decltype(&std::decay_t<Hty>::operator())>;
     signature::template check<RQty, RSty>();
@@ -166,8 +165,7 @@ class router {
         }
       }
       parametrized_handlers_.push_back(
-          {std::string(method),
-           {{std::move(data), std::move(authenticate)}}});
+          {std::string(method), {{std::move(data), std::move(authenticate)}}});
     }
   }
   // +=========================================================================+

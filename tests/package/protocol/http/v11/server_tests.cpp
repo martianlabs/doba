@@ -69,11 +69,11 @@ class package_controller {
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   std::error_code error;
-  const auto root = martianlabs::doba::common::filesystem_root(".", error);
+  const auto root = martianlabs::doba::common::filesystem::root(".", error);
   if (error) return 1;
-  martianlabs::doba::common::filesystem_file file;
+  martianlabs::doba::common::filesystem file;
   martianlabs::doba::common::reader input(std::move(file));
-  martianlabs::doba::transport::server::tcp_policies io;
+  martianlabs::doba::transport::tcp_policies io;
   io.max_connections = 65535;
   policies limits;
   limits.max_pending_requests = 128;

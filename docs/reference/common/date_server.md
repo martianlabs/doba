@@ -19,7 +19,8 @@ This specification holds for a [cross-platform] date server.
 [get](#method-get) ·
 [start](#method-start) ·
 [stop](#method-stop) ·
-[current](#method-current)
+[current](#method-current) ·
+[format](#method-format)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -110,3 +111,17 @@ Returns the current value.
 **Errors:** Declared `noexcept`.
 
 **Source:** [include/common/date_server.h:112](../../../include/common/date_server.h#L112)
+
+<a id="method-format"></a>
+
+## format
+
+**METHOD** · *common::date_server*
+
+```cpp
+static std::string format(std::time_t timestamp);
+```
+
+Formats a timestamp as an HTTP date in GMT. Returns an empty string if the
+timestamp cannot be converted or its year does not fit four digits.
+The date server does not need to be running.

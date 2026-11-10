@@ -18,7 +18,7 @@ same engine automatically. Pipelined responses remain in request order.
 TLS forwards processing turns to the existing TCP workers and reuses TCP
 unchanged. Sources are consumed completely during their send callback and
 must fit the finite plaintext budget for that input or processing call;
-see the [TLS contract](../../../../docs/reference/transport/server/tls.md).
+see the [TLS contract](../../../../docs/reference/transport/tls.md).
 
 An optional final argument selects the listening port instead of 8443. The
 [TLS example test](../../../../tests/integration/tls/examples_wire.cpp) runs the built

@@ -49,7 +49,7 @@ namespace {
 constexpr std::size_t kSocketWorkers = 2;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 namespace {
@@ -199,9 +199,7 @@ DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
   file_directory directory;
   directory.write("file.txt", "0123456789");
   directory.write("file.txt.gz", "compressed");
-  auto cache = std::make_shared<static_file_cache>(
-      martianlabs::doba::common::cache_policies{
-          .ttl = std::chrono::hours(24)});
+  auto cache = std::make_shared<static_file_cache>();
   tcpip_client client;
   const auto port = client.find_available_port();
   http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
@@ -293,8 +291,6 @@ DOBA_TEST(
   server.stop();
   cache->clear();
   DOBA_EXPECT_EQUAL(complete.load(), 7);
-  DOBA_EXPECT_EQUAL(cache->statistics().loads, 0);
-  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
 }
 
 // +===========================================================================+
@@ -318,7 +314,7 @@ DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
   key += "file";
   manual_event entered, release;
   std::jthread loader([&] {
-    cache->get_or_load(key, 128, [&] {
+    cache->try_get_or_load(key, 128, [&] {
       entered.open();
       release.wait();
       return std::shared_ptr<const static_file_representation>{};
@@ -336,25 +332,23 @@ DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
     auto result = receive_http_response(client);
     DOBA_EXPECT(result.has_value());
     DOBA_EXPECT_EQUAL(result->body, body);
-    DOBA_EXPECT_EQUAL(cache->statistics().waiters, 0);
-    DOBA_EXPECT_EQUAL(cache->statistics().loads, 1);
   }
   server.stop();
   release.open();
   loader.join();
-  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
+  DOBA_EXPECT(!cache->find(key));
 }
 
 // +===========================================================================+
 // | [>] HTTP cached reload contention                           ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
+DOBA_TEST("HTTP cached files complete repeated concurrent invalidation cycles") {
   file_directory directory;
   const std::string body(32768, 'c');
   directory.write("file", body);
   auto cache = std::make_shared<static_file_cache>(
       martianlabs::doba::common::cache_policies{
-          .max_loads = 1, .ttl = std::chrono::milliseconds(1)});
+          .max_loads = 1});
   tcpip_client probe;
   const auto port = probe.find_available_port();
   http_server<> server({.worker_count = kSocketWorkers, .ip = "127.0.0.1",
@@ -363,6 +357,7 @@ DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
       "/", directory.path(), static_file_policies{.cache = cache});
   server.start();
   for (unsigned repeat = 0; repeat < 3; ++repeat) {
+    cache->clear();
     std::atomic<unsigned> completed{0};
     {
       std::vector<std::jthread> clients;
@@ -379,9 +374,7 @@ DOBA_TEST("HTTP cached files complete repeated concurrent expiration cycles") {
       });
     }
     DOBA_EXPECT_EQUAL(completed.load(), 160);
-    DOBA_EXPECT_EQUAL(cache->statistics().waiters, 0);
   }
   server.stop();
   cache->clear();
-  DOBA_EXPECT_EQUAL(cache->statistics().live_cost, 0);
 }

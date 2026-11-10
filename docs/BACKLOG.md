@@ -150,8 +150,8 @@ campaign logic must be C++; no scripting runtime is a project dependency.
   </a>
 </h2>
 
-These entries refer only to the current [TCP contract](reference/transport/server/tcp.md#runtime-contract)
-and separate [TLS contract](reference/transport/server/tls.md). Future features
+These entries refer only to the current [TCP contract](reference/transport/tcp.md#runtime-contract)
+and separate [TLS contract](reference/transport/tls.md). Future features
 require an explicit scope decision. Exact release qualification remains in RE1.
 
 <a name="c1-single-inactivity-timeout"></a>

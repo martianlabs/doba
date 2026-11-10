@@ -35,22 +35,19 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | [>] reader_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Result of a body reader read() call.                                      |
-// | produced  - bytes of decoded payload written into the caller-supplied     |
-// | output span during this call. Wire framing bytes consumed                 |
-// | from the source reader are internal and not reported.                     |
-// | complete  - body fully decoded; no further read() calls needed.           |
-// | has_error - a protocol or size-limit error was detected.                  |
-// | error     - error code, if has_error is true.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct reader_state {
-  // Bytes of decoded payload written into the output span during this call.
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Payload bytes written by this call. Does not count framing bytes.
   std::size_t produced = 0;
-  // Body fully decoded; no further read() calls needed.
+  // The whole body has been decoded.
   bool complete = false;
-  // A protocol or size-limit error was detected.
+  // Reading failed, framing was invalid, or a size limit was exceeded.
   bool has_error = false;
-  // Error code, if has_error is true.
+  // Only meaningful when has_error is true.
   reader_error error = reader_error::none;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body

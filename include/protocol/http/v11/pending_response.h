@@ -44,9 +44,9 @@ struct pending_response {
   // +-------------------------------------------------------------------------+
   // Only asynchronous handlers need retained request/frame ownership.
   std::unique_ptr<request_processor_async<RQty, RSty>> handler;
-  std::string interim;   // At most one ordered 100 Continue per request.
-  std::string head;      // Owned serialized head awaiting transport acceptance.
-  std::string body;      // Owned inline body awaiting transport acceptance.
+  std::string interim;  // At most one ordered 100 Continue per request.
+  std::string head;     // Owned serialized head awaiting transport acceptance.
+  std::string body;     // Owned inline body awaiting transport acceptance.
   std::unique_ptr<common::reader> source;  // Same reader contract as sync.
   bool complete{false};  // Final response is ready for ordered emission.
   bool close{false};     // Close after this response reaches the wire frontier.

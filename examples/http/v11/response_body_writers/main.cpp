@@ -26,7 +26,6 @@
 #include <cstddef>
 #include <utility>
 
-#include "common/console_logger.h"
 #include "common/signaler.h"
 #include "protocol/http/v11/body/writer.h"
 #include "http_server.h"

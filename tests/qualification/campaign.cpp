@@ -89,11 +89,11 @@ int main(int argc, char** argv) {
           "1/1 Test\\s+#[0-9]+: " + name + "\\b[^\\r\\n]*\\bPassed\\b"}});
       }
       std::vector<std::pair<std::string, size_t>> files{
-        {"common/cache_tests.cpp", 13}, {"common/byte_storage_tests.cpp", 19},
+        {"common/cache_tests.cpp", 14}, {"common/byte_storage_tests.cpp", 19},
         {"common/reader_tests.cpp", 9},
         {"protocol/http/v11/operating_limits_tests.cpp", 1}};
       if (!windows) files.emplace_back(
-        "transport/server/tcp_context_linux_tests.cpp", 17);
+        "transport/tcp_context_linux_tests.cpp", 17);
       auto unit = (build / ("tests/unit/doba_unit_tests" + suffix)).string();
       size_t index = 0;
       for (const auto& [file, minimum] : files) {

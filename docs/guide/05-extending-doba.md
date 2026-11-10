@@ -142,11 +142,11 @@ with Ctrl+C when you're done.
 
 The [custom_transport example][custom-transport] flips the experiment: it
 keeps doba's HTTP/1.1 engine and supplies a tiny in-memory transport. Its
-[source](../../examples/transport/server/custom_transport/main.cpp) takes
+[source](../../examples/transport/custom_transport/main.cpp) takes
 the engine factory in its constructor. In *start*, it creates the engine and
 wires up its output and close callbacks:
 
-[custom-transport]: ../../examples/transport/server/custom_transport/README.md
+[custom-transport]: ../../examples/transport/custom_transport/README.md
 
 ```cpp
 connection_.reset(new ENty(create_engine_()));
@@ -191,13 +191,13 @@ martianlabs::doba::http_server<http::request, http::response, routes_type,
 Run the already-built example. On Linux:
 
 ```sh
-./out/build/guide/examples/transport/server/custom_transport/custom_transport
+./out/build/guide/examples/transport/custom_transport/custom_transport
 ```
 
 With Visual Studio on Windows:
 
 ```powershell
-$build = '.\out\build\guide\examples\transport\server\custom_transport'
+$build = '.\out\build\guide\examples\transport\custom_transport'
 & "$build\Release\custom_transport.exe"
 ```
 
@@ -230,7 +230,7 @@ view:
   output; errors and output-limit violations may abort it. Administration belongs
   to a sequential external owner outside worker callbacks.
 
-The [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+The [TCP runtime contract](../reference/transport/tcp.md#runtime-contract)
 specifies buffers, reader lifetime, platform limits and stop behavior. A C++
 concept checks signatures; implementing it alone does not prove these guarantees.
 

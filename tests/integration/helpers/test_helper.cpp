@@ -26,14 +26,15 @@
 #include "../../helpers/test_watchdog.h"
 
 #include <atomic>
-#include <mutex>
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
+#include <mutex>
 #include <string>
+#include <string_view>
 #include <vector>
-
-#include "common/console_logger.h"
 
 namespace martianlabs::doba::tests::integration {
 namespace {
@@ -306,9 +307,6 @@ int test_helper::run(int argc, char** argv) {
     return 2;
   }
   ::martianlabs::doba::tests::test_watchdog watchdog(timeout);
-  common::console_logger logger{
-      "integration_tests", common::console_logger_options{
-                               .show_function = false, .show_line = false}};
   static constexpr std::string_view kText =
       "     _       _\n"
       "  __| | ___ | |__   __ _\n"
@@ -318,7 +316,7 @@ int test_helper::run(int argc, char** argv) {
   std::fwrite(kText.data(), 1, kText.size(), stdout);
   std::fputc('\n', stdout);
   std::fflush(stdout);
-  logger.info() << "running " << selected << " integration tests";
+  std::printf("running %zu integration tests\n", selected);
   std::size_t failed_tests = 0;
   std::size_t skipped_tests = 0;
   for (const auto& test : tests()) {
@@ -353,18 +351,22 @@ int test_helper::run(int argc, char** argv) {
     watchdog.disarm();
     if (failures() != failures_before) {
       failed_tests++;
-      logger.error() << test.file << ':' << test.line << " - " << test.name
-                     << common::console_log_color::kRed << " failed";
+      std::printf("%.*s:%d - %.*s failed\n",
+                  static_cast<int>(test.file.size()), test.file.data(),
+                  test.line, static_cast<int>(test.name.size()),
+                  test.name.data());
     } else {
-      logger.info() << test.file << ':' << test.line << " - " << test.name
-                    << common::console_log_color::kGreen << " passed";
+      std::printf("%.*s:%d - %.*s passed\n",
+                  static_cast<int>(test.file.size()), test.file.data(),
+                  test.line, static_cast<int>(test.name.size()),
+                  test.name.data());
     }
   }
   if (skipped_tests != 0) {
-    logger.info() << skipped_tests << " test(s) skipped by explicit exclusions";
+    std::printf("%zu test(s) skipped by explicit exclusions\n", skipped_tests);
   }
   if (failed_tests != 0) {
-    logger.error() << failed_tests << " test(s) failed";
+    std::printf("%zu test(s) failed\n", failed_tests);
     return 1;
   }
   return 0;

@@ -24,7 +24,7 @@ The factory and shared application state must support concurrent connections.
 Configuration and start/stop belong to a sequential external owner, outside
 worker callbacks. Linux administrative stop cancels pending output after the
 active call; Windows drains accepted bytes and real I/O. Neither waits for
-application tasks. See the [runtime contract](../../../docs/reference/transport/server/tcp.md#runtime-contract).
+application tasks. See the [runtime contract](../../../docs/reference/transport/tcp.md#runtime-contract).
 
 The engine contract returns processing_result from both input and processing
 entry points. This synchronous example returns the empty result and requests

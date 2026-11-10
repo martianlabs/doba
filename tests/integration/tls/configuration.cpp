@@ -33,10 +33,10 @@
 
 #include <openssl/pem.h>
 
-#include "transport/server/tls_configuration.h"
+#include "transport/tls_configuration.h"
 
 namespace {
-namespace tr = martianlabs::doba::transport::server;
+namespace tr = martianlabs::doba::transport;
 namespace detail = tr::detail;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

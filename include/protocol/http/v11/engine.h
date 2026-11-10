@@ -106,16 +106,16 @@ class engine {
     try {
       auto budget = decoder_.configuration().max_task_steps_per_turn;
       if (deferred_.empty()) {
-        process_input_(input, budget);
-        retain_(input);
+        process_input(input, budget);
+        retain(input);
       } else {
-        retain_(input);
-        process_deferred_(budget);
+        retain(input);
+        process_deferred(budget);
       }
     } catch (...) {
       query_for_close();
     }
-    return processing_();
+    return processing();
   }
   // +=========================================================================+
   // | [>] on_processing_turn                                       ( public ) |
@@ -126,17 +126,17 @@ class engine {
       auto budget = decoder_.configuration().max_task_steps_per_turn;
       if (output_pending_ && output_idle) {
         output_pending_ = false;
-        pop_front_();
+        pop_front();
       }
       // Reserve an admission step when retained input can use free capacity.
-      const auto allowance = admission_ready_() ? budget - 1 : budget;
-      resume_pending_(budget, allowance);
-      flush_();
-      process_deferred_(budget);
+      const auto allowance = admission_ready() ? budget - 1 : budget;
+      resume_pending(budget, allowance);
+      flush();
+      process_deferred(budget);
     } catch (...) {
       query_for_close();
     }
-    return processing_();
+    return processing();
   }
 
  private:
@@ -149,11 +149,11 @@ class engine {
   using entry_type = detail::pending_response<RQty, RSty>;
   using queue_type = std::deque<entry_type>;
   // +=========================================================================+
-  // | [>] process_input_                                          ( private ) |
+  // | [>] process_input                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  void process_input_(std::string_view& input, std::size_t& budget) {
+  void process_input(std::string_view& input, std::size_t& budget) {
     while (!closed_ && !admission_closed_ && !input.empty() && budget &&
-           capacity_()) {
+           capacity()) {
       auto result = decoder_.deserialize(input);
       if (result.code != deserialization_status::kSucceeded) {
         const bool rejected =
@@ -161,19 +161,19 @@ class engine {
         if (result.response) {
           auto serialized = serialize(*result.response, rejected);
           if (!pending_ && !output_pending_) {
-            send_direct_(std::move(serialized));
+            send_direct(std::move(serialized));
             if (rejected) query_for_close();
           } else {
-            auto& entry = decoding_ ? *decoding_ : append_();
+            auto& entry = decoding_ ? *decoding_ : append();
             if (rejected) {
-              store_(entry, std::move(serialized), true);
+              store(entry, std::move(serialized), true);
               decoding_ = nullptr;
-              barrier_(pending_->size() - 1);
+              barrier(pending_->size() - 1);
             } else {
-              store_interim_(entry, std::move(serialized));
+              store_interim(entry, std::move(serialized));
               decoding_ = &entry;
             }
-            flush_();
+            flush();
           }
         }
         return;
@@ -182,11 +182,11 @@ class engine {
       router_match_result<RQty, RSty> match{};
       if (request.get_target() == target::kOriginForm ||
           request.get_target() == target::kAbsoluteForm) {
-        match = router_.match(request.get_method(),
-                              request.get_absolute_path());
+        match =
+            router_.match(request.get_method(), request.get_absolute_path());
       }
       if (match.async_handler || match.async_parametrized_handler) {
-        auto& entry = decoding_ ? *decoding_ : append_();
+        auto& entry = decoding_ ? *decoding_ : append();
         decoding_ = nullptr;
         --budget;
         entry.handler =
@@ -202,12 +202,12 @@ class engine {
           failed = true;
         }
         if (entry.handler->done() || failed) {
-          finish_async_(entry, failed);
+          finish_async(entry, failed);
         }
         if (entry.close || entry.handler->request().wants_connection_close()) {
-          barrier_(pending_->size() - 1);
+          barrier(pending_->size() - 1);
         }
-        flush_();
+        flush();
       } else {
         bool close = request.wants_connection_close();
         auto response = decoder_.make_response(response_head_, response_body_);
@@ -221,24 +221,24 @@ class engine {
         }
         auto serialized = serialize(request, response, close);
         if (!pending_ && !output_pending_) {
-          send_direct_(std::move(serialized));
+          send_direct(std::move(serialized));
           if (close) query_for_close();
         } else {
           --budget;
-          auto& entry = decoding_ ? *decoding_ : append_();
+          auto& entry = decoding_ ? *decoding_ : append();
           decoding_ = nullptr;
-          store_(entry, std::move(serialized), close);
-          if (close) barrier_(pending_->size() - 1);
-          flush_();
+          store(entry, std::move(serialized), close);
+          if (close) barrier(pending_->size() - 1);
+          flush();
         }
       }
     }
     if (admission_closed_) input = {};
   }
   // +=========================================================================+
-  // | [>] resume_pending_                                         ( private ) |
+  // | [>] resume_pending                                          ( private ) |
   // +-------------------------------------------------------------------------+
-  void resume_pending_(std::size_t& budget, std::size_t allowance) {
+  void resume_pending(std::size_t& budget, std::size_t allowance) {
     if (!pending_ || !allowance) return;
     const auto count = pending_->size();
     for (std::size_t visited = 0; visited < count && allowance; ++visited) {
@@ -250,32 +250,32 @@ class engine {
       --budget;
       --allowance;
       if (entry.handler->done()) {
-        finish_async_(entry, false);
+        finish_async(entry, false);
         if (entry.close) {
-          barrier_(index);
+          barrier(index);
           return;
         }
       }
     }
   }
   // +=========================================================================+
-  // | [>] finish_async_                                           ( private ) |
+  // | [>] finish_async                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  void finish_async_(entry_type& entry, bool failed) {
+  void finish_async(entry_type& entry, bool failed) {
     bool close = entry.handler->request().wants_connection_close();
     if (failed || entry.handler->error()) {
       close = true;
       build_error_response(entry.handler->response());
     }
-    auto output = serialize(entry.handler->request(), entry.handler->response(),
-                            close);
-    store_(entry, std::move(output), close);
+    auto output =
+        serialize(entry.handler->request(), entry.handler->response(), close);
+    store(entry, std::move(output), close);
   }
   // +=========================================================================+
-  // | [>] store_                                                  ( private ) |
+  // | [>] store                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  void store_(entry_type& entry, serialization_result output, bool close) {
-    reserve_bytes_(output.head.size(), output.body.size());
+  void store(entry_type& entry, serialization_result output, bool close) {
+    reserve_bytes(output.head.size(), output.body.size());
     entry.head.assign(output.head);
     entry.body.assign(output.body);
     entry.source = std::move(output.source);
@@ -284,20 +284,20 @@ class engine {
     entry.complete = true;
   }
   // +=========================================================================+
-  // | [>] store_interim_                                          ( private ) |
+  // | [>] store_interim                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  void store_interim_(entry_type& entry, serialization_result output) {
+  void store_interim(entry_type& entry, serialization_result output) {
     if (!entry.interim.empty() || !output.body.empty() || output.source) {
       throw std::logic_error("Invalid interim response");
     }
-    reserve_bytes_(output.head.size(), 0);
+    reserve_bytes(output.head.size(), 0);
     entry.interim.assign(output.head);
     pending_bytes_ += entry.interim.size();
   }
   // +=========================================================================+
-  // | [>] reserve_bytes_                                          ( private ) |
+  // | [>] reserve_bytes                                           ( private ) |
   // +-------------------------------------------------------------------------+
-  void reserve_bytes_(std::size_t head, std::size_t body) const {
+  void reserve_bytes(std::size_t head, std::size_t body) const {
     const auto capacity = decoder_.configuration().max_pending_response_bytes;
     const auto used = pending_bytes_;
     if (head > capacity - used || body > capacity - used - head) {
@@ -305,9 +305,9 @@ class engine {
     }
   }
   // +=========================================================================+
-  // | [>] flush_                                                  ( private ) |
+  // | [>] flush                                                   ( private ) |
   // +-------------------------------------------------------------------------+
-  void flush_() {
+  void flush() {
     while (!closed_ && pending_ && !output_pending_) {
       auto& front = pending_->front();
       if (!front.interim.empty()) {
@@ -327,15 +327,15 @@ class engine {
         query_for_close();
         return;
       }
-      if (!source) pop_front_();
+      if (!source) pop_front();
     }
   }
   // +=========================================================================+
-  // | [>] send_direct_                                            ( private ) |
+  // | [>] send_direct                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  void send_direct_(serialization_result output) {
+  void send_direct(serialization_result output) {
     if (output.source) {
-      auto& entry = append_();
+      auto& entry = append();
       entry.complete = true;
       entry.source_sent = true;
       output_pending_ = true;
@@ -345,17 +345,17 @@ class engine {
     }
   }
   // +=========================================================================+
-  // | [>] append_                                                 ( private ) |
+  // | [>] append                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  entry_type& append_() {
+  entry_type& append() {
     if (!pending_) pending_ = std::make_unique<queue_type>();
     pending_->emplace_back();
     return pending_->back();
   }
   // +=========================================================================+
-  // | [>] pop_front_                                              ( private ) |
+  // | [>] pop_front                                               ( private ) |
   // +-------------------------------------------------------------------------+
-  void pop_front_() {
+  void pop_front() {
     pending_->pop_front();
     if (cursor_) --cursor_;
     if (pending_->empty()) {
@@ -364,9 +364,9 @@ class engine {
     }
   }
   // +=========================================================================+
-  // | [>] barrier_                                                ( private ) |
+  // | [>] barrier                                                 ( private ) |
   // +-------------------------------------------------------------------------+
-  void barrier_(std::size_t position) {
+  void barrier(std::size_t position) {
     admission_closed_ = true;
     deferred_.clear();
     decoding_ = nullptr;
@@ -379,33 +379,33 @@ class engine {
     cursor_ %= pending_->size();
   }
   // +=========================================================================+
-  // | [>] capacity_                                               ( private ) |
+  // | [>] capacity                                                ( private ) |
   // +-------------------------------------------------------------------------+
-  bool capacity_() const noexcept {
+  bool capacity() const noexcept {
     return decoding_ || !pending_ ||
            pending_->size() < decoder_.configuration().max_pending_requests;
   }
   // +=========================================================================+
-  // | [>] admission_ready_                                        ( private ) |
+  // | [>] admission_ready                                         ( private ) |
   // +-------------------------------------------------------------------------+
-  bool admission_ready_() const noexcept {
-    return !admission_closed_ && !deferred_.empty() && capacity_();
+  bool admission_ready() const noexcept {
+    return !admission_closed_ && !deferred_.empty() && capacity();
   }
   // +=========================================================================+
-  // | [>] process_deferred_                                       ( private ) |
+  // | [>] process_deferred                                        ( private ) |
   // +-------------------------------------------------------------------------+
-  void process_deferred_(std::size_t& budget) {
-    if (closed_ || !admission_ready_()) return;
+  void process_deferred(std::size_t& budget) {
+    if (closed_ || !admission_ready()) return;
     std::string_view input(deferred_);
-    process_input_(input, budget);
+    process_input(input, budget);
     if (!closed_ && !admission_closed_) {
       deferred_.erase(0, deferred_.size() - input.size());
     }
   }
   // +=========================================================================+
-  // | [>] retain_                                                 ( private ) |
+  // | [>] retain                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  void retain_(std::string_view input) {
+  void retain(std::string_view input) {
     if (closed_ || admission_closed_ || input.empty()) return;
     const auto limit = decoder_.configuration().max_deferred_input_size;
     if (input.size() > limit - deferred_.size()) {
@@ -414,11 +414,11 @@ class engine {
     deferred_.append(input);
   }
   // +=========================================================================+
-  // | [>] processing_                                             ( private ) |
+  // | [>] processing                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  processing_result processing_() const noexcept {
+  processing_result processing() const noexcept {
     if (closed_) return {};
-    processing_result result{admission_ready_(), {}, output_pending_};
+    processing_result result{admission_ready(), {}, output_pending_};
     if (!pending_) return result;
     const auto now = clock::now();
     for (const auto& entry : *pending_) {
@@ -466,8 +466,7 @@ class engine {
     if ((!result.challenge.empty() &&
          !http::headers::www_authenticate::check(result.challenge)) ||
         (result.status == auth::authentication_status::kUnauthenticated &&
-         result.challenge.find_first_not_of(" \t,") ==
-             std::string::npos)) {
+         result.challenge.find_first_not_of(" \t,") == std::string::npos)) {
       throw std::invalid_argument("Invalid authentication challenge");
     }
     switch (result.status) {
@@ -547,17 +546,17 @@ class engine {
   // +-------------------------------------------------------------------------+
   const ROty& router_;
   decoder<RQty, RSty> decoder_;
-  std::string response_head_;       // Reusable synchronous response storage.
+  std::string response_head_;  // Reusable synchronous response storage.
   std::string response_body_;
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;
-  std::string deferred_;            // Bounded, unadmitted raw input.
+  std::string deferred_;                 // Bounded, unadmitted raw input.
   std::unique_ptr<queue_type> pending_;  // Lazy ordered engine-owned records.
-  entry_type* decoding_{nullptr};   // Reserved record for an interim response.
-  std::size_t pending_bytes_{0};    // Owned serialized prefix/inline bytes.
-  std::size_t cursor_{0};           // Fair resumption position in the records.
-  bool output_pending_{false};      // Current terminal source must drain.
-  bool admission_closed_{false};    // An ordered close frontier is known.
+  entry_type* decoding_{nullptr};  // Reserved record for an interim response.
+  std::size_t pending_bytes_{0};   // Owned serialized prefix/inline bytes.
+  std::size_t cursor_{0};          // Fair resumption position in the records.
+  bool output_pending_{false};     // Current terminal source must drain.
+  bool admission_closed_{false};   // An ordered close frontier is known.
   bool closed_{false};
 };
 }  // namespace martianlabs::doba::protocol::http::v11

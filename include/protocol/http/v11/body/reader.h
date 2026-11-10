@@ -42,11 +42,8 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] reader                                                      ( class ) |
 // +---------------------------------------------------------------------------+
-// | Holds a borrowed buffer or an owned file with the body decoder.           |
-// | (reader_chunked or reader_raw) matching the encoding actually used by the |
-// | request (Transfer-Encoding: chunked vs Content-Length). This lets callers |
-// | pull already-decoded payload bytes via read() without ever having to know |
-// | which framing produced them.                                              |
+// | Reads decoded body bytes from borrowed memory or owned storage.           |
+// | Raw bodies use Content-Length; chunked bodies strip framing.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class reader {
@@ -64,17 +61,15 @@ class reader {
   // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a chunked Transfer-Encoding from a borrowed        |
-  // | span source. The extension_limit and trailer_limit parameters set the   |
-  // | maximum number of bytes allowed for chunk extensions and trailers,      |
-  // | respectively. A limit of zero means no limit.                           |
+  // | Borrows chunked bytes; keep source alive while reading.                 |
+  // | Limits count extension bytes per chunk and trailer bytes per body.      |
+  // | A limit of 0 means unlimited.                                           |
   // +-------------------------------------------------------------------------+
-  static reader chunked(
-      std::span<const std::byte> source,
-      std::size_t extension_limit =
-          reader_chunked::kDefaultMaxChunkExtensionSize,
-      std::size_t trailer_limit =
-          reader_chunked::kDefaultMaxTrailerSectionSize) {
+  static reader chunked(std::span<const std::byte> source,
+                        std::size_t extension_limit =
+                            reader_chunked::kDefaultMaxChunkExtensionSize,
+                        std::size_t trailer_limit =
+                            reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (source.empty()) throw std::invalid_argument("Empty body source");
     return reader(common::reader::borrowed(source),
                   reader_chunked(extension_limit, trailer_limit));
@@ -82,17 +77,15 @@ class reader {
   // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a chunked Transfer-Encoding from a file source.    |
-  // | The extension_limit and trailer_limit parameters set the                |
-  // | maximum number of bytes allowed for chunk extensions and trailers,      |
-  // | respectively. A limit of zero means no limit.                           |
+  // | Takes an open file containing chunked bytes.                            |
+  // | Limits count extension bytes per chunk and trailer bytes per body.      |
+  // | A limit of 0 means unlimited.                                           |
   // +-------------------------------------------------------------------------+
-  static reader chunked(
-      common::filesystem_file&& source,
-      std::size_t extension_limit =
-          reader_chunked::kDefaultMaxChunkExtensionSize,
-      std::size_t trailer_limit =
-          reader_chunked::kDefaultMaxTrailerSectionSize) {
+  static reader chunked(common::filesystem&& source,
+                        std::size_t extension_limit =
+                            reader_chunked::kDefaultMaxChunkExtensionSize,
+                        std::size_t trailer_limit =
+                            reader_chunked::kDefaultMaxTrailerSectionSize) {
     if (!source.is_open()) throw std::invalid_argument("Body file is not open");
     return reader(common::reader(std::move(source)),
                   reader_chunked(extension_limit, trailer_limit));
@@ -100,9 +93,8 @@ class reader {
   // +=========================================================================+
   // | [>] raw                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a raw Transfer-Encoding from a borrowed            |
-  // | span source. The content_length parameter sets the                      |
-  // | maximum number of bytes allowed for the raw content.                    |
+  // | Borrows a Content-Length body; keep source alive while reading.         |
+  // | content_length is the expected byte count, not a size limit.            |
   // +-------------------------------------------------------------------------+
   static reader raw(std::span<const std::byte> source,
                     std::size_t content_length) {
@@ -113,12 +105,9 @@ class reader {
   // +=========================================================================+
   // | [>] raw                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Creates a reader for a raw Transfer-Encoding from a file source.        |
-  // | The content_length parameter sets the                                   |
-  // | maximum number of bytes allowed for the raw content.                    |
+  // | Takes an open file and reads exactly content_length body bytes.         |
   // +-------------------------------------------------------------------------+
-  static reader raw(common::filesystem_file&& source,
-                    std::size_t content_length) {
+  static reader raw(common::filesystem&& source, std::size_t content_length) {
     if (!source.is_open()) throw std::invalid_argument("Body file is not open");
     return reader(common::reader(std::move(source)),
                   reader_raw(content_length));
@@ -126,9 +115,8 @@ class reader {
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Pulls wire bytes from the owned source, decodes them using the encoding |
-  // | selected at construction time, and writes the decoded payload into      |
-  // | output. See reader_chunked::read/reader_raw::read for semantics.        |
+  // | Fills output with payload bytes, removing any chunked framing.          |
+  // | Reports bytes produced, completion and any read or framing error.       |
   // +-------------------------------------------------------------------------+
   reader_state read(std::span<std::byte> output) {
     return std::visit(
@@ -138,19 +126,29 @@ class reader {
   // +=========================================================================+
   // | [>] take_borrowed_raw                                        ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns the remaining raw bytes without copying, if they fit maximum.   |
+  // | Needs a complete borrowed buffer; marks the body as consumed.           |
+  // +-------------------------------------------------------------------------+
   std::optional<std::span<const std::byte>> take_borrowed_raw(
       std::size_t maximum) {
     if (borrowed_raw_.empty()) return std::nullopt;
     auto* decoder = std::get_if<reader_raw>(&decoder_);
     return decoder ? decoder->take_view(borrowed_raw_, maximum) : std::nullopt;
   }
-
-  // Takes ownership of wire bytes, including any temporary backing file.
+  // +=========================================================================+
+  // | [>] raw                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Takes stored body bytes, including any temporary file.                  |
+  // | length is the expected body size.                                       |
+  // +-------------------------------------------------------------------------+
   static reader raw(common::byte_storage source, std::size_t length) {
     return reader(common::reader(std::move(source)), reader_raw(length));
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] chunked                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Takes stored chunked bytes, including any temporary file.               |
+  // | Limits count extensions per chunk and all trailers; 0 means unlimited.  |
   // +-------------------------------------------------------------------------+
   static reader chunked(common::byte_storage source,
                         std::size_t extension_limit,
@@ -158,9 +156,11 @@ class reader {
     return reader(common::reader(std::move(source)),
                   reader_chunked(extension_limit, trailer_limit));
   }
-
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] rebind_borrowed                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Points borrowed views at relocated bytes, keeping the read position.    |
+  // | source must contain the same bytes at their new location.               |
   // +-------------------------------------------------------------------------+
   void rebind_borrowed(std::span<const std::byte> source) noexcept {
     source_.rebind_borrowed(source);
