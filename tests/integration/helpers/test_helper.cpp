@@ -24,12 +24,12 @@
 
 #include "test_helper.h"
 #include "../../helpers/test_watchdog.h"
+#include "../../helpers/tool_support.h"
 
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <exception>
 #include <mutex>
 #include <string>
@@ -296,9 +296,11 @@ int test_helper::run(int argc, char** argv) {
     return 0;
   }
   std::chrono::milliseconds timeout{30000};
-  const char* environment_timeout = std::getenv("DOBA_TEST_TIMEOUT_MS");
+  const auto environment_timeout =
+      ::martianlabs::doba::tests::tools::environment_value("DOBA_TEST_TIMEOUT_MS")
+          .value_or("30000");
   const auto configured_timeout = !timeout_given
-      ? std::string_view(environment_timeout ? environment_timeout : "30000")
+      ? std::string_view(environment_timeout)
       : timeout_argument;
   if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout,
                                                       timeout)) {
