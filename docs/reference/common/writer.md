@@ -9,7 +9,7 @@
 **Header:** [include/common/writer.h](../../../include/common/writer.h)
 
 <a id="type-writer"></a>
-## writer
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> writer
 
 Move-only output backed by [byte_storage](byte_storage.md), using its default
 or supplied [storage options](byte_storage_options.md). Successful writes count
@@ -19,7 +19,7 @@ access to each writer.
 <a id="method-write"></a>
 <a id="method-write-2"></a>
 <a id="method-write-3"></a>
-## write
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
 ```cpp
 bool write(const char* ptr, std::size_t len);
@@ -33,7 +33,7 @@ or a storage I/O failure; allocation failures may throw. Empty writes follow
 the same sealed/error checks. Only successful calls increase the byte count.
 
 <a id="method-finish"></a>
-## finish
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> finish
 
 ```cpp
 void finish(std::size_t bytes);
@@ -45,7 +45,7 @@ finalization, not a disk-durability operation. Check `ok()` separately for
 recorded storage errors.
 
 <a id="method-ok"></a>
-## ok
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ok
 
 ```cpp
 bool ok() const noexcept;
@@ -55,7 +55,7 @@ Report storage I/O health. A sealed writer can still be healthy even though
 further writes are rejected.
 
 <a id="method-release"></a>
-## release
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> release
 
 ```cpp
 byte_storage release();

@@ -1,10 +1,10 @@
-# Processing turns
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Processing turns
 
 Header: [processing_result.h](../../../include/protocol/processing_result.h).
 The structural engine interface is defined in
 [contracts.h](../../../include/protocol/contracts.h).
 
-## Implementation status
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Implementation status
 
 Linux and Windows TCP deliver immediate, monotonic-deadline and output-drain
 processing turns on their transport workers. TLS forwards the same complete
@@ -15,7 +15,7 @@ or externally resumed handles.
 See the [Linux delivery design](../transport/tcp_linux_processing.md) and
 [Windows delivery design](../transport/tcp_windows_processing.md).
 
-## Entry points and ownership
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Entry points and ownership
 
 ```cpp
 processing_result on_bytes_received(std::string_view input);
@@ -43,7 +43,7 @@ snapshot does not reserve space and can become outdated after the engine emits
 new output itself. It does not acknowledge delivery to the peer. Other turns,
 including deadlines, are not blocked just because output_idle is false.
 
-## Result properties
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Result properties
 
 | Property | Default | Meaning |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ for example when an engine waits for output with a timeout. A protocol may
 continue accepting ordinary input while also scheduling maintenance turns.
 No field denotes an HTTP handler, coroutine, thread or application work item.
 
-## Reconciliation rules
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Reconciliation rules
 
 A result is a complete snapshot of current interests, not an append-only list.
 The transport reconciles it after either entry point returns. Repeating an
@@ -91,7 +91,7 @@ Engines inspect their own state and monotonic time before acting. A turn can
 serve several reasons, so it is not permission to blindly resume a frame or
 assume a particular deadline/output condition has been met.
 
-## Scope boundaries
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Scope boundaries
 
 Read policy, socket buffers, partial sends and source consumption belong to the
 transport. Scheduling a processing turn does not override these operations or

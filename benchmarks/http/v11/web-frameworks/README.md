@@ -1,4 +1,12 @@
-# Web Frameworks HTTP/1.1 benchmark adapter
+<a name="web-frameworks-http11-benchmark-adapter"></a>
+<h1>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter.svg" alt="Web Frameworks HTTP/1.1 benchmark adapter">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter-dark.svg" alt="Web Frameworks HTTP/1.1 benchmark adapter">
+  </a>
+</h1>
 
 This target exposes the routes used by the Web Frameworks benchmark. It
 contains only the doba server adapter; the upstream project owns validation,

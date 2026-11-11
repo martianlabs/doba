@@ -13,13 +13,13 @@ Internal grammar helpers used by HTTP parsing and header checks. Character tests
 <a id="api"></a>
 <a id="type-helpers"></a>
 
-## helpers
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> helpers
 
 `martianlabs::doba::protocol::http::helpers` groups static parsing operations. Prefix consumers do not establish that a whole HTTP field or request is valid.
 
 <a id="enum-host-type"></a>
 
-## host_type
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> host_type
 
 ```cpp
 enum class host_type { kUnknown, kIpLiteral, kIpV4Address, kRegName };
@@ -29,7 +29,7 @@ Classifies a host as invalid, bracketed IP literal, IPv4, or registered name.
 
 <a id="method-is-digit"></a>
 
-## is_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digit
 
 ```cpp
 static constexpr bool is_digit(unsigned char c) noexcept;
@@ -39,7 +39,7 @@ Returns whether the byte is an ASCII decimal digit.
 
 <a id="method-is-digit-2"></a>
 
-## is_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digit
 
 ```cpp
 static constexpr bool is_digit(char c) noexcept;
@@ -49,7 +49,7 @@ Returns whether the byte is an ASCII decimal digit.
 
 <a id="method-is-digits"></a>
 
-## is_digits
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_digits
 
 ```cpp
 static constexpr bool is_digits(std::string_view sv) noexcept;
@@ -59,7 +59,7 @@ Requires at least one ASCII decimal digit and no other bytes.
 
 <a id="method-parse-size-t"></a>
 
-## parse_size_t
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> parse_size_t
 
 ```cpp
 static constexpr bool parse_size_t(std::string_view sv,
@@ -70,7 +70,7 @@ Parses the whole nonempty decimal string into `out`, checking `size_t` overflow.
 
 <a id="method-is-hex-digit"></a>
 
-## is_hex_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_hex_digit
 
 ```cpp
 static constexpr bool is_hex_digit(unsigned char c) noexcept;
@@ -80,7 +80,7 @@ Recognizes ASCII `0-9`, `A-F`, and `a-f`.
 
 <a id="method-is-hex-digit-2"></a>
 
-## is_hex_digit
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_hex_digit
 
 ```cpp
 static constexpr bool is_hex_digit(char c) noexcept;
@@ -90,7 +90,7 @@ Recognizes ASCII `0-9`, `A-F`, and `a-f`.
 
 <a id="method-is-alpha"></a>
 
-## is_alpha
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_alpha
 
 ```cpp
 static constexpr bool is_alpha(unsigned char c) noexcept;
@@ -100,7 +100,7 @@ Recognizes ASCII letters only.
 
 <a id="method-is-alpha-2"></a>
 
-## is_alpha
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_alpha
 
 ```cpp
 static constexpr bool is_alpha(char c) noexcept;
@@ -110,7 +110,7 @@ Recognizes ASCII letters only.
 
 <a id="method-is-token"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
 ```cpp
 static constexpr bool is_token(unsigned char c) noexcept;
@@ -120,7 +120,7 @@ The byte overloads recognize HTTP token characters. The string overload requires
 
 <a id="method-is-token-2"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
 ```cpp
 static constexpr bool is_token(char c) noexcept;
@@ -130,7 +130,7 @@ The byte overloads recognize HTTP token characters. The string overload requires
 
 <a id="method-is-token-3"></a>
 
-## is_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token
 
 ```cpp
 static constexpr bool is_token(std::string_view sv) noexcept;
@@ -140,7 +140,7 @@ The byte overloads recognize HTTP token characters. The string overload requires
 
 <a id="method-is-unreserved"></a>
 
-## is_unreserved
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_unreserved
 
 ```cpp
 static constexpr bool is_unreserved(unsigned char c) noexcept;
@@ -150,7 +150,7 @@ Recognizes ASCII letters, digits, and `-._~`.
 
 <a id="method-is-unreserved-2"></a>
 
-## is_unreserved
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_unreserved
 
 ```cpp
 static constexpr bool is_unreserved(char c) noexcept;
@@ -160,7 +160,7 @@ Recognizes ASCII letters, digits, and `-._~`.
 
 <a id="method-is-sub-delim"></a>
 
-## is_sub_delim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_sub_delim
 
 ```cpp
 static constexpr bool is_sub_delim(unsigned char c) noexcept;
@@ -170,7 +170,7 @@ Recognizes URI sub-delimiters: `!$&'()*+,;=`.
 
 <a id="method-is-sub-delim-2"></a>
 
-## is_sub_delim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_sub_delim
 
 ```cpp
 static constexpr bool is_sub_delim(char c) noexcept;
@@ -180,7 +180,7 @@ Recognizes URI sub-delimiters: `!$&'()*+,;=`.
 
 <a id="method-is-pchar"></a>
 
-## is_pchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_pchar
 
 ```cpp
 static constexpr bool is_pchar(unsigned char c) noexcept;
@@ -190,7 +190,7 @@ Recognizes unreserved bytes, sub-delimiters, `:`, and `@`. A percent escape is h
 
 <a id="method-is-pchar-2"></a>
 
-## is_pchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_pchar
 
 ```cpp
 static constexpr bool is_pchar(char c) noexcept;
@@ -200,7 +200,7 @@ Recognizes unreserved bytes, sub-delimiters, `:`, and `@`. A percent escape is h
 
 <a id="method-is-vchar"></a>
 
-## is_vchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_vchar
 
 ```cpp
 static constexpr bool is_vchar(unsigned char c) noexcept;
@@ -210,7 +210,7 @@ Recognizes visible ASCII bytes `0x21-0x7e`.
 
 <a id="method-is-vchar-2"></a>
 
-## is_vchar
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_vchar
 
 ```cpp
 static constexpr bool is_vchar(char c) noexcept;
@@ -220,7 +220,7 @@ Recognizes visible ASCII bytes `0x21-0x7e`.
 
 <a id="method-is-qdtext"></a>
 
-## is_qdtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qdtext
 
 ```cpp
 static constexpr bool is_qdtext(unsigned char c) noexcept;
@@ -230,7 +230,7 @@ Recognizes unescaped quoted-string text: tab, space, visible bytes other than do
 
 <a id="method-is-qdtext-2"></a>
 
-## is_qdtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qdtext
 
 ```cpp
 static constexpr bool is_qdtext(char c) noexcept;
@@ -240,7 +240,7 @@ Recognizes unescaped quoted-string text: tab, space, visible bytes other than do
 
 <a id="method-is-obs-text"></a>
 
-## is_obs_text
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_obs_text
 
 ```cpp
 static constexpr bool is_obs_text(unsigned char c) noexcept;
@@ -250,7 +250,7 @@ Recognizes bytes `0x80-0xff`, without decoding a character set.
 
 <a id="method-is-obs-text-2"></a>
 
-## is_obs_text
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_obs_text
 
 ```cpp
 static constexpr bool is_obs_text(char c) noexcept;
@@ -260,7 +260,7 @@ Recognizes bytes `0x80-0xff`, without decoding a character set.
 
 <a id="method-is-ctext"></a>
 
-## is_ctext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ctext
 
 ```cpp
 static constexpr bool is_ctext(unsigned char c) noexcept;
@@ -270,7 +270,7 @@ Recognizes comment text: tab, space, visible bytes other than parentheses/backsl
 
 <a id="method-is-ctext-2"></a>
 
-## is_ctext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ctext
 
 ```cpp
 static constexpr bool is_ctext(char c) noexcept;
@@ -280,7 +280,7 @@ Recognizes comment text: tab, space, visible bytes other than parentheses/backsl
 
 <a id="method-is-atext"></a>
 
-## is_atext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_atext
 
 ```cpp
 static constexpr bool is_atext(unsigned char c) noexcept;
@@ -290,7 +290,7 @@ Recognizes the ASCII letters, digits, and punctuation allowed in a mailbox atom.
 
 <a id="method-is-atext-2"></a>
 
-## is_atext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_atext
 
 ```cpp
 static constexpr bool is_atext(char c) noexcept;
@@ -300,7 +300,7 @@ Recognizes the ASCII letters, digits, and punctuation allowed in a mailbox atom.
 
 <a id="method-is-dtext"></a>
 
-## is_dtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dtext
 
 ```cpp
 static constexpr bool is_dtext(unsigned char c) noexcept;
@@ -310,7 +310,7 @@ Recognizes domain-literal text: bytes `0x21-0x5a`, `0x5e-0x7e`, and `0x80-0xff`.
 
 <a id="method-is-dtext-2"></a>
 
-## is_dtext
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dtext
 
 ```cpp
 static constexpr bool is_dtext(char c) noexcept;
@@ -320,7 +320,7 @@ Recognizes domain-literal text: bytes `0x21-0x5a`, `0x5e-0x7e`, and `0x80-0xff`.
 
 <a id="method-is-etagc"></a>
 
-## is_etagc
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_etagc
 
 ```cpp
 static constexpr bool is_etagc(unsigned char c) noexcept;
@@ -330,7 +330,7 @@ Recognizes entity-tag content: visible bytes except double quote, plus bytes `0x
 
 <a id="method-is-etagc-2"></a>
 
-## is_etagc
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_etagc
 
 ```cpp
 static constexpr bool is_etagc(char c) noexcept;
@@ -340,7 +340,7 @@ Recognizes entity-tag content: visible bytes except double quote, plus bytes `0x
 
 <a id="method-is-cookie-octet"></a>
 
-## is_cookie_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_octet
 
 ```cpp
 static constexpr bool is_cookie_octet(unsigned char c) noexcept;
@@ -350,7 +350,7 @@ Recognizes cookie-value octets, excluding whitespace, double quote, comma, semic
 
 <a id="method-is-cookie-octet-2"></a>
 
-## is_cookie_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_octet
 
 ```cpp
 static constexpr bool is_cookie_octet(char c) noexcept;
@@ -360,7 +360,7 @@ Recognizes cookie-value octets, excluding whitespace, double quote, comma, semic
 
 <a id="method-is-cookie-av-octet"></a>
 
-## is_cookie_av_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av_octet
 
 ```cpp
 static constexpr bool is_cookie_av_octet(unsigned char c) noexcept;
@@ -370,7 +370,7 @@ Recognizes attribute text: ASCII space through `~`, except semicolon.
 
 <a id="method-is-cookie-av-octet-2"></a>
 
-## is_cookie_av_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av_octet
 
 ```cpp
 static constexpr bool is_cookie_av_octet(char c) noexcept;
@@ -380,7 +380,7 @@ Recognizes attribute text: ASCII space through `~`, except semicolon.
 
 <a id="method-is-entity-tag"></a>
 
-## is_entity_tag
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_entity_tag
 
 ```cpp
 static constexpr bool is_entity_tag(std::string_view sv) noexcept;
@@ -390,7 +390,7 @@ Checks a complete quoted entity tag with an optional uppercase `W/` prefix. Back
 
 <a id="method-is-ows"></a>
 
-## is_ows
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ows
 
 ```cpp
 static constexpr bool is_ows(unsigned char c) noexcept;
@@ -400,7 +400,7 @@ Recognizes space or tab only.
 
 <a id="method-is-ows-2"></a>
 
-## is_ows
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ows
 
 ```cpp
 static constexpr bool is_ows(char c) noexcept;
@@ -410,7 +410,7 @@ Recognizes space or tab only.
 
 <a id="method-is-qvalue"></a>
 
-## is_qvalue
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_qvalue
 
 ```cpp
 static constexpr bool is_qvalue(std::string_view sv) noexcept;
@@ -420,7 +420,7 @@ Accepts `0` or `1`, optionally followed by a dot and up to three digits. A fract
 
 <a id="method-consume-weight"></a>
 
-## consume_weight
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_weight
 
 ```cpp
 static constexpr bool consume_weight(std::string_view sv) noexcept;
@@ -430,7 +430,7 @@ Checks the whole suffix as optional whitespace, `;`, optional whitespace, and ca
 
 <a id="method-tolower-ascii"></a>
 
-## tolower_ascii
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tolower_ascii
 
 ```cpp
 static constexpr unsigned char tolower_ascii(unsigned char c) noexcept;
@@ -440,7 +440,7 @@ Maps ASCII `A-Z` to `a-z`; leaves all other bytes unchanged.
 
 <a id="method-tolower-ascii-2"></a>
 
-## tolower_ascii
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> tolower_ascii
 
 ```cpp
 static constexpr char tolower_ascii(char c) noexcept;
@@ -450,7 +450,7 @@ Maps ASCII `A-Z` to `a-z`; leaves all other bytes unchanged.
 
 <a id="method-ows-ltrim"></a>
 
-## ows_ltrim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_ltrim
 
 ```cpp
 static constexpr void ows_ltrim(std::string_view& sv) noexcept;
@@ -460,7 +460,7 @@ Removes leading spaces/tabs by changing the supplied view. The backing bytes are
 
 <a id="method-ows-rtrim"></a>
 
-## ows_rtrim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_rtrim
 
 ```cpp
 static constexpr void ows_rtrim(std::string_view& sv) noexcept;
@@ -470,7 +470,7 @@ Removes trailing spaces/tabs by changing the supplied view. The backing bytes ar
 
 <a id="method-ows-trim"></a>
 
-## ows_trim
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ows_trim
 
 ```cpp
 static constexpr void ows_trim(std::string_view& sv) noexcept;
@@ -480,7 +480,7 @@ Removes leading and trailing spaces/tabs by changing the supplied view. The back
 
 <a id="method-skip-n-hextets"></a>
 
-## skip_n_hextets
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> skip_n_hextets
 
 ```cpp
 static constexpr int skip_n_hextets(std::string_view sv);
@@ -490,7 +490,7 @@ Counts complete colon-separated IPv6 hextets, each one to four hexadecimal digit
 
 <a id="method-is-port"></a>
 
-## is_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_port
 
 ```cpp
 static constexpr bool is_port(std::string_view sv);
@@ -500,7 +500,7 @@ Accepts empty text or any number of ASCII decimal digits. It does not convert th
 
 <a id="method-is-dec-octet"></a>
 
-## is_dec_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dec_octet
 
 ```cpp
 static constexpr bool is_dec_octet(std::string_view sv, std::size_t digits,
@@ -511,7 +511,7 @@ Checks a decimal octet from 0 to 255 without leading zeroes on multi-digit value
 
 <a id="method-is-dec-octet-2"></a>
 
-## is_dec_octet
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_dec_octet
 
 ```cpp
 static constexpr bool is_dec_octet(std::string_view sv) noexcept;
@@ -521,7 +521,7 @@ Checks a decimal octet from 0 to 255 without leading zeroes on multi-digit value
 
 <a id="method-is-ip-v-future"></a>
 
-## is_ip_v_future
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v_future
 
 ```cpp
 static constexpr bool is_ip_v_future(std::string_view sv);
@@ -531,7 +531,7 @@ Checks an IPvFuture literal without brackets: `v`/`V`, hexadecimal version, dot,
 
 <a id="method-is-ip-v6-address"></a>
 
-## is_ip_v6_address
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v6_address
 
 ```cpp
 static constexpr bool is_ip_v6_address(std::string_view sv);
@@ -541,7 +541,7 @@ Checks an unbracketed IPv6 address, including a compressed run and an optional I
 
 <a id="method-is-ip-v4-address"></a>
 
-## is_ip_v4_address
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_v4_address
 
 ```cpp
 static constexpr bool is_ip_v4_address(std::string_view sv);
@@ -551,7 +551,7 @@ Checks four decimal octets from 0 to 255, with dots and no multi-digit leading z
 
 <a id="method-is-ip-literal"></a>
 
-## is_ip_literal
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_ip_literal
 
 ```cpp
 static constexpr bool is_ip_literal(std::string_view sv);
@@ -561,7 +561,7 @@ Requires brackets around an IPv6 or IPvFuture address.
 
 <a id="method-is-reg-name"></a>
 
-## is_reg_name
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_reg_name
 
 ```cpp
 static constexpr bool is_reg_name(std::string_view sv);
@@ -571,7 +571,7 @@ Checks a URI registered name made of unreserved bytes, sub-delimiters, and `%HH`
 
 <a id="method-is-token68"></a>
 
-## is_token68
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_token68
 
 ```cpp
 static constexpr bool is_token68(std::string_view sv) noexcept;
@@ -581,7 +581,7 @@ Checks a nonempty token68 alphabet followed by optional `=` padding. This is not
 
 <a id="method-is-base64-char"></a>
 
-## is_base64_char
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_base64_char
 
 ```cpp
 static constexpr bool is_base64_char(char c) noexcept;
@@ -591,7 +591,7 @@ Recognizes ASCII Base64 alphabet bytes: letters, digits, `+`, and `/`.
 
 <a id="method-check-base64-value"></a>
 
-## check_base64_value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_base64_value
 
 ```cpp
 static constexpr bool check_base64_value(std::string_view sv) noexcept;
@@ -601,7 +601,7 @@ Requires nonempty Base64 text whose length is divisible by four, with at most tw
 
 <a id="method-consume-token"></a>
 
-## consume_token
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_token
 
 ```cpp
 static constexpr std::string_view consume_token(
@@ -612,7 +612,7 @@ Returns the longest token prefix, or an empty view when no token starts here. Th
 
 <a id="method-consume-quoted-string"></a>
 
-## consume_quoted_string
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_quoted_string
 
 ```cpp
 static constexpr std::string_view consume_quoted_string(
@@ -623,7 +623,7 @@ Returns a complete quoted-string prefix, including its quotes and escapes, or an
 
 <a id="method-consume-comment"></a>
 
-## consume_comment
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_comment
 
 ```cpp
 static constexpr std::string_view consume_comment(
@@ -634,7 +634,7 @@ Returns a complete balanced comment prefix, including nested comments and suppor
 
 <a id="method-consume-cfws"></a>
 
-## consume_cfws
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_cfws
 
 ```cpp
 static constexpr bool consume_cfws(std::string_view sv,
@@ -645,7 +645,7 @@ Advances `i` past spaces, tabs, and balanced comments. Returns false on a malfor
 
 <a id="method-consume-dot-atom"></a>
 
-## consume_dot_atom
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_dot_atom
 
 ```cpp
 static constexpr bool consume_dot_atom(std::string_view sv,
@@ -656,7 +656,7 @@ Advances `i` over a nonempty dot-separated mailbox atom and surrounding comments
 
 <a id="method-consume-domain-literal"></a>
 
-## consume_domain_literal
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_domain_literal
 
 ```cpp
 static constexpr bool consume_domain_literal(std::string_view sv,
@@ -667,7 +667,7 @@ Advances `i` over a bracketed domain literal and surrounding comments/whitespace
 
 <a id="method-consume-addr-spec"></a>
 
-## consume_addr_spec
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_addr_spec
 
 ```cpp
 static constexpr bool consume_addr_spec(std::string_view sv,
@@ -678,7 +678,7 @@ Advances `i` over a mailbox local part, `@`, and domain, with the supported comm
 
 <a id="method-consume-word"></a>
 
-## consume_word
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_word
 
 ```cpp
 static constexpr bool consume_word(std::string_view sv,
@@ -689,7 +689,7 @@ Advances `i` over a mailbox atom or quoted string and surrounding comments/white
 
 <a id="method-check-mailbox"></a>
 
-## check_mailbox
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_mailbox
 
 ```cpp
 static constexpr bool check_mailbox(std::string_view sv) noexcept;
@@ -699,7 +699,7 @@ Checks a complete address or display-name/angle-address mailbox. It validates st
 
 <a id="method-consume-token-or-quoted-string"></a>
 
-## consume_token_or_quoted_string
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_token_or_quoted_string
 
 ```cpp
 static constexpr std::string_view consume_token_or_quoted_string(
@@ -710,7 +710,7 @@ Returns a quoted-string prefix if the first byte is a quote; otherwise returns a
 
 <a id="method-is-cookie-value"></a>
 
-## is_cookie_value
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_value
 
 ```cpp
 static constexpr bool is_cookie_value(std::string_view sv) noexcept;
@@ -720,7 +720,7 @@ Accepts cookie octets, optionally enclosed in double quotes. Empty values are ac
 
 <a id="method-is-cookie-pair"></a>
 
-## is_cookie_pair
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_pair
 
 ```cpp
 static constexpr bool is_cookie_pair(std::string_view sv) noexcept;
@@ -730,7 +730,7 @@ Checks a nonempty token name, `=`, and a cookie value. Empty values are accepted
 
 <a id="method-is-cookie-av"></a>
 
-## is_cookie_av
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_cookie_av
 
 ```cpp
 static constexpr bool is_cookie_av(std::string_view sv) noexcept;
@@ -740,7 +740,7 @@ Requires nonempty cookie-attribute text. Attribute names and values are not inte
 
 <a id="method-is-directive"></a>
 
-## is_directive
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_directive
 
 ```cpp
 static constexpr bool is_directive(std::string_view sv) noexcept;
@@ -750,7 +750,7 @@ Checks a whole token directive with an optional `=token` or `="quoted value"`, w
 
 <a id="method-consume-parameter"></a>
 
-## consume_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_parameter
 
 ```cpp
 static constexpr bool consume_parameter(std::string_view sv,
@@ -762,7 +762,7 @@ Consumes a `name=value` prefix and writes its length to `bytes_used`. With `allo
 
 <a id="method-consume-extension-parameter"></a>
 
-## consume_extension_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_extension_parameter
 
 ```cpp
 static constexpr bool consume_extension_parameter(
@@ -773,7 +773,7 @@ Consumes a token prefix with an optional `=token` or `="quoted value"`. Writes t
 
 <a id="method-for-each-parameter"></a>
 
-## for_each_parameter
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_parameter
 
 ```cpp
 template <typename ParameterConsumer>
@@ -786,7 +786,7 @@ Walks semicolon-prefixed parameters. Calls `consume(remaining, bytes)` for each 
 
 <a id="method-for-each-forwarded-pair"></a>
 
-## for_each_forwarded_pair
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_forwarded_pair
 
 ```cpp
 template <typename PairConsumer>
@@ -798,7 +798,7 @@ Walks semicolon-separated forwarded pairs without trimming whitespace. Empty slo
 
 <a id="method-for-each-list-element"></a>
 
-## for_each_list_element
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> for_each_list_element
 
 ```cpp
 template <typename ElementConsumer>
@@ -810,7 +810,7 @@ Walks comma-separated elements while respecting quoted strings and quoted escape
 
 <a id="method-check-auth-param-list"></a>
 
-## check_auth_param_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_auth_param_list
 
 ```cpp
 static constexpr bool check_auth_param_list(std::string_view sv) noexcept;
@@ -820,7 +820,7 @@ Checks a comma-separated list of complete `name=value` authentication parameters
 
 <a id="method-check-credentials"></a>
 
-## check_credentials
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_credentials
 
 ```cpp
 static constexpr bool check_credentials(std::string_view sv) noexcept;
@@ -830,7 +830,7 @@ Checks a scheme token alone, or followed by spaces and token68/authentication pa
 
 <a id="method-challenge-opens-param-list"></a>
 
-## challenge_opens_param_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> challenge_opens_param_list
 
 ```cpp
 static constexpr bool challenge_opens_param_list(
@@ -841,7 +841,7 @@ Detects whether text following the initial scheme is not token68. Used after a c
 
 <a id="method-check-challenge-list"></a>
 
-## check_challenge_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_challenge_list
 
 ```cpp
 static constexpr bool check_challenge_list(std::string_view sv) noexcept;
@@ -851,7 +851,7 @@ Checks challenges and following authentication parameters, tracking the precedin
 
 <a id="method-consume-product"></a>
 
-## consume_product
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_product
 
 ```cpp
 static constexpr std::string_view consume_product(
@@ -862,7 +862,7 @@ Returns a product-token prefix with an optional `/version` token, or an empty vi
 
 <a id="method-check-product-list"></a>
 
-## check_product_list
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_product_list
 
 ```cpp
 static constexpr bool check_product_list(std::string_view sv) noexcept;
@@ -872,7 +872,7 @@ Requires a first product, then whitespace-separated products or balanced comment
 
 <a id="method-check-uri-host"></a>
 
-## check_uri_host
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_host
 
 ```cpp
 static host_type check_uri_host(std::string_view sv);
@@ -882,7 +882,7 @@ Classifies an IP literal, strict IPv4 address, or registered name. Empty text is
 
 <a id="method-is-uri-scheme"></a>
 
-## is_uri_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> is_uri_scheme
 
 ```cpp
 static constexpr bool is_uri_scheme(std::string_view sv) noexcept;
@@ -892,7 +892,7 @@ Requires an ASCII letter, followed by ASCII letters, digits, `+`, `-`, or `.`.
 
 <a id="method-consume-uri-scheme"></a>
 
-## consume_uri_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_uri_scheme
 
 ```cpp
 static constexpr bool consume_uri_scheme(std::string_view sv,
@@ -903,7 +903,7 @@ Checks the prefix before the first colon as a scheme and sets `i` just after tha
 
 <a id="method-consume-uri-pct-encoded"></a>
 
-## consume_uri_pct_encoded
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> consume_uri_pct_encoded
 
 ```cpp
 static constexpr bool consume_uri_pct_encoded(std::string_view sv,
@@ -914,7 +914,7 @@ Expects `i` to point at a percent sign with two following hexadecimal digits. Ch
 
 <a id="method-percent-decode-validate"></a>
 
-## percent_decode_validate
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> percent_decode_validate
 
 ```cpp
 static constexpr bool percent_decode_validate(std::string_view sv) noexcept;
@@ -924,7 +924,7 @@ Returns false if a well-formed `%HH` triplet decodes to NUL. It does not reject 
 
 <a id="method-percent-decode-in-place"></a>
 
-## percent_decode_in_place
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> percent_decode_in_place
 
 ```cpp
 static constexpr void percent_decode_in_place(
@@ -935,7 +935,7 @@ Decodes well-formed `%HH` triplets into the backing buffer and shortens `sv`. Th
 
 <a id="method-check-uri-userinfo"></a>
 
-## check_uri_userinfo
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_userinfo
 
 ```cpp
 static constexpr bool check_uri_userinfo(std::string_view sv) noexcept;
@@ -945,7 +945,7 @@ Checks unreserved bytes, sub-delimiters, colons, and `%HH` escapes. Empty text i
 
 <a id="method-check-host-port"></a>
 
-## check_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_host_port
 
 ```cpp
 static constexpr bool check_host_port(std::string_view sv,
@@ -958,7 +958,7 @@ Checks a whole host with an optional colon/port and produces borrowed host/port 
 
 <a id="method-check-host-port-2"></a>
 
-## check_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_host_port
 
 ```cpp
 static constexpr bool check_host_port(std::string_view sv) noexcept;
@@ -968,7 +968,7 @@ Checks a whole host with an optional colon/port and produces borrowed host/port 
 
 <a id="method-check-serialized-origin"></a>
 
-## check_serialized_origin
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_serialized_origin
 
 ```cpp
 static constexpr bool check_serialized_origin(std::string_view sv) noexcept;
@@ -978,7 +978,7 @@ Checks `scheme://host[:port]` without a path. Uses the permissive host/port rule
 
 <a id="method-check-uri-authority"></a>
 
-## check_uri_authority
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_authority
 
 ```cpp
 static constexpr bool check_uri_authority(std::string_view sv) noexcept;
@@ -988,7 +988,7 @@ Checks an optional userinfo prefix followed by host/port. It does not resolve th
 
 <a id="method-check-uri-reference"></a>
 
-## check_uri_reference
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check_uri_reference
 
 ```cpp
 static constexpr bool check_uri_reference(std::string_view sv,
@@ -999,7 +999,7 @@ Checks a complete absolute or relative URI reference. Empty text is accepted. `a
 
 <a id="method-split-authority-host-port"></a>
 
-## split_authority_host_port
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> split_authority_host_port
 
 ```cpp
 static constexpr bool split_authority_host_port(
@@ -1011,7 +1011,7 @@ Splits host text from its port separator, respecting bracketed literals. For bra
 
 <a id="method-try-to-deserialize-as-authority-form"></a>
 
-## try_to_deserialize_as_authority_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_authority_form
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_authority_form(
@@ -1023,7 +1023,7 @@ Parses a host, required colon, and a decimal port prefix; the port may be empty 
 
 <a id="method-try-to-deserialize-as-asterisk-form"></a>
 
-## try_to_deserialize_as_asterisk_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_asterisk_form
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_asterisk_form(
@@ -1034,7 +1034,7 @@ Consumes one leading `*`. Empty input requests more bytes; a different first byt
 
 <a id="method-try-to-deserialize-as-origin-form"></a>
 
-## try_to_deserialize_as_origin_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_origin_form
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_origin_form(
@@ -1046,7 +1046,7 @@ Parses a leading absolute path and optional query as borrowed views, reporting t
 
 <a id="method-default-port-for-scheme"></a>
 
-## default_port_for_scheme
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> default_port_for_scheme
 
 ```cpp
 static constexpr std::string_view default_port_for_scheme(
@@ -1057,7 +1057,7 @@ Returns `80` for ASCII-case-insensitive `http`, `443` for `https`, or an empty v
 
 <a id="method-ports-equivalent"></a>
 
-## ports_equivalent
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ports_equivalent
 
 ```cpp
 static constexpr bool ports_equivalent(std::string_view scheme,
@@ -1069,7 +1069,7 @@ Compares port strings exactly, replacing empty values with the default for HTTP/
 
 <a id="method-try-to-deserialize-as-absolute-form"></a>
 
-## try_to_deserialize_as_absolute_form
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_absolute_form
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_absolute_form(
@@ -1083,7 +1083,7 @@ Parses a scheme, optional authority, path, and query prefix into borrowed views.
 
 <a id="method-try-to-deserialize-as-absolute-path"></a>
 
-## try_to_deserialize_as_absolute_path
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_absolute_path
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_absolute_path(
@@ -1095,7 +1095,7 @@ Requires a leading slash and consumes path characters and valid percent escapes.
 
 <a id="method-try-to-deserialize-as-query"></a>
 
-## try_to_deserialize_as_query
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> try_to_deserialize_as_query
 
 ```cpp
 static constexpr deserialization_status try_to_deserialize_as_query(
@@ -1107,7 +1107,7 @@ Consumes query characters and valid percent escapes, allowing an empty query. An
 
 <a id="method-iequals"></a>
 
-## iequals
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> iequals
 
 ```cpp
 static constexpr bool iequals(std::string_view a, std::string_view b);
@@ -1117,7 +1117,7 @@ Compares equal-length strings after folding ASCII `A-Z` only. Other bytes are co
 
 <a id="method-split-query-parameters"></a>
 
-## split_query_parameters
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> split_query_parameters
 
 ```cpp
 static constexpr std::size_t split_query_parameters(

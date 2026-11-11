@@ -1,4 +1,12 @@
-# HttpArena HTTP/1.1 benchmark adapter
+<a name="httparena-http11-benchmark-adapter"></a>
+<h1>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h1-httparena-http11-benchmark-adapter.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h1-httparena-http11-benchmark-adapter.svg" alt="HttpArena HTTP/1.1 benchmark adapter">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h1-httparena-http11-benchmark-adapter-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h1-httparena-http11-benchmark-adapter-dark.svg" alt="HttpArena HTTP/1.1 benchmark adapter">
+  </a>
+</h1>
 
 This adapter supports the suite's eleven HTTP/1.1 profiles: **baseline**,
 **pipelined**, **limited-conn**, **latency-10k**, **latency-1m**,
@@ -6,7 +14,15 @@ This adapter supports the suite's eleven HTTP/1.1 profiles: **baseline**,
 **static-tls**. The normal HTTP engine serves plaintext on 8080 and TLS on 8081.
 Only the delay handler is a coroutine; all other handlers remain synchronous.
 
-## Routes and scope
+<a name="routes-and-scope"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-routes-and-scope.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-routes-and-scope.svg" alt="Routes and scope">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-routes-and-scope-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-routes-and-scope-dark.svg" alt="Routes and scope">
+  </a>
+</h2>
 
 | Method | Route | Response |
 | --- | --- | --- |
@@ -58,7 +74,15 @@ The official harness supplies /data/dataset.json, /data/static and
 with DATASET_PATH, STATIC_DIR, TLS_CERT and TLS_KEY. Both listeners start in the
 normal executable; missing data or certificates are startup errors.
 
-## Build and run
+<a name="build-and-run"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-build-and-run.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-build-and-run.svg" alt="Build and run">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-build-and-run-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-build-and-run-dark.svg" alt="Build and run">
+  </a>
+</h2>
 
 Use C++20, CMake 3.20+, platform thread support, OpenSSL 3, zlib and RapidJSON.
 TLS is enabled on the driver target without changing the library's plain HTTP
@@ -104,7 +128,15 @@ cooperative engine/native processing implementation; it does not include local
 uncommitted library changes. Use the local build above to qualify this source
 tree. Select a remote ref containing the matching implementation.
 
-## Historical local reference against Spliffy
+<a name="historical-local-reference-against-spliffy"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-historical-local-reference-against-spliffy.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-historical-local-reference-against-spliffy.svg" alt="Historical local reference against Spliffy">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/httparena/h2-historical-local-reference-against-spliffy-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/httparena/h2-historical-local-reference-against-spliffy-dark.svg" alt="Historical local reference against Spliffy">
+  </a>
+</h2>
 
 The following describes archived qualification campaigns, not the official
 HttpArena launcher. For official scores use HttpArena's profiles, repetitions

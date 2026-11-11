@@ -1,4 +1,4 @@
-# Connection admission
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Connection admission
 
 Internal headers:
 [connection_budget.h](../../../include/transport/connection_budget.h)

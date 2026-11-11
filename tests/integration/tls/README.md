@@ -1,4 +1,12 @@
-# TLS integration
+<a name="tls-integration"></a>
+<h1>
+  <a href="../../../resources/tests/integration/tls/h1-tls-integration.svg#gh-light-mode-only">
+    <img src="../../../resources/tests/integration/tls/h1-tls-integration.svg" alt="TLS integration">
+  </a>
+  <a href="../../../resources/tests/integration/tls/h1-tls-integration-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/tests/integration/tls/h1-tls-integration-dark.svg" alt="TLS integration">
+  </a>
+</h1>
 
 Enable `DOBA_ENABLE_TLS=ON`. Production consumers and independent native test
 clients need OpenSSL 3.0 or newer. No interpreter or OpenSSL executable is

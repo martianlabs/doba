@@ -1,4 +1,4 @@
-# TLS validation coverage
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> TLS validation coverage
 
 This inventory covers the current TCP-based TLS class and cooperative engine
 turns on Linux and Windows. It is a functional contract matrix, not a claim of

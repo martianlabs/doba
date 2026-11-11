@@ -1,4 +1,4 @@
-# byte_storage_options
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage_options
 
 **Header:** [include/common/byte_storage_options.h](../../../include/common/byte_storage_options.h)
 

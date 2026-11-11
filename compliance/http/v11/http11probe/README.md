@@ -1,9 +1,25 @@
-# Http11Probe compliance adapter
+<a name="http11probe-compliance-adapter"></a>
+<h1>
+  <a href="../../../../resources/compliance/http/v11/http11probe/h1-http11probe-compliance-adapter.svg#gh-light-mode-only">
+    <img src="../../../../resources/compliance/http/v11/http11probe/h1-http11probe-compliance-adapter.svg" alt="Http11Probe compliance adapter">
+  </a>
+  <a href="../../../../resources/compliance/http/v11/http11probe/h1-http11probe-compliance-adapter-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/compliance/http/v11/http11probe/h1-http11probe-compliance-adapter-dark.svg" alt="Http11Probe compliance adapter">
+  </a>
+</h1>
 
 This directory contains the doba adapter and container setup for the official
 Http11Probe suite.
 
-## Contents
+<a name="contents"></a>
+<h2>
+  <a href="../../../../resources/compliance/http/v11/http11probe/h2-contents.svg#gh-light-mode-only">
+    <img src="../../../../resources/compliance/http/v11/http11probe/h2-contents.svg" alt="Contents">
+  </a>
+  <a href="../../../../resources/compliance/http/v11/http11probe/h2-contents-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/compliance/http/v11/http11probe/h2-contents-dark.svg" alt="Contents">
+  </a>
+</h2>
 
 - `CMakeLists.txt` builds the `doba_http11probe` adapter.
 - `main.cpp` exposes the routes required by Http11Probe on port `8080`.

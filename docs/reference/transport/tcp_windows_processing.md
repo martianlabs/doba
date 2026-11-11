@@ -1,4 +1,4 @@
-# Windows TCP processing turns
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Windows TCP processing turns
 
 Headers: [context](../../../include/transport/tcp_windows_context.h),
 [worker](../../../include/transport/tcp_windows_worker.h),
@@ -7,7 +7,7 @@ and [group timer](../../../include/transport/tcp_windows_processing_timer.h).
 The public [processing result](../protocol/processing_result.md) is shared
 with Linux. This page describes the internal IOCP delivery implementation.
 
-## Ownership and serialization
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Ownership and serialization
 
 The existing context mutex serializes input, socket completions, processing
 turns and administrative stop. Engines have no physical-thread affinity on
@@ -29,7 +29,7 @@ connection owners and a version checked under each context lock. Closing or
 replacing a deadline withdraws the registration eagerly; already-selected stale
 versions cannot enter the engine or address a reused connection.
 
-## Snapshot and output
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Snapshot and output
 
 Each engine return replaces the full processing snapshot. Immediate readiness,
 a future deadline and drained-output interest remain independent. Several ready
@@ -43,7 +43,7 @@ the existing IOCP procedure. Processing turns can advance admitted handlers
 while a reader keeps TX busy; the engine retains response order. The transport
 never accepts coroutine handles or runs application tasks outside engine calls.
 
-## Timer and resource bounds
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Timer and resource bounds
 
 One native thread-pool timer is created lazily for the entire IOCP worker group,
 not per context or coroutine. Empty synchronous results do not post packets,
@@ -69,7 +69,7 @@ thread is introduced. A bounded 64-entry array selects due work without heap
 allocation. Remaining overdue registrations queue the next group notification
 on IOCP immediately, preserving bounded batches and ordinary I/O interleaving.
 
-## Stop and tests
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Stop and tests
 
 Stop first closes admission and waits for accept initialization. It disables
 timer producers, waits for native callbacks and withdraws registrations before

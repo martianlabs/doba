@@ -1,10 +1,10 @@
-# Retired execution APIs
+# <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Retired execution APIs
 
 doba has one HTTP engine for synchronous and cooperative coroutine handlers.
 The old split engines, transport job submission and pressure/wakeup setters
 are no longer part of the API. There are no compatibility wrappers for them.
 
-## Current boundary
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Current boundary
 
 - An argument-free factory creates one engine per connection. See the
   [engine contract](../../contracts.md) and
@@ -22,7 +22,7 @@ are no longer part of the API. There are no compatibility wrappers for them.
 - TLS forwards processing requests through the same TCP entries. It has no
   separate application executor.
 
-## Admission and validation
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Admission and validation
 
 Windows admission uses separate
 [connection_budget](../../../../../include/transport/connection_budget.h) and

@@ -9,7 +9,7 @@
 **Header:** [include/common/byte_storage.h](../../../include/common/byte_storage.h)
 
 <a id="type-byte-storage"></a>
-## byte_storage
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage
 
 Move-only byte storage, initially in memory. A write above the configured
 [threshold](byte_storage_options.md) spills all buffered bytes to a private
@@ -21,7 +21,7 @@ transfers the bytes, file, cursor and state; move assignment first cleans up the
 destination. Serialize access to each storage object.
 
 <a id="method-write"></a>
-## write
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
 
 ```cpp
 bool write(const char* ptr, std::size_t len);
@@ -34,7 +34,7 @@ empty writes. File creation/write failures return false and make `ok()` false;
 allocation failures may throw. The caller must check the result.
 
 <a id="method-read"></a>
-## read
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
 ```cpp
 std::size_t read(char* out, std::size_t want);
@@ -47,7 +47,7 @@ until `finish()` records its size. An I/O failure can return a partial count
 and makes `ok()` false; later reads return zero.
 
 <a id="method-fetch"></a>
-## fetch
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
 
 ```cpp
 bool fetch(std::byte& byte);
@@ -58,7 +58,7 @@ the output byte at end, before spilled storage is finished, or after an I/O
 failure. Check `ok()` to distinguish an I/O error.
 
 <a id="method-spill"></a>
-## spill
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill
 
 ```cpp
 bool spill();
@@ -71,7 +71,7 @@ File creation/copy failure returns false and records an I/O error; this is not
 a way to recover a failed store. Allocation failures may throw.
 
 <a id="method-unlink-file"></a>
-## unlink_file
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> unlink_file
 
 ```cpp
 void unlink_file() noexcept;
@@ -82,7 +82,7 @@ Removal errors are ignored and the name remains available for another cleanup
 attempt. This does nothing when there is no temporary name.
 
 <a id="method-finish"></a>
-## finish
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> finish
 
 ```cpp
 void finish(std::size_t stored) noexcept;
@@ -97,7 +97,7 @@ which is currently a no-op on both platforms. It does not call `fsync` or
 <a id="method-total-size"></a>
 <a id="method-exhausted"></a>
 <a id="method-ok"></a>
-## State
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> State
 
 | Operation | Result |
 | --- | --- |

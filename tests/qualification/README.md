@@ -1,4 +1,12 @@
-# Release qualification
+<a name="release-qualification"></a>
+<h1>
+  <a href="../../resources/tests/qualification/h1-release-qualification.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h1-release-qualification.svg" alt="Release qualification">
+  </a>
+  <a href="../../resources/tests/qualification/h1-release-qualification-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h1-release-qualification-dark.svg" alt="Release qualification">
+  </a>
+</h1>
 
 Coverage and campaigns measure different properties. A covered line might
 still contain a bug; a repeated test can still miss a rare schedule. These
@@ -10,7 +18,15 @@ that produced additional fault tests. Remote CI results remain separate.
 The [policy inventory](POLICIES.md) maps every public TCP, TLS, HTTP and cache
 policy to behavioral checks, including overload and recovery.
 
-## Source coverage
+<a name="source-coverage"></a>
+<h2>
+  <a href="../../resources/tests/qualification/h2-source-coverage.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h2-source-coverage.svg" alt="Source coverage">
+  </a>
+  <a href="../../resources/tests/qualification/h2-source-coverage-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h2-source-coverage-dark.svg" alt="Source coverage">
+  </a>
+</h2>
 
 `doba_coverage` configures an isolated Clang **Release** build with TLS and
 examples, builds it and runs the complete registered CTest suite. Normal
@@ -54,7 +70,7 @@ and a heartbeat every fifteen seconds while a subprocess runs. Configure,
 build and CTest output is streamed to CI and written incrementally to logs.
 LLVM JSON/LCOV exports remain separate files and are not printed to the console.
 
-### Aggregation and denominator
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Aggregation and denominator
 
 This library is implemented in headers. Combining all executable mappings and
 all profiles in one LLVM export can produce hash mismatches for unused inline
@@ -105,7 +121,7 @@ The artifact contains:
 | `object-*/` | Separate profiles and original LLVM JSON/LCOV exports, including zero-profile probes. |
 | `source-sha256.json`, command/tool logs, `status.json` | Provenance and final qualification status. A failed test run remains failed even if a diagnostic report can be exported. |
 
-### Regression gates
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Regression gates
 
 The per-platform baselines contain reviewed floors derived from measured
 Release results, plus the measured header inventory. Each module must satisfy
@@ -120,7 +136,15 @@ actual tests before changing a floor. Adding executable code can legitimately
 fail the gate and require new tests. A floor is a regression guard, not an
 assertion that the remaining uncovered code is safe.
 
-## Systematic campaigns
+<a name="systematic-campaigns"></a>
+<h2>
+  <a href="../../resources/tests/qualification/h2-systematic-campaigns.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h2-systematic-campaigns.svg" alt="Systematic campaigns">
+  </a>
+  <a href="../../resources/tests/qualification/h2-systematic-campaigns-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h2-systematic-campaigns-dark.svg" alt="Systematic campaigns">
+  </a>
+</h2>
 
 `doba_campaign` requires a Release build and validates its registered inventory.
 It executes each selected case in an isolated process and records every
@@ -148,7 +172,15 @@ controls **case order**, not OS thread scheduling. Controlled native probes
 establish the interleavings they claim; arbitrary kernel schedules are not
 reproducible merely from this seed. `results.json` records the actual order.
 
-## CI budgets
+<a name="ci-budgets"></a>
+<h2>
+  <a href="../../resources/tests/qualification/h2-ci-budgets.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h2-ci-budgets.svg" alt="CI budgets">
+  </a>
+  <a href="../../resources/tests/qualification/h2-ci-budgets-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h2-ci-budgets-dark.svg" alt="CI budgets">
+  </a>
+</h2>
 
 | Trigger | Sanitizer campaigns | Decoder/chunked/engine fuzzing | Coverage |
 | --- | --- | --- | --- |
@@ -184,7 +216,15 @@ allocation-failure sweeps, complete native/TLS stateful fuzzing, exhaustive
 schedules or a security certification. Remaining work is tracked in the
 [security audit](../security-audit.md).
 
-## Native tooling qualification, 2026-11-04
+<a name="native-tooling-qualification-2026-11-04"></a>
+<h2>
+  <a href="../../resources/tests/qualification/h2-native-tooling-qualification-2026-11-04.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h2-native-tooling-qualification-2026-11-04.svg" alt="Native tooling qualification, 2026-11-04">
+  </a>
+  <a href="../../resources/tests/qualification/h2-native-tooling-qualification-2026-11-04-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h2-native-tooling-qualification-2026-11-04-dark.svg" alt="Native tooling qualification, 2026-11-04">
+  </a>
+</h2>
 
 The thirteen former interpreter-based scripts have been replaced with C++.
 CTest group names, Release execution, campaign selection controls and coverage
@@ -214,7 +254,15 @@ shutdown preserves SIGTERM handling; Windows signal-based examples retain
 their hidden private console. All 189 production header hashes are unchanged.
 These are local results, not a new remote CI run.
 
-## Reliability finding during qualification
+<a name="reliability-finding-during-qualification"></a>
+<h2>
+  <a href="../../resources/tests/qualification/h2-reliability-finding-during-qualification.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/h2-reliability-finding-during-qualification.svg" alt="Reliability finding during qualification">
+  </a>
+  <a href="../../resources/tests/qualification/h2-reliability-finding-during-qualification-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/h2-reliability-finding-during-qualification-dark.svg" alt="Reliability finding during qualification">
+  </a>
+</h2>
 
 The expanded Windows ASan campaign failed on round eight in the processing
 publication probe. Its reply bytes and close checks passed; the fixture also

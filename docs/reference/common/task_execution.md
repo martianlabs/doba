@@ -1,4 +1,4 @@
-# Controlled task execution
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Controlled task execution
 
 Header: [task_execution.h](../../../include/common/task_execution.h).
 
@@ -9,7 +9,7 @@ to decide when another turn is needed. This is the ownership primitive for
 the current async processor. Native TCP workers provide serialized engine
 turns on Linux and Windows; TLS forwards them without owning task frames.
 
-## Ownership and limits
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Ownership and limits
 
 Construction consumes an unstarted task without running its body. A moved-from
 or already-transferred task throws `std::invalid_argument`. The owner cannot be
@@ -31,7 +31,7 @@ must not arrange external resumption or access frame-owned state after
 cancellation. Coroutine parameters that borrow external objects require those
 objects to outlive the owner. Destructors must not throw.
 
-## Operations
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Operations
 
 | Operation | Meaning |
 | --- | --- |

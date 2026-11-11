@@ -15,7 +15,7 @@ capability is supplied or injected by this contract.
 
 <a id="concept-transport"></a>
 
-## transport
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transport
 
 ```cpp
 template <typename TRty, typename ENty, typename FNty>

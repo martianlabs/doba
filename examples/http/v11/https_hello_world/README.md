@@ -1,4 +1,12 @@
-# HTTPS hello world
+<a name="https-hello-world"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/https_hello_world/h1-https-hello-world.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/https_hello_world/h1-https-hello-world.svg" alt="HTTPS hello world">
+  </a>
+  <a href="../../../../resources/examples/http/v11/https_hello_world/h1-https-hello-world-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/https_hello_world/h1-https-hello-world-dark.svg" alt="HTTPS hello world">
+  </a>
+</h1>
 
 Build with `-DDOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or newer, then run:
 

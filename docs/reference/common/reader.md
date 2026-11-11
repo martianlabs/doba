@@ -9,7 +9,7 @@
 **Header:** [include/common/reader.h](../../../include/common/reader.h)
 
 <a id="type-reader"></a>
-## reader
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader
 
 A move-only cursor over owned [byte storage](byte_storage.md), an owned open
 [file](filesystem.md), borrowed bytes or shared immutable bytes. The default
@@ -20,7 +20,7 @@ Methods on one reader need serialized access. Separate shared readers have
 independent cursors, provided their backing bytes stay immutable.
 
 <a id="method-borrowed"></a>
-## borrowed
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> borrowed
 
 ```cpp
 static reader borrowed(std::span<const std::byte> source) noexcept;
@@ -30,7 +30,7 @@ Do not copy or own the bytes. Keep them alive and unchanged until the reader
 and every object it is moved into finish using them. Empty input is allowed.
 
 <a id="method-shared"></a>
-## shared
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> shared
 
 ```cpp
 static reader shared(std::shared_ptr<const void> owner,
@@ -42,7 +42,7 @@ refers to stable storage retained by that owner and is immutable through every
 alias. A null owner throws `std::invalid_argument`, even for empty input.
 
 <a id="method-rebind-borrowed"></a>
-## rebind_borrowed
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rebind_borrowed
 
 ```cpp
 void rebind_borrowed(std::span<const std::byte> source) noexcept;
@@ -54,7 +54,7 @@ including already-consumed bytes. It does nothing for file, byte-storage and
 shared-owner readers. It cannot rewind or recover a reader.
 
 <a id="method-read"></a>
-## read
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
 
 ```cpp
 std::size_t read(std::span<std::byte> output);
@@ -66,7 +66,7 @@ Borrowed/shared reads allow the destination to overlap their source.
 An I/O error may return a partial count; inspect the state as well.
 
 <a id="method-fetch"></a>
-## fetch
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
 
 ```cpp
 bool fetch(std::byte& byte);
@@ -80,7 +80,7 @@ The caller must check `failed()`/`ok()` to distinguish an I/O failure from end.
 <a id="method-failed"></a>
 <a id="method-ok"></a>
 <a id="method-size"></a>
-## State and size
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> State and size
 
 | Operation | Result |
 | --- | --- |
@@ -94,7 +94,7 @@ returns zero. A reader adopting already-failed storage can have `ok() == false`
 before a read updates `failed()`.
 
 <a id="method-read-all"></a>
-## read_all
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read_all
 
 ```cpp
 std::size_t read_all(std::string& out);

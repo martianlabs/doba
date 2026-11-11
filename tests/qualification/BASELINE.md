@@ -1,4 +1,12 @@
-# Measured Release baseline
+<a name="measured-release-baseline"></a>
+<h1>
+  <a href="../../resources/tests/qualification/baseline/h1-measured-release-baseline.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h1-measured-release-baseline.svg" alt="Measured Release baseline">
+  </a>
+  <a href="../../resources/tests/qualification/baseline/h1-measured-release-baseline-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h1-measured-release-baseline-dark.svg" alt="Measured Release baseline">
+  </a>
+</h1>
 
 The public [release coverage reference](../../docs/coverage/README.md) records
 these results alongside the versioned data snapshot and release history.
@@ -31,7 +39,15 @@ security assurance percentages.
 | tcp | 94.19% | 79.52% | 91.78% | 83.88% |
 | tls | 99.21% | 79.78% | 99.21% | 79.78% |
 
-## Evidence and gates
+<a name="evidence-and-gates"></a>
+<h2>
+  <a href="../../resources/tests/qualification/baseline/h2-evidence-and-gates.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h2-evidence-and-gates.svg" alt="Evidence and gates">
+  </a>
+  <a href="../../resources/tests/qualification/baseline/h2-evidence-and-gates-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h2-evidence-and-gates-dark.svg" alt="Evidence and gates">
+  </a>
+</h2>
 
 - Complete instrumented Release CTest: Linux 21/21 groups; Windows 23/23.
 - Twelve-round local campaigns with TLS: 888 actions under Linux TSan and
@@ -69,7 +85,15 @@ per-object LLVM exports, HTML, the failed run, fresh campaigns and validation.
 The first remote CI run is still pending. No Git operation or publication was
 performed. Production headers and the normal Release policy remain unchanged.
 
-## Next coverage-driven work
+<a name="next-coverage-driven-work"></a>
+<h2>
+  <a href="../../resources/tests/qualification/baseline/h2-next-coverage-driven-work.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h2-next-coverage-driven-work.svg" alt="Next coverage-driven work">
+  </a>
+  <a href="../../resources/tests/qualification/baseline/h2-next-coverage-driven-work-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/baseline/h2-next-coverage-driven-work-dark.svg" alt="Next coverage-driven work">
+  </a>
+</h2>
 
 Prioritize uncovered outcomes in common ownership/error handling, native TCP
 cleanup/scheduling and TLS error paths. Classify unreachable/configuration-only

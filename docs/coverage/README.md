@@ -24,7 +24,15 @@ the reviewed module floors and header inventories live in
 [Limits](#limits) / [Release history](#release-history)
 
 <a name="results"></a>
-## The measured result
+<a name="the-measured-result"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-the-measured-result.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-the-measured-result.svg" alt="The measured result">
+  </a>
+  <a href="../../resources/docs/coverage/h2-the-measured-result-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-the-measured-result-dark.svg" alt="The measured result">
+  </a>
+</h2>
 
 | Platform | Measured on | Executable lines | Condition outcomes | Mapped headers | Unmapped headers |
 | --- | --- | --- | --- | --- | --- |
@@ -42,7 +50,14 @@ and production-header hashes for both measurements. Earlier snapshots are
 listed in the [release history](#release-history).
 
 <a name="by-module"></a>
-## By module
+<h2>
+  <a href="../../resources/docs/coverage/h2-by-module.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-by-module.svg" alt="By module">
+  </a>
+  <a href="../../resources/docs/coverage/h2-by-module-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-by-module-dark.svg" alt="By module">
+  </a>
+</h2>
 
 | Module | Linux lines | Linux outcomes | Windows lines | Windows outcomes |
 | --- | --- | --- | --- | --- |
@@ -66,7 +81,15 @@ groups public wrappers and protocol/transport contracts with emitted mapping.
 Linux's network environment has no emitted runtime mapping in this snapshot.
 
 <a name="test-families"></a>
-## What the tests exercise
+<a name="what-the-tests-exercise"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-the-tests-exercise.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-the-tests-exercise.svg" alt="What the tests exercise">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-the-tests-exercise-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-the-tests-exercise-dark.svg" alt="What the tests exercise">
+  </a>
+</h2>
 
 | Family | Covered behavior |
 | --- | --- |
@@ -100,7 +123,15 @@ passed after that correction; the failure was retained, not hidden by an
 automatic retry. Production transport code was unchanged.
 
 <a name="method"></a>
-## How the measurement works
+<a name="how-the-measurement-works"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-how-the-measurement-works.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-how-the-measurement-works.svg" alt="How the measurement works">
+  </a>
+  <a href="../../resources/docs/coverage/h2-how-the-measurement-works-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-how-the-measurement-works-dark.svg" alt="How the measurement works">
+  </a>
+</h2>
 
 The isolated Clang Release builds use LLVM source instrumentation with atomic
 counter updates. Profiles are namespaced by executable target and exported
@@ -130,7 +161,15 @@ own builds. Reproduction commands, report layout and technical details live in
 [Release qualification](../../tests/qualification/README.md).
 
 <a name="ci-safeguards"></a>
-## What CI requires
+<a name="what-ci-requires"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-ci-requires.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-ci-requires.svg" alt="What CI requires">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-ci-requires-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-ci-requires-dark.svg" alt="What CI requires">
+  </a>
+</h2>
 
 | Gate | Normal runs | Nightly runs |
 | --- | --- | --- |
@@ -160,7 +199,15 @@ new checks separately after their first remote run. These are configured
 safeguards, not a claim that a new remote workflow has already passed.
 
 <a name="limits"></a>
-## What these figures cannot establish
+<a name="what-these-figures-cannot-establish"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-these-figures-cannot-establish.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-these-figures-cannot-establish.svg" alt="What these figures cannot establish">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-these-figures-cannot-establish-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-these-figures-cannot-establish-dark.svg" alt="What these figures cannot establish">
+  </a>
+</h2>
 
 Coverage shows execution, not that every assertion is sufficient or every
 schedule is safe. Uncovered outcomes remain in common ownership/error handling,
@@ -173,7 +220,15 @@ corruption or vulnerabilities. This reference records the evidence and its
 scope; it is not a security certification.
 
 <a name="release-history"></a>
-## Keep the reference current
+<a name="keep-the-reference-current"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-keep-the-reference-current.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-keep-the-reference-current.svg" alt="Keep the reference current">
+  </a>
+  <a href="../../resources/docs/coverage/h2-keep-the-reference-current-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-keep-the-reference-current-dark.svg" alt="Keep the reference current">
+  </a>
+</h2>
 
 | Source version | Measurement date | Evidence status | Archived data |
 | --- | --- | --- | --- |

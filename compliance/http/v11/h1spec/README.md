@@ -1,9 +1,25 @@
-# h1spec compliance adapter
+<a name="h1spec-compliance-adapter"></a>
+<h1>
+  <a href="../../../../resources/compliance/http/v11/h1spec/h1-h1spec-compliance-adapter.svg#gh-light-mode-only">
+    <img src="../../../../resources/compliance/http/v11/h1spec/h1-h1spec-compliance-adapter.svg" alt="h1spec compliance adapter">
+  </a>
+  <a href="../../../../resources/compliance/http/v11/h1spec/h1-h1spec-compliance-adapter-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/compliance/http/v11/h1spec/h1-h1spec-compliance-adapter-dark.svg" alt="h1spec compliance adapter">
+  </a>
+</h1>
 
 This directory contains the doba adapter and container setup for the official
 h1spec suite.
 
-## Contents
+<a name="contents"></a>
+<h2>
+  <a href="../../../../resources/compliance/http/v11/h1spec/h2-contents.svg#gh-light-mode-only">
+    <img src="../../../../resources/compliance/http/v11/h1spec/h2-contents.svg" alt="Contents">
+  </a>
+  <a href="../../../../resources/compliance/http/v11/h1spec/h2-contents-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/compliance/http/v11/h1spec/h2-contents-dark.svg" alt="Contents">
+  </a>
+</h2>
 
 - `CMakeLists.txt` builds the `doba_h1spec` adapter.
 - `main.cpp` exposes the routes required by h1spec on port `8080`.

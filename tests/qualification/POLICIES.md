@@ -1,10 +1,26 @@
-# Policy checks
+<a name="policy-checks"></a>
+<h1>
+  <a href="../../resources/tests/qualification/policies/h1-policy-checks.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h1-policy-checks.svg" alt="Policy checks">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h1-policy-checks-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h1-policy-checks-dark.svg" alt="Policy checks">
+  </a>
+</h1>
 
 This inventory follows the public fields, rather than counting tests that
 only read defaults back. A limit needs an observable effect: admission,
 rejection, bounded work, storage choice or exact output.
 
-## TCP
+<a name="tcp"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-tcp.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-tcp.svg" alt="TCP">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-tcp-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-tcp-dark.svg" alt="TCP">
+  </a>
+</h2>
 
 Paths below start at `tests/`.
 
@@ -18,7 +34,15 @@ Paths below start at `tests/`.
 | `ip` | Valid loopback and malformed addresses, including embedded/trailing NUL, in `tcp_policy_limits_tests.cpp`. |
 | `port` | Valid ephemeral port, zero, range overflow, signs, whitespace and embedded/trailing NUL in the same file. |
 
-## TLS
+<a name="tls"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-tls.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-tls.svg" alt="TLS">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-tls-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-tls-dark.svg" alt="TLS">
+  </a>
+</h2>
 
 TCP settings are inherited. `encrypted_receive_buffer_capacity` becomes the
 TCP RX block size; `max_buffered_ciphertext_bytes` becomes the TCP TX budget.
@@ -36,7 +60,15 @@ The plaintext settings remain separate inside the TLS engine.
 Plaintext RX is asserted at engine entry. Plaintext TX tests cover exact and
 excess inline/source output, multiple submissions and processing turns.
 
-## HTTP/1.1
+<a name="http11"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-http11.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-http11.svg" alt="HTTP/1.1">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-http11-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-http11-dark.svg" alt="HTTP/1.1">
+  </a>
+</h2>
 
 `unit/protocol/http/v11/policy_behavior_tests.cpp` feeds whole requests and
 one-byte fragments with a following sentinel request. Rejection must prevent
@@ -69,7 +101,15 @@ complete response stream to an independently constructed expected stream.
 Another case sets every numeric HTTP policy to SIZE_MAX and processes a small
 valid chunked pipeline, checking for wraparound or eager allocation of a limit.
 
-## Cache
+<a name="cache"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-cache.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-cache.svg" alt="Cache">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-cache-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-cache-dark.svg" alt="Cache">
+  </a>
+</h2>
 
 The shared file cache also has policies. `unit/common/cache_tests.cpp` covers
 each field: `max_entries` evicts the LRU, `max_cost` bounds resident cost while
@@ -77,7 +117,15 @@ responses retain ownership, and `max_loads` bounds concurrent loaders even
 after invalidation. Each zero value disables caching without invoking a loader.
 Failed loads release capacity and permit retry.
 
-## Execution and scope
+<a name="execution-and-scope"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-execution-and-scope.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope.svg" alt="Execution and scope">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-execution-and-scope-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope-dark.svg" alt="Execution and scope">
+  </a>
+</h2>
 
 The new HTTP and TCP files have explicit CTest groups:
 `doba_http_policy_tests` and `doba_transport_policy_tests`. CI inventory and
@@ -89,7 +137,15 @@ These are bounded correctness and overload checks. They do not establish an
 RSS ceiling, an idle/handshake timeout, a maximum shutdown duration or stability
 under hours of sustained load. Those are separate contracts or campaigns.
 
-## Local validation, 2026-11-11
+<a name="local-validation-2026-11-11"></a>
+<h2>
+  <a href="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11.svg#gh-light-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11.svg" alt="Local validation, 2026-11-11">
+  </a>
+  <a href="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11-dark.svg" alt="Local validation, 2026-11-11">
+  </a>
+</h2>
 
 - Complete Release suites with TLS and examples: Linux Clang 22/22 CTest
   groups; Windows MSVC 24/24. The final SIZE_MAX HTTP case also passes the

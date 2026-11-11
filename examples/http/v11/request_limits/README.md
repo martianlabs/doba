@@ -1,4 +1,12 @@
-# Request limits
+<a name="request-limits"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/request_limits/h1-request-limits.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/request_limits/h1-request-limits.svg" alt="Request limits">
+  </a>
+  <a href="../../../../resources/examples/http/v11/request_limits/h1-request-limits-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/request_limits/h1-request-limits-dark.svg" alt="Request limits">
+  </a>
+</h1>
 
 This example passes HTTP/1.1 `policies` as the second argument to `server`.
 It accepts request bodies of at most five bytes. Larger bodies are rejected
@@ -22,7 +30,15 @@ reader restriction is fixed. The transport send-byte budget
 must stay positive. See [limits and operation](../../../../docs/guide/06-limits-and-operation.md#bound-work-in-flight)
 for accounting and the boundaries these settings cover.
 
-## Try it
+<a name="try-it"></a>
+<h2>
+  <a href="../../../../resources/examples/http/v11/request_limits/h2-try-it.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/request_limits/h2-try-it.svg" alt="Try it">
+  </a>
+  <a href="../../../../resources/examples/http/v11/request_limits/h2-try-it-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/request_limits/h2-try-it-dark.svg" alt="Try it">
+  </a>
+</h2>
 
 ```sh
 curl -i --data-binary "12345" http://localhost:8080/upload

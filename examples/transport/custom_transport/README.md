@@ -1,4 +1,12 @@
-# Custom transport
+<a name="custom-transport"></a>
+<h1>
+  <a href="../../../resources/examples/transport/custom_transport/h1-custom-transport.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/transport/custom_transport/h1-custom-transport.svg" alt="Custom transport">
+  </a>
+  <a href="../../../resources/examples/transport/custom_transport/h1-custom-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/transport/custom_transport/h1-custom-transport-dark.svg" alt="Custom transport">
+  </a>
+</h1>
 
 This example implements an in-memory transport for doba's HTTP/1.1 server. It
 creates one protocol engine, passes it a fixed `GET /hello` request, and copies

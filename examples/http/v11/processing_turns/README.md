@@ -1,4 +1,12 @@
-# Concurrent HTTP processing turns
+<a name="concurrent-http-processing-turns"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/processing_turns/h1-concurrent-http-processing-turns.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/processing_turns/h1-concurrent-http-processing-turns.svg" alt="Concurrent HTTP processing turns">
+  </a>
+  <a href="../../../../resources/examples/http/v11/processing_turns/h1-concurrent-http-processing-turns-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/processing_turns/h1-concurrent-http-processing-turns-dark.svg" alt="Concurrent HTTP processing turns">
+  </a>
+</h1>
 
 Build and run `http_processing_turns` with examples enabled. The executable
 uses one HTTP engine and a serialized in-memory adapter, starts three async

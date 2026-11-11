@@ -1,4 +1,12 @@
-# Custom protocol
+<a name="custom-protocol"></a>
+<h1>
+  <a href="../../../resources/examples/protocol/custom_protocol/h1-custom-protocol.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/protocol/custom_protocol/h1-custom-protocol.svg" alt="Custom protocol">
+  </a>
+  <a href="../../../resources/examples/protocol/custom_protocol/h1-custom-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/protocol/custom_protocol/h1-custom-protocol-dark.svg" alt="Custom protocol">
+  </a>
+</h1>
 
 This example implements a line-based protocol engine and runs it on doba's TCP
 transport. Each connection has its own engine. Complete lines are returned as

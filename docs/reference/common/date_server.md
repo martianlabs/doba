@@ -124,7 +124,7 @@ With no running updater, this remains the last cached sample until the next
 
 <a id="method-format"></a>
 
-## format
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> format
 
 **METHOD** · *common::date_server*
 

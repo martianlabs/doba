@@ -1,4 +1,12 @@
-# Cache storage
+<a name="cache-storage"></a>
+<h1>
+  <a href="../../../resources/examples/common/cache/h1-cache-storage.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/common/cache/h1-cache-storage.svg" alt="Cache storage">
+  </a>
+  <a href="../../../resources/examples/common/cache/h1-cache-storage-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/common/cache/h1-cache-storage-dark.svg" alt="Cache storage">
+  </a>
+</h1>
 
 Build and run **common_cache** using the [examples instructions](../../README.md).
 

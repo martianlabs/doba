@@ -1,10 +1,26 @@
-# Filesystem
+<a name="filesystem"></a>
+<h1>
+  <a href="../../../resources/examples/common/filesystem/h1-filesystem.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h1-filesystem.svg" alt="Filesystem">
+  </a>
+  <a href="../../../resources/examples/common/filesystem/h1-filesystem-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h1-filesystem-dark.svg" alt="Filesystem">
+  </a>
+</h1>
 
 This example opens a regular file below a configured directory and moves its
 native handle into a `reader`. It prints the contents in 4096-byte blocks without
 preloading the file or copying it to temporary storage.
 
-## Run
+<a name="run"></a>
+<h2>
+  <a href="../../../resources/examples/common/filesystem/h2-run.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h2-run.svg" alt="Run">
+  </a>
+  <a href="../../../resources/examples/common/filesystem/h2-run-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h2-run-dark.svg" alt="Run">
+  </a>
+</h2>
 
 Build the `common_filesystem` target. From the repository root, run:
 
@@ -26,7 +42,15 @@ Reads are synchronous. The open handle keeps the file object alive, but does
 not freeze bytes against writes by another process.
 
 
-## Query attributes
+<a name="query-attributes"></a>
+<h2>
+  <a href="../../../resources/examples/common/filesystem/h2-query-attributes.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h2-query-attributes.svg" alt="Query attributes">
+  </a>
+  <a href="../../../resources/examples/common/filesystem/h2-query-attributes-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/common/filesystem/h2-query-attributes-dark.svg" alt="Query attributes">
+  </a>
+</h2>
 
 ```sh
 common_filesystem examples/common/filesystem README.md --metadata

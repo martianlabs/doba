@@ -1,4 +1,4 @@
-# Linux processing turns
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Linux processing turns
 
 Internal headers:
 [context](../../../include/transport/tcp_linux_context.h),
@@ -6,7 +6,7 @@ Internal headers:
 [registrations](../../../include/transport/tcp_linux_processing_queue.h).
 These are implementation details, not an application execution service.
 
-## Responsibilities and entry rules
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Responsibilities and entry rules
 
 The context owns its RX/TX buffers, reader, engine and latest processing_result.
 Both receive and processing entries allow send/close callbacks only inside the
@@ -28,7 +28,7 @@ engine. Its one stop eventfd remains administrative; it carries no work payload.
 Windows IOCP delivery is documented in
 [Windows processing turns](tcp_windows_processing.md). TLS forwards turns through the same serialized entries.
 
-## Storage and bounded progress
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Storage and bounded progress
 
 The processing registry is allocated only for runnable/deadline work. It holds
 one coalesced ready-list entry and at most one ordered deadline per connection.
@@ -47,7 +47,7 @@ which requeues itself goes to the tail and is not recursively entered. Socket
 polling continues between batches. When nothing is ready or overdue, epoll waits
 for socket, timer or stop events; waiting handlers do not busy-spin.
 
-## Lifetime and shutdown
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Lifetime and shutdown
 
 Each accepted connection receives a monotonically increasing 64-bit identity.
 Descriptors may be reused; identities are not reused within a worker lifetime.
@@ -68,7 +68,7 @@ worker timer/epoll failure closes its listener and connections; restart belongs
 to the external administrator. There is no timer callback thread or automatic
 application executor recovery loop.
 
-## Verification
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Verification
 
 [Unit tests](../../../tests/unit/transport/processing_queue_linux_tests.cpp)
 use explicit monotonic timestamps for coalescing, unchanged/replaced deadlines,

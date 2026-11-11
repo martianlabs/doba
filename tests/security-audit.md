@@ -1,4 +1,12 @@
-# Test security and integrity audit
+<a name="test-security-and-integrity-audit"></a>
+<h1>
+  <a href="../resources/tests/security-audit/h1-test-security-and-integrity-audit.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h1-test-security-and-integrity-audit.svg" alt="Test security and integrity audit">
+  </a>
+  <a href="../resources/tests/security-audit/h1-test-security-and-integrity-audit-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h1-test-security-and-integrity-audit-dark.svg" alt="Test security and integrity audit">
+  </a>
+</h1>
 
 Assessment date: 2026-11-04. Scope: the working tree, including the current
 TCP, TLS and cooperative HTTP processing implementations on Linux and Windows.
@@ -10,7 +18,15 @@ from a green CTest run. This audit found reproducible weaknesses in test
 oracles and child-process diagnostics and added independent checks for them.
 No production header changes were needed for those corrections.
 
-## Method and scope
+<a name="method-and-scope"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-method-and-scope.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-method-and-scope.svg" alt="Method and scope">
+  </a>
+  <a href="../resources/tests/security-audit/h2-method-and-scope-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-method-and-scope-dark.svg" alt="Method and scope">
+  </a>
+</h2>
 
 The initial inventory contains 277 test, support and documentation files,
 52,753 lines and 1,355 source-level `DOBA_TEST` registrations in 185 files.
@@ -32,7 +48,15 @@ All current test tooling is C++; checks fail explicitly in Release. The
 historical interpreter-based wrappers described below have been migrated,
 including their positive and negative controls.
 
-## Threat and coverage matrix
+<a name="threat-and-coverage-matrix"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-threat-and-coverage-matrix.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-threat-and-coverage-matrix.svg" alt="Threat and coverage matrix">
+  </a>
+  <a href="../resources/tests/security-audit/h2-threat-and-coverage-matrix-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-threat-and-coverage-matrix-dark.svg" alt="Threat and coverage matrix">
+  </a>
+</h2>
 
 | Boundary | Existing evidence and additions | Remaining assurance limit |
 | --- | --- | --- |
@@ -47,9 +71,17 @@ including their positive and negative controls.
 | Common storage / utilities | Reader/writer limits, moves, binary data, storage spill and cleanup, containers, date ownership, signals and task ownership/cancellation. | Functional cases do not measure source/branch coverage; numeric/type extremes and allocation failures require further targeted measurement. |
 | Runner / CI trust | Subprocess negative controls verify failures, exceptions, watchdogs, cleanup and filters. Inventory rejects missing mandatory groups. New diagnostic tests reject sanitizer reports even from exit-zero children. Packages and examples are executed separately. | Remote workflow execution must still confirm the new configuration. Eight selected mutations are not a library-wide mutation score. |
 
-## Confirmed weaknesses and corrections
+<a name="confirmed-weaknesses-and-corrections"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-confirmed-weaknesses-and-corrections.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-confirmed-weaknesses-and-corrections.svg" alt="Confirmed weaknesses and corrections">
+  </a>
+  <a href="../resources/tests/security-audit/h2-confirmed-weaknesses-and-corrections-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-confirmed-weaknesses-and-corrections-dark.svg" alt="Confirmed weaknesses and corrections">
+  </a>
+</h2>
 
-### 1. Response oracles could accept malformed output
+### <a href="../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> 1. Response oracles could accept malformed output
 
 The old Python TLS-processing parser accepted duplicate case-insensitive
 Content-Length fields, CL with Transfer-Encoding, and status 099. These inputs
@@ -65,7 +97,7 @@ legal whitespace, opaque bytes, repeatable fields and pipeline boundaries.
 These findings concern test reliability; they are not evidence that production
 doba emitted the malformed responses.
 
-### 2. Child sanitizer findings could be discarded
+### <a href="../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> 2. Child sanitizer findings could be discarded
 
 Some example/probe wrappers discarded captured stderr when terminating the
 server. A successful exchange or an exit code alone cannot qualify that child.
@@ -74,7 +106,7 @@ launch exit-zero children emitting ASan, LSan, MSan, TSan and UBSan reports and
 require rejection. Harmless sanitizer initialization text remains accepted.
 Existing C++ runner process checks remain in place.
 
-### 3. Reader coverage needed a realistic admission window
+### <a href="../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> 3. Reader coverage needed a realistic admission window
 
 A one-slot, one-byte regression fixture tests a deliberately constrained
 contract; it does not replace queued-reader coverage. The new native case uses
@@ -84,7 +116,7 @@ payload, including 512 KiB sources, sync/async handlers and HEAD requests.
 It checks every byte, length, request identity, ordered close, forbidden
 successor dispatch and release of all shared source owners after stop.
 
-### 4. A shutdown test inferred scheduling from sleeps
+### <a href="../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> 4. A shutdown test inferred scheduling from sleeps
 
 The Windows input-during-stop case assumed that 150/50 ms sleeps established
 the stop phase and did not inspect its received 8 MiB payload. It now observes
@@ -96,7 +128,15 @@ machine, where closed loopback ports report refusal after about two seconds.
 The assertion remains strict about preventing another engine invocation.
 Receipt of socket bytes is never used as proof of IOCP send completion.
 
-## New stateful checks
+<a name="new-stateful-checks"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-new-stateful-checks.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-new-stateful-checks.svg" alt="New stateful checks">
+  </a>
+  <a href="../resources/tests/security-audit/h2-new-stateful-checks-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-new-stateful-checks-dark.svg" alt="New stateful checks">
+  </a>
+</h2>
 
 `fuzz/engine_case.h` is shared by a deterministic Release unit case and
 `fuzz_engine`. Its independent output model checks:
@@ -131,7 +171,15 @@ notifications. TCP stops engine entry once closing begins. The new TLS test
 checks no plaintext or scheduling resurrection; it does not invent an
 exactly-once protocol-close callback requirement.
 
-## Qualification and interpretation
+<a name="qualification-and-interpretation"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-qualification-and-interpretation.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-qualification-and-interpretation.svg" alt="Qualification and interpretation">
+  </a>
+  <a href="../resources/tests/security-audit/h2-qualification-and-interpretation-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-qualification-and-interpretation-dark.svg" alt="Qualification and interpretation">
+  </a>
+</h2>
 
 Recorded validation results are maintained alongside source hashes in the
 local audit evidence. The new groups run in ordinary Release suites and in
@@ -158,7 +206,15 @@ The standalone native negative controls remain active under optimization.
 
 No Git operation, publication or remote CI run is part of this audit.
 
-## Prioritized remaining work
+<a name="prioritized-remaining-work"></a>
+<h2>
+  <a href="../resources/tests/security-audit/h2-prioritized-remaining-work.svg#gh-light-mode-only">
+    <img src="../resources/tests/security-audit/h2-prioritized-remaining-work.svg" alt="Prioritized remaining work">
+  </a>
+  <a href="../resources/tests/security-audit/h2-prioritized-remaining-work-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/security-audit/h2-prioritized-remaining-work-dark.svg" alt="Prioritized remaining work">
+  </a>
+</h2>
 
 The [Release qualification follow-up](qualification/README.md) now measures
 per-platform source coverage, gates module/header regressions and runs seeded

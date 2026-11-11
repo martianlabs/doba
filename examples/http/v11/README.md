@@ -1,4 +1,12 @@
-# HTTP/1.1 examples
+<a name="http11-examples"></a>
+<h1>
+  <a href="../../../resources/examples/http/v11/h1-http11-examples.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/http/v11/h1-http11-examples.svg" alt="HTTP/1.1 examples">
+  </a>
+  <a href="../../../resources/examples/http/v11/h1-http11-examples-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/http/v11/h1-http11-examples-dark.svg" alt="HTTP/1.1 examples">
+  </a>
+</h1>
 
 Build the project from the repository root as described in the
 [examples index](../../README.md). The TCP examples listen on

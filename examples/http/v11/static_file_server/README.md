@@ -1,4 +1,12 @@
-# Static file server
+<a name="static-file-server"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/static_file_server/h1-static-file-server.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/static_file_server/h1-static-file-server.svg" alt="Static file server">
+  </a>
+  <a href="../../../../resources/examples/http/v11/static_file_server/h1-static-file-server-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/static_file_server/h1-static-file-server-dark.svg" alt="Static file server">
+  </a>
+</h1>
 
 The [source](main.cpp) mounts one directory twice: **/assets/** uses an opt-in
 small-file cache and **/downloads/** keeps direct file reads. The cache is doba's

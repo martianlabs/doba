@@ -1,4 +1,12 @@
-# Examples
+<a name="examples"></a>
+<h1>
+  <a href="../resources/examples/h1-examples.svg#gh-light-mode-only">
+    <img src="../resources/examples/h1-examples.svg" alt="Examples">
+  </a>
+  <a href="../resources/examples/h1-examples-dark.svg#gh-dark-mode-only">
+    <img src="../resources/examples/h1-examples-dark.svg" alt="Examples">
+  </a>
+</h1>
 
 Start with [hello_world](http/v11/hello_world/README.md), then try
 [static_routes](http/v11/static_routes/README.md),

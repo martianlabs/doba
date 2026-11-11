@@ -413,7 +413,7 @@ next request as raw input until that position is released.
 
 <a id="field-max-deferred-input-size"></a>
 
-## max_deferred_input_size
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_deferred_input_size
 
 `std::size_t max_deferred_input_size = 1024 * 1024;`
 
@@ -423,7 +423,7 @@ Overflow closes before copying the excess; there is no unlimited zero setting.
 
 <a id="field-max-task-steps-per-turn"></a>
 
-## max_task_steps_per_turn
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> max_task_steps_per_turn
 
 `std::size_t max_task_steps_per_turn = 64;`
 

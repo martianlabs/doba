@@ -136,7 +136,7 @@ workers through `detail::linux_transport`; Windows retains its existing
 [tcp_windows.h](../../../include/transport/tcp_windows.h).
 
 
-## Processing-result support
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Processing-result support
 
 Linux and Windows TCP deliver immediate, monotonic-deadline and output-drain
 processing turns on their transport workers. TLS forwards the same complete

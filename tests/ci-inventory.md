@@ -1,4 +1,12 @@
-# CI processing coverage
+<a name="ci-processing-coverage"></a>
+<h1>
+  <a href="../resources/tests/ci-inventory/h1-ci-processing-coverage.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h1-ci-processing-coverage.svg" alt="CI processing coverage">
+  </a>
+  <a href="../resources/tests/ci-inventory/h1-ci-processing-coverage-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h1-ci-processing-coverage-dark.svg" alt="CI processing coverage">
+  </a>
+</h1>
 
 This inventory describes the configured workflow, not a new GitHub run.
 [ci.yml](../.github/workflows/ci.yml) retains its existing job identifiers,
@@ -56,7 +64,15 @@ one at a time, native processing, driver, TLS processing wire and executable
 examples. Each omission must fail its intended diagnostic on Linux and Windows;
 a generic process failure cannot count as a successful negative check.
 
-## Measurement and reliability boundaries
+<a name="measurement-and-reliability-boundaries"></a>
+<h2>
+  <a href="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries.svg" alt="Measurement and reliability boundaries">
+  </a>
+  <a href="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries-dark.svg" alt="Measurement and reliability boundaries">
+  </a>
+</h2>
 
 The [driver check](integration/benchmarks/httparena.cpp) draws path values after
 server startup and verifies their bodies, text/plain and minimum waits. It also
@@ -77,7 +93,15 @@ an injected executor. Both route kinds are registered in the driver and examples
 by default. Published benchmark data and the frozen pre-async reference remain
 unchanged; final throughput comparisons are a separate campaign.
 
-## Release coverage and systematic qualification
+<a name="release-coverage-and-systematic-qualification"></a>
+<h2>
+  <a href="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification.svg" alt="Release coverage and systematic qualification">
+  </a>
+  <a href="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification-dark.svg" alt="Release coverage and systematic qualification">
+  </a>
+</h2>
 
 [Qualification](qualification/README.md) adds separate Linux/Windows Release
 source-coverage jobs, reviewed module floors and explicit mapped/unmapped
