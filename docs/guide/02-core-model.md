@@ -28,9 +28,10 @@ bytes to an engine and sends the output that engine produces. The
 **protocol engine** decides what those bytes mean: it consumes input, submits
 output, and can ask to close the connection.
 
-For TCP, each connection gets its own engine from a factory. Input callbacks
-for a connection are serialized; output can be submitted from different
-threads. The transport owns submitted output while it sends it. The required
+For TCP, each connection gets its own engine from a factory. Input and
+processing calls are serialized per connection. Send and close callbacks run
+only inside those calls, on the calling thread. The transport owns submitted
+output while it sends it. The required
 methods on each side are checked by C++ concepts, so a missing piece shows up
 at compile time.
 
@@ -243,5 +244,5 @@ Head back to the [guide index](README.md) when you're ready for more.
 
 The result describes future processing needs, never RX consumption or read
 policy. See [processing turns](../reference/protocol/processing_result.md) for
-the full contract and implementation status. Current native backends accept
-empty results; nonempty turn requests are rejected until native integration.
+the full contract. Linux and Windows TCP deliver immediate, deadline and
+output-drain turns; TLS forwards the same requests to those backends.

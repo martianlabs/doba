@@ -44,9 +44,11 @@ using namespace martianlabs::doba::tests::integration;
 using protocol::http::v11::request;
 using protocol::http::v11::response;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] payload                                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string payload(std::size_t id) {
   std::string value(id % 10 == 0 ? 512 * 1024 : 65536 + id * 17, '\0');
   std::uint64_t state = 0xd1b54a32d192ed03ULL ^ (id + 1);
@@ -125,7 +127,7 @@ DOBA_TEST("HTTP pipelines retain binary readers under default limits") {
                   std::to_string(bodies[id]->size()) ||
               reply->body != (head ? std::string{} : *bodies[id])) return false;
         }
-        // EOF must be clean and immediate after the final exact body.
+        // The final body must be followed by a clean EOF.
         const auto extra = peer.receive_until_close(1);
         return extra && extra->empty() && peer.error() != "timeout";
       }));

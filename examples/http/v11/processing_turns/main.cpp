@@ -39,7 +39,7 @@ using namespace protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | A serialized in-memory adapter supplies turns for concurrent handlers.    |
+// | Drive async handlers in memory, keeping replies in request order.         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -67,7 +67,7 @@ int main() {
   }
   auto needs = protocol.on_bytes_received(input);
   if (started != 3 || closed) return 1;
-  input.assign(input.size(), 'x');  // RX storage can be reused after delivery.
+  input.assign(input.size(), 'x');  // Reuse the input bytes after delivery.
   while (needs.turn_requested || needs.turn_at ||
          needs.turn_after_output_drained) {
     if (!needs.turn_requested && needs.turn_at) {

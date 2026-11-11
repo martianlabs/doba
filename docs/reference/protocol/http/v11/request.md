@@ -78,7 +78,7 @@ class request { ... };
 
 Provides the http 1.1 request implementation.
 
-**Source:** [include/protocol/http/v11/request.h:133](../../../../../include/protocol/http/v11/request.h#L133)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-from"></a>
 
@@ -122,7 +122,7 @@ Constructs the value from the supplied input.
 
 **Returns:** A value of type `request`.
 
-**Source:** [include/protocol/http/v11/request.h:144](../../../../../include/protocol/http/v11/request.h#L144)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-method"></a>
 
@@ -138,7 +138,7 @@ Returns method.
 
 **Returns:** The HTTP method (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:170](../../../../../include/protocol/http/v11/request.h#L170)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-target"></a>
 
@@ -154,7 +154,7 @@ Returns target.
 
 **Returns:** The request-target form (`target`).
 
-**Source:** [include/protocol/http/v11/request.h:174](../../../../../include/protocol/http/v11/request.h#L174)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-absolute-path"></a>
 
@@ -170,7 +170,7 @@ Returns absolute path.
 
 **Returns:** The decoded absolute path (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:178](../../../../../include/protocol/http/v11/request.h#L178)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-header"></a>
 
@@ -190,7 +190,10 @@ Returns header.
 
 **Returns:** The matching header (`header_view`). The index overload accesses the indexed entry; the name overload searches case-insensitively.
 
-**Source:** [include/protocol/http/v11/request.h:182](../../../../../include/protocol/http/v11/request.h#L182)
+**Precondition for the index overload:** `i < get_headers_length()`. Indexing
+is unchecked; an invalid index is not a supported error-reporting path.
+
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-header-2"></a>
 
@@ -212,7 +215,7 @@ Returns header.
 
 **Errors:** Throws `std::out_of_range` when the named header is absent.
 
-**Source:** [include/protocol/http/v11/request.h:186](../../../../../include/protocol/http/v11/request.h#L186)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-exist-header"></a>
 
@@ -232,7 +235,7 @@ Checks whether the named HTTP header exists.
 
 **Returns:** `true` if the named header exists; otherwise `false`.
 
-**Source:** [include/protocol/http/v11/request.h:195](../../../../../include/protocol/http/v11/request.h#L195)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-headers-length"></a>
 
@@ -248,7 +251,7 @@ Returns headers length.
 
 **Returns:** The number of headers (`std::size_t`).
 
-**Source:** [include/protocol/http/v11/request.h:204](../../../../../include/protocol/http/v11/request.h#L204)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-query-parameter"></a>
 
@@ -268,7 +271,9 @@ Returns query parameter.
 
 **Returns:** The indexed query parameter (`query_parameter_view`).
 
-**Source:** [include/protocol/http/v11/request.h:208](../../../../../include/protocol/http/v11/request.h#L208)
+**Precondition:** `i < get_query_parameters_length()`. Indexing is unchecked.
+
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-query-parameter-2"></a>
 
@@ -289,7 +294,7 @@ Returns query parameter.
 
 **Returns:** A `std::optional<query_parameter_view>` containing the result when present; otherwise `std::nullopt`.
 
-**Source:** [include/protocol/http/v11/request.h:212](../../../../../include/protocol/http/v11/request.h#L212)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-query-parameters-length"></a>
 
@@ -305,7 +310,7 @@ Returns query parameters length.
 
 **Returns:** The number of query parameters (`std::size_t`).
 
-**Source:** [include/protocol/http/v11/request.h:222](../../../../../include/protocol/http/v11/request.h#L222)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-has-host"></a>
 
@@ -321,7 +326,7 @@ Reports whether host applies.
 
 **Returns:** `true` if a host value is present.
 
-**Source:** [include/protocol/http/v11/request.h:226](../../../../../include/protocol/http/v11/request.h#L226)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-host"></a>
 
@@ -337,7 +342,7 @@ Returns host.
 
 **Returns:** The host value (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:230](../../../../../include/protocol/http/v11/request.h#L230)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-host-port"></a>
 
@@ -353,7 +358,7 @@ Returns host port.
 
 **Returns:** The host port (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:234](../../../../../include/protocol/http/v11/request.h#L234)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-host-type"></a>
 
@@ -369,7 +374,7 @@ Returns host type.
 
 **Returns:** The host type (`helpers::host_type`).
 
-**Source:** [include/protocol/http/v11/request.h:238](../../../../../include/protocol/http/v11/request.h#L238)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-has-target-authority"></a>
 
@@ -385,7 +390,7 @@ Reports whether target authority applies.
 
 **Returns:** `true` if the target authority contains a host.
 
-**Source:** [include/protocol/http/v11/request.h:242](../../../../../include/protocol/http/v11/request.h#L242)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-target-authority-host"></a>
 
@@ -401,7 +406,7 @@ Returns target authority host.
 
 **Returns:** The target authority host (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:246](../../../../../include/protocol/http/v11/request.h#L246)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-target-authority-port"></a>
 
@@ -417,7 +422,7 @@ Returns target authority port.
 
 **Returns:** The target authority port (`std::string_view`).
 
-**Source:** [include/protocol/http/v11/request.h:250](../../../../../include/protocol/http/v11/request.h#L250)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-target-authority-type"></a>
 
@@ -433,7 +438,7 @@ Returns target authority type.
 
 **Returns:** The target authority host type (`helpers::host_type`).
 
-**Source:** [include/protocol/http/v11/request.h:254](../../../../../include/protocol/http/v11/request.h#L254)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-body-reader"></a>
 
@@ -454,7 +459,7 @@ reads it during that call.
 **Returns:** A borrowed `body::reader*` when a reader exists; otherwise
 `nullptr`.
 
-**Source:** [include/protocol/http/v11/request.h:258](../../../../../include/protocol/http/v11/request.h#L258)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-has-body-reader"></a>
 
@@ -470,7 +475,7 @@ Reports whether body reader applies.
 
 **Returns:** `true` if a body reader exists.
 
-**Source:** [include/protocol/http/v11/request.h:264](../../../../../include/protocol/http/v11/request.h#L264)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-wants-connection-close"></a>
 
@@ -486,7 +491,7 @@ Reports whether the connection should close.
 
 **Returns:** `true` if the protocol decided to close the connection.
 
-**Source:** [include/protocol/http/v11/request.h:268](../../../../../include/protocol/http/v11/request.h#L268)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-cookie"></a>
 
@@ -506,7 +511,7 @@ Looks up a single cookie-pair by name in the (unparsed) Cookie header, if presen
 
 **Returns:** A `std::optional<std::string_view>` containing the result when present; otherwise `std::nullopt`.
 
-**Source:** [include/protocol/http/v11/request.h:276](../../../../../include/protocol/http/v11/request.h#L276)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-get-cookies"></a>
 
@@ -523,7 +528,7 @@ Returns every cookie-pair present in the (unparsed) Cookie header, or an empty v
 
 **Returns:** A value of type `std::vector<std::pair<std::string_view, std::string_view>>`.
 
-**Source:** [include/protocol/http/v11/request.h:293](../../../../../include/protocol/http/v11/request.h#L293)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-borrows-bytes"></a>
 
@@ -541,7 +546,7 @@ Async execution must own its bytes before calling user code.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/request.h:306](../../../../../include/protocol/http/v11/request.h#L306)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-make-owned"></a>
 
@@ -559,7 +564,7 @@ Creates owned.
 
 **Errors:** Throws `std::length_error` if the combined request fields exceed `std::size_t`; allocation errors may propagate.
 
-**Source:** [include/protocol/http/v11/request.h:307](../../../../../include/protocol/http/v11/request.h#L307)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-rebase-bytes"></a>
 
@@ -582,7 +587,7 @@ Rebases borrowed views onto a new byte buffer.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/request.h:350](../../../../../include/protocol/http/v11/request.h#L350)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-body-is-stored"></a>
 
@@ -600,7 +605,7 @@ Reports whether body storage is present.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/request.h:367](../../../../../include/protocol/http/v11/request.h#L367)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-body-wire-size"></a>
 
@@ -618,7 +623,7 @@ Returns the body size on the wire, in bytes.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/request.h:368](../../../../../include/protocol/http/v11/request.h#L368)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-begin-body"></a>
 
@@ -639,7 +644,7 @@ Inline wire bytes stay in the decoder; larger bodies use existing storage.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/request.h:371](../../../../../include/protocol/http/v11/request.h#L371)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-append-body"></a>
 
@@ -659,7 +664,7 @@ Appends body.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/request.h:382](../../../../../include/protocol/http/v11/request.h#L382)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)
 
 <a id="method-finish-body"></a>
 
@@ -683,4 +688,4 @@ Finalizes body storage and prepares its reader.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/request.h:400](../../../../../include/protocol/http/v11/request.h#L400)
+**Source:** [include/protocol/http/v11/request.h](../../../../../include/protocol/http/v11/request.h)

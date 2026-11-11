@@ -10,6 +10,10 @@
 
 The two await operations supported by doba's tasks.
 
+Use them inside a task adopted by `task_execution` or the HTTP engine. Their
+suspension hooks require the scheduler installed by that owner; constructing
+an awaiter alone does not register work with a thread or transport.
+
 <a id="function-yield"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> yield

@@ -69,7 +69,7 @@ static constexpr std::size_t kDefaultReceiveBufferCapacity = 4 * 1024;
 
 Default RX block capacity, in bytes. It does not limit protocol message size.
 
-**Source:** [include/transport/tcp_policies.h:41](../../../include/transport/tcp_policies.h#L41)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-receive-buffer-capacity"></a>
 
@@ -85,7 +85,7 @@ Maximum bytes in one socket receive block. The engine receives only fresh
 borrowed bytes and retains incomplete messages itself. Zero and values beyond
 the platform receive API range are rejected before listening.
 
-**Source:** [include/transport/tcp_policies.h:45](../../../include/transport/tcp_policies.h#L45)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-worker-count"></a>
 
@@ -103,7 +103,7 @@ independent SO_REUSEPORT listeners and contexts; Windows shares an IOCP.
 Different connection engines may execute concurrently. Resource exhaustion can
 still make startup fail; representability does not promise unlimited threads.
 
-**Source:** [include/transport/tcp_policies.h:48](../../../include/transport/tcp_policies.h#L48)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-listen-backlog"></a>
 
@@ -120,7 +120,7 @@ may cap the queue according to its own limits. This does not cap established
 contexts. Negative values are rejected. INT_MAX is a valid request, not a
 promise that the kernel can queue that many connections.
 
-**Source:** [include/transport/tcp_policies.h:51](../../../include/transport/tcp_policies.h#L51)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-max-buffered-send-bytes"></a>
 
@@ -142,7 +142,7 @@ RSS and storage owned by a reader are outside this cap. The fixed one-reader
 restriction is independent of the byte budget. Linux requires a representable
 ssize_t budget; Windows divides larger transfers into ULONG-sized submissions.
 
-**Source:** [include/transport/tcp_policies.h:57](../../../include/transport/tcp_policies.h#L57)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-max-connections"></a>
 
@@ -167,7 +167,7 @@ worker count. A reservation remains held after socket closure while real I/O
 or another context owner still retains the context. The value does not
 preallocate contexts or bound the kernel's pending handshakes.
 
-**Source:** [include/transport/tcp_policies.h:61](../../../include/transport/tcp_policies.h#L61)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-ip"></a>
 
@@ -184,7 +184,7 @@ IPv6, trailing data and embedded or trailing NUL bytes are rejected. No name
 resolution is performed. Binding can fail even for valid text if the address
 is unavailable locally.
 
-**Source:** [include/transport/tcp_policies.h:63](../../../include/transport/tcp_policies.h#L63)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="field-port"></a>
 
@@ -201,7 +201,7 @@ required at start. Signs, whitespace, trailing data, NUL bytes, overflow and
 port zero are rejected. Leading decimal zeros are accepted. A valid port may
 still fail to bind because of availability or operating-system permissions.
 
-**Source:** [include/transport/tcp_policies.h:65](../../../include/transport/tcp_policies.h#L65)
+**Source:** [include/transport/tcp_policies.h](../../../include/transport/tcp_policies.h)
 
 <a id="validation-coverage"></a>
 

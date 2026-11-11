@@ -8,67 +8,30 @@
 
 **Header:** [include/protocol/http/v11/headers/transfer_encoding.h](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h)
 
-The "Transfer-Encoding" header field lists the transfer coding names corresponding to the sequence of transfer codings that have been, or will be, applied to the content in order to form the message body.
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
-
-[transfer_encoding](#type-transfer-encoding)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::transfer_encoding
-
-[check](#method-check) ·
-[interpret](#method-interpret)
+HTTP/1.1 `transfer-encoding` parsing and interpretation.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-transfer-encoding"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> transfer_encoding
+## transfer_encoding
 
-**TYPE** · *protocol::http::v11::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class transfer_encoding { ... };
-```
-
-The "Transfer-Encoding" header field lists the transfer coding names corresponding to the sequence of transfer codings that have been, or will be, applied to the content in order to form the message body.
-
-**Source:** [include/protocol/http/v11/headers/transfer_encoding.h:62](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h#L62)
+Static operations in `martianlabs::doba::protocol::http::v11::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::v11::headers::transfer_encoding*
+## check
 
 ```cpp
 static bool check(std::string_view sv, parsed_parameter_list& out);
 ```
 
-Checks whether a value follows the HTTP transfer-encoding header syntax.
+Appends coding elements with optional required, nonempty semicolon parameters. Whitespace around parameter `=` is allowed.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-- **out:** Output parameter that receives the result. Declaration: `parsed_parameter_list& out`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/v11/headers/transfer_encoding.h:67](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h#L67)
+Output lists are appended to, not cleared. Parsed views borrow the input; keep its backing bytes alive and unchanged. Failure may leave earlier elements appended, and allocation failures may throw. Use a fresh output for a new field. Empty comma elements are skipped; field-level whitespace trimming is the caller's responsibility.
 
 <a id="method-interpret"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
-
-**METHOD** · *protocol::http::v11::headers::transfer_encoding*
+## interpret
 
 ```cpp
 static constexpr verdict interpret(
@@ -76,14 +39,4 @@ static constexpr verdict interpret(
       const policies& pol);
 ```
 
-Interprets the parsed header value for HTTP/1.1 processing.
-
-**Parameters:**
-
-- **parameters_list:** Parsed parameter list. Declaration: `const parsed_parameter_list& parameters_list`.
-- **conn:** Connection being processed. Declaration: `v11::connection& conn`.
-- **pol:** Policies controlling this operation. Declaration: `const policies& pol`.
-
-**Returns:** A `verdict` describing the result of applying this header or rule.
-
-**Source:** [include/protocol/http/v11/headers/transfer_encoding.h:80](../../../../../../include/protocol/http/v11/headers/transfer_encoding.h#L80)
+Rejects before appending when the combined coding count exceeds a nonzero `max_transfer_codings`. Otherwise appends coding names and sets `chunked` from the last name. If chunked is disabled, rejection occurs after these changes. Coding support and ordering are checked later by the decoder.

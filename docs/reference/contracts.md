@@ -52,4 +52,4 @@ HTTP/1.1 server composition contract.
 - **ENty:** `typename ENty`.
 - **TRty:** `template <typename, typename> class TRty`.
 
-**Source:** [include/contracts.h:43](../../include/contracts.h#L43)
+**Source:** [include/contracts.h](../../include/contracts.h)

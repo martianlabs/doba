@@ -33,15 +33,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server registers three routes:                                        |
-// |   * "/resources" for POST requests,                                       |
-// |   * "/redirect" for GET requests,                                         |
-// |   * "/resources/1" for DELETE requests                                    |
-// | Each route has a corresponding lambda function that handles the request   |
-// | and constructs an appropriate response with different HTTP status codes.  |
-// | The server runs until a termination signal is received.                   |
+// | Return created, redirect and no-content responses.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

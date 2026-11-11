@@ -60,4 +60,4 @@ Error codes shared by reader_raw and reader_chunked.
 - **chunk_extension_size_limit_exceeded:** Chunk extension size limit exceeded. Declaration: `chunk_extension_size_limit_exceeded`.
 - **trailer_size_limit_exceeded:** Trailer size limit exceeded. Declaration: `trailer_size_limit_exceeded`.
 
-**Source:** [include/protocol/http/v11/body/reader_error.h:50](../../../../../../include/protocol/http/v11/body/reader_error.h#L50)
+**Source:** [include/protocol/http/v11/body/reader_error.h](../../../../../../include/protocol/http/v11/body/reader_error.h)

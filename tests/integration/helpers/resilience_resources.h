@@ -49,8 +49,7 @@ struct resilience_resources {
 #include DOBA_TEST_PLATFORM_HEADER(resilience_resources)
 
 namespace martianlabs::doba::tests::integration {
-// Tests execute sequentially in this runner. Change the environment only before
-// starting server/client threads and restore it after their destruction.
+// Change the environment before starting threads; restore it after they stop.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] resilience_temp_directory                                   ( class ) |
@@ -58,7 +57,7 @@ namespace martianlabs::doba::tests::integration {
 // /////////////////////////////////////////////////////////////////////////////
 class resilience_temp_directory {
  public:
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   resilience_temp_directory() {
@@ -77,28 +76,27 @@ class resilience_temp_directory {
   }
   ~resilience_temp_directory() {
     set(present_ ? previous_.c_str() : nullptr);
-    // A leaked file is evidence: leave a nonempty directory for inspection.
+    // Leave nonempty directories behind to help find leaked files.
     std::error_code ignored;
     std::filesystem::remove(path, ignored);
   }
   resilience_temp_directory(const resilience_temp_directory&) = delete;
   resilience_temp_directory& operator=(const resilience_temp_directory&) =
       delete;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] empty                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   bool empty() const { return std::filesystem::is_empty(path); }
   std::filesystem::path path;
 
  private:
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] variable                                                ( private ) |
   // +-------------------------------------------------------------------------+
   static const char* variable() { return resilience_temp_variable(); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] set                                                     ( private ) |
   // +-------------------------------------------------------------------------+
   static void set(const char* value) { set_resilience_temp_variable(value); }

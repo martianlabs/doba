@@ -8,56 +8,23 @@
 
 **Header:** [include/protocol/http/common/headers/access_control_expose_headers.h](../../../../../../include/protocol/http/common/headers/access_control_expose_headers.h)
 
-|                                             access-control-expose-headers | | Fetch Standard S3.3.3 Access-Control-Expose-Headers                       | | The "Access-Control-Expose-Headers" response header indicates which       | | response headers can be exposed to frontend JavaScript as part of a CORS  | | response.
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[access_control_expose_headers](#type-access-control-expose-headers)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_expose_headers
-
-[check](#method-check)
+Checks a comma-separated list of header-name tokens. It does not apply a CORS policy.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-access-control-expose-headers"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> access_control_expose_headers
+## access_control_expose_headers
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class access_control_expose_headers { ... };
-```
-
-|                                             access-control-expose-headers | | Fetch Standard S3.3.3 Access-Control-Expose-Headers                       | | The "Access-Control-Expose-Headers" response header indicates which       | | response headers can be exposed to frontend JavaScript as part of a CORS  | | response.
-
-**Source:** [include/protocol/http/common/headers/access_control_expose_headers.h:96](../../../../../../include/protocol/http/common/headers/access_control_expose_headers.h#L96)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::headers::access_control_expose_headers*
+## check
 
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP access-control-expose-headers header syntax.
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/access_control_expose_headers.h:101](../../../../../../include/protocol/http/common/headers/access_control_expose_headers.h#L101)
+List parsing skips empty comma elements and respects quoted commas. Spaces/tabs are trimmed before commas and after separators, but not uniformly at the outer edges; pass the field value after HTTP field-level trimming.

@@ -164,7 +164,7 @@ DOBA_TEST("borrowed reads allow overlapping storage") {
 }
 
 // +===========================================================================+
-// | [>] truncated spill files fail the reader                  ( test-case )  |
+// | [>] truncated spill files fail the reader                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("truncated spill files fail the reader") {
   spill_directory directory{"doba_reader_"};

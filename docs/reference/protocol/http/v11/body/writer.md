@@ -47,7 +47,7 @@ class body_writer { ... };
 
 Owns the wire-level common::writer sink together with the body encoder (writer_chunked or writer_raw) matching the framing chosen for the outgoing response (Transfer-Encoding: chunked vs Content-Length). This lets callers push raw payload bytes via write() without ever having to know which framing will encode them, mirroring body::reader on the
 
-**Source:** [include/protocol/http/v11/body/writer.h:52](../../../../../../include/protocol/http/v11/body/writer.h#L52)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-chunked"></a>
 
@@ -67,7 +67,7 @@ Creates a reader or writer for chunked transfer encoding.
 
 **Returns:** A `body_writer` configured for the selected body format.
 
-**Source:** [include/protocol/http/v11/body/writer.h:57](../../../../../../include/protocol/http/v11/body/writer.h#L57)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-raw"></a>
 
@@ -87,7 +87,7 @@ Creates a reader or writer for an unchunked body.
 
 **Returns:** A `body_writer` configured for the selected body format.
 
-**Source:** [include/protocol/http/v11/body/writer.h:60](../../../../../../include/protocol/http/v11/body/writer.h#L60)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-write"></a>
 
@@ -107,7 +107,7 @@ Encodes the caller-supplied raw payload using the framing selected at constructi
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer.h:76](../../../../../../include/protocol/http/v11/body/writer.h#L76)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-write-2"></a>
 
@@ -127,7 +127,7 @@ Writes data.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer.h:90](../../../../../../include/protocol/http/v11/body/writer.h#L90)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-end"></a>
 
@@ -143,7 +143,7 @@ Finalizes the body framing (emits the terminating chunk for chunked encoding; a 
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer.h:107](../../../../../../include/protocol/http/v11/body/writer.h#L107)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-release"></a>
 
@@ -159,7 +159,7 @@ Finalizes the framing and the underlying storage, then hands over the accumulate
 
 **Returns:** A value of type `common::byte_storage`.
 
-**Source:** [include/protocol/http/v11/body/writer.h:117](../../../../../../include/protocol/http/v11/body/writer.h#L117)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-is-chunked"></a>
 
@@ -177,7 +177,7 @@ Reports whether this instance was constructed via chunked() (as opposed to raw()
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/body/writer.h:128](../../../../../../include/protocol/http/v11/body/writer.h#L128)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)
 
 <a id="method-bytes-written"></a>
 
@@ -195,4 +195,4 @@ Returns the total number of raw payload bytes passed to write() so far (i.e. bef
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/body/writer.h:139](../../../../../../include/protocol/http/v11/body/writer.h#L139)
+**Source:** [include/protocol/http/v11/body/writer.h](../../../../../../include/protocol/http/v11/body/writer.h)

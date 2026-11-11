@@ -65,7 +65,7 @@ namespace h = martianlabs::doba::protocol::http::headers;
 // +---------------------------------------------------------------------------+
 // | [>] header_case                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Header checker paired with a value it must accept.                        |
+// | Pair each checker with a value it accepts.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct header_case {
@@ -81,11 +81,6 @@ struct header_case {
 // +---------------------------------------------------------------------------+
 // | [>] check                                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function is a wrapper to allow the use of template header checkers   |
-// | in the header_case struct. It is used to call the check function of the   |
-// | header type passed as a template parameter. It returns true if the value  |
-// | is valid for the header type, false otherwise.                            |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Hty>
 bool check(std::string_view value) {
@@ -96,8 +91,7 @@ bool check(std::string_view value) {
 // +---------------------------------------------------------------------------+
 // | [>] constants                                                  ( public ) |
 // +---------------------------------------------------------------------------+
-// | This constants array contains the header names, their corresponding check |
-// | functions, and sample values that should be accepted by the checkers.     |
+// | Give every checker a valid value to start from.                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 constexpr header_case kCases[] = {

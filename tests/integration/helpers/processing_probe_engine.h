@@ -38,7 +38,7 @@ namespace martianlabs::doba::tests::integration {
 // +---------------------------------------------------------------------------+
 // | [>] processing_probe_engine                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Probes unsupported processing results at the native socket boundary.      |
+// | Checks how TCP handles unsupported processing requests.                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct processing_probe_engine {
@@ -78,13 +78,13 @@ struct processing_probe_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Immutable scheduling request returned from input.
+  // Processing request returned when input arrives.
   protocol::processing_result progress{};
-  // Emits output and requests graceful closure when true.
+  // When true, send a reply and close after it drains.
   bool close_after_output{false};
-  // Counts processing entries independently of connection destruction.
+  // Count processing calls separately from destroyed connections.
   std::shared_ptr<std::atomic<unsigned>> turns;
-  // Transport callbacks remain valid only during the current engine turn.
+  // Use callbacks only during the current engine call.
   protocol::send_delegate output;
   std::function<void()> close;
 };

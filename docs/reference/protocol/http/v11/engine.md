@@ -85,8 +85,8 @@ TLS forwards the same snapshots and engine turns over both TCP backends.
 Its existing finite plaintext and ciphertext batch limits apply to each
 input/processing entry. See the [TLS contract](../../../transport/tls.md).
 
-See [the compiled example](../../../../../examples/http/v11/processing_turns/README.md)
-and [the plan](../../../../../ASYNC.md).
+See the [compiled in-memory example](../../../../../examples/http/v11/processing_turns/README.md)
+and the [native TCP example](../../../../../examples/http/v11/async_routes/README.md).
 
 See the [retirement inventory](async-retirement.md) for removed legacy
 mechanisms, preserved ownership and coverage mapping.

@@ -37,7 +37,8 @@
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-// Isolated native API faults: failed submissions never post a completion.
+// Only this executable injects API failures. Failed submissions post no
+// completion.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] fault                                                        ( enum ) |
@@ -46,26 +47,30 @@ using martianlabs::doba::protocol::processing_result;
 enum class fault {
   kNone, kPort, kSocket, kBind, kListen, kAccept, kAssociate, kReceive, kSend
 };
-// One armed failure is consumed atomically by the matching API.
+// The matching API consumes each failure once.
 std::atomic<fault> armed{fault::kNone};
-// The second AcceptEx fails after the first real operation was submitted.
+// Fail the second AcceptEx while the first is still pending.
 std::atomic<unsigned> accepts{0};
-// Accepted socket whose ownership transfer is being checked.
+// Watch who closes this accepted socket.
 std::atomic<SOCKET> watched{INVALID_SOCKET};
 std::atomic<unsigned> closes{0};
-// Real entry point loaded before substituting the test-only accept function.
+// Save the real AcceptEx before replacing it.
 LPFN_ACCEPTEX native_accept = nullptr;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] consume_fault                                            ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool consume_fault(fault expected) {
   return armed.compare_exchange_strong(expected, fault::kNone);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_port                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 HANDLE WINAPI tracked_port(HANDLE file, HANDLE port, ULONG_PTR key,
                            DWORD workers) {
   if ((file == INVALID_HANDLE_VALUE && consume_fault(fault::kPort)) ||
@@ -77,17 +82,21 @@ HANDLE WINAPI tracked_port(HANDLE file, HANDLE port, ULONG_PTR key,
   return ::CreateIoCompletionPort(file, port, key, workers);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_close                                            ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_close(SOCKET socket) {
   if (socket == watched.load()) ++closes;
   return ::closesocket(socket);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_socket                                           ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 SOCKET WSAAPI tracked_socket(int family, int type, int protocol,
                             LPWSAPROTOCOL_INFOW info, GROUP group, DWORD flags) {
   if (consume_fault(fault::kSocket)) {
@@ -97,9 +106,11 @@ SOCKET WSAAPI tracked_socket(int family, int type, int protocol,
   return ::WSASocketW(family, type, protocol, info, group, flags);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_bind                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_bind(SOCKET socket, const sockaddr* address, int length) {
   if (consume_fault(fault::kBind)) {
     WSASetLastError(WSAEADDRINUSE);
@@ -108,9 +119,11 @@ int WSAAPI tracked_bind(SOCKET socket, const sockaddr* address, int length) {
   return ::bind(socket, address, length);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_listen                                           ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_listen(SOCKET socket, int backlog) {
   if (consume_fault(fault::kListen)) {
     WSASetLastError(WSAENOBUFS);
@@ -119,9 +132,11 @@ int WSAAPI tracked_listen(SOCKET socket, int backlog) {
   return ::listen(socket, backlog);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_accept                                           ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 BOOL PASCAL tracked_accept(SOCKET listener, SOCKET socket, PVOID buffer,
                           DWORD bytes, DWORD local, DWORD remote,
                           LPDWORD received, LPOVERLAPPED operation) {
@@ -133,9 +148,11 @@ BOOL PASCAL tracked_accept(SOCKET listener, SOCKET socket, PVOID buffer,
                        received, operation);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_ioctl                                            ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_ioctl(SOCKET socket, DWORD code, LPVOID input,
                          DWORD input_size, LPVOID output, DWORD output_size,
                          LPDWORD bytes, LPWSAOVERLAPPED operation,
@@ -149,9 +166,11 @@ int WSAAPI tracked_ioctl(SOCKET socket, DWORD code, LPVOID input,
   return result;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_receive                                          ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
                           LPDWORD bytes, LPDWORD flags,
                           LPWSAOVERLAPPED operation,
@@ -163,9 +182,11 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
   return ::WSARecv(socket, buffers, count, bytes, flags, operation, completion);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_send                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
                        LPDWORD bytes, DWORD flags,
                        LPWSAOVERLAPPED operation,
@@ -232,15 +253,17 @@ struct lifecycle_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Synchronous engine output; the transport owns the copied response bytes.
+  // The transport copies these bytes during the call.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] check_fault                                              ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void check_fault(fault injected) {
   namespace tr = martianlabs::doba::transport;
   using namespace std::chrono_literals;
@@ -270,7 +293,7 @@ void check_fault(fault injected) {
     DOBA_EXPECT(failed);
     DOBA_EXPECT(armed.load() == fault::kNone);
     if (injected == fault::kAccept) DOBA_EXPECT_EQUAL(accepts.load(), 2u);
-    // start() must already have joined workers and drained the real accept.
+    // Failed start() must have joined workers and drained the pending accept.
     transport.stop();
     transport.start();
   } else {
@@ -281,8 +304,8 @@ void check_fault(fault injected) {
     DOBA_EXPECT(armed.load() == fault::kNone);
     client.close();
   }
-  // A one-connection budget proves the failed context released its slot.
-  // Socket EOF can precede destruction of the reservation by a few cycles.
+  // With one connection slot, recovery proves it was released. EOF can arrive
+  // before the slot is freed.
   bool healthy = false;
   const auto deadline = std::chrono::steady_clock::now() + 5s;
   do {
@@ -294,7 +317,7 @@ void check_fault(fault injected) {
   } while (!healthy && std::chrono::steady_clock::now() < deadline);
   DOBA_EXPECT(healthy);
   if (injected == fault::kAssociate) DOBA_EXPECT_EQUAL(closes.load(), 1u);
-  // Stop with the healthy connection's real receive still pending.
+  // Stop while the next receive is still pending.
   watched = INVALID_SOCKET;
   transport.stop();
   client.close();

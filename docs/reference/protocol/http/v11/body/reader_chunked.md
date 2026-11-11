@@ -42,7 +42,7 @@ class reader_chunked { ... };
 
 Decodes a chunked Transfer-Encoding body (as accumulated verbatim by framer_chunked) by pulling wire bytes on demand from a common::reader source and filling the caller-supplied output span.
 
-**Source:** [include/protocol/http/v11/body/reader_chunked.h:62](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L62)
+**Source:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
 
 <a id="constant-kdefaultmaxchunkextensionsize"></a>
 
@@ -59,7 +59,7 @@ Defines the default max chunk extension size constant.
 
 **Value:** `policies::kDefaultMaxChunkExtensionSize`
 
-**Source:** [include/protocol/http/v11/body/reader_chunked.h:94](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L94)
+**Source:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
 
 <a id="constant-kdefaultmaxtrailersectionsize"></a>
 
@@ -76,7 +76,7 @@ Defines the default max trailer section size constant.
 
 **Value:** `policies::kDefaultMaxTrailerSectionSize`
 
-**Source:** [include/protocol/http/v11/body/reader_chunked.h:96](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L96)
+**Source:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)
 
 <a id="method-read"></a>
 
@@ -97,4 +97,4 @@ Pulls wire bytes from src, walking the chunked framing, and writes only chunk-da
 
 **Returns:** A `reader_state` describing progress, completion, and errors.
 
-**Source:** [include/protocol/http/v11/body/reader_chunked.h:112](../../../../../../include/protocol/http/v11/body/reader_chunked.h#L112)
+**Source:** [include/protocol/http/v11/body/reader_chunked.h](../../../../../../include/protocol/http/v11/body/reader_chunked.h)

@@ -8,56 +8,23 @@
 
 **Header:** [include/protocol/http/common/headers/www_authenticate.h](../../../../../../include/protocol/http/common/headers/www_authenticate.h)
 
-|                                                          www-authenticate | | RFC 9110 S11.6.1 WWW-Authenticate                                         | | The "WWW-Authenticate" response header field indicates the authentication | | scheme(s) and parameters applicable to the target resource.               | | A server generating a 401 (Unauthori
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[www_authenticate](#type-www-authenticate)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::www_authenticate
-
-[check](#method-check)
+Checks a comma-separated challenge list, tracking whether following `name=value` members belong to the preceding scheme. Schemes may stand alone or use token68/parameters. It does not implement a challenge exchange.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-www-authenticate"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> www_authenticate
+## www_authenticate
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class www_authenticate { ... };
-```
-
-|                                                          www-authenticate | | RFC 9110 S11.6.1 WWW-Authenticate                                         | | The "WWW-Authenticate" response header field indicates the authentication | | scheme(s) and parameters applicable to the target resource.               | | A server generating a 401 (Unauthori
-
-**Source:** [include/protocol/http/common/headers/www_authenticate.h:133](../../../../../../include/protocol/http/common/headers/www_authenticate.h#L133)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::headers::www_authenticate*
+## check
 
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP www-authenticate header syntax.
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/www_authenticate.h:138](../../../../../../include/protocol/http/common/headers/www_authenticate.h#L138)
+List parsing skips empty comma elements and respects quoted commas. Spaces/tabs are trimmed before commas and after separators, but not uniformly at the outer edges; pass the field value after HTTP field-level trimming.

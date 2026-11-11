@@ -51,7 +51,7 @@ The [HTTP consumer](protocol/http/v11/server_tests.cpp) exercises filesystem
 and reader types, an HTTP server, a controller with a typed route parameter,
 and the static-file controller.
 
-The installed package exports the synchronous TCP interface and its thread
+The installed package exports the TCP interface and its thread
 and Windows socket dependencies. `DOBA_PACKAGE_USE_TLS=ON` additionally requests
 the installed `TLS` component and builds `doba_tls_consumer`, linked with
 `martianlabs::doba_tls`. Source consumers enable the same optional target.

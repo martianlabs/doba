@@ -36,13 +36,7 @@ using martianlabs::doba::tests::integration::test_helper;
 // +---------------------------------------------------------------------------+
 // | [>] run_probe                                                ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test_helper with the specified arguments and       |
-// | timeout. It takes an initializer list of const char* as arguments and an  |
-// | optional timeout duration (defaulting to 3 seconds). The function calls   |
-// | run_test_helper from the martianlabs::doba::tests namespace, passing the  |
-// | arguments and timeout. It then sets the context of the test_helper with   |
-// | the output from the result and returns the test_helper_result containing  |
-// | the exit code, timeout status, and output of the test_helper execution.   |
+// | Keep probe output as the assertion context.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 test_helper_result run_probe(
@@ -239,7 +233,7 @@ DOBA_TEST("runner reports every concurrent assertion failure") {
 }
 
 // +===========================================================================+
-// | [>] integration filters accept repeated qualified exclusions( test-case ) |
+// | [>] repeated qualified integration exclusions               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("integration runner applies every exclusion with normalized paths") {
   const auto result = run_probe({"--list", "--exclude", "probe assertion fails",

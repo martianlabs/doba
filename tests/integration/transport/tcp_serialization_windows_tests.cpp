@@ -50,9 +50,9 @@ using namespace std::chrono_literals;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct observations {
-  // Gate for the engine deliberately held on a separate connection.
+  // Hold one engine call on a separate connection.
   martianlabs::doba::tests::manual_event held, release;
-  // Records any overlapping engine calls on the same connection.
+  // Flag overlapping engine calls on the same connection.
   std::atomic<bool> overlap{false};
 };
 
@@ -104,17 +104,17 @@ struct serial_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Shared test observations; each engine keeps its own entry guard.
+  // Share results, but give each engine its own entry guard.
   std::shared_ptr<observations> state;
-  // Per-engine overlap detection independent of transport synchronization.
+  // Check overlap without using the transport lock.
   std::atomic<bool> active{false};
-  // Synchronous output callback supplied by the transport.
+  // Send only during an engine call.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace
 
 // +===========================================================================+
-// | [>] multiple output calls preserve byte order                ( test-case )|
+// | [>] multiple output calls preserve byte order               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Windows serializes engine input and batches synchronous callbacks") {
   for (const std::size_t workers : {1u, 4u, 8u}) {

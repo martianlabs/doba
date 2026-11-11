@@ -36,6 +36,23 @@ root, open and inspect report failures through error. root returns an empty path
 on failure; open returns false; inspect and metadata return an empty optional.
 Metadata is declared in [filesystem_metadata.h](filesystem_metadata.md).
 
+`open()` closes any previous handle before validating the new request, including
+when the new open fails. A default or closed object has size zero, reports EOF
+and has no read failure. A nonempty read on it records failure; an empty read
+does not change state. Positive short reads may precede an early-EOF failure
+on the next read. Read failures remain set until a successful `select()`,
+`close()` or `open()` resets them.
+
+`select()` uses an absolute offset from the file start, validates the range
+against the current `size()`, then changes `size()` to the requested length and
+resets the cursor. It does not compose relative slices. Reopen the file before
+selecting a range outside that reduced size. A failed selection reports an
+error without changing the stored cursor/size state.
+
+`valid_relative_path()` sets `error` on rejection but does not clear an existing
+error on success. `root()`, `open()`, `inspect()`, `metadata()` and `select()` clear
+it first. Allocation and path-conversion exceptions may still propagate.
+
 Request paths use forward slashes and must be relative. HTTP percent decoding
 happens in the server. The root must already be absolute when calling open or
 inspect; every path component is checked again so a replacement link is rejected.
@@ -46,5 +63,7 @@ Reads are synchronous.
 
 Linux uses openat2 with O_PATH for inspect when the kernel allows it.
 If the syscall is unavailable or blocked, it walks the path one directory at
-a time and queries the resulting handle. Reading uses read and select uses lseek.
+a time and queries the resulting handle. That fallback needs data-read access,
+unlike the `O_PATH` fast path, even though it reads no file contents.
+Reading uses read and select uses lseek.
 The native header includes linux/openat2.h directly, without compile-time branches.

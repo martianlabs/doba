@@ -35,11 +35,11 @@ concept provider = requires(const Aty& value, const RQty& request) {
 };
 ```
 
-Checks the compile-time requirements for provider.
+Requires a const provider to accept a const request and return exactly `authentication_result`. It does not require `noexcept` or establish runtime thread safety.
 
 **Template parameters:**
 
 - **Aty:** `typename Aty`.
 - **RQty:** `typename RQty`.
 
-**Source:** [include/protocol/http/common/auth/contracts.h:39](../../../../../../include/protocol/http/common/auth/contracts.h#L39)
+**Source:** [include/protocol/http/common/auth/contracts.h](../../../../../../include/protocol/http/common/auth/contracts.h)

@@ -62,13 +62,13 @@ enum class output_case {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct empty_state {
-  // Shared backing storage; only the fixture owns it after reader release.
+  // After reader cleanup, only the fixture should keep these bytes alive.
   std::shared_ptr<const std::string> bytes;
-  // Input count also detects a missing or unexpected additional callback.
+  // Count input calls to catch extra or missing deliveries.
   std::atomic<int> calls{0};
-  // The reader must be released before the next input call.
+  // Release the reader before delivering more input.
   std::atomic<bool> released{true};
-  // Output sequence selected before workers start.
+  // Choose the output sequence before starting workers.
   output_case selected{output_case::kSource};
 };
 
@@ -125,9 +125,9 @@ struct empty_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Shared observations and immutable reader storage.
+  // Shared results and the reader backing bytes.
   std::shared_ptr<empty_state> state;
-  // Transport callbacks, invoked only during the current input call.
+  // Call these only while handling input.
   send_delegate send;
   std::function<void()> close;
 };

@@ -116,7 +116,7 @@ DOBA_TEST("authority form requires exact port equality") {
 }
 
 // +===========================================================================+
-// | [>] absolute form authority overrides a different Host name ( test-case ) |
+// | [>] absolute-form authority overrides Host                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("absolute form authority overrides a different Host name") {
   context ctx;

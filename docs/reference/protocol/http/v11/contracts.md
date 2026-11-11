@@ -102,7 +102,7 @@ Checks the compile-time requirements for request.
 
 - **RQty:** `typename RQty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:107](../../../../../include/protocol/http/v11/contracts.h#L107)
+**Source:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
 
 <a id="concept-response"></a>
 
@@ -203,7 +203,7 @@ Checks the compile-time requirements for response.
 
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:176](../../../../../include/protocol/http/v11/contracts.h#L176)
+**Source:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)
 
 <a id="concept-router"></a>
 
@@ -239,4 +239,4 @@ Checks the compile-time requirements for router.
 - **RQty:** `typename RQty`.
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/v11/contracts.h:266](../../../../../include/protocol/http/v11/contracts.h#L266)
+**Source:** [include/protocol/http/v11/contracts.h](../../../../../include/protocol/http/v11/contracts.h)

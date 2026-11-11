@@ -40,9 +40,11 @@
 
 namespace martianlabs::doba::tests::integration {
 using martianlabs::doba::protocol::processing_result;
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::protocol::send_delegate;
 using namespace std::chrono_literals;
 

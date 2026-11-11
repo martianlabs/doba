@@ -35,13 +35,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/headers" that responds to GET requests.   |
-// | The lambda function constructs a response body containing the request     |
-// | headers in a human-readable format. The response is sent with a           |
-// | "Content-Type" of "text/plain; charset=utf-8". The server runs until a    |
-// | termination signal is received.                                           |
+// | Look up request headers or visit them all.                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -50,14 +44,13 @@ int main() {
       "GET", "/headers", [](const request& req, response& res) {
         res.ok_200();
         std::string body = "user-agent: ";
-        // Header-name lookup is case-insensitive.
+        // Header names ignore letter case.
         if (req.exist_header("User-Agent")) {
           body.append(req.get_header("User-Agent").second);
         } else {
           body.append("not provided");
         }
         body.append("\n\nall headers:\n");
-        // Indexed access also allows every received field to be inspected.
         for (std::size_t i = 0; i < req.get_headers_length(); i++) {
           const auto [name, value] = req.get_header(i);
           body.append(name);

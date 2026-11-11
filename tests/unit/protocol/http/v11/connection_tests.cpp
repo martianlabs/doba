@@ -30,7 +30,7 @@ using martianlabs::doba::protocol::http::v11::connection;
 }  // namespace
 
 // +===========================================================================+
-// | [>] default state represents persistent HTTP 1.1 connection ( test-case ) |
+// | [>] default persistent HTTP/1.1 connection                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("default state represents persistent HTTP 1.1 connection") {
   const connection value;

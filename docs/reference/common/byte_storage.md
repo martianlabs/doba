@@ -8,287 +8,102 @@
 
 **Header:** [include/common/byte_storage.h](../../../include/common/byte_storage.h)
 
-Provides the byte storage options type.
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
-
-[byte_storage_options](#type-byte-storage-options) ·
-[byte_storage](#type-byte-storage)
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::byte_storage_options
-
-[kDefaultSpillToDiskThreshold](#constant-kdefaultspilltodiskthreshold) ·
-[spill_to_disk_threshold](#field-spill-to-disk-threshold) ·
-[spill_dir](#field-spill-dir)
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::byte_storage
-
-[read](#method-read) ·
-[write](#method-write) ·
-[spill](#method-spill) ·
-[unlink_file](#method-unlink-file) ·
-[finish](#method-finish) ·
-[fetch](#method-fetch) ·
-[total_size](#method-total-size) ·
-[exhausted](#method-exhausted) ·
-[ok](#method-ok)
-
-<a id="api"></a>
-<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
-<a id="type-byte-storage-options"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage_options
-
-**TYPE** · *common*
-
-**Declaration synopsis:**
-
-```cpp
-struct byte_storage_options { ... };
-```
-
-Provides the byte storage options type.
-
-**Source:** [include/common/byte_storage.h:44](../../../include/common/byte_storage.h#L44)
-
-<a id="constant-kdefaultspilltodiskthreshold"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> kDefaultSpillToDiskThreshold
-
-**CONSTANT** · *common::byte_storage_options*
-
-```cpp
-static constexpr std::size_t kDefaultSpillToDiskThreshold = 128 * 1024;
-```
-
-Defines the default spill to disk threshold constant.
-
-**Value:** `128 * 1024`
-
-**Source:** [include/common/byte_storage.h:45](../../../include/common/byte_storage.h#L45)
-
-<a id="field-spill-to-disk-threshold"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill_to_disk_threshold
-
-**FIELD** · *common::byte_storage_options*
-
-```cpp
-std::size_t spill_to_disk_threshold = kDefaultSpillToDiskThreshold;
-```
-
-Stores the spill to disk threshold value.
-
-**Value:** `kDefaultSpillToDiskThreshold`
-
-**Source:** [include/common/byte_storage.h:46](../../../include/common/byte_storage.h#L46)
-
-<a id="field-spill-dir"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill_dir
-
-**FIELD** · *common::byte_storage_options*
-
-```cpp
-std::string spill_dir;
-```
-
-Stores the spill dir value.
-
-**Value:** No explicit initializer appears in this declaration.
-
-**Source:** [include/common/byte_storage.h:47](../../../include/common/byte_storage.h#L47)
-
 <a id="type-byte-storage"></a>
+## byte_storage
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> byte_storage
+Move-only byte storage, initially in memory. A write above the configured
+[threshold](byte_storage_options.md) spills all buffered bytes to a private
+temporary file. Exactly reaching the threshold does not spill; zero disables
+automatic spilling. Construction does not reserve the threshold in memory.
 
-**TYPE** · *common*
-
-**Declaration synopsis:**
-
-```cpp
-class byte_storage { ... };
-```
-
-This class provides a storage backend for bytes, with optional spilling to disk when a threshold is exceeded. It supports reading and writing bytes, and can be used in scenarios where large amounts of data need to be temporarily stored without consuming too much memory.
-
-**Source:** [include/common/byte_storage.h:60](../../../include/common/byte_storage.h#L60)
-
-<a id="method-read"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
-
-**METHOD** · *common::byte_storage*
-
-```cpp
-std::size_t read(char* out, std::size_t want);
-```
-
-Reads data.
-
-**Parameters:**
-
-- **out:** Output parameter that receives the result. Declaration: `char* out`.
-- **want:** Requested byte count. Declaration: `std::size_t want`.
-
-**Returns:** The number of bytes processed.
-
-**Source:** [include/common/byte_storage.h:85](../../../include/common/byte_storage.h#L85)
+Destruction closes the file and attempts to remove its temporary name. Moving
+transfers the bytes, file, cursor and state; move assignment first cleans up the
+destination. Serialize access to each storage object.
 
 <a id="method-write"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> write
-
-**METHOD** · *common::byte_storage*
+## write
 
 ```cpp
 bool write(const char* ptr, std::size_t len);
 ```
 
-Writes data.
+Append `len` bytes. The source must contain that many readable bytes for the
+call. A zero-length write succeeds before finalization, including a null
+pointer. Writes after `finish()` or an I/O failure return false, including
+empty writes. File creation/write failures return false and make `ok()` false;
+allocation failures may throw. The caller must check the result.
 
-**Parameters:**
+<a id="method-read"></a>
+## read
 
-- **ptr:** Pointer to the input or output memory. Declaration: `const char* ptr`.
-- **len:** Length in elements or bytes, according to the declared type. Declaration: `std::size_t len`.
+```cpp
+std::size_t read(char* out, std::size_t want);
+```
 
-**Returns:** A boolean result; see the operation description for its meaning.
+Copy up to `want` unread bytes and advance the cursor. The destination must
+hold the requested bytes. A zero request does not access the destination.
+Memory bytes can be read before finalization; spilled storage returns zero
+until `finish()` records its size. An I/O failure can return a partial count
+and makes `ok()` false; later reads return zero.
 
-**Source:** [include/common/byte_storage.h:96](../../../include/common/byte_storage.h#L96)
+<a id="method-fetch"></a>
+## fetch
+
+```cpp
+bool fetch(std::byte& byte);
+```
+
+Read one byte using the same cursor as `read()`. Return false without changing
+the output byte at end, before spilled storage is finished, or after an I/O
+failure. Check `ok()` to distinguish an I/O error.
 
 <a id="method-spill"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> spill
-
-**METHOD** · *common::byte_storage*
+## spill
 
 ```cpp
 bool spill();
 ```
 
-Moves buffered data to file-backed storage.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/common/byte_storage.h:117](../../../include/common/byte_storage.h#L117)
+Explicitly move memory bytes to a temporary file, even with a zero automatic
+threshold. Preserve the read cursor. An already-spilled store returns true,
+even after an earlier I/O error; check `ok()` for health.
+File creation/copy failure returns false and records an I/O error; this is not
+a way to recover a failed store. Allocation failures may throw.
 
 <a id="method-unlink-file"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> unlink_file
-
-**METHOD** · *common::byte_storage*
+## unlink_file
 
 ```cpp
 void unlink_file() noexcept;
 ```
 
-The open handle remains readable after removing the temporary name.
-
-**Returns:** No value (`void`).
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:119](../../../include/common/byte_storage.h#L119)
+Attempt to remove the temporary name while keeping the open handle readable.
+Removal errors are ignored and the name remains available for another cleanup
+attempt. This does nothing when there is no temporary name.
 
 <a id="method-finish"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> finish
-
-**METHOD** · *common::byte_storage*
+## finish
 
 ```cpp
 void finish(std::size_t stored) noexcept;
 ```
 
-Finalizes the buffered data or output stream.
-
-**Parameters:**
-
-- **stored:** Number of bytes already stored. Declaration: `std::size_t stored`.
-
-**Returns:** No value (`void`).
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:128](../../../include/common/byte_storage.h#L128)
-
-<a id="method-fetch"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
-
-**METHOD** · *common::byte_storage*
-
-```cpp
-bool fetch(std::byte& b);
-```
-
-Fetches the requested value.
-
-**Parameters:**
-
-- **b:** Byte or text value to process. Declaration: `std::byte& b`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/common/byte_storage.h:143](../../../include/common/byte_storage.h#L143)
+Seal writes and record `stored` as the total byte count. The caller must supply
+the actual number of stored bytes; the value is not validated. The first call
+wins and does not rewind the read cursor. It calls the backend flush hook,
+which is currently a no-op on both platforms. It does not call `fsync` or
+`FlushFileBuffers`, so finalization makes no disk-durability guarantee.
 
 <a id="method-total-size"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> total_size
-
-**METHOD** · *common::byte_storage*
-
-```cpp
-[[nodiscard]] std::optional<std::size_t> total_size() const noexcept;
-```
-
-Returns the total data size.
-
-**Returns:** A `std::optional<std::size_t>` containing the result when present; otherwise `std::nullopt`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:153](../../../include/common/byte_storage.h#L153)
-
 <a id="method-exhausted"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> exhausted
-
-**METHOD** · *common::byte_storage*
-
-```cpp
-[[nodiscard]] bool exhausted() const noexcept;
-```
-
-Reports whether the exhausted condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:159](../../../include/common/byte_storage.h#L159)
-
 <a id="method-ok"></a>
+## State
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ok
+| Operation | Result |
+| --- | --- |
+| `total_size()` | The count passed to the first `finish()`, or `nullopt` before it. |
+| `exhausted()` | Memory cursor has reached the current memory size; for spilled storage, finalization is also required. |
+| `ok()` | No recorded file creation, read, write or flush failure. |
 
-**METHOD** · *common::byte_storage*
-
-```cpp
-[[nodiscard]] bool ok() const noexcept;
-```
-
-Reports whether the ok condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/byte_storage.h:166](../../../include/common/byte_storage.h#L166)
+An unfinished memory store can become exhausted and later receive more writes.
+Finalization and read exhaustion are separate states.

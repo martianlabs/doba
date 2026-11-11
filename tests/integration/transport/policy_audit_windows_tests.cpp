@@ -49,15 +49,15 @@ constexpr std::string_view get = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
 // /////////////////////////////////////////////////////////////////////////////
 struct plain_peer {
   tcpip_client socket;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] connect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   bool connect(std::uint16_t port) { return socket.connect(port); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool send(std::string_view input) { return socket.send_all(input); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   auto receive(std::size_t size) { return socket.receive(size); }
@@ -133,7 +133,7 @@ void terminal_source(Policies p) {
   p.port = std::to_string(port);
   p.worker_count = 2;
   protocol::http::v11::policies limits;
-  // Retain the next request as raw input until the current source drains.
+  // Hold the next request until the current source drains.
   limits.max_pending_requests = 1;
   limits.max_pending_response_bytes = 1;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
@@ -150,7 +150,7 @@ void terminal_source(Policies p) {
   DOBA_EXPECT(peer.connect(port));
   DOBA_EXPECT(peer.send(get));
   DOBA_EXPECT(wait_count(calls, 1));
-  // The body streams through bounded TX blocks without charging its length.
+  // A long body must fit through small output blocks.
   DOBA_EXPECT(reply(peer, *bytes));
   DOBA_EXPECT(peer.send(get));
   DOBA_EXPECT(reply(peer, *bytes));

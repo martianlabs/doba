@@ -8,56 +8,21 @@
 
 **Header:** [include/protocol/http/common/headers/cookie.h](../../../../../../include/protocol/http/common/headers/cookie.h)
 
-|                                                                    cookie | | RFC 6265 S4.2 Cookie                                                      | | The "Cookie" header field is sent by a user agent in an HTTP request to   | | return stored cookies to the origin server. The field contains cookies    | | previously received from Set-Cookie
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[cookie](#type-cookie)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::cookie
-
-[check](#method-check)
+Requires cookie `name=value` pairs separated by exactly `; `. Values may be enclosed in double quotes, but still use cookie octets: quotes do not enable escapes or spaces. Empty values are allowed; an empty header is rejected.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-cookie"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> cookie
+## cookie
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class cookie { ... };
-```
-
-|                                                                    cookie | | RFC 6265 S4.2 Cookie                                                      | | The "Cookie" header field is sent by a user agent in an HTTP request to   | | return stored cookies to the origin server. The field contains cookies    | | previously received from Set-Cookie
-
-**Source:** [include/protocol/http/common/headers/cookie.h:105](../../../../../../include/protocol/http/common/headers/cookie.h#L105)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::headers::cookie*
+## check
 
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP cookie header syntax.
-
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/cookie.h:110](../../../../../../include/protocol/http/common/headers/cookie.h#L110)
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.

@@ -40,7 +40,7 @@ class framer_raw { ... };
 
 Detects the Content-Length-framed body boundary within an already-wire- encoded input buffer.
 
-**Source:** [include/protocol/http/v11/body/framer_raw.h:48](../../../../../../include/protocol/http/v11/body/framer_raw.h#L48)
+**Source:** [include/protocol/http/v11/body/framer_raw.h](../../../../../../include/protocol/http/v11/body/framer_raw.h)
 
 <a id="method-consume"></a>
 
@@ -60,4 +60,4 @@ Consumes up to (expected_ - accumulated_) bytes from input. Returns immediately 
 
 **Returns:** A `framer_state` describing progress, completion, and errors.
 
-**Source:** [include/protocol/http/v11/body/framer_raw.h:61](../../../../../../include/protocol/http/v11/body/framer_raw.h#L61)
+**Source:** [include/protocol/http/v11/body/framer_raw.h](../../../../../../include/protocol/http/v11/body/framer_raw.h)

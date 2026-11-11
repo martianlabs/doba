@@ -51,15 +51,13 @@ using martianlabs::doba::transport::detail::tcp_connection;
 // +---------------------------------------------------------------------------+
 // | [>] test_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Engine probe used by TCP connection tests.                                |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct test_engine {
   // +=========================================================================+
   // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
-  // Processing needs returned by the probe after consuming each full block.
+  // Return these processing requests after each complete input block.
   processing_result progress{};
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |

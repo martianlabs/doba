@@ -34,9 +34,11 @@
 #include "protocol/http/v11/decoder.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace http = martianlabs::doba::protocol::http::v11;
 using status = martianlabs::doba::protocol::deserialization_status;
 using doba_fuzz::check;
@@ -65,9 +67,11 @@ struct stream {
   bool operator==(const stream&) const = default;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] decode                                                   ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 stream decode(std::string_view wire, bool fragmented,
               const http::policies& policy) {
   stream result;
@@ -102,7 +106,7 @@ stream decode(std::string_view wire, bool fragmented,
                                 pos - input.size());
         } else if (decoded.code == status::kInvalidSource) {
           result.rejected = true;
-          break;  // An invalid stream is terminal; never decode its successor.
+          break;  // Stop at an invalid stream; do not try the next request.
         } else {
           check(!decoded.request.has_value(),
                 "incomplete decoder has no request");
@@ -110,10 +114,10 @@ stream decode(std::string_view wire, bool fragmented,
           break;
         }
       }
-      // Expose dependencies on caller-owned storage before the next fragment.
+      // Overwrite the input to catch borrowed data kept by the decoder.
       std::fill(piece.begin(), piece.end(), '\x5a');
     }
-  }  // Owned requests must also survive destruction of the decoder.
+  }  // Requests must survive the decoder too.
   for (auto& [request, boundary] : retained) {
     message snapshot{
         {std::string(request.get_method()),
@@ -163,9 +167,11 @@ stream decode(std::string_view wire, bool fragmented,
 }
 }  // namespace
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] LLVMFuzzerTestOneInput                                   ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
   if (size > 16384) return 0;
@@ -183,8 +189,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   check(whole == decode(wire, true, policy),
         "HTTP memory/disk storage equivalence");
 
-  // Differential rejection alone could miss a parser rejecting every input.
-  // Build a valid pipeline with a known binary body and exact boundaries too.
+  // Also check a known valid pipeline, so rejecting everything cannot pass.
   const auto payload = wire.substr(0, 512);
   const std::string body =
       size % 2 ? doba_fuzz::chunked_wire(payload) : std::string(payload);

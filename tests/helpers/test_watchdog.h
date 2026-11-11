@@ -36,9 +36,11 @@
 #include <thread>
 
 namespace martianlabs::doba::tests {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] parse_test_timeout                                       ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline bool parse_test_timeout(std::string_view text,
                                std::chrono::milliseconds& timeout) {
   long long value = 0;
@@ -51,7 +53,7 @@ inline bool parse_test_timeout(std::string_view text,
   return true;
 }
 
-// One watchdog per runner, including the cleanup performed inside each test.
+// One watchdog per runner, including test cleanup.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] test_watchdog                                               ( class ) |
@@ -59,7 +61,7 @@ inline bool parse_test_timeout(std::string_view text,
 // /////////////////////////////////////////////////////////////////////////////
 class test_watchdog {
  public:
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   explicit test_watchdog(std::chrono::milliseconds timeout)
@@ -75,7 +77,7 @@ class test_watchdog {
     worker_.join();
   }
 
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] arm                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   void arm(std::string_view file, int line, std::string_view name) {
@@ -88,7 +90,7 @@ class test_watchdog {
     active_ = true;
     changed_.notify_one();
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] disarm                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   void disarm() {
@@ -98,10 +100,9 @@ class test_watchdog {
   }
 
  private:
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
-  // +-------------------------------------------------------------------------+
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] watch                                                   ( private ) |
   // +-------------------------------------------------------------------------+
   void watch() {
@@ -120,7 +121,7 @@ class test_watchdog {
                    static_cast<int>(file_.size()), file_.data(), line_,
                    static_cast<int>(name_.size()), name_.data());
       std::fflush(stderr);
-      // A hung test cannot safely unwind. Avoid abort dialogs and core dumps.
+      // A hung test cannot unwind safely. Exit without a dialog or core dump.
       std::_Exit(124);
     }
   }

@@ -92,7 +92,7 @@ The container exposes 8080 and 8081. Build it against the matching Doba revision
 and run it with the official data/certificate mounts:
 
 ```sh
-docker build --build-arg DOBA_REF=feature/async --tag doba-httparena-http-v11 \
+docker build --build-arg DOBA_REF=main --tag doba-httparena-http-v11 \
   benchmarks/http/v11/httparena
 docker run --rm --publish 8080:8080 --publish 8081:8081 \
   --mount type=bind,src="$PWD/data",dst=/data,readonly \

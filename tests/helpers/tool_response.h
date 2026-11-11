@@ -32,17 +32,18 @@
 
 namespace martianlabs::doba::tests::tools {
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] wire_response                                              ( struct ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 struct wire_response {
   int status{};
   std::map<std::string, std::string> headers;
   std::string body;
 };
 
-// Independent final Content-Length oracle. Read only the current response;
-// never consume the first bytes of its pipelined successor.
+// Read one Content-Length response without eating the next reply.
 template<class Stream>
 wire_response response(Stream& stream, bool unique_headers = false) {
   size_t total = 0;

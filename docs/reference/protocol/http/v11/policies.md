@@ -61,7 +61,7 @@ struct policies { ... };
 
 HTTP/1.1 resource limits, memory thresholds and feature switches. The defaults below preserve the standard server behavior. A limit of 0 means unlimited unless noted.
 
-**Source:** [include/protocol/http/v11/policies.h:43](../../../../../include/protocol/http/v11/policies.h#L43)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultmaxqueryparameters"></a>
 
@@ -77,7 +77,7 @@ Defines the default max query parameters constant.
 
 **Value:** `128`
 
-**Source:** [include/protocol/http/v11/policies.h:48](../../../../../include/protocol/http/v11/policies.h#L48)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultmaxchunkextensionsize"></a>
 
@@ -93,7 +93,7 @@ Default maximum chunk extension bytes per chunk.
 
 **Value:** `1024`
 
-**Source:** [include/protocol/http/v11/policies.h:50](../../../../../include/protocol/http/v11/policies.h#L50)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultmaxtrailersectionsize"></a>
 
@@ -109,7 +109,7 @@ Default maximum trailer section bytes per chunked body.
 
 **Value:** `4096`
 
-**Source:** [include/protocol/http/v11/policies.h:52](../../../../../include/protocol/http/v11/policies.h#L52)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultmaxrequestheadsize"></a>
 
@@ -125,7 +125,7 @@ Maximum accepted request head bytes.
 
 **Value:** `4 * 1024`
 
-**Source:** [include/protocol/http/v11/policies.h:54](../../../../../include/protocol/http/v11/policies.h#L54)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultrequestbodymemorythreshold"></a>
 
@@ -141,7 +141,7 @@ Request body wire bytes retained before spilling to disk.
 
 **Value:** `16 * 1024`
 
-**Source:** [include/protocol/http/v11/policies.h:56](../../../../../include/protocol/http/v11/policies.h#L56)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultmaxresponseheadsize"></a>
 
@@ -157,7 +157,7 @@ Maximum serialized response head bytes.
 
 **Value:** `4 * 1024`
 
-**Source:** [include/protocol/http/v11/policies.h:58](../../../../../include/protocol/http/v11/policies.h#L58)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="constant-kdefaultresponsebodymemorythreshold"></a>
 
@@ -173,7 +173,7 @@ Response body bytes kept inline before using a writer.
 
 **Value:** `16 * 1024`
 
-**Source:** [include/protocol/http/v11/policies.h:60](../../../../../include/protocol/http/v11/policies.h#L60)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-request-body-size"></a>
 
@@ -189,7 +189,7 @@ Maximum accepted body size, in octets (0 means unlimited).
 
 **Value:** `16 * 1024 * 1024`
 
-**Source:** [include/protocol/http/v11/policies.h:62](../../../../../include/protocol/http/v11/policies.h#L62)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-forwarding-hops"></a>
 
@@ -205,7 +205,7 @@ Maximum number of forwarding hops accepted across Via / Forwarded / X-Forwarded-
 
 **Value:** `32`
 
-**Source:** [include/protocol/http/v11/policies.h:65](../../../../../include/protocol/http/v11/policies.h#L65)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-transfer-codings"></a>
 
@@ -221,7 +221,7 @@ Maximum number of transfer-codings accepted in Transfer-Encoding (0 means unlimi
 
 **Value:** `4`
 
-**Source:** [include/protocol/http/v11/policies.h:68](../../../../../include/protocol/http/v11/policies.h#L68)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-allow-chunked"></a>
 
@@ -237,7 +237,7 @@ Whether the server allows requests carrying a chunked Transfer-Encoding.
 
 **Value:** `true`
 
-**Source:** [include/protocol/http/v11/policies.h:70](../../../../../include/protocol/http/v11/policies.h#L70)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-allow-upgrade"></a>
 
@@ -253,7 +253,7 @@ Whether the server allows protocol upgrades offered via Upgrade. NOTE: no protoc
 
 **Value:** `true`
 
-**Source:** [include/protocol/http/v11/policies.h:78](../../../../../include/protocol/http/v11/policies.h#L78)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-pending-requests"></a>
 
@@ -272,7 +272,7 @@ within its separate budget. Native RX is not paused by an engine hook.
 
 **Value:** `128`
 
-**Source:** [include/protocol/http/v11/policies.h:80](../../../../../include/protocol/http/v11/policies.h#L80)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-query-parameters"></a>
 
@@ -288,7 +288,7 @@ Maximum query parameter pairs (0 means unlimited).
 
 **Value:** `kDefaultMaxQueryParameters`
 
-**Source:** [include/protocol/http/v11/policies.h:88](../../../../../include/protocol/http/v11/policies.h#L88)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-chunk-extension-size"></a>
 
@@ -304,7 +304,7 @@ Maximum chunk extension bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxChunkExtensionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:90](../../../../../include/protocol/http/v11/policies.h#L90)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-trailer-section-size"></a>
 
@@ -320,7 +320,7 @@ Maximum trailer section bytes (0 means unlimited).
 
 **Value:** `kDefaultMaxTrailerSectionSize`
 
-**Source:** [include/protocol/http/v11/policies.h:92](../../../../../include/protocol/http/v11/policies.h#L92)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-request-head-size"></a>
 
@@ -336,7 +336,7 @@ Maximum request head bytes (must be positive).
 
 **Value:** `kDefaultMaxRequestHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:94](../../../../../include/protocol/http/v11/policies.h#L94)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-request-body-memory-threshold"></a>
 
@@ -353,7 +353,7 @@ Request body wire bytes kept in memory (0 spills immediately).
 
 **Value:** `kDefaultRequestBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:96](../../../../../include/protocol/http/v11/policies.h#L96)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-response-head-size"></a>
 
@@ -369,7 +369,7 @@ Maximum response head bytes (must be positive).
 
 **Value:** `kDefaultMaxResponseHeadSize`
 
-**Source:** [include/protocol/http/v11/policies.h:99](../../../../../include/protocol/http/v11/policies.h#L99)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-response-body-memory-threshold"></a>
 
@@ -386,7 +386,7 @@ Response body bytes kept inline (0 disables inline storage).
 
 **Value:** `kDefaultResponseBodyMemoryThreshold`
 
-**Source:** [include/protocol/http/v11/policies.h:101](../../../../../include/protocol/http/v11/policies.h#L101)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-pending-response-bytes"></a>
 
@@ -409,7 +409,7 @@ when queued behind earlier output. Client receipt of the preceding body is
 not an output-drain notification. A one-position request window retains the
 next request as raw input until that position is released.
 
-**Source:** [include/protocol/http/v11/policies.h:82](../../../../../include/protocol/http/v11/policies.h#L82)
+**Source:** [include/protocol/http/v11/policies.h](../../../../../include/protocol/http/v11/policies.h)
 
 <a id="field-max-deferred-input-size"></a>
 

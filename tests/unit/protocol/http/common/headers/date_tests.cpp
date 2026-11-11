@@ -123,7 +123,7 @@ DOBA_TEST("check rejects incomplete and corrupted date fields") {
 // | [>] check is syntactic for out of range date fields         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check is syntactic for out of range date fields") {
-  // RFC 9110 S5.6.7: this checker parses syntax; calendar validity is separate.
+  // RFC 9110 S5.6.7: check date syntax here, not calendar validity.
   constexpr std::string_view cases[] = {
       "Sun, 00 Nov 1994 08:49:37 GMT",  "Sun, 32 Nov 1994 08:49:37 GMT",
       "Sun, 06 Nov 1994 24:00:00 GMT",  "Sun, 06 Nov 1994 08:60:37 GMT",

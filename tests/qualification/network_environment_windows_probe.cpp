@@ -34,9 +34,11 @@ int startup_result = 0;
 unsigned startups = 0, cleanups = 0;
 bool valid_arguments = true;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] startup                                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI startup(WORD version, LPWSADATA data) {
   ++startups;
   valid_arguments &= version == MAKEWORD(2, 2) && data != nullptr;
@@ -44,16 +46,18 @@ int WSAAPI startup(WORD version, LPWSADATA data) {
   return startup_result;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] cleanup                                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI cleanup() {
   ++cleanups;
   return 0;
 }
 }  // namespace
 
-// A separate executable prevents mixing substituted and native definitions.
+// Keep replaced native APIs in a separate executable.
 #define WSAStartup startup
 #define WSACleanup cleanup
 #include "network/environment_windows.h"
@@ -88,7 +92,7 @@ DOBA_TEST("Winsock startup failures reject exactly and permit later recovery") {
 }
 
 // +===========================================================================+
-// | [>] nested owners release exactly their acquired references ( test-case ) |
+// | [>] nested owners release their own references              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Winsock nested owners release one reference per successful owner") {
   using martianlabs::doba::network::detail::environment;

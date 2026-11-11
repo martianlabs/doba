@@ -991,8 +991,7 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
 }
 
 // +===========================================================================+
-// | [>] tcpip reuses receive space while the engine retains     ( test-case ) |
-// | fragments                                                                 |
+// | [>] receive space with retained fragments                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcpip reuses receive space while the engine retains fragments") {
   tcpip_client client;

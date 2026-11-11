@@ -40,7 +40,7 @@ class bearer { ... };
 
 Validates HTTP Bearer credentials through a user-supplied callback.
 
-**Source:** [include/protocol/http/common/auth/bearer.h:43](../../../../../../include/protocol/http/common/auth/bearer.h#L43)
+**Source:** [include/protocol/http/common/auth/bearer.h](../../../../../../include/protocol/http/common/auth/bearer.h)
 
 <a id="method-authenticate"></a>
 
@@ -65,4 +65,17 @@ Checks the request's Authorization header using the Bearer scheme and calls the 
 
 **Returns:** An `authentication_result` with the status and any challenge text.
 
-**Source:** [include/protocol/http/common/auth/bearer.h:66](../../../../../../include/protocol/http/common/auth/bearer.h#L66)
+**Source:** [include/protocol/http/common/auth/bearer.h](../../../../../../include/protocol/http/common/auth/bearer.h)
+
+## Construction
+
+```cpp
+explicit bearer(std::string_view realm,
+               std::function<bool(std::string_view)> validator);
+```
+
+The realm is copied into the challenge, escaping quotes and backslashes. Only printable ASCII realm bytes are accepted. A missing validator or invalid realm throws `std::invalid_argument`; allocation failures may propagate.
+
+The provider is shared by the router, so validators must support concurrent calls. Callback arguments are borrowed for the call; copy them if they must be retained. Validator exceptions propagate to the caller.
+
+Duplicate `Authorization` fields or a Bearer credential that is not token68 produce `kInvalidRequest` and an `invalid_request` challenge. A missing/wrong scheme produces `kUnauthenticated` with the plain challenge. A false validator result adds `invalid_token`; true produces `kAccepted`. Scheme matching ignores ASCII case; spaces separate scheme and token. The token is passed unchanged, without decoding or JWT validation.

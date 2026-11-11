@@ -31,3 +31,7 @@ struct task_promise;
 
 An unsupported awaiter throws std::logic_error before any of its hooks run.
 The execution owner can inspect that error and release the frame.
+
+The default scheduler hooks are null. `task_execution` installs them before
+the first resume; manually resuming an unadopted task into a managed awaiter
+is outside this contract.

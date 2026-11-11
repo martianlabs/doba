@@ -30,9 +30,11 @@
 
 using namespace martianlabs::doba::tests::tools;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] logged_run                                               ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static int logged_run(const std::vector<std::string>& command,
   const fs::path& output, const std::string& name,
   const process::environment& environment = {}, bool check = true,

@@ -45,7 +45,7 @@ static void rejected(Function function) {
 struct memory_stream {
   std::string bytes;
   size_t offset{};
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   std::string receive(size_t maximum) {

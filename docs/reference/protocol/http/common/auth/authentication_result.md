@@ -52,7 +52,7 @@ Enumerates authentication status values.
 - **kUnauthenticated:** Authentication is required or the credential was rejected. Declaration: `kUnauthenticated`.
 - **kForbidden:** The authenticated caller is not permitted to access the resource. Declaration: `kForbidden`.
 
-**Source:** [include/protocol/http/common/auth/authentication_result.h:36](../../../../../../include/protocol/http/common/auth/authentication_result.h#L36)
+**Source:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)
 
 <a id="type-authentication-result"></a>
 
@@ -68,7 +68,7 @@ struct authentication_result { ... };
 
 Provides the authentication result protocol component.
 
-**Source:** [include/protocol/http/common/auth/authentication_result.h:48](../../../../../../include/protocol/http/common/auth/authentication_result.h#L48)
+**Source:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)
 
 <a id="field-status"></a>
 
@@ -84,7 +84,7 @@ Stores the status value.
 
 **Value:** `{authentication_status::kUnauthenticated}`
 
-**Source:** [include/protocol/http/common/auth/authentication_result.h:52](../../../../../../include/protocol/http/common/auth/authentication_result.h#L52)
+**Source:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)
 
 <a id="field-challenge"></a>
 
@@ -100,4 +100,4 @@ Stores the challenge value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/common/auth/authentication_result.h:53](../../../../../../include/protocol/http/common/auth/authentication_result.h#L53)
+**Source:** [include/protocol/http/common/auth/authentication_result.h](../../../../../../include/protocol/http/common/auth/authentication_result.h)

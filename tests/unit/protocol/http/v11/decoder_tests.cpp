@@ -107,7 +107,7 @@ struct decoder_input {
     request_seen = false;
     std::string_view remaining(input);
     auto result = decoder.deserialize(remaining);
-    // This test helper returns requests that may outlive the next decode.
+    // Returned requests may outlive the next decode call.
     if (result.request) result.request->make_owned();
     input.erase(0, input.size() - remaining.size());
     request_seen = result.request.has_value();
@@ -127,9 +127,7 @@ struct decoder_input {
 // +---------------------------------------------------------------------------+
 // | [>] accumulate                                               ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function appends the given source to the decoder input and returns   |
-// | the number of bytes appended. It is used to simulate receiving data       |
-// | from a transport layer in chunks.                                         |
+// | Feed input in chunks, as a transport would.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::size_t accumulate(decoder_input& value, std::string_view source) {
@@ -140,9 +138,7 @@ std::size_t accumulate(decoder_input& value, std::string_view source) {
 // +---------------------------------------------------------------------------+
 // | [>] body_temp_files                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a list of temporary files created by the decoder    |
-// | for request bodies. It is used to verify that the decoder cleans up       |
-// | temporary files after processing requests.                                |
+// | List spilled bodies to check they are cleaned up.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::vector<std::filesystem::path> body_temp_files() {
@@ -161,11 +157,7 @@ std::vector<std::filesystem::path> body_temp_files() {
 // +---------------------------------------------------------------------------+
 // | [>] new_body_temp_file                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns the path of a new temporary file created by the     |
-// | decoder for a request body. It is used to verify that the decoder creates |
-// | temporary files when needed. The function takes a list of paths that      |
-// | existed before the test and returns the first path that was not in        |
-// | that list. If no new file was created, it returns an empty path.          |
+// | Find a spill file created after the supplied snapshot.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::filesystem::path new_body_temp_file(
@@ -182,13 +174,7 @@ std::filesystem::path new_body_temp_file(
 // +---------------------------------------------------------------------------+
 // | [>] check_header                                             ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function checks that the decoder correctly parses a header field     |
-// | with the given name and value. It tests the header in three different     |
-// | cases (original, lower-case, upper-case) and with or without optional     |
-// | whitespace (OWS) around the field value. It also allows specifying a      |
-// | custom request line, extra headers, and a body for the request. The       |
-// | function verifies that the decoded request contains the expected header   |
-// | value and that the body is correctly handled if present.                  |
+// | Check header case and surrounding whitespace, then check any body too.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void check_header(std::string_view name, std::string_view field_value,
@@ -2919,7 +2905,7 @@ DOBA_TEST("full body buffers remain consumable") {
 }
 
 // +===========================================================================+
-// | [>] unknown headers retain their complete normalized values ( test-case ) |
+// | [>] complete normalized unknown headers                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("unknown headers retain their complete normalized values") {
   check_header("Warning", "199 example \"diagnostic\"", true);

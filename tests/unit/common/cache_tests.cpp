@@ -47,7 +47,7 @@ auto text(std::string value) {
 }  // namespace
 
 // +===========================================================================+
-// | [>] resident entries and LRU recency                       ( test-case ) |
+// | [>] resident entries and LRU recency                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache bounds resident entries and promotes sequential hits") {
   cache<std::string> value({.max_entries = 2});
@@ -61,7 +61,7 @@ DOBA_TEST("cache bounds resident entries and promotes sequential hits") {
 }
 
 // +===========================================================================+
-// | [>] resident cost and response ownership                   ( test-case ) |
+// | [>] resident cost and response ownership                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache bounds resident cost independently of retained responses") {
   cache<std::string> value({.max_cost = 6});
@@ -77,7 +77,7 @@ DOBA_TEST("cache bounds resident cost independently of retained responses") {
 }
 
 // +===========================================================================+
-// | [>] direct shared ownership and cached hits                ( test-case ) |
+// | [>] direct shared ownership and cached hits                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache returns the loader ownership directly and reuses hits") {
   cache<std::string> value;
@@ -96,7 +96,7 @@ DOBA_TEST("cache returns the loader ownership directly and reuses hits") {
 }
 
 // +===========================================================================+
-// | [>] disabled and oversized admission                       ( test-case ) |
+// | [>] disabled and oversized admission                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache disabled and oversize admission never invokes the loader") {
   for (auto policies :
@@ -117,7 +117,7 @@ DOBA_TEST("cache disabled and oversize admission never invokes the loader") {
 }
 
 // +===========================================================================+
-// | [>] failed and empty loads                                 ( test-case ) |
+// | [>] failed and empty loads                                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "cache null and failed loads preserve resident entries and permit retry") {
@@ -140,7 +140,7 @@ DOBA_TEST(
 }
 
 // +===========================================================================+
-// | [>] active load bypass                                     ( test-case ) |
+// | [>] active load bypass                                      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache bypasses an active key while distinct keys load") {
   cache<std::string> value({.max_loads = 2});
@@ -169,7 +169,7 @@ DOBA_TEST("cache bypasses an active key while distinct keys load") {
 }
 
 // +===========================================================================+
-// | [>] load slots after invalidation                          ( test-case ) |
+// | [>] load slots after invalidation                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache invalidation keeps obsolete loaders in the load limit") {
   for (bool clear : {false, true}) {
@@ -206,7 +206,7 @@ DOBA_TEST("cache invalidation keeps obsolete loaders in the load limit") {
 }
 
 // +===========================================================================+
-// | [>] obsolete and replacement loaders                       ( test-case ) |
+// | [>] obsolete and replacement loaders                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache obsolete completion cannot remove or overwrite a newer load") {
   for (bool clear : {false, true}) {
@@ -267,7 +267,7 @@ DOBA_TEST("cache obsolete completion cannot remove or overwrite a newer load") {
 }
 
 // +===========================================================================+
-// | [>] obsolete completion after publication                  ( test-case ) |
+// | [>] obsolete completion after publication                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "cache obsolete completion preserves an already published replacement") {
@@ -292,7 +292,7 @@ DOBA_TEST(
 }
 
 // +===========================================================================+
-// | [>] conditional invalidation                               ( test-case ) |
+// | [>] conditional invalidation                                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache conditional erase preserves newer entries and active loads") {
   cache<std::string> value;
@@ -319,7 +319,7 @@ DOBA_TEST("cache conditional erase preserves newer entries and active loads") {
 }
 
 // +===========================================================================+
-// | [>] reader ownership after cache destruction               ( test-case ) |
+// | [>] reader ownership after cache destruction                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("shared readers retain evicted values after cache destruction") {
   reader first, second;
@@ -346,7 +346,7 @@ DOBA_TEST("shared readers retain evicted values after cache destruction") {
 }
 
 // +===========================================================================+
-// | [>] concurrent publication bounds                          ( test-case ) |
+// | [>] concurrent publication bounds                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache concurrent publication respects resident and loader bounds") {
   cache<int> value({.max_entries = 3, .max_cost = 5, .max_loads = 4});
@@ -400,7 +400,7 @@ DOBA_TEST("cache concurrent publication respects resident and loader bounds") {
 }
 
 // +===========================================================================+
-// | [>] concurrent hits and invalidation                       ( test-case ) |
+// | [>] concurrent hits and invalidation                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache concurrent hits retain valid values across invalidation") {
   cache<std::string> value;
@@ -425,7 +425,7 @@ DOBA_TEST("cache concurrent hits retain valid values across invalidation") {
 }
 
 // +===========================================================================+
-// | [>] recursive load bypass                                  ( test-case ) |
+// | [>] recursive load bypass                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cache recursive same key load bypasses instead of waiting") {
   cache<std::string> value;

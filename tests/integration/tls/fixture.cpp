@@ -44,7 +44,7 @@ namespace common = martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] echo_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | A deliberately non-HTTP protocol exercises the unchanged TCP contract.    |
+// | Use a non-HTTP protocol to check the TCP contract through TLS.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct echo_engine {
@@ -126,9 +126,9 @@ struct echo_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Incomplete input retained by the protocol between receive blocks.
+  // Keep partial input until the next receive.
   std::string pending;
-  // Callbacks are used only during the synchronous input call.
+  // Call these only while handling input.
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
 };

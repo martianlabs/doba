@@ -8,7 +8,9 @@
   </a>
 </h1>
 
-Looking for a precise signature or a default? Start with the header that owns it. The index lists supported public headers; implementation-only headers retain short status pages. For a walkthrough, see the [guide](../guide/README.md).
+Looking for a signature or a default? Start with the header that owns it.
+Public API pages describe signatures and behavior; internal pages are marked
+as implementation details. For a walkthrough, see the [guide](../guide/README.md).
 
 Implementation declarations live in *detail* namespaces and are not supported API.
 Use route registration, public server/transport constructors and documented
@@ -27,7 +29,9 @@ there are no supported compatibility aliases for detail declarations.
 </h2>
 
 - [common/byte_storage.h](common/byte_storage.md)
+- [common/byte_storage_options.h](common/byte_storage_options.md)
 - [common/cache.h](common/cache.md)
+- [common/cache_entry.h](common/cache_entry.md) (internal bookkeeping)
 - [common/cache_policies.h](common/cache_policies.md)
 - [common/date_server.h](common/date_server.md)
 - [common/filesystem.h](common/filesystem.md)
@@ -76,6 +80,12 @@ there are no supported compatibility aliases for detail declarations.
   </a>
 </h2>
 
+
+The network environment headers are implementation details:
+
+- [network/environment.h](network/environment.md)
+- [network/environment_linux.h](network/environment_linux.md)
+- [network/environment_windows.h](network/environment_windows.md)
 
 <a name="protocol"></a>
 <h2>

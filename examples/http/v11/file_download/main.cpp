@@ -40,7 +40,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Sends an opened file through an owned response body reader.               |
+// | Keep the file open until the response reader finishes.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {

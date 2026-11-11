@@ -22,10 +22,11 @@ and collect the results.
   </a>
 </h2>
 
-The bundled HttpArena driver supports baseline, pipelined and real async delay
-requests over plain HTTP. It registers both handler types by default and has
-no TLS listener; the library offers TLS separately. A dynamic correctness group
-checks the driver in root test builds; throughput measurement is separate.
+The HttpArena driver supports baseline, pipelined and coroutine-delay routes.
+Standalone and Docker builds default to full mode, with JSON, gzip and a TLS
+listener for JSON, echo and static files. Root builds default to TCP-only
+qualification; set `DOBA_HTTPARENA_FULL=ON` to check the full adapter there too.
+A dynamic correctness group checks the driver; throughput measurement is separate.
 [HttpArena adapter](http/v11/httparena/README.md).
 
 <a name="web-frameworks"></a>

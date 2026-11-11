@@ -423,7 +423,7 @@ DOBA_TEST("mailbox helpers validate address grammar") {
 }
 
 // +===========================================================================+
-// | [>] cookie and directive validators enforce complete values ( test-case ) |
+// | [>] complete cookie and directive values                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("cookie and directive validators enforce complete values") {
   constexpr std::string_view cookie_values[] = {
@@ -631,7 +631,7 @@ DOBA_TEST("URI references cover relative absolute query and fragment") {
 }
 
 // +===========================================================================+
-// | [>] request target deserializers report precise consumption ( test-case ) |
+// | [>] request target consumption                              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("request target deserializers report precise consumption") {
   std::string_view host;

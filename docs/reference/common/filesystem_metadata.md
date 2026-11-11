@@ -24,3 +24,7 @@ struct filesystem_metadata { ... };
 Equality compares all fields. This is a change detector, not an immutable snapshot
 or a content hash. Precision and identity depend on the filesystem. Windows
 FILETIME uses 100 ns units; Linux fstat provides nanoseconds.
+
+The current Windows conversion does not normalize fractional timestamps before
+the Unix epoch into a seconds/nanoseconds pair. Treat those fields as native
+change-detection tokens rather than reconstructing pre-1970 timestamps from them.

@@ -41,7 +41,7 @@ class reader_raw { ... };
 
 Decodes a Content-Length-framed body by pulling wire bytes from a common::reader source and filling the caller-supplied output span.
 
-**Source:** [include/protocol/http/v11/body/reader_raw.h:55](../../../../../../include/protocol/http/v11/body/reader_raw.h#L55)
+**Source:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)
 
 <a id="method-read"></a>
 
@@ -62,7 +62,7 @@ Pulls up to (expected_ - accumulated_) bytes from src into output. Returns immed
 
 **Returns:** A `reader_state` describing progress, completion, and errors.
 
-**Source:** [include/protocol/http/v11/body/reader_raw.h:68](../../../../../../include/protocol/http/v11/body/reader_raw.h#L68)
+**Source:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)
 
 <a id="method-take-view"></a>
 
@@ -84,4 +84,4 @@ Takes the current non-owning byte view.
 
 **Returns:** A `std::optional<std::span<const std::byte>>` containing the result when present; otherwise `std::nullopt`.
 
-**Source:** [include/protocol/http/v11/body/reader_raw.h:96](../../../../../../include/protocol/http/v11/body/reader_raw.h#L96)
+**Source:** [include/protocol/http/v11/body/reader_raw.h](../../../../../../include/protocol/http/v11/body/reader_raw.h)

@@ -40,7 +40,7 @@ class framing { ... };
 
 Transversal framing rules that span Content-Length and Transfer-Encoding, which no single intra-header interpreter can decide because they need both headers at once. Applied by the coordinator after every intra-header interpreter has run and the context has been populated.
 
-**Source:** [include/protocol/http/v11/headers/rules/framing.h:57](../../../../../../../include/protocol/http/v11/headers/rules/framing.h#L57)
+**Source:** [include/protocol/http/v11/headers/rules/framing.h](../../../../../../../include/protocol/http/v11/headers/rules/framing.h)
 
 <a id="method-apply"></a>
 
@@ -60,4 +60,4 @@ Applies these rules to the supplied state.
 
 **Returns:** A `verdict` describing the result of applying this header or rule.
 
-**Source:** [include/protocol/http/v11/headers/rules/framing.h:62](../../../../../../../include/protocol/http/v11/headers/rules/framing.h#L62)
+**Source:** [include/protocol/http/v11/headers/rules/framing.h](../../../../../../../include/protocol/http/v11/headers/rules/framing.h)

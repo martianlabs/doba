@@ -82,7 +82,7 @@ Provides the http 1.1 status codes. Code | Reason Phrase 100  | Continue 101  | 
 
 **Value:** `100`
 
-**Source:** [include/protocol/http/common/status_codes.h:87](../../../../../include/protocol/http/common/status_codes.h#L87)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-101-switching-protocols"></a>
 
@@ -98,7 +98,7 @@ Defines the HTTP 101 switching protocols status code.
 
 **Value:** `101`
 
-**Source:** [include/protocol/http/common/status_codes.h:88](../../../../../include/protocol/http/common/status_codes.h#L88)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-200-ok"></a>
 
@@ -114,7 +114,7 @@ Defines the HTTP 200 ok status code.
 
 **Value:** `200`
 
-**Source:** [include/protocol/http/common/status_codes.h:89](../../../../../include/protocol/http/common/status_codes.h#L89)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-201-created"></a>
 
@@ -130,7 +130,7 @@ Defines the HTTP 201 created status code.
 
 **Value:** `201`
 
-**Source:** [include/protocol/http/common/status_codes.h:90](../../../../../include/protocol/http/common/status_codes.h#L90)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-202-accepted"></a>
 
@@ -146,7 +146,7 @@ Defines the HTTP 202 accepted status code.
 
 **Value:** `202`
 
-**Source:** [include/protocol/http/common/status_codes.h:91](../../../../../include/protocol/http/common/status_codes.h#L91)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-203-non-authoritative-information"></a>
 
@@ -162,7 +162,7 @@ Defines the HTTP 203 non authoritative information status code.
 
 **Value:** `203`
 
-**Source:** [include/protocol/http/common/status_codes.h:92](../../../../../include/protocol/http/common/status_codes.h#L92)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-204-no-content"></a>
 
@@ -178,7 +178,7 @@ Defines the HTTP 204 no content status code.
 
 **Value:** `204`
 
-**Source:** [include/protocol/http/common/status_codes.h:93](../../../../../include/protocol/http/common/status_codes.h#L93)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-205-reset-content"></a>
 
@@ -194,7 +194,7 @@ Defines the HTTP 205 reset content status code.
 
 **Value:** `205`
 
-**Source:** [include/protocol/http/common/status_codes.h:94](../../../../../include/protocol/http/common/status_codes.h#L94)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-206-partial-content"></a>
 
@@ -210,7 +210,7 @@ Defines the HTTP 206 partial content status code.
 
 **Value:** `206`
 
-**Source:** [include/protocol/http/common/status_codes.h:95](../../../../../include/protocol/http/common/status_codes.h#L95)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-300-multiple-choices"></a>
 
@@ -226,7 +226,7 @@ Defines the HTTP 300 multiple choices status code.
 
 **Value:** `300`
 
-**Source:** [include/protocol/http/common/status_codes.h:96](../../../../../include/protocol/http/common/status_codes.h#L96)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-301-moved-permanently"></a>
 
@@ -242,7 +242,7 @@ Defines the HTTP 301 moved permanently status code.
 
 **Value:** `301`
 
-**Source:** [include/protocol/http/common/status_codes.h:97](../../../../../include/protocol/http/common/status_codes.h#L97)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-302-found"></a>
 
@@ -258,7 +258,7 @@ Defines the HTTP 302 found status code.
 
 **Value:** `302`
 
-**Source:** [include/protocol/http/common/status_codes.h:98](../../../../../include/protocol/http/common/status_codes.h#L98)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-303-see-other"></a>
 
@@ -274,7 +274,7 @@ Defines the HTTP 303 see other status code.
 
 **Value:** `303`
 
-**Source:** [include/protocol/http/common/status_codes.h:99](../../../../../include/protocol/http/common/status_codes.h#L99)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-304-not-modified"></a>
 
@@ -290,7 +290,7 @@ Defines the HTTP 304 not modified status code.
 
 **Value:** `304`
 
-**Source:** [include/protocol/http/common/status_codes.h:100](../../../../../include/protocol/http/common/status_codes.h#L100)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-305-use-proxy"></a>
 
@@ -306,7 +306,7 @@ Defines the HTTP 305 use proxy status code.
 
 **Value:** `305`
 
-**Source:** [include/protocol/http/common/status_codes.h:101](../../../../../include/protocol/http/common/status_codes.h#L101)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-306-unused"></a>
 
@@ -322,7 +322,7 @@ Defines the HTTP 306 unused status code.
 
 **Value:** `306`
 
-**Source:** [include/protocol/http/common/status_codes.h:102](../../../../../include/protocol/http/common/status_codes.h#L102)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-307-temporary-redirect"></a>
 
@@ -338,7 +338,7 @@ Defines the HTTP 307 temporary redirect status code.
 
 **Value:** `307`
 
-**Source:** [include/protocol/http/common/status_codes.h:103](../../../../../include/protocol/http/common/status_codes.h#L103)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-308-permanent-redirect"></a>
 
@@ -354,7 +354,7 @@ Defines the HTTP 308 permanent redirect status code.
 
 **Value:** `308`
 
-**Source:** [include/protocol/http/common/status_codes.h:104](../../../../../include/protocol/http/common/status_codes.h#L104)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-400-bad-request"></a>
 
@@ -370,7 +370,7 @@ Defines the HTTP 400 bad request status code.
 
 **Value:** `400`
 
-**Source:** [include/protocol/http/common/status_codes.h:105](../../../../../include/protocol/http/common/status_codes.h#L105)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-401-unauthorized"></a>
 
@@ -386,7 +386,7 @@ Defines the HTTP 401 unauthorized status code.
 
 **Value:** `401`
 
-**Source:** [include/protocol/http/common/status_codes.h:106](../../../../../include/protocol/http/common/status_codes.h#L106)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-402-payment-required"></a>
 
@@ -402,7 +402,7 @@ Defines the HTTP 402 payment required status code.
 
 **Value:** `402`
 
-**Source:** [include/protocol/http/common/status_codes.h:107](../../../../../include/protocol/http/common/status_codes.h#L107)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-403-forbidden"></a>
 
@@ -418,7 +418,7 @@ Defines the HTTP 403 forbidden status code.
 
 **Value:** `403`
 
-**Source:** [include/protocol/http/common/status_codes.h:108](../../../../../include/protocol/http/common/status_codes.h#L108)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-404-not-found"></a>
 
@@ -434,7 +434,7 @@ Defines the HTTP 404 not found status code.
 
 **Value:** `404`
 
-**Source:** [include/protocol/http/common/status_codes.h:109](../../../../../include/protocol/http/common/status_codes.h#L109)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-405-method-not-allowed"></a>
 
@@ -450,7 +450,7 @@ Defines the HTTP 405 method not allowed status code.
 
 **Value:** `405`
 
-**Source:** [include/protocol/http/common/status_codes.h:110](../../../../../include/protocol/http/common/status_codes.h#L110)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-406-not-acceptable"></a>
 
@@ -466,7 +466,7 @@ Defines the HTTP 406 not acceptable status code.
 
 **Value:** `406`
 
-**Source:** [include/protocol/http/common/status_codes.h:111](../../../../../include/protocol/http/common/status_codes.h#L111)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-407-proxy-authentication-required"></a>
 
@@ -482,7 +482,7 @@ Defines the HTTP 407 proxy authentication required status code.
 
 **Value:** `407`
 
-**Source:** [include/protocol/http/common/status_codes.h:112](../../../../../include/protocol/http/common/status_codes.h#L112)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-408-request-timeout"></a>
 
@@ -498,7 +498,7 @@ Defines the HTTP 408 request timeout status code.
 
 **Value:** `408`
 
-**Source:** [include/protocol/http/common/status_codes.h:113](../../../../../include/protocol/http/common/status_codes.h#L113)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-409-conflict"></a>
 
@@ -514,7 +514,7 @@ Defines the HTTP 409 conflict status code.
 
 **Value:** `409`
 
-**Source:** [include/protocol/http/common/status_codes.h:114](../../../../../include/protocol/http/common/status_codes.h#L114)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-410-gone"></a>
 
@@ -530,7 +530,7 @@ Defines the HTTP 410 gone status code.
 
 **Value:** `410`
 
-**Source:** [include/protocol/http/common/status_codes.h:115](../../../../../include/protocol/http/common/status_codes.h#L115)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-411-length-required"></a>
 
@@ -546,7 +546,7 @@ Defines the HTTP 411 length required status code.
 
 **Value:** `411`
 
-**Source:** [include/protocol/http/common/status_codes.h:116](../../../../../include/protocol/http/common/status_codes.h#L116)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-412-precondition-failed"></a>
 
@@ -562,7 +562,7 @@ Defines the HTTP 412 precondition failed status code.
 
 **Value:** `412`
 
-**Source:** [include/protocol/http/common/status_codes.h:117](../../../../../include/protocol/http/common/status_codes.h#L117)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-413-content-too-large"></a>
 
@@ -578,7 +578,7 @@ Defines the HTTP 413 content too large status code.
 
 **Value:** `413`
 
-**Source:** [include/protocol/http/common/status_codes.h:118](../../../../../include/protocol/http/common/status_codes.h#L118)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-414-uri-too-long"></a>
 
@@ -594,7 +594,7 @@ Defines the HTTP 414 uri too long status code.
 
 **Value:** `414`
 
-**Source:** [include/protocol/http/common/status_codes.h:119](../../../../../include/protocol/http/common/status_codes.h#L119)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-415-unsupported-media-type"></a>
 
@@ -610,7 +610,7 @@ Defines the HTTP 415 unsupported media type status code.
 
 **Value:** `415`
 
-**Source:** [include/protocol/http/common/status_codes.h:120](../../../../../include/protocol/http/common/status_codes.h#L120)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-416-range-not-satisfiable"></a>
 
@@ -626,7 +626,7 @@ Defines the HTTP 416 range not satisfiable status code.
 
 **Value:** `416`
 
-**Source:** [include/protocol/http/common/status_codes.h:121](../../../../../include/protocol/http/common/status_codes.h#L121)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-417-expectation-failed"></a>
 
@@ -642,7 +642,7 @@ Defines the HTTP 417 expectation failed status code.
 
 **Value:** `417`
 
-**Source:** [include/protocol/http/common/status_codes.h:122](../../../../../include/protocol/http/common/status_codes.h#L122)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-418-im-a-teapot"></a>
 
@@ -658,7 +658,7 @@ Defines the HTTP 418 im a teapot status code.
 
 **Value:** `418`
 
-**Source:** [include/protocol/http/common/status_codes.h:123](../../../../../include/protocol/http/common/status_codes.h#L123)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-421-misdirected-request"></a>
 
@@ -674,7 +674,7 @@ Defines the HTTP 421 misdirected request status code.
 
 **Value:** `421`
 
-**Source:** [include/protocol/http/common/status_codes.h:124](../../../../../include/protocol/http/common/status_codes.h#L124)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-422-unprocessable-content"></a>
 
@@ -690,7 +690,7 @@ Defines the HTTP 422 unprocessable content status code.
 
 **Value:** `422`
 
-**Source:** [include/protocol/http/common/status_codes.h:125](../../../../../include/protocol/http/common/status_codes.h#L125)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-426-upgrade-required"></a>
 
@@ -706,7 +706,7 @@ Defines the HTTP 426 upgrade required status code.
 
 **Value:** `426`
 
-**Source:** [include/protocol/http/common/status_codes.h:126](../../../../../include/protocol/http/common/status_codes.h#L126)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-431-request-header-fields-too-large"></a>
 
@@ -722,7 +722,7 @@ Defines the HTTP 431 request header fields too large status code.
 
 **Value:** `431`
 
-**Source:** [include/protocol/http/common/status_codes.h:127](../../../../../include/protocol/http/common/status_codes.h#L127)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-500-internal-server-error"></a>
 
@@ -738,7 +738,7 @@ Defines the HTTP 500 internal server error status code.
 
 **Value:** `500`
 
-**Source:** [include/protocol/http/common/status_codes.h:128](../../../../../include/protocol/http/common/status_codes.h#L128)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-501-not-implemented"></a>
 
@@ -754,7 +754,7 @@ Defines the HTTP 501 not implemented status code.
 
 **Value:** `501`
 
-**Source:** [include/protocol/http/common/status_codes.h:129](../../../../../include/protocol/http/common/status_codes.h#L129)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-502-bad-gateway"></a>
 
@@ -770,7 +770,7 @@ Defines the HTTP 502 bad gateway status code.
 
 **Value:** `502`
 
-**Source:** [include/protocol/http/common/status_codes.h:130](../../../../../include/protocol/http/common/status_codes.h#L130)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-503-service-unavailable"></a>
 
@@ -786,7 +786,7 @@ Defines the HTTP 503 service unavailable status code.
 
 **Value:** `503`
 
-**Source:** [include/protocol/http/common/status_codes.h:131](../../../../../include/protocol/http/common/status_codes.h#L131)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-504-gateway-timeout"></a>
 
@@ -802,7 +802,7 @@ Defines the HTTP 504 gateway timeout status code.
 
 **Value:** `504`
 
-**Source:** [include/protocol/http/common/status_codes.h:132](../../../../../include/protocol/http/common/status_codes.h#L132)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)
 
 <a id="macro-sc-505-http-version-not-supported"></a>
 
@@ -818,4 +818,4 @@ Defines the HTTP 505 http version not supported status code.
 
 **Value:** `505`
 
-**Source:** [include/protocol/http/common/status_codes.h:133](../../../../../include/protocol/http/common/status_codes.h#L133)
+**Source:** [include/protocol/http/common/status_codes.h](../../../../../include/protocol/http/common/status_codes.h)

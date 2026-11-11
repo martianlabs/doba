@@ -79,7 +79,7 @@ DOBA_TEST("rejects nominated control fields case insensitively") {
 // | [>] accepts the TE connection option                        ( test-case ) |
 // +===========================================================================+
 DOBA_TEST("accepts the TE connection option") {
-  // RFC 9110 S10.1.4: TE senders include the TE connection option.
+  // RFC 9110 S10.1.4: a TE sender must also list TE in Connection.
   for (const std::string_view option : {"TE", "Te", "te"}) {
     context ctx;
     ctx.connection.options = {option};

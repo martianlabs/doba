@@ -341,8 +341,7 @@ DOBA_TEST("server accepts new connections after handler failure") {
 }
 
 // +===========================================================================+
-// | [>] server retains controllers and rejects live             ( test-case ) |
-// | registration                                                              |
+// | [>] controller lifetime and live registration               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("server retains controllers and rejects live registration") {
   int calls = 0;

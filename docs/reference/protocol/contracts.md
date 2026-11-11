@@ -53,7 +53,7 @@ context lifetime; they must not escape for delayed or cross-thread invocation.
 See the [TCP runtime contract](../transport/tcp.md#runtime-contract)
 for closure, empty submissions, limits and platform differences.
 
-**Source:** [include/protocol/contracts.h:49](../../../include/protocol/contracts.h#L49)
+**Source:** [include/protocol/contracts.h](../../../include/protocol/contracts.h)
 
 <a id="concept-engine"></a>
 
@@ -95,7 +95,7 @@ satisfying the C++ requires-expression alone does not establish conformance.
 
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:68](../../../include/protocol/contracts.h#L68)
+**Source:** [include/protocol/contracts.h](../../../include/protocol/contracts.h)
 
 <a id="concept-engine-factory"></a>
 
@@ -120,4 +120,4 @@ application state belongs to its owner.
 - **FNty:** `typename FNty`.
 - **ENty:** `typename ENty`.
 
-**Source:** [include/protocol/contracts.h:89](../../../include/protocol/contracts.h#L89)
+**Source:** [include/protocol/contracts.h](../../../include/protocol/contracts.h)

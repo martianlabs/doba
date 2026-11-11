@@ -91,7 +91,7 @@ struct parsed_host_port { ... };
 
 The zero-copy product of a "host [ ":" port ]" value (the shape shared by the Host header and an authority-form request-target). "host" is the uri-host substring (bracketed colons of an IP-literal are kept intact); "type" classifies it; "port" is the raw *DIGIT run after the ":" (empty when no port is present). Both "host" and "port" may be empty
 
-**Source:** [include/protocol/http/v11/parsed_types.h:53](../../../../../include/protocol/http/v11/parsed_types.h#L53)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-host"></a>
 
@@ -107,7 +107,7 @@ Stores the host value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:54](../../../../../include/protocol/http/v11/parsed_types.h#L54)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-port"></a>
 
@@ -123,7 +123,7 @@ Stores the port value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:55](../../../../../include/protocol/http/v11/parsed_types.h#L55)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-type"></a>
 
@@ -139,7 +139,7 @@ Stores the type value.
 
 **Value:** `helpers::host_type::kUnknown`
 
-**Source:** [include/protocol/http/v11/parsed_types.h:56](../../../../../include/protocol/http/v11/parsed_types.h#L56)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-scheme"></a>
 
@@ -155,7 +155,7 @@ Stores the scheme value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:57](../../../../../include/protocol/http/v11/parsed_types.h#L57)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-token-list"></a>
 
@@ -171,7 +171,7 @@ struct parsed_token_list { ... };
 
 The zero-copy product of a comma-separated token list (the shape shared by Connection, Trailer, Upgrade, and X-Forwarded-Proto). "elements" holds every non-empty list element, already OWS-trimmed and in the order they appeared. An empty list yields an empty "elements" vector.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:72](../../../../../include/protocol/http/v11/parsed_types.h#L72)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-elements"></a>
 
@@ -187,7 +187,7 @@ Stores the elements value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:73](../../../../../include/protocol/http/v11/parsed_types.h#L73)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-parameter-list"></a>
 
@@ -203,7 +203,7 @@ struct parsed_parameter_list { ... };
 
 The zero-copy product of a comma-separated list whose elements each carry an optional set of ";"-separated parameters (the shape shared by Transfer-Encoding and TE). Every element keeps its raw text, including any parameters, so the semantic layer decides which parameters to read.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:88](../../../../../include/protocol/http/v11/parsed_types.h#L88)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-elements-2"></a>
 
@@ -219,7 +219,7 @@ Stores the elements value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:89](../../../../../include/protocol/http/v11/parsed_types.h#L89)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-scalar"></a>
 
@@ -235,7 +235,7 @@ struct parsed_scalar { ... };
 
 The zero-copy product of a single scalar field value (the shape shared by Expect and, before numeric conversion, Max-Forwards). "value" is the raw field-value with no OWS around it, exactly as validated by the checker.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:101](../../../../../include/protocol/http/v11/parsed_types.h#L101)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-value"></a>
 
@@ -251,7 +251,7 @@ Stores the value value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:102](../../../../../include/protocol/http/v11/parsed_types.h#L102)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-via-element"></a>
 
@@ -267,7 +267,7 @@ struct parsed_via_element { ... };
 
 received-protocol = [ protocol-name "/" ] protocol-version received-by       = pseudonym / ( uri-host [ ":" port ] ) The zero-copy product of a single Via list element. "received_protocol" and "received_by" are the raw substrings of the two mandatory parts, and "comment" is the optional trailing comment (empty when absent).
 
-**Source:** [include/protocol/http/v11/parsed_types.h:119](../../../../../include/protocol/http/v11/parsed_types.h#L119)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-received-protocol"></a>
 
@@ -283,7 +283,7 @@ Stores the received protocol value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:120](../../../../../include/protocol/http/v11/parsed_types.h#L120)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-received-by"></a>
 
@@ -299,7 +299,7 @@ Stores the received by value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:121](../../../../../include/protocol/http/v11/parsed_types.h#L121)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-comment"></a>
 
@@ -315,7 +315,7 @@ Stores the comment value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:122](../../../../../include/protocol/http/v11/parsed_types.h#L122)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-via-list"></a>
 
@@ -331,7 +331,7 @@ struct parsed_via_list { ... };
 
 The zero-copy product of a Via header: every list element in order.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:134](../../../../../include/protocol/http/v11/parsed_types.h#L134)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-elements-3"></a>
 
@@ -347,7 +347,7 @@ Stores the elements value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:135](../../../../../include/protocol/http/v11/parsed_types.h#L135)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-forwarded-pair"></a>
 
@@ -363,7 +363,7 @@ struct parsed_forwarded_pair { ... };
 
 The zero-copy product of a single Forwarded name=value pair. "name" is the raw parameter token and "value" is the raw token or quoted-string exactly as it appeared (quotes and escapes are preserved).
 
-**Source:** [include/protocol/http/v11/parsed_types.h:149](../../../../../include/protocol/http/v11/parsed_types.h#L149)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-name"></a>
 
@@ -379,7 +379,7 @@ Stores the name value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:150](../../../../../include/protocol/http/v11/parsed_types.h#L150)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-value-2"></a>
 
@@ -395,7 +395,7 @@ Stores the value value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:151](../../../../../include/protocol/http/v11/parsed_types.h#L151)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-forwarded-element"></a>
 
@@ -411,7 +411,7 @@ struct parsed_forwarded_element { ... };
 
 The zero-copy product of a single Forwarded list element: its ";"- separated name=value pairs, in order.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:164](../../../../../include/protocol/http/v11/parsed_types.h#L164)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-pairs"></a>
 
@@ -427,7 +427,7 @@ Stores the pairs value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:165](../../../../../include/protocol/http/v11/parsed_types.h#L165)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-forwarded-list"></a>
 
@@ -443,7 +443,7 @@ struct parsed_forwarded_list { ... };
 
 The zero-copy product of a Forwarded header: every list element in order.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:177](../../../../../include/protocol/http/v11/parsed_types.h#L177)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-elements-4"></a>
 
@@ -459,7 +459,7 @@ Stores the elements value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:178](../../../../../include/protocol/http/v11/parsed_types.h#L178)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="type-parsed-host-port-list"></a>
 
@@ -475,7 +475,7 @@ struct parsed_host_port_list { ... };
 
 de-facto X-Forwarded-Host - #( uri-host [ ":" port ] ) The zero-copy product of a comma-separated list of "host [ ":" port ]" items (the shape of X-Forwarded-Host), each already parsed into its host/port parts.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:192](../../../../../include/protocol/http/v11/parsed_types.h#L192)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)
 
 <a id="field-elements-5"></a>
 
@@ -491,4 +491,4 @@ Stores the elements value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/parsed_types.h:193](../../../../../include/protocol/http/v11/parsed_types.h#L193)
+**Source:** [include/protocol/http/v11/parsed_types.h](../../../../../include/protocol/http/v11/parsed_types.h)

@@ -62,7 +62,7 @@ for finite source limits, shutdown behavior and excluded features.
 - **ENty:** `protocol::contracts::engine ENty = protocol::http::v11::engine<RQty, RSty, ROty>`.
 - **AUty:** `typename... AUty`.
 
-**Source:** [include/https_server.h:49](../../include/https_server.h#L49)
+**Source:** [include/https_server.h](../../include/https_server.h)
 
 **Constructors:**
 
@@ -82,3 +82,8 @@ configuration selects `http/1.1`; other tokens are rejected. The transport is
 created on first start, so credential errors can surface from `start()` before
 any listener is opened. Configuration and administrative calls remain sequential
 owner operations outside worker callbacks.
+
+An invalid ALPN token is rejected by the HTTPS constructor itself. Credential
+loading is deferred to transport construction on first start; if that
+construction throws, create a new server after correcting the credentials.
+The consumed construction arguments are not restored for another attempt.

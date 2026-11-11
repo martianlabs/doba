@@ -52,7 +52,7 @@ struct context { ... };
 
 The aggregated view the transversal rules operate on. Where an intra- header interpreter sees a single header in isolation, a rule needs to reason across several: whether a header was present at all, how two headers combine, and the connection/policy state the interpreters already derived. deserialize() fills this context during its single header
 
-**Source:** [include/protocol/http/v11/context.h:58](../../../../../include/protocol/http/v11/context.h#L58)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-connection"></a>
 
@@ -68,7 +68,7 @@ The mutable hop-by-hop connection state derived from the request.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/context.h:63](../../../../../include/protocol/http/v11/context.h#L63)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-has-content-length"></a>
 
@@ -84,7 +84,7 @@ Content-Length and Transfer-Encoding are mutually exclusive; the rules check for
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:67](../../../../../include/protocol/http/v11/context.h#L67)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-multiple-content-length"></a>
 
@@ -100,7 +100,7 @@ Stores the multiple content length value.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:68](../../../../../include/protocol/http/v11/context.h#L68)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-content-length"></a>
 
@@ -116,7 +116,7 @@ Stores the content length value.
 
 **Value:** `0`
 
-**Source:** [include/protocol/http/v11/context.h:69](../../../../../include/protocol/http/v11/context.h#L69)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-has-transfer-encoding"></a>
 
@@ -132,7 +132,7 @@ Stores the has transfer encoding value.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:70](../../../../../include/protocol/http/v11/context.h#L70)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-has-host"></a>
 
@@ -148,7 +148,7 @@ Host and Target-Authority are mutually exclusive; the rules check for their pres
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:74](../../../../../include/protocol/http/v11/context.h#L74)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-multiple-host"></a>
 
@@ -164,7 +164,7 @@ Stores the multiple host value.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:75](../../../../../include/protocol/http/v11/context.h#L75)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-host"></a>
 
@@ -180,7 +180,7 @@ Stores the host value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/context.h:76](../../../../../include/protocol/http/v11/context.h#L76)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-has-target-authority"></a>
 
@@ -196,7 +196,7 @@ Stores the has target authority value.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/context.h:77](../../../../../include/protocol/http/v11/context.h#L77)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-target-authority"></a>
 
@@ -212,7 +212,7 @@ Stores the target authority value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/context.h:78](../../../../../include/protocol/http/v11/context.h#L78)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-forwarding-hops"></a>
 
@@ -228,7 +228,7 @@ The number of forwarding hops across Via / Forwarded / X-Forwarded-For.
 
 **Value:** `0`
 
-**Source:** [include/protocol/http/v11/context.h:80](../../../../../include/protocol/http/v11/context.h#L80)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)
 
 <a id="field-rejection-reason"></a>
 
@@ -245,4 +245,4 @@ Why the last verdict::kReject happened, at the granularity the HTTP/1.1 layer ne
 
 **Value:** `martianlabs::doba::protocol::http::v11::rejection_reason::kNone`
 
-**Source:** [include/protocol/http/v11/context.h:85](../../../../../include/protocol/http/v11/context.h#L85)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)

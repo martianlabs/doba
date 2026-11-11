@@ -58,4 +58,4 @@ Error codes shared by framer_raw and framer_chunked.
 - **trailer_size_limit_exceeded:** Trailer size limit exceeded. Declaration: `trailer_size_limit_exceeded`.
 - **chunked_size_limit_exceeded:** Chunked size limit exceeded. Declaration: `chunked_size_limit_exceeded`.
 
-**Source:** [include/protocol/http/v11/body/framer_error.h:53](../../../../../../include/protocol/http/v11/body/framer_error.h#L53)
+**Source:** [include/protocol/http/v11/body/framer_error.h](../../../../../../include/protocol/http/v11/body/framer_error.h)

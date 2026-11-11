@@ -42,7 +42,7 @@ using martianlabs::doba::common::task_execution;
 using martianlabs::doba::common::yield;
 using clock_type = task_execution::clock;
 
-// Keep the parameters alive until the owner releases the frame.
+// Keep coroutine parameters alive until the frame is destroyed.
 task<> finish(std::shared_ptr<int>, int& steps) {
   ++steps;
   co_return;
@@ -75,15 +75,15 @@ task<> sleep_once(clock_type::duration duration, int& steps) {
 struct foreign_awaiter {
   bool& touched;
   bool ready;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] await_ready                                              ( public ) |
   // +-------------------------------------------------------------------------+
   bool await_ready() const noexcept { touched = true; return ready; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] await_suspend                                            ( public ) |
   // +-------------------------------------------------------------------------+
   void await_suspend(std::coroutine_handle<>) const noexcept { touched = true; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] await_resume                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void await_resume() const noexcept { touched = true; }

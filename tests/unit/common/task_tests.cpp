@@ -47,7 +47,7 @@ task<> retain(std::shared_ptr<int>) { co_return; }
 }  // namespace
 
 // +===========================================================================+
-// | [>] task result constraint                                 ( test-case ) |
+// | [>] task result constraint                                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("task constraints reject unsupported result types") {
   DOBA_EXPECT(task_available<void>);
@@ -78,7 +78,7 @@ DOBA_TEST("task transfers a lazy frame to its execution owner") {
 }
 
 // +===========================================================================+
-// | [>] abandoned task cleanup                                 ( test-case ) |
+// | [>] abandoned task cleanup                                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("task releases an unstarted frame after ownership moves") {
   auto token = std::make_shared<int>(1);
@@ -92,7 +92,7 @@ DOBA_TEST("task releases an unstarted frame after ownership moves") {
 }
 
 // +===========================================================================+
-// | [>] explicit frame transfer                                ( test-case ) |
+// | [>] explicit frame transfer                                 ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("released task frame survives the original task") {
   auto token = std::make_shared<int>(1);

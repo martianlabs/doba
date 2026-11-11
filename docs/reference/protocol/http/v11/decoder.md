@@ -49,7 +49,7 @@ Provides the http 1.1 decoder implementation.
 - **RQty:** `contracts::request RQty`.
 - **RSty:** `contracts::response RSty`.
 
-**Source:** [include/protocol/http/v11/decoder.h:140](../../../../../include/protocol/http/v11/decoder.h#L140)
+**Source:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
 
 <a id="method-deserialize"></a>
 
@@ -73,7 +73,7 @@ not borrow output buffers from the engine or decoder.
 **Returns:** The decoding status, an optional completed request, and an
 optional owned interim or rejection response in `deserialization_result<RQty, RSty>`.
 
-**Source:** [include/protocol/http/v11/decoder.h:170](../../../../../include/protocol/http/v11/decoder.h#L170)
+**Source:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
 
 <a id="method-configuration"></a>
 
@@ -91,7 +91,7 @@ Returns the decoder's configuration.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/decoder.h:285](../../../../../include/protocol/http/v11/decoder.h#L285)
+**Source:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
 
 <a id="method-make-response"></a>
 
@@ -107,7 +107,7 @@ Creates a response that owns its bytes, with the configured limits.
 
 **Returns:** A value of type `RSty`.
 
-**Source:** [include/protocol/http/v11/decoder.h:291](../../../../../include/protocol/http/v11/decoder.h#L291)
+**Source:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)
 
 <a id="method-make-response-2"></a>
 
@@ -128,4 +128,4 @@ Creates response.
 
 **Returns:** A value of type `RSty`.
 
-**Source:** [include/protocol/http/v11/decoder.h:295](../../../../../include/protocol/http/v11/decoder.h#L295)
+**Source:** [include/protocol/http/v11/decoder.h](../../../../../include/protocol/http/v11/decoder.h)

@@ -8,13 +8,25 @@
 
 **Header:** [include/http_server.h](../../include/http_server.h)
 
-The bundled TCP server supports synchronous handlers and one terminal
-prefix/source reader. Use [https_server](https_server.md) for TLS; coroutine execution remains
-outside the transport.
+The default HTTP engine accepts synchronous handlers and handlers returning
+`common::task<>`. TCP delivers serialized processing turns; the engine owns
+coroutine execution and response order. TCP supports one terminal prefix/source
+reader. Use [https_server](https_server.md) for TLS.
 See the [TCP runtime contract](transport/tcp.md#runtime-contract).
 
 Combines an HTTP/1.1 router and protocol engine with a server transport. TCP is
 the default transport.
+
+The first constructor argument configures the transport, the second the HTTP
+engine. With authentication providers in `AUty...`, supply their owning tuple
+as the third argument. Configuration is captured by value; changing the
+original objects later does not reconfigure the server.
+
+Registration closes before transport startup, reopens after a failed start or
+successful stop, and retains existing routes/controllers across restart.
+Provider and controller instances can be called concurrently from different
+connections; their application state must support that use. Lifecycle calls
+belong to a sequential external owner, outside handler/transport callbacks.
 
 ### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
@@ -68,7 +80,7 @@ Combines routing, the HTTP/1.1 engine, and the selected transport in one server.
 - **TRty:** `template <typename, typename> class TRty = transport::tcp`.
 - **AUty:** `typename... AUty`.
 
-**Source:** [include/http_server.h:62](../../include/http_server.h#L62)
+**Source:** [include/http_server.h](../../include/http_server.h)
 
 <a id="method-add-route"></a>
 
@@ -99,7 +111,7 @@ Registers an HTTP method and route pattern with a handler.
 
 **Errors:** Throws `std::runtime_error` if registration has closed because the server is running. Router or controller construction errors may propagate.
 
-**Source:** [include/http_server.h:126](../../include/http_server.h#L126)
+**Source:** [include/http_server.h](../../include/http_server.h)
 
 <a id="method-add-route-2"></a>
 
@@ -132,7 +144,7 @@ Registers a route that authenticates requests with the provider selected by `Aty
 
 **Errors:** Throws `std::runtime_error` if registration has closed because the server is running. Router or controller construction errors may propagate.
 
-**Source:** [include/http_server.h:141](../../include/http_server.h#L141)
+**Source:** [include/http_server.h](../../include/http_server.h)
 
 <a id="method-add-controller"></a>
 
@@ -160,4 +172,4 @@ Constructs and registers controller `CTty` with the forwarded arguments.
 
 **Errors:** Throws `std::runtime_error` if registration has closed because the server is running. Router or controller construction errors may propagate.
 
-**Source:** [include/http_server.h:163](../../include/http_server.h#L163)
+**Source:** [include/http_server.h](../../include/http_server.h)

@@ -132,7 +132,7 @@ static void verify(uint16_t port) {
   std::barrier barrier(33);
   std::vector<std::future<double>> futures;
   futures.reserve(32);
-  // Every participant reaches the barrier, even if its connection fails.
+  // Reach the barrier even if connecting failed.
   try {
     for (int index = 0; index < 32; ++index) {
       futures.push_back(std::async(std::launch::async, [&, index] {
@@ -140,7 +140,7 @@ static void verify(uint16_t port) {
       }));
     }
   } catch (...) {
-    // Release launched peers before futures join during stack unwinding.
+    // Release peers before cleanup waits for their futures.
     for (size_t missing = futures.size(); missing <= 32; ++missing) {
       barrier.arrive_and_drop();
     }

@@ -4,7 +4,7 @@ file(
   CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_LIST_DIR}/*_tests.cpp"
 )
-# Native implementation tests are separate translation units.
+# Build only the native tests for this platform.
 if(WIN32)
   list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "_linux_tests\\.cpp$")
 else()
@@ -81,7 +81,7 @@ set_tests_properties(
   TIMEOUT 120
 )
 
-# Run the same model in ordinary tests and coverage-guided fuzzing.
+# Run the same model in tests and fuzzing.
 add_executable(doba_security_model_tests
   "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/protocol/http/v11/engine_security_state_tests.cpp")
@@ -92,7 +92,7 @@ add_test(NAME doba_security_model_tests COMMAND doba_security_model_tests)
 set_tests_properties(doba_security_model_tests PROPERTIES TIMEOUT 60)
 
 if(WIN32)
-  # Isolate native API substitution from the ordinary unit binary.
+  # Keep replaced native APIs in a separate executable.
   set(qualification "${CMAKE_CURRENT_LIST_DIR}/../qualification")
   add_executable(doba_network_fault_tests
     "${CMAKE_CURRENT_LIST_DIR}/helpers/test_helper.cpp"

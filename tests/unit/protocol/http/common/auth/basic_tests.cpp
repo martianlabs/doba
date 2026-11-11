@@ -64,7 +64,7 @@ DOBA_TEST("Basic decodes credentials and splits the first colon") {
 }
 
 // +===========================================================================+
-// | [>] Basic challenges missing wrong and rejected credentials ( test-case ) |
+// | [>] Basic challenges rejected credentials                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic challenges missing wrong and rejected credentials") {
   auth::basic provider("demo", [](auto, auto) { return false; });

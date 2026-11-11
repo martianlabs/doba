@@ -8,56 +8,23 @@
 
 **Header:** [include/protocol/http/common/headers/accept_language.h](../../../../../../include/protocol/http/common/headers/accept_language.h)
 
-|                                                           accept-language | | RFC 9110 S12.5.4 Accept-Language                                          | | The "Accept-Language" request header field allows a user agent to         | | indicate the natural languages preferred for response content.            | | Each language range can have an opti
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[accept_language](#type-accept-language)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::accept_language
-
-[check](#method-check)
+Checks `*` or language ranges: an alphabetic first subtag and optional alphanumeric subtags, each one to eight characters. Each range may have one `;q=` weight.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-accept-language"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> accept_language
+## accept_language
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class accept_language { ... };
-```
-
-|                                                           accept-language | | RFC 9110 S12.5.4 Accept-Language                                          | | The "Accept-Language" request header field allows a user agent to         | | indicate the natural languages preferred for response content.            | | Each language range can have an opti
-
-**Source:** [include/protocol/http/common/headers/accept_language.h:123](../../../../../../include/protocol/http/common/headers/accept_language.h#L123)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::headers::accept_language*
+## check
 
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP accept-language header syntax.
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/accept_language.h:128](../../../../../../include/protocol/http/common/headers/accept_language.h#L128)
+List parsing skips empty comma elements and respects quoted commas. Spaces/tabs are trimmed before commas and after separators, but not uniformly at the outer edges; pass the field value after HTTP field-level trimming.

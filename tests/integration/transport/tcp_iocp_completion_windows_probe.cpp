@@ -38,20 +38,21 @@
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-// Test-only API interception lives in an isolated executable. Production
-// headers and the benchmark driver contain no hooks or alternate paths.
-// Operations watched while the transport-facing API call is still active.
+// Only this executable replaces native APIs. Watch completions before the API
+// call returns.
 std::atomic<OVERLAPPED*> receive_operation{nullptr}, send_operation{nullptr};
-// Completion packets observed by another real IOCP worker.
+// Another IOCP worker records the completion.
 std::atomic<bool> receive_seen{false}, send_seen{false};
-// Watch only the first operation of each kind, not idle subsequent receives.
+// Watch only the first send and receive.
 std::atomic<bool> receive_watched{false}, send_watched{false};
-// Bounded test failure if a packet is not observed.
+// Fail if the expected completion never arrives.
 std::atomic<bool> timed_out{false};
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] wait_for_packet                                          ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void wait_for_packet(const std::atomic<bool>& seen) {
   const auto deadline = std::chrono::steady_clock::now() +
                         std::chrono::seconds{5};
@@ -64,9 +65,11 @@ void wait_for_packet(const std::atomic<bool>& seen) {
   }
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_receive                                          ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
                           LPDWORD bytes, LPDWORD flags,
                           LPWSAOVERLAPPED operation,
@@ -82,9 +85,11 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
   return result;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_send                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
                        LPDWORD bytes, DWORD flags,
                        LPWSAOVERLAPPED operation,
@@ -100,9 +105,11 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
   return result;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] tracked_completion                                       ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
                                LPOVERLAPPED* operation, DWORD timeout) {
   const BOOL result = ::GetQueuedCompletionStatus(port, bytes, key,
@@ -161,7 +168,7 @@ struct completion_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Synchronous engine output; the transport owns the copied response bytes.
+  // The transport copies these bytes during the call.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace
@@ -190,7 +197,7 @@ DOBA_TEST("Windows handles IOCP packets dequeued before socket API returns") {
   const auto bytes = client.receive(5, 10s);
   DOBA_EXPECT(bytes.has_value());
   if (bytes) DOBA_EXPECT_EQUAL(*bytes, "first");
-  // Ensure both watched calls returned and the connection still progresses.
+  // Check that both watched calls returned and the connection still works.
   DOBA_EXPECT(client.send_all("next"));
   const auto next = client.receive(4, 10s);
   DOBA_EXPECT(next.has_value());

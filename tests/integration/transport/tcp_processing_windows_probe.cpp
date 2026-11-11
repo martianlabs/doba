@@ -40,7 +40,7 @@ namespace {
 using namespace std::chrono_literals;
 using martianlabs::doba::transport::detail::io_type;
 using martianlabs::doba::transport::detail::overlapped_base;
-// Only this executable intercepts native APIs. No production test hooks exist.
+// Only this executable replaces native APIs.
 std::atomic<unsigned> timer_creations{0}, timer_arms{0};
 std::atomic<bool> watch{false}, immediate_seen{false}, timer_seen{false};
 std::atomic<bool> timed_out{false};
@@ -49,9 +49,11 @@ std::atomic<unsigned> fail_timer_posts{0}, timer_posts{0};
 std::atomic<bool> fail_timer_create{false}, hold_timer{false};
 martianlabs::doba::tests::manual_event release_timer;
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] wait_until                                               ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool wait_until(const std::function<bool()>& predicate) {
   const auto end = std::chrono::steady_clock::now() + 5s;
   do {
@@ -61,9 +63,11 @@ bool wait_until(const std::function<bool()>& predicate) {
   return false;
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] tracked_create                                           ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
                                 PTP_CALLBACK_ENVIRON environment) {
   if (fail_timer_create.exchange(false)) return nullptr;
@@ -71,22 +75,26 @@ PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
   return ::CreateThreadpoolTimer(callback, state, environment);
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] tracked_arm                                              ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
                          DWORD window) {
   if (due) ++timer_arms;
-  // Force a queued wake for the cancellation test without assuming that a
-  // one-millisecond logical deadline survives context reconciliation.
+  // Force a timer wake for cancellation; do not rely on a one-millisecond
+  // deadline.
   FILETIME forced{0xffffffffU, 0xffffffffU};
   ::SetThreadpoolTimer(timer, due && hold_timer ? &forced : due,
                        period, window);
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] reject_timer_post                                        ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool reject_timer_post() {
   auto remaining = fail_timer_posts.load();
   while (remaining) {
@@ -96,9 +104,11 @@ bool reject_timer_post() {
   return false;
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] tracked_post                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
                           LPOVERLAPPED packet) {
   const auto type = packet ? static_cast<overlapped_base*>(packet)->get_type()
@@ -121,9 +131,11 @@ BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
   return result;
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] tracked_completion                                       ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
                                 LPOVERLAPPED* packet, DWORD timeout) {
   const auto result = ::GetQueuedCompletionStatus(port, bytes, key,
@@ -165,16 +177,16 @@ namespace tr = transport;
 // +---------------------------------------------------------------------------+
 // | [>] publication_engine                                         ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Generic connection-turn probe; it contains no coroutine execution.        |
+// | Checks processing turns without running coroutines.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct publication_engine {
   // +=========================================================================+
-  // | [>] USINGs                                                  ( public  ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( public  ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   protocol::send_delegate send;
   std::function<void()> close;
@@ -183,21 +195,21 @@ struct publication_engine {
   clock_type::time_point due{};
   unsigned step{0};
   // +=========================================================================+
-  // | [>] set_on_send                                             ( public  ) |
+  // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate value) { send = std::move(value); }
   // +=========================================================================+
-  // | [>] set_on_close                                            ( public  ) |
+  // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> value) { close = std::move(value); }
   // +=========================================================================+
-  // | [>] on_bytes_received                                       ( public  ) |
+  // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view bytes) {
     return input(*this, bytes);
   }
   // +=========================================================================+
-  // | [>] on_processing_turn                                      ( public  ) |
+  // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool idle) { return turn(*this, idle); }
 };
@@ -263,8 +275,8 @@ DOBA_TEST("Windows timer wake can dequeue before publication returns") {
       INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
   std::array<decltype(timer)::entry, 64> ready{};
   bool dequeued = false;
-  // The consumer observes the embedded packet before taking the timer lock.
-  // Its bounded wait and lifetime surround every producer/publication path.
+  // Observe the packet before taking the timer lock. Keep the consumer alive
+  // until all producers finish.
   std::jthread consumer([&] {
     DWORD bytes = 0;
     ULONG_PTR key = 0;
@@ -296,7 +308,7 @@ DOBA_TEST("Windows keeps deadlines after a failed timer wake publication") {
   auto ctx = std::make_shared<detail::context<publication_engine>>(
       INVALID_SOCKET, 128, 128, factory, stopping, nullptr, nullptr);
   const auto previous = timer_posts.load();
-  // Fail the initial overdue post and then the native callback's retry.
+  // Fail the first overdue post and the timer callback retry.
   DOBA_EXPECT(timer.replace(ctx, clock_type::now() - 1ms, 19));
   DWORD bytes = 0;
   ULONG_PTR key = 0;
@@ -398,8 +410,8 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
     DOBA_EXPECT(timer.replace(ctx, clock_type::now() - 1ms, i + 1));
   }
   std::size_t total = 0;
-  // Drain notifications after producer stop as well, keeping embedded storage
-  // and the IOCP alive for every packet, including early callback publication.
+  // Drain packets after stopping producers too. Keep the IOCP and packet
+  // storage alive until then.
   for (const auto expected : {64U, 1U}) {
     DWORD bytes = 0;
     ULONG_PTR key = 0;
@@ -417,7 +429,7 @@ DOBA_TEST("Windows timer wake batches select at most 64 exact connections") {
     total += count;
   }
   DOBA_EXPECT_EQUAL(total, 65U);
-  // Already-due batches must not wait for another native timer tick.
+  // Already-due work must not wait for another timer tick.
   DOBA_EXPECT_EQUAL(timer_arms.load(), previous_arms);
 }
 

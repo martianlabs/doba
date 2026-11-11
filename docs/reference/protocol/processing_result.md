@@ -12,8 +12,7 @@ snapshots and executes engine turns through those serialized entries.
 Coroutine frames remain engine-owned; no transport accepts application jobs
 or externally resumed handles.
 
-See [the implementation plan](../../../ASYNC.md) and the
-[Linux delivery design](../transport/tcp_linux_processing.md) and
+See the [Linux delivery design](../transport/tcp_linux_processing.md) and
 [Windows delivery design](../transport/tcp_windows_processing.md).
 
 ## Entry points and ownership
@@ -69,9 +68,8 @@ that wait: the engine returns the same T while it remains necessary. An
 immediate request can coexist with a future deadline; it does not erase that
 future interest. The engine computes its own earliest logical deadline.
 
-The following table is normative for native delivery in subsequent blocks.
-Runtime coverage will be added with those implementations, not claimed by the
-passive value/signature tests in block 1.
+The following rules apply to both native backends. Their processing tests cover
+delivery, cancellation, deadlines and publication failures.
 
 | Situation | Required behavior |
 | --- | --- |

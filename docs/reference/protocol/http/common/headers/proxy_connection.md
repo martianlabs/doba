@@ -8,56 +8,23 @@
 
 **Header:** [include/protocol/http/common/headers/proxy_connection.h](../../../../../../include/protocol/http/common/headers/proxy_connection.h)
 
-|                                                          proxy-connection | | Non-standard / legacy Proxy-Connection                                    | | The "Proxy-Connection" header field is a non-standard, legacy field used  | | by some clients when communicating with an explicit HTTP proxy. It was    | | intended to provide semantics simila
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[x_proxy_connection](#type-x-proxy-connection)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::x_proxy_connection
-
-[check](#method-check)
+Checks a comma-separated list of connection-option tokens. The class is named `x_proxy_connection`; this checker does not change connection lifetime.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-x-proxy-connection"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> x_proxy_connection
+## x_proxy_connection
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class x_proxy_connection { ... };
-```
-
-|                                                          proxy-connection | | Non-standard / legacy Proxy-Connection                                    | | The "Proxy-Connection" header field is a non-standard, legacy field used  | | by some clients when communicating with an explicit HTTP proxy. It was    | | intended to provide semantics simila
-
-**Source:** [include/protocol/http/common/headers/proxy_connection.h:100](../../../../../../include/protocol/http/common/headers/proxy_connection.h#L100)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
-## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
-
-**METHOD** · *protocol::http::headers::x_proxy_connection*
+## check
 
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP proxy-connection header syntax.
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/proxy_connection.h:105](../../../../../../include/protocol/http/common/headers/proxy_connection.h#L105)
+List parsing skips empty comma elements and respects quoted commas. Spaces/tabs are trimmed before commas and after separators, but not uniformly at the outer edges; pass the field value after HTTP field-level trimming.

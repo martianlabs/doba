@@ -32,9 +32,11 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using namespace martianlabs::doba;
 using namespace martianlabs::doba::protocol::http::v11;
 using protocol::http::router;
@@ -42,8 +44,7 @@ constexpr std::string_view next = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
 }  // namespace
 
 // +===========================================================================+
-// | [>] detection rejects a body one byte above its configured  ( test-case ) |
-// |     limit                                                                 |
+// | [>] body one byte above the limit                           ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("detection rejects a body one byte above its configured limit") {
   policies configuration;
@@ -64,8 +65,7 @@ DOBA_TEST("detection rejects a body one byte above its configured limit") {
 }
 
 // +===========================================================================+
-// | [>] detection queues a successor response until the first   ( test-case ) |
-// |     completes                                                             |
+// | [>] hold the next response until the first finishes         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("detection queues a successor response until the first completes") {
   router<request, response> routes;
@@ -88,7 +88,7 @@ DOBA_TEST("detection queues a successor response until the first completes") {
   current.set_on_close([] {});
   current.on_bytes_received("GET /first HTTP/1.1\r\nHost: x\r\n\r\n" +
                             std::string(next));
-  // The first task yielded; the successor response must still be retained.
+  // Keep the next response while the first task is suspended.
   DOBA_EXPECT_EQUAL(sends, 0);
   current.on_processing_turn(true);
   DOBA_EXPECT_EQUAL(sends, 2);
@@ -99,8 +99,7 @@ DOBA_TEST("detection queues a successor response until the first completes") {
 }
 
 // +===========================================================================+
-// | [>] detection never dispatches a successor after terminal   ( test-case ) |
-// |     rejection                                                             |
+// | [>] no dispatch after terminal rejection                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("detection never dispatches a successor after terminal rejection") {
   router<request, response> routes;

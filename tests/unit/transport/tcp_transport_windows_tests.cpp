@@ -31,15 +31,17 @@
 #include "transport/tcp.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 namespace tr = martianlabs::doba::transport;
 using martianlabs::doba::tests::unit::policy_engine;
 }  // namespace
 
 // +===========================================================================+
-// | [>] tcp transport rejects overflowing Windows worker counts ( test-case ) |
+// | [>] reject overflowing Windows worker counts                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcp transport rejects overflowing Windows worker counts") {
   auto factory = [] { return policy_engine{}; };

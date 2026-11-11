@@ -36,6 +36,26 @@ root, open and inspect report failures through error. root returns an empty path
 on failure; open returns false; inspect and metadata return an empty optional.
 Metadata is declared in [filesystem_metadata.h](filesystem_metadata.md).
 
+`open()` closes any previous handle before validating the new request, including
+when the new open fails. A default or closed object has size zero, reports EOF
+and has no read failure. A nonempty read on it records failure; an empty read
+does not change state. Positive short reads may precede an early-EOF failure
+on the next read. Read failures remain set until a successful `select()`,
+`close()` or `open()` resets them.
+
+`select()` uses an absolute offset from the file start, validates the range
+against the current `size()`, then changes `size()` to the requested length and
+resets the cursor. It does not compose relative slices. Reopen the file before
+selecting a range outside that reduced size. A failed selection reports an
+error without changing the stored cursor/size state.
+
+`valid_relative_path()` sets `error` on rejection but does not clear an existing
+error on success. It performs the shared lexical checks only: Windows device
+names and ambiguous names are rejected later by `open()`/`inspect()`.
+`root()`, `open()`, `inspect()`, `metadata()` and `select()` clear `error` first.
+Allocation exceptions may still propagate; invalid UTF-8 path conversion
+reports its filesystem error through `error`.
+
 Request paths use forward slashes and must be relative. HTTP percent decoding
 happens in the server. The root must already be absolute when calling open or
 inspect; every path component is checked again so a replacement link is rejected.

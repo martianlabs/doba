@@ -8,257 +8,99 @@
 
 **Header:** [include/common/reader.h](../../../include/common/reader.h)
 
-This class provides a reader interface for reading bytes from a byte_storage backend. It supports reading into a span of bytes, fetching individual bytes, and checking the state of the reader (e.g., whether it has reached the end of the storage or encountered an error). It can also read all remaining bytes into a string.
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
-
-[reader](#type-reader)
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::reader
-
-[borrowed](#method-borrowed) ·
-[shared](#method-shared) ·
-[rebind_borrowed](#method-rebind-borrowed) ·
-[read](#method-read) ·
-[fetch](#method-fetch) ·
-[eof](#method-eof) ·
-[exhausted](#method-exhausted) ·
-[failed](#method-failed) ·
-[ok](#method-ok) ·
-[size](#method-size) ·
-[read_all](#method-read-all)
-
-<a id="api"></a>
-<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-reader"></a>
+## reader
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> reader
+A move-only cursor over owned [byte storage](byte_storage.md), an owned open
+[file](filesystem.md), borrowed bytes or shared immutable bytes. The default
+reader is empty and healthy, with an unknown size because its byte storage is
+unfinished. Moving preserves the unread suffix and transfers any owner.
 
-**TYPE** · *common*
-
-**Declaration synopsis:**
-
-```cpp
-class reader { ... };
-```
-
-This class provides a reader interface for reading bytes from a byte_storage backend. It supports reading into a span of bytes, fetching individual bytes, and checking the state of the reader (e.g., whether it has reached the end of the storage or encountered an error). It can also read all remaining bytes into a string.
-
-**Source:** [include/common/reader.h:53](../../../include/common/reader.h#L53)
+Methods on one reader need serialized access. Separate shared readers have
+independent cursors, provided their backing bytes stay immutable.
 
 <a id="method-borrowed"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> borrowed
-
-**METHOD** · *common::reader*
+## borrowed
 
 ```cpp
 static reader borrowed(std::span<const std::byte> source) noexcept;
 ```
 
-Creates a non-owning reader over stable caller storage. The referenced bytes must outlive this reader and every object to which it is moved.
-
-**Parameters:**
-
-- **source:** Source data or object to read from. Declaration: `std::span<const std::byte> source`.
-
-**Returns:** A `reader` configured for the selected body format.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:102](../../../include/common/reader.h#L102)
-
-<a id="method-rebind-borrowed"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> rebind_borrowed
-
-**METHOD** · *common::reader*
-
-```cpp
-void rebind_borrowed(std::span<const std::byte> source) noexcept;
-```
-
-Points borrowed byte views at the replacement buffer.
-
-**Parameters:**
-
-- **source:** Source data or object to read from. Declaration: `std::span<const std::byte> source`.
-
-**Returns:** No value (`void`).
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:114](../../../include/common/reader.h#L114)
-
-<a id="method-read"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read
-
-**METHOD** · *common::reader*
-
-```cpp
-std::size_t read(std::span<std::byte> output);
-```
-
-Reads data.
-
-**Parameters:**
-
-- **output:** Destination or output callback, as specified by its type. Declaration: `std::span<std::byte> output`.
-
-**Returns:** The number of bytes processed.
-
-**Source:** [include/common/reader.h:121](../../../include/common/reader.h#L121)
-
-<a id="method-fetch"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> fetch
-
-**METHOD** · *common::reader*
-
-```cpp
-bool fetch(std::byte& byte);
-```
-
-Fetches the requested value.
-
-**Parameters:**
-
-- **byte:** Byte to read or write. Declaration: `std::byte& byte`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/common/reader.h:144](../../../include/common/reader.h#L144)
-
-<a id="method-eof"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> eof
-
-**METHOD** · *common::reader*
-
-```cpp
-[[nodiscard]] bool eof() const noexcept;
-```
-
-Reports whether the eof condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:158](../../../include/common/reader.h#L158)
-
-<a id="method-exhausted"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> exhausted
-
-**METHOD** · *common::reader*
-
-```cpp
-[[nodiscard]] bool exhausted() const noexcept;
-```
-
-Reports whether the exhausted condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:161](../../../include/common/reader.h#L161)
-
-<a id="method-failed"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> failed
-
-**METHOD** · *common::reader*
-
-```cpp
-[[nodiscard]] bool failed() const noexcept;
-```
-
-Reports whether the failed condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:125](../../../include/common/reader.h#L125)
-
-<a id="method-ok"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> ok
-
-**METHOD** · *common::reader*
-
-```cpp
-[[nodiscard]] bool ok() const noexcept;
-```
-
-Reports whether the ok condition holds.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:138](../../../include/common/reader.h#L138)
-
-<a id="method-size"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> size
-
-**METHOD** · *common::reader*
-
-```cpp
-[[nodiscard]] std::optional<std::size_t> size() const noexcept;
-```
-
-Returns the current size.
-
-**Returns:** A `std::optional<std::size_t>` containing the result when present; otherwise `std::nullopt`.
-
-**Errors:** Declared `noexcept`.
-
-**Source:** [include/common/reader.h:129](../../../include/common/reader.h#L129)
-
-<a id="method-read-all"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> read_all
-
-**METHOD** · *common::reader*
-
-```cpp
-std::size_t read_all(std::string& out);
-```
-
-Reads all.
-
-**Parameters:**
-
-- **out:** Output parameter that receives the result. Declaration: `std::string& out`.
-
-**Returns:** The number of bytes processed.
-
-**Source:** [include/common/reader.h:189](../../../include/common/reader.h#L189)
+Do not copy or own the bytes. Keep them alive and unchanged until the reader
+and every object it is moved into finish using them. Empty input is allowed.
 
 <a id="method-shared"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> shared
+## shared
 
 ```cpp
 static reader shared(std::shared_ptr<const void> owner,
                      std::span<const std::byte> source);
 ```
 
-**Parameters:** owner retains stable immutable storage; source must refer into it.
-Each reader has an independent cursor. Bytes must be immutable through all aliases.
+Retain `owner` without copying the bytes. The caller must ensure that `source`
+refers to stable storage retained by that owner and is immutable through every
+alias. A null owner throws `std::invalid_argument`, even for empty input.
 
-**Returns:** An owning reader moved safely through the existing transport pipeline.
+<a id="method-rebind-borrowed"></a>
+## rebind_borrowed
 
-**Errors:** A null owner throws std::invalid_argument. rebind_borrowed() does not
-rebind an owning shared reader. See the [cache example](../../../examples/common/cache/README.md).
+```cpp
+void rebind_borrowed(std::span<const std::byte> source) noexcept;
+```
+
+Replace the span of a non-owning borrowed reader without resetting its cursor.
+Use this when the same logical buffer moves: preserve its contents and size,
+including already-consumed bytes. It does nothing for file, byte-storage and
+shared-owner readers. It cannot rewind or recover a reader.
+
+<a id="method-read"></a>
+## read
+
+```cpp
+std::size_t read(std::span<std::byte> output);
+```
+
+Read up to the span size and advance the cursor. Only the returned number of
+bytes is valid output. Empty output returns zero without changing state.
+Borrowed/shared reads allow the destination to overlap their source.
+An I/O error may return a partial count; inspect the state as well.
+
+<a id="method-fetch"></a>
+## fetch
+
+```cpp
+bool fetch(std::byte& byte);
+```
+
+Read one byte through the same cursor. False means no byte was produced.
+The caller must check `failed()`/`ok()` to distinguish an I/O failure from end.
+
+<a id="method-eof"></a>
+<a id="method-exhausted"></a>
+<a id="method-failed"></a>
+<a id="method-ok"></a>
+<a id="method-size"></a>
+## State and size
+
+| Operation | Result |
+| --- | --- |
+| `eof()` / `exhausted()` | The backend's read end was reached; this does not by itself report an error. |
+| `failed()` | This reader has observed a backend failure while reading. |
+| `ok()` | The backend has no recorded error; borrowed/shared readers return true. |
+| `size()` | Total size, including bytes already read. Byte-storage size is unknown before `finish()`. |
+
+Zero bytes is not sufficient to infer end: unfinished spilled storage also
+returns zero. A reader adopting already-failed storage can have `ok() == false`
+before a read updates `failed()`.
+
+<a id="method-read-all"></a>
+## read_all
+
+```cpp
+std::size_t read_all(std::string& out);
+```
+
+Append remaining bytes to `out` without clearing it. Return the number appended
+by this call, not the final string length. Stop at end, a recorded failure or
+a zero-byte read. A partial result may remain after I/O failure; check state.
+String allocation failures propagate as exceptions.

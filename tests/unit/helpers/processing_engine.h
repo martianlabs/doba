@@ -35,7 +35,7 @@ namespace martianlabs::doba::tests::unit {
 // +---------------------------------------------------------------------------+
 // | [>] processing_engine                                          ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Signature probe; no protocol or transport implementation is required.     |
+// | Check signatures without needing a real protocol or transport.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename Input = protocol::processing_result,

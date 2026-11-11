@@ -57,7 +57,7 @@ Provides the router match result protocol component.
 - **RQty:** `typename RQty`.
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/common/router_match_result.h:43](../../../../../include/protocol/http/common/router_match_result.h#L43)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 <a id="field-handler"></a>
 
@@ -73,7 +73,7 @@ Stores the handler value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/protocol/http/common/router_match_result.h:44](../../../../../include/protocol/http/common/router_match_result.h#L44)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 <a id="field-parametrized-handler"></a>
 
@@ -89,7 +89,7 @@ Stores the parametrized handler value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/protocol/http/common/router_match_result.h:45](../../../../../include/protocol/http/common/router_match_result.h#L45)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 <a id="field-async-handler"></a>
 
@@ -105,7 +105,7 @@ Stores the async handler value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/protocol/http/common/router_match_result.h:46](../../../../../include/protocol/http/common/router_match_result.h#L46)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 <a id="field-async-parametrized-handler"></a>
 
@@ -122,7 +122,7 @@ Stores the async parametrized handler value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/protocol/http/common/router_match_result.h:47](../../../../../include/protocol/http/common/router_match_result.h#L47)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)
 
 <a id="field-authenticate"></a>
 
@@ -139,4 +139,4 @@ Stores the authenticate value.
 
 **Value:** `{nullptr}`
 
-**Source:** [include/protocol/http/common/router_match_result.h:49](../../../../../include/protocol/http/common/router_match_result.h#L49)
+**Source:** [include/protocol/http/common/router_match_result.h](../../../../../include/protocol/http/common/router_match_result.h)

@@ -49,7 +49,7 @@ struct connection { ... };
 
 The hop-by-hop transport state that the semantic layer derives from a request. Framing and connection interpreters/rules read the parsed values of Connection, Transfer-Encoding, TE, Trailer, and Upgrade and mutate this state accordingly. It is deliberately separate from both the agnostic deserialization result and the request itself, because it
 
-**Source:** [include/protocol/http/v11/connection.h:48](../../../../../include/protocol/http/v11/connection.h#L48)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-persistent"></a>
 
@@ -65,7 +65,7 @@ Whether the connection is to be kept alive after the current message. HTTP/1.1 d
 
 **Value:** `true`
 
-**Source:** [include/protocol/http/v11/connection.h:51](../../../../../include/protocol/http/v11/connection.h#L51)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-close-requested"></a>
 
@@ -81,7 +81,7 @@ Whether "Connection: close" was requested for this connection.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/connection.h:53](../../../../../include/protocol/http/v11/connection.h#L53)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-transfer-codings"></a>
 
@@ -97,7 +97,7 @@ The transfer-coding names of Transfer-Encoding, in order (outermost last).
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/connection.h:55](../../../../../include/protocol/http/v11/connection.h#L55)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-chunked"></a>
 
@@ -113,7 +113,7 @@ Whether the final transfer-coding is "chunked" (message framing is then delimite
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/connection.h:58](../../../../../include/protocol/http/v11/connection.h#L58)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-te-codings"></a>
 
@@ -129,7 +129,7 @@ The transfer-coding names the client is willing to accept (TE), in order.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/connection.h:60](../../../../../include/protocol/http/v11/connection.h#L60)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-accepts-trailers"></a>
 
@@ -145,7 +145,7 @@ Whether the client signalled acceptance of the "trailers" TE token.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/connection.h:62](../../../../../include/protocol/http/v11/connection.h#L62)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-trailer-names"></a>
 
@@ -161,7 +161,7 @@ The header field names announced in the Trailer header, in order.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/connection.h:64](../../../../../include/protocol/http/v11/connection.h#L64)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-upgrade-offer"></a>
 
@@ -177,7 +177,7 @@ The protocols offered in the Upgrade header, in order (empty when absent). Parse
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/connection.h:68](../../../../../include/protocol/http/v11/connection.h#L68)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-options"></a>
 
@@ -193,7 +193,7 @@ Every connection-option token named by Connection, in order. These name header f
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/connection.h:71](../../../../../include/protocol/http/v11/connection.h#L71)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)
 
 <a id="field-expects-continue"></a>
 
@@ -209,4 +209,4 @@ Whether the client sent "Expect: 100-continue" and is therefore waiting for an i
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/connection.h:74](../../../../../include/protocol/http/v11/connection.h#L74)
+**Source:** [include/protocol/http/v11/connection.h](../../../../../include/protocol/http/v11/connection.h)

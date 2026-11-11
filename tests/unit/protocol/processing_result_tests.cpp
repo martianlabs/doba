@@ -36,9 +36,11 @@ using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::tests::unit::processing_engine;
 namespace contracts = martianlabs::doba::protocol::contracts;
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] Contract signatures                                        ( static ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static_assert(contracts::engine<processing_engine<>>);
 static_assert(!contracts::engine<processing_engine<void>>);
 static_assert(!contracts::engine<processing_engine<int>>);

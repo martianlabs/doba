@@ -42,10 +42,13 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] socket workers                                           ( constant ) |
 // +---------------------------------------------------------------------------+
-// Exercise independent connection owners on both backends.
+// | Keep connection state separate on both platforms.                         |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 constexpr std::size_t kSocketWorkers = 2;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;

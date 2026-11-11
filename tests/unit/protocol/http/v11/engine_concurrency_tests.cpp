@@ -74,8 +74,8 @@ DOBA_TEST(
   const auto due = current.needs.turn_at;
   current.receive({});
   DOBA_EXPECT_EQUAL(current.needs.turn_at, due);
-  // Every sleep was registered before this bound; no sequential-wait timing
-  // assertion is needed to prove all three can finish in one eligible turn.
+  // All sleeps were registered before this time, so one turn can finish all
+  // three.
   std::this_thread::sleep_until(admitted + 5ms);
   current.turn();
   DOBA_EXPECT_EQUAL(completed, 3);
@@ -339,7 +339,7 @@ DOBA_TEST("sibling deadlines keep advancing during another handler resume") {
   int completed = 0;
   routes.add("GET", "/work", [&](const request&, response& res) -> task<> {
     co_await yield();
-    // Simulate ordinary non-suspending handler work while a sibling sleeps.
+    // Do some ordinary handler work while another request sleeps.
     std::this_thread::sleep_until(release_at);
     res.ok_200().set_body("work");
   });

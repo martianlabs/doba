@@ -40,7 +40,7 @@ class signaler { ... };
 
 Provides the signaler type.
 
-**Source:** [include/common/signaler_linux.h:40](../../../include/common/signaler_linux.h#L40)
+**Source:** [include/common/signaler_linux.h](../../../include/common/signaler_linux.h)
 
 <a id="method-wait"></a>
 
@@ -52,10 +52,16 @@ Provides the signaler type.
 static void wait();
 ```
 
-Waits for the pending operation or event.
+Install temporary handlers for SIGINT and SIGTERM, then block until either
+requests shutdown. The loop checks the shared flag every 50 ms; this is not
+an exact wakeup deadline. Previous handlers are restored before returning.
+
+Use one application-owned wait at a time: its flag and signal handlers are
+process-wide. It does not stop a server itself. Handler installation failure
+throws `std::runtime_error`; restoration errors are not reported.
 
 **Returns:** No value (`void`).
 
 **Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/common/signaler_linux.h:45](../../../include/common/signaler_linux.h#L45)
+**Source:** [include/common/signaler_linux.h](../../../include/common/signaler_linux.h)

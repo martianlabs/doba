@@ -43,7 +43,7 @@ struct framer_state { ... };
 
 Result of a body framer consume() call. consumed  - bytes taken from the input span (wire bytes, including any chunked framing). Caller advances its buffer by this amount; the remainder belongs to the next request. complete  - body fully parsed; no further consume() calls needed. has_error - a protocol or size-limit error was detected. error     -
 
-**Source:** [include/protocol/http/v11/body/framer_state.h:46](../../../../../../include/protocol/http/v11/body/framer_state.h#L46)
+**Source:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)
 
 <a id="field-consumed"></a>
 
@@ -59,7 +59,7 @@ Consumed bytes from the input span (wire bytes, including framing).
 
 **Value:** `0`
 
-**Source:** [include/protocol/http/v11/body/framer_state.h:48](../../../../../../include/protocol/http/v11/body/framer_state.h#L48)
+**Source:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)
 
 <a id="field-complete"></a>
 
@@ -75,7 +75,7 @@ Body fully parsed; no further consume() calls needed.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/body/framer_state.h:50](../../../../../../include/protocol/http/v11/body/framer_state.h#L50)
+**Source:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)
 
 <a id="field-has-error"></a>
 
@@ -91,7 +91,7 @@ A protocol or size-limit error was detected.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/body/framer_state.h:52](../../../../../../include/protocol/http/v11/body/framer_state.h#L52)
+**Source:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)
 
 <a id="field-error"></a>
 
@@ -107,4 +107,4 @@ Error code, if has_error is true.
 
 **Value:** `framer_error::none`
 
-**Source:** [include/protocol/http/v11/body/framer_state.h:54](../../../../../../include/protocol/http/v11/body/framer_state.h#L54)
+**Source:** [include/protocol/http/v11/body/framer_state.h](../../../../../../include/protocol/http/v11/body/framer_state.h)

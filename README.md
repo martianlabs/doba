@@ -48,7 +48,7 @@ frames, bounded concurrency and response order.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured on **Scaleway, 2026-10-28**, using the official HttpArena suite:
+Measured on **Scaleway, 2026-11-10**, using the official HttpArena suite:
 native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
 upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
 upstream from its repetitions, not averaged across runs.
@@ -69,13 +69,13 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 <a href="resources/benchmarks/benchmark-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow.svg">
-    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-11-10. doba ranks 1 of 21 with 7,256.51 overall points, 6.4% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
-<a href="resources/benchmarks/benchmark-summary.svg#gh-dark-mode-only" title="Open full-size light card">
+<a href="resources/benchmarks/benchmark-summary-dark.svg#gh-dark-mode-only" title="Open full-size dark card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow-dark.svg">
-    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-11-10. doba ranks 1 of 21 with 7,256.51 overall points, 6.4% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
 
@@ -190,21 +190,20 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations and 230+ integration test declarations. CI runs 200 concurrency repetitions and checks eight mutation detectors. Local Release coverage for doba 0.1.0 on 2026-11-10. Linux covered 96.23% of executable lines and 89.39% of condition outcomes. Windows covered 95.65% and 89.35%, respectively. Only emitted mappings count." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations and 230+ integration test declarations. CI runs 200 concurrency repetitions and checks eight mutation detectors. Local Release coverage for doba 0.1.0 on 2026-11-10. Linux covered 96.23% of executable lines and 89.39% of condition outcomes. Windows covered 95.65% and 89.35%, respectively. Only emitted mappings count." width="100%">
   </picture>
 </a>
 
-**Measured coverage for 0.1.0:** Linux **95.17% of executable lines /
-88.87% of condition outcomes** (2026-11-05); Windows **94.64% / 88.50%**
-(2026-11-04).
-These are local Release measurements of emitted production mappings;
-unmapped headers are inventoried separately.
+In the **local Release coverage runs on 2026-11-10**, Linux covered
+**96.23% of executable lines** and **89.39% of condition outcomes**.
+Windows covered **95.65% of lines** and **89.35% of outcomes**.
+The report lists production headers without an emitted mapping separately.
 [See coverage by module, validation results and release history](docs/coverage/README.md).
 
 All of this has to get past the [CI matrix](.github/workflows/ci.yml):
@@ -234,4 +233,3 @@ and the tests; letting somebody else's tools have a go seems only fair.
 ---
 
 [Apache 2.0](LICENSE)
-

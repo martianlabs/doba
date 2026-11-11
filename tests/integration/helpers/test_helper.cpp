@@ -42,13 +42,6 @@ namespace {
 // +---------------------------------------------------------------------------+
 // | [>] test_case                                                  ( struct ) |
 // +---------------------------------------------------------------------------+
-// | This struct represents a single test case in the integration test         |
-// | framework. It contains the file name, line number, test name, and a       |
-// | function pointer to the test function. The test function is expected      |
-// | to return a boolean value indicating whether the test passed or failed.   |
-// | The struct is used to store and manage test cases in the integration      |
-// | test framework.                                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct test_case {
   // +=========================================================================+
@@ -64,9 +57,7 @@ struct test_case {
 // +---------------------------------------------------------------------------+
 // | [>] relative_test_path                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function takes a file path as input and returns a relative path by   |
-// | removing the leading directories up to and including                      |
-// | the "tests/integration/"                                                  |
+// | Keep test paths short in diagnostics.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string_view relative_test_path(std::string_view file) {
@@ -82,12 +73,6 @@ std::string_view relative_test_path(std::string_view file) {
 // +---------------------------------------------------------------------------+
 // | [>] tests                                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to a static vector of                   |
-// | test_case objects. It is used to store and manage the test cases in the   |
-// | integration test framework. The vector is initialized only once and       |
-// | persists for the lifetime of the program, allowing test cases to be added |
-// | and accessed throughout the execution of the tests.                       |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::vector<test_case>& tests() {
   static std::vector<test_case> value;
@@ -97,13 +82,6 @@ std::vector<test_case>& tests() {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] failures                                                 ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns a reference to a static atomic counter that keeps   |
-// | track of the number of test failures. It is used to count the number of   |
-// | failed test cases in the integration test framework. The variable is      |
-// | initialized to zero and persists for the lifetime of the program,         |
-// | allowing the failure count to be updated and accessed throughout the      |
-// | execution of the tests.                                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::atomic<std::size_t>& failures() {
@@ -115,7 +93,7 @@ std::atomic<std::size_t>& failures() {
 // +---------------------------------------------------------------------------+
 // | [>] diagnostics_mutex                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | Serialize failure diagnostics and context changes made by test workers.   |
+// | Keep worker diagnostics and context updates from overlapping.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::mutex& diagnostics_mutex() {
@@ -126,13 +104,6 @@ std::mutex& diagnostics_mutex() {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                  ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns a reference to a static std::string variable that   |
-// | keeps track of the current test context. It is used to store and access   |
-// | the context information for the test cases in the integration test        |
-// | framework. The variable is initialized only once and persists for the     |
-// | lifetime of the program, allowing the context to be updated and accessed  |
-// | throughout the execution of the tests.                                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string& context() {
@@ -145,13 +116,6 @@ std::string& context() {
 // +---------------------------------------------------------------------------+
 // | [>] add                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function adds a new test case to the integration test framework.     |
-// | It takes the file name, line number, test name, and a function pointer to |
-// | the test function as parameters. The function creates a new test_case     |
-// | object with the provided information and appends it to the static vector  |
-// | of test cases. The function returns true to indicate that the test case   |
-// | was successfully added.                                                   |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::add(std::string_view file, int line, std::string_view name,
                       test_t test) {
@@ -163,14 +127,7 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 // +---------------------------------------------------------------------------+
 // | [>] expect                                                   ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function checks whether a given condition is true or false.          |
-// | It takes a boolean condition, a string_view expression representing the   |
-// | assertion, the file name, and the line number as parameters. If the       |
-// | condition is true, it returns true. If the condition is false, it         |
-// | increments the failure count, prints an error message to stderr with the  |
-// | file name, line number, and failed assertion expression, and              |
-// | returns false. The function also prints the current test context if       |
-// | it is not empty.                                                          |
+// | Print failed assertions with the current test context.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::expect(bool condition, std::string_view expression,
@@ -193,13 +150,6 @@ bool test_helper::expect(bool condition, std::string_view expression,
 // +---------------------------------------------------------------------------+
 // | [>] set_context                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function sets the current test context to the provided string_view   |
-// | value. It assigns the value to a static std::string variable that         |
-// | keeps track of the current test context. This allows the context          |
-// | information to be updated and accessed throughout the execution of the    |
-// | tests, providing additional information for debugging and                 |
-// | reporting test results.                                                   |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
   std::lock_guard lock(diagnostics_mutex());
@@ -210,10 +160,7 @@ void test_helper::set_context(std::string_view value) {
 // +---------------------------------------------------------------------------+
 // | [>] run                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the tests with the provided command-line arguments.    |
-// | It parses the arguments to determine which tests to run, list, or exclude |
-// | and then executes the matching tests, providing detailed output for each  |
-// | test case.                                                                |
+// | Run matching tests, or list them without running.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int test_helper::run(int argc, char** argv) {
@@ -377,13 +324,7 @@ int test_helper::run(int argc, char** argv) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] main                                                   ( entry-pint ) |
-// +---------------------------------------------------------------------------+
-// | This is the entry point of the integration test framework.                |
-// | It calls the run function of the test_helper class, passing the           |
-// | command-line arguments to it. The return value of the run function is     |
-// | returned as the exit code of the program, indicating the                  |
-// | success or failure of the tests.                                          |
+// | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv) {

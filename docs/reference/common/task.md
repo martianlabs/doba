@@ -41,6 +41,10 @@ std::move(value).release(). The returned handle belongs to the receiver,
 which must eventually destroy the frame. Releasing an empty task returns
 an empty handle.
 
+The receiver must install the scheduler hooks before resuming code that uses
+the managed awaiters; normally it is `task_execution`. Releasing transfers
+ownership, not permission to resume the frame later from unrelated threads.
+
 handle_type is std::coroutine_handle<promise_type>. task_execution uses this
 transfer to adopt the frame. The promise creates the original task through
 its explicit constructor taking promise_type&.

@@ -40,7 +40,7 @@ class signaler { ... };
 
 Provides the signaler type.
 
-**Source:** [include/common/signaler_windows.h:41](../../../include/common/signaler_windows.h#L41)
+**Source:** [include/common/signaler_windows.h](../../../include/common/signaler_windows.h)
 
 <a id="method-wait"></a>
 
@@ -52,10 +52,17 @@ Provides the signaler type.
 static void wait();
 ```
 
-Waits for the pending operation or event.
+Register a temporary console handler, then block until CTRL_C_EVENT or
+CTRL_BREAK_EVENT requests shutdown. Other console events are not handled here.
+The loop checks the shared flag every 50 ms; this is not an exact wakeup
+deadline. The handler is removed before returning.
+
+Use one application-owned wait at a time: its flag and console registration
+are process-wide. It does not stop a server itself. Registration failure
+throws `std::system_error`; removal errors are not reported.
 
 **Returns:** No value (`void`).
 
 **Errors:** Directly throws `std::system_error`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/common/signaler_windows.h:46](../../../include/common/signaler_windows.h#L46)
+**Source:** [include/common/signaler_windows.h](../../../include/common/signaler_windows.h)

@@ -53,9 +53,7 @@ using martianlabs::doba::protocol::http::v11::response;
 // +---------------------------------------------------------------------------+
 // | [>] with_request                                             ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function deserializes a request and invokes the provided callback    |
-// | with the decoded request. It asserts that the deserialization succeeds    |
-// | and that the callback is called.                                          |
+// | Decode a request and check that the callback receives it.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty>

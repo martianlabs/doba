@@ -88,7 +88,7 @@ batches without native rearming of overdue work, lazy/shared timer creation
 and native publication/creation failures.
 
 TLS forwards the same generic turns without changing this native delivery.
-The final local comparison with the frozen synchronous baseline and Spliffy
-covers baseline, pipelined and async with equivalent resources per server.
-The [plan](../../../ASYNC.md) records the qualification scope. Remote CI
-remains a separate release gate.
+The [CI inventory](../../../tests/ci-inventory.md) lists the processing,
+lifecycle and publication-failure checks. Published performance results and
+their measurement limits are recorded separately in the
+[benchmark documentation](../../benchmarks/README.md).

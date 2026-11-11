@@ -84,7 +84,7 @@ an explicit scope decision supported by evidence.
   </a>
 </h2>
 
-19 open items across seven active categories: one release gate and eighteen
+17 open items across seven active categories: one release gate and sixteen
 future items. Three operational items describe the current contracts below. Previously closed and archived identifiers remain in
 Git history. "Verification pending" requires a run on the relevant revision.
 
@@ -92,7 +92,8 @@ QA2's initial fuzzing delivery is complete: HTTP and chunked harnesses,
 corpus, sanitizers, CI budgets and reproduction evidence are in
 [tests/fuzz](../tests/fuzz/README.md). Broader targets or longer recurring
 campaigns need separate scope. P3 is archived until a concrete middleware
-composition use case is selected.
+composition use case is selected. P2 is outside library scope: applications
+handle logging, and doba provides no logger.
 
 Native runners use repository C++ and CMake; TLS interoperability and example
 checks use independent C++ clients. All test, corpus, mutation, coverage and
@@ -102,12 +103,12 @@ campaign logic must be C++; no scripting runtime is a project dependency.
 | --- | --- | --- | --- | --- | --- |
 | Operational hardening | C1-C3, C7 | 0 | 1 | 3 | 4 |
 | Bugs | B13 | 0 | 1 | 0 | 1 |
-| Product and convenience | F2, P2, P4-P8 | 0 | 7 | 0 | 7 |
+| Product and convenience | F2, P4-P8 | 0 | 6 | 0 | 6 |
 | Quality and validation | QA1, QA6 | 0 | 2 | 0 | 2 |
 | Release engineering | RE1 | 1 | 0 | 0 | 1 |
-| C++ maintainability | DT1-DT3 | 0 | 3 | 0 | 3 |
+| C++ maintainability | DT1-DT3 | 0 | 2 | 1 | 3 |
 | Beyond the first release | F3-F5, F7 | 0 | 4 | 0 | 4 |
-| **Total** | | **1** | **18** | **3** | **22** |
+| **Total** | | **1** | **16** | **4** | **21** |
 
 | Item | Category | Status | Priority | Target |
 | --- | --- | --- | --- | --- |
@@ -115,9 +116,8 @@ campaign logic must be C++; no scripting runtime is a project dependency.
 | [C2](#c2-effective-per-request-limits) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
 | [C3](#c3-global-active-connection-limit) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
 | [C7](#c7-pending-response-and-work-budget) | Hardening | Complete | Release gate met | 0.1.0-beta1 |
-| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark bug | Fix and regression pending | Medium | Future work |
+| [B13](#b13-signed-overflow-in-the-httparena-adapter) | Benchmark regression | Fix implemented; boundary coverage pending | Medium | Future work |
 | [F2](#f2-compression-and-gzip) | Product | Design and implementation pending | Not set | Future work |
-| [P2](#p2-access-logging) | Product | Decision pending | Not set | Future work |
 | [P4](#p4-form-parsing) | Product | Pending | Not set | Future work |
 | [P5](#p5-automatic-conditionals-and-ranges) | Product | Deferred | Not set | Future work |
 | [P6](#p6-output-trailers) | Product | Deferred | Not set | Future work |
@@ -127,7 +127,7 @@ campaign logic must be C++; no scripting runtime is a project dependency.
 | [QA6](#qa6-external-compliance-automation) | QA | Deferred | Not set | Future work |
 | [RE1](#re1-release-governance-and-traceability) | Release | Partial; publication work deferred until planned | Release gate | 0.1.0-beta1 |
 | [DT1](#dt1-platformh-dependencies-and-global-effects) | C++ | Pending | Medium | Future work |
-| [DT2](#dt2-indexed-getter-contract) | C++ | Decision pending | Low/Medium | Future work |
+| [DT2](#dt2-indexed-getter-contract) | C++ | Documented | Not applicable | Current contract |
 | [DT3](#dt3-response-framing-and-capacity-contract) | C++ | Decision pending | Medium | Future work |
 | [F3](#f3-progressive-streaming-and-sse) | Future | Deferred | Not set | Future work |
 | [F4](#f4-ordered-upgrade-barrier) | Future | Deferred | Not set | Future work |
@@ -281,7 +281,8 @@ budgets. See the TCP and TLS policy references for platform-specific semantics.
   </a>
 </h2>
 
-B13 is the only open bug recorded here. Closed fixes remain in Git history.
+B13 tracks remaining regression coverage for an implemented adapter fix.
+Closed fixes remain in Git history.
 
 <a name="b13-signed-overflow-in-the-httparena-adapter"></a>
 <h3>
@@ -299,15 +300,17 @@ B13 is the only open bug recorded here. Closed fixes remain in Git history.
   </a>
 </h3>
 
-**Status.** Unfixed in the current source; benchmark-only future work.
+**Status.** Overflow checks are implemented in the adapter. Boundary coverage
+still needs expansion before this item is closed.
 
-**Problem.** `read_query_sum()` and the POST handler add parsed
-`int64_t` values without checking whether the sums are representable.
+**Implemented.** `read_query_sum()` and the POST handler use `checked_add()`
+before adding parsed `int64_t` values. Invalid sums return 400. The current
+wire tests cover positive and negative query overflow and positive body-sum
+overflow, plus ordinary inputs.
 
-**Close when.** Test maximum plus one, minimum minus one, representable
-boundaries, and ordinary inputs in both additions. Define a deterministic
-invalid-request result and verify with UBSan where available. Keep the fix
-local to the adapter.
+**Close when.** Add negative body-sum overflow and representable upper/lower
+boundary cases for both additions. Verify the adapter with UBSan on the
+qualified revision.
 
 <a name="product-and-convenience"></a>
 <h2>
@@ -325,8 +328,8 @@ local to the adapter.
   </a>
 </h2>
 
-F2, P2 and P4-P8 are future work, outside the first beta. P3 is archived
-until a concrete composition use case exists.
+F2 and P4-P8 are future work, outside the first beta. P2 is outside library
+scope; P3 is archived until a concrete composition use case exists.
 
 <a name="f2-compression-and-gzip"></a>
 <h3>
@@ -346,6 +349,8 @@ until a concrete composition use case exists.
 
 **Status.** Design and implementation pending; future product work.
 Parsing Accept-Encoding or Content-Encoding does not implement compression.
+The benchmark's zlib handler is adapter-specific; the library has no automatic
+response-compression API.
 This feature does not block resource hardening or the first beta.
 
 **Scope.** Add GZIP response compression with `Accept-Encoding` selection,
@@ -366,16 +371,10 @@ large bodies.
   </a>
 </h3>
 
-**Status.** Future product decision. There is no dedicated request access
-log hook.
+**Status.** Archived, outside library scope. doba provides neither a logger
+nor a dedicated request access-log hook. Applications handle their own output.
 
-**Decide.** Choose the observation point, completion meaning, exposed peer
-endpoint, status, duration, and outcome. Treat forwarded addresses as claims;
-support them only with an explicit trusted-proxy policy. Do not put HTTP
-semantics in the transport or assume P3 is required.
-
-**Close when selected.** Verify success, rejection, disconnect, and send
-failure records without duplicates, and define lifetime and disabled cost.
+Logging is not an implementation item for the current library.
 
 <a name="p4-form-parsing"></a>
 <h3>
@@ -413,9 +412,11 @@ boundaries. Coordinate budgets with C2.
   </a>
 </h3>
 
-**Status.** Deferred future work. The static file server handles
-existence-based `If-Match: *` and `If-None-Match: *` but supplies no entity
-tags, date validators, or byte ranges.
+**Status.** General response helpers remain deferred. The existing
+`static_file_server` already supplies entity tags, date validators,
+precondition handling and single byte ranges for GET. Its policies can disable
+ranges; HEAD describes the complete representation. See the
+[current static-file contract](reference/protocol/http/v11/static_file_server.md).
 
 **Scope to decide.** Add optional helpers using application-supplied
 representation metadata. Preserve wildcard conditions and the option to
@@ -639,7 +640,8 @@ content, notes, and `v0.1.0-beta1` tag; publish as a prerelease.
   </a>
 </h2>
 
-DT1-DT3 are future work. RE1 covers the minimum documentation of current
+DT1 and DT3 are future work; DT2's current precondition is documented. RE1 covers
+the minimum documentation of current
 usage preconditions for `0.1.0-beta1`; these entries do not require API
 changes or a broader redesign before that release.
 
@@ -686,17 +688,17 @@ without evidence.
   </a>
 </h3>
 
-**Status.** Future contract decision.
+**Status.** Current precondition documented; a checked API remains a separate
+optional design decision.
 
 **Problem.** `request::get_header(size_t)` and
 `get_query_parameter(size_t)` use unchecked indexing; callers currently
 need valid indices.
 
-**Smallest remaining task.** Document the current precondition
-0 <= i < get_headers_length() or get_query_parameters_length(), as
-appropriate. A checked API is a separate optional change, not required
-to document current behavior. Do not test out-of-range unchecked access
-as though it were a supported operation.
+**Current contract.** The [request reference](reference/protocol/http/v11/request.md)
+requires `i < get_headers_length()` or `i < get_query_parameters_length()`, as
+appropriate. A checked API is a separate optional change. Out-of-range
+unchecked access is not a supported operation to exercise in tests.
 
 <a name="dt3-response-framing-and-capacity-contract"></a>
 <h3>

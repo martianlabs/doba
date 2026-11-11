@@ -30,7 +30,7 @@
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  // Missing credentials must fail before a listening socket is opened.
+  // Missing credentials must fail before opening a listener.
   martianlabs::doba::https_server<> server;
   try {
     server.start();

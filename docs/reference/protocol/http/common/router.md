@@ -50,7 +50,7 @@ Provides the http 1.1 router implementation.
 - **RQty:** `typename RQty`.
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/common/router.h:58](../../../../../include/protocol/http/common/router.h#L58)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 <a id="method-add"></a>
 
@@ -78,7 +78,7 @@ Adds a route to the router with the specified HTTP method, route path, and handl
 
 **Returns:** No value (`void`).
 
-**Source:** [include/protocol/http/common/router.h:80](../../../../../include/protocol/http/common/router.h#L80)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 <a id="method-add-2"></a>
 
@@ -111,7 +111,7 @@ Adds the requested value.
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/common/router.h:89](../../../../../include/protocol/http/common/router.h#L89)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 <a id="method-add-controller"></a>
 
@@ -139,7 +139,7 @@ Adds a controller to the router. The controller must implement the 'register_rou
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/common/router.h:180](../../../../../include/protocol/http/common/router.h#L180)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 <a id="method-match"></a>
 
@@ -162,7 +162,7 @@ Matches the given HTTP method and path against the registered routes.
 
 **Returns:** A value of type `router_match_result<RQty, RSty>`.
 
-**Source:** [include/protocol/http/common/router.h:213](../../../../../include/protocol/http/common/router.h#L213)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)
 
 <a id="method-allowed-methods"></a>
 
@@ -183,4 +183,4 @@ Returns a comma-separated string of allowed HTTP methods for the given path.
 
 **Returns:** A value of type `std::string`.
 
-**Source:** [include/protocol/http/common/router.h:269](../../../../../include/protocol/http/common/router.h#L269)
+**Source:** [include/protocol/http/common/router.h](../../../../../include/protocol/http/common/router.h)

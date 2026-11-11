@@ -45,11 +45,11 @@ namespace tr = martianlabs::doba::transport;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct factory_probe {
-  // Factory calls and completed disconnection notifications.
+  // Count factory calls and disconnection callbacks.
   std::atomic<unsigned> created{0}, disconnected{0};
-  // Application state configured before the first transport entry.
+  // Set application state before starting the transport.
   std::string expected;
-  // All receive entries must observe that same factory-owned state.
+  // Every input call must see the state supplied by the factory.
   std::atomic<bool> preserved{true};
 };
 
@@ -57,7 +57,7 @@ struct factory_probe {
 // +---------------------------------------------------------------------------+
 // | [>] factory_engine                                             ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Requires only the current protocol contract, with no execution hooks.     |
+// | Needs only the engine contract, without execution helpers.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct factory_engine {
@@ -90,11 +90,11 @@ struct factory_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Test-owned state outlives the transport and all context callbacks.
+  // Keep this state alive until the transport and its callbacks finish.
   std::shared_ptr<factory_probe> probe;
-  // Value supplied only by the application factory.
+  // A value supplied by the application factory.
   std::string marker;
-  // Current transport output callback, valid only inside serialized entries.
+  // Use this callback only during an engine call.
   martianlabs::doba::protocol::send_delegate output;
 };
 }  // namespace

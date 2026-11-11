@@ -309,7 +309,7 @@ DOBA_TEST("Windows deadlines progress while a source keeps output busy") {
   DOBA_EXPECT(peer.send_all("x"));
   DOBA_EXPECT(fired.wait_for(3s) == std::future_status::ready);
   DOBA_EXPECT(!fired.get());
-  // Windows stop drains accepted output; disconnect the non-reading peer.
+  // Disconnect the slow peer so stop() can finish draining output.
   peer.close();
   server.stop();
 }

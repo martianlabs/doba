@@ -75,17 +75,24 @@ namespace common = martianlabs::doba::common;
 using martianlabs::doba::protocol::http::helpers;
 
 #if DOBA_HTTPARENA_FULL
-// Each worker reuses zlib's allocations; reset starts an independent gzip
-// member for every response. No JSON or compressed response is cached.
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] gzip_context                                               ( struct ) |
 // +---------------------------------------------------------------------------+
+// | Reuse zlib buffers per worker. Start fresh gzip for each response;        |
+// | never cache JSON or compressed output.                                    |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct gzip_context {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
   z_stream stream{};
   bool initialized{false};
 
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
   gzip_context() = default;
   gzip_context(const gzip_context&) = delete;
   gzip_context& operator=(const gzip_context&) = delete;
@@ -93,7 +100,7 @@ struct gzip_context {
     if (initialized) deflateEnd(&stream);
   }
 
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] reset                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   bool reset() {
@@ -133,7 +140,7 @@ bool encoding_weights(std::string_view value, std::array<int, 4>& quality) {
         }
         for (std::size_t j = 0; j < names.size(); ++j) {
           if (helpers::iequals(coding, names[j])) {
-            // Conflicting duplicates must not override a q=0 rejection.
+            // A duplicate must not undo a q=0 rejection.
             quality[j] = quality[j] < 0 ? q : std::min(quality[j], q);
             break;
           }
@@ -189,7 +196,7 @@ bool read_query_sum(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] read_body_integer                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | Reads decoded bytes for Content-Length and chunked bodies.                |
+// | Use the same reader for Content-Length and chunked bodies.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool read_body_integer(const request& req, std::int64_t& value) {
@@ -214,7 +221,7 @@ bool read_body_integer(const request& req, std::int64_t& value) {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the HttpArena benchmark routes on TCP and TLS.                       |
+// | Serve the HttpArena routes over TCP and TLS.                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -228,7 +235,7 @@ int main() {
     return 1;
   }
   workers = std::max<std::size_t>(1, CPU_COUNT(&available));
-  // Docker exposes the container's cgroup at the controller mount root.
+  // Docker puts this container's cgroup at the controller root.
   constexpr std::array<const char*, 3> quota_paths = {
       "/sys/fs/cgroup/cpu.max",
       "/sys/fs/cgroup/cpu/cpu.cfs_quota_us",
@@ -256,8 +263,7 @@ int main() {
       std::cerr << "invalid CPU quota\n";
       return 1;
     }
-    // Match one worker per complete usable core, as Fulmine's automatic pool.
-    // A fractional quota still needs one worker, but not an extra full worker.
+    // Like Fulmine, use whole CPU cores, with at least one worker.
     const auto quota_workers = std::max<std::uint64_t>(1, quota / period);
     workers = static_cast<std::size_t>(
         std::min<std::uint64_t>(workers, quota_workers));
@@ -313,7 +319,7 @@ int main() {
         res.ok_200();
         res.add_header("Content-Type", "text/plain").set_body("ok");
       });
-  // Parse every baseline value; HttpArena randomizes them to detect shortcuts.
+  // Parse every value; HttpArena changes them to catch canned replies.
   http_server.add_route(
       "GET", "/baseline11",
       [](const request& req, response& res) {
@@ -462,10 +468,8 @@ int main() {
   martianlabs::doba::https_server<> tls_server(tls_configuration,
                                                http_configuration);
   tls_server.add_route("GET", "/json/:count", json_handler);
-  // The framework owns representation selection, attribute validation and the
-  // bounded cache. Keep all workers under one declared budget; no file preload
-  // or per-worker maps in the adapter. Compressed siblings are selected on
-  // disk.
+  // Let static_file_server validate and select files, including compressed
+  // siblings. Share one cache budget across workers; do not preload files.
   const common::cache_policies cache_configuration;
   static_file_policies static_configuration;
   static_configuration.precompressed = true;
@@ -493,7 +497,7 @@ int main() {
   std::cerr << "workers per listener: " << workers << "; HTTP port: " << port
             << "; TCP qualification build (not the full HttpArena image)\n";
 #endif
-  // The benchmark harness owns process shutdown.
+  // The harness stops this process.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

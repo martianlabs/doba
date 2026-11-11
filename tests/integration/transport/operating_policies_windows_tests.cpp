@@ -51,17 +51,17 @@ constexpr std::string_view get = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
 struct echo_engine {
   using policies_type = int;
   protocol::send_delegate send;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate callback) {
     send = std::move(callback);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()>) {}
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view bytes) {
@@ -82,15 +82,15 @@ struct echo_engine {
 // /////////////////////////////////////////////////////////////////////////////
 struct plain_peer {
   tcpip_client socket;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] connect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   bool connect(std::uint16_t port) { return socket.connect(port); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool send(std::string_view wire) { return socket.send_all(wire); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   auto receive(std::size_t size) { return socket.receive(size); }
@@ -181,7 +181,7 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   for (auto &thread : burst)
     thread.join();
   DOBA_EXPECT_EQUAL(rejected.load(), 8);
-  // A separate instance still admits while this instance has no credit.
+  // Another transport must still accept while this one is full.
   auto independent_configuration = p;
   const auto independent_port = probe.find_available_port();
   independent_configuration.port = std::to_string(independent_port);

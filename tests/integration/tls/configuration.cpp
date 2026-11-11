@@ -51,7 +51,7 @@ void require(bool condition) {
 // +---------------------------------------------------------------------------+
 // | [>] temporary_files                                            ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Owns only the named files it creates; cleanup is never recursive.         |
+// | Remove only files created here; never remove a directory tree.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct temporary_files {
@@ -74,7 +74,7 @@ struct temporary_files {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Unique directory created by this fixture under the system temp directory.
+  // A private directory under the system temp directory.
   std::filesystem::path directory;
 };
 
@@ -82,7 +82,7 @@ struct temporary_files {
 // +---------------------------------------------------------------------------+
 // | [>] invalid                                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// | Require the intended policy exception, without opening any listener.      |
+// | Check the expected policy error before any listener opens.                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename FNty>

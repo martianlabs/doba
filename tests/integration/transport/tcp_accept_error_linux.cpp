@@ -81,7 +81,7 @@ struct echo_engine {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Transport callback, used only during input processing.
+  // Call only while handling input.
   martianlabs::doba::protocol::send_delegate send;
 };
 
@@ -89,7 +89,7 @@ struct echo_engine {
 // +---------------------------------------------------------------------------+
 // | [>] descriptor_budget                                           ( class ) |
 // +---------------------------------------------------------------------------+
-// | Exhausts descriptors in this isolated test process only.                  |
+// | Exhaust file descriptors only in this test process.                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class descriptor_budget {
@@ -141,9 +141,9 @@ class descriptor_budget {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Restored before the transport is destroyed, even on failed assertions.
+  // Restore the limit before destroying the transport, even if a check fails.
   rlimit original_{};
-  // Dummy files occupying the process descriptor table.
+  // Files held open to fill the descriptor table.
   std::vector<int> descriptors_;
 };
 
@@ -151,10 +151,10 @@ class descriptor_budget {
 // +---------------------------------------------------------------------------+
 // | [>] make_engine                                              ( function ) |
 // +---------------------------------------------------------------------------+
+// | Warm up this factory type before exhausting descriptors: UBSan may open a |
+// | file on its first use.                                                    |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-// Use one factory type in both cases. The healthy exchange initializes UBSan's
-// thread type metadata before partial_start exhausts the descriptor table.
-// LLVM may need a descriptor when inspecting that type for the first time.
 echo_engine make_engine() { return {}; }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -178,7 +178,7 @@ bool exercise() {
     descriptor_budget budget;
     budget.leave_slots(1);
     tcpip_client rejected;
-    // Its client socket uses the last slot; accept4 must fail with EMFILE.
+    // The client takes the last descriptor, so accept4 must fail with EMFILE.
     if (rejected.connect(port)) {
       if (!rejected.wait_for_close(3s) && !rejected.connection_reset()) {
         return false;
@@ -213,7 +213,8 @@ bool partial_start() {
       factory);
   {
     descriptor_budget budget;
-    // A worker uses three descriptors. The second must fail and unwind both.
+    // Each worker needs three descriptors. The second must fail and clean up
+    // both.
     budget.leave_slots(4);
     bool rejected = false;
     try { transport.start(); }

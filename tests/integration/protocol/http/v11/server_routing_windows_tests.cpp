@@ -35,26 +35,29 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] text_response                                            ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void text_response(response& res, std::string_view text) {
   res.ok_200().set_body(text);
 }
 }  // namespace
 
 // +===========================================================================+
-// | [>] HTTP/1.1 runs synchronous pipelines with IOCP           ( test-case ) |
-// |     workers                                                               |
+// | [>] HTTP pipelines across IOCP workers                      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 runs synchronous pipelines with multiple IOCP workers") {
   tcpip_client probe;

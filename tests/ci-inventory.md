@@ -11,10 +11,10 @@ prerequisites. New processing checks run inside those jobs.
 | Portable integration | Factory configuration, close precedence, RX/TX/reader rules and policy limits in the ordinary integration binary. |
 | Linux native processing | doba_linux_processing_tests alongside transport and accept-fault groups; transport and processing repeat under TSan. |
 | Windows native processing | Actual processing cases in the integration binary and doba_windows_processing_tests for forced early publication/cancellation/faults; repeated with IOCP/lifecycle probes under Windows sanitizers. |
-| TLS | Existing wire/core/configuration/header/example groups plus doba_tls_processing_tests and doba_tls_processing_wire_tests. Dedicated TLS jobs explicitly build doba_tls_processing and execute both new groups. |
+| TLS | Six groups: native wire, core, configuration, executable examples, processing and ordered processing wire checks. Dedicated TLS jobs build their named targets and run each group explicitly. |
 | Executable processing examples | doba_processing_examples_tests runs the task_execution example, in-memory concurrent engine and native TCP example. Required when examples are enabled. |
 | HttpArena driver | doba_httparena_tests checks metadata and actual baseline/pipelined/async behavior with dynamic values on isolated ports. It is always part of root test builds, not a throughput campaign. |
-| Existing broader gates | Minimum CMake, package/source consumers, fuzzers and private-copy mutation campaigns remain configured; final qualification belongs to async-plan block 10. |
+| Broader gates | Minimum CMake, package/source consumers, fuzzers, private-copy mutation campaigns and per-platform coverage checks. |
 
 [ci_test_inventory.cmake](../cmake/ci_test_inventory.cmake) requires Release,
 records selected build options, lists the registered unit/integration cases and
@@ -51,7 +51,7 @@ required-check names remain unchanged. These are configured gates; local
 qualification and remote workflow execution must be distinguished.
 
 Evidence is written under <build>/ci-evidence and uploaded by the workflow.
-The current block-9 local checks also use private CTest inventories omitting,
+Inventory negative controls use private CTest inventories omitting,
 one at a time, native processing, driver, TLS processing wire and executable
 examples. Each omission must fail its intended diagnostic on Linux and Windows;
 a generic process failure cannot count as a successful negative check.

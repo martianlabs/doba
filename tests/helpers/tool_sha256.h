@@ -33,11 +33,14 @@
 
 namespace martianlabs::doba::tests::tools {
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] sha256                                                   ( function ) |
 // +---------------------------------------------------------------------------+
-// FIPS 180-4 digest for evidence identity, never credential authentication.
-// Tests include the standard empty and abc known-answer vectors.
+// | SHA-256 for identifying test evidence. Check it with the empty and abc    |
+// | vectors.                                                                  |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 inline std::string sha256(std::string input) {
   constexpr std::array<uint32_t, 64> constants{
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b,

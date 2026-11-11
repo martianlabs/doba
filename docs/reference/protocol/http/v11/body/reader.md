@@ -48,7 +48,7 @@ class reader { ... };
 
 Holds a borrowed buffer or an owned file with the body decoder. (reader_chunked or reader_raw) matching the encoding actually used by the request (Transfer-Encoding: chunked vs Content-Length). This lets callers pull already-decoded payload bytes via read() without ever having to know which framing produced them.
 
-**Source:** [include/protocol/http/v11/body/reader.h:52](../../../../../../include/protocol/http/v11/body/reader.h#L52)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-chunked"></a>
 
@@ -77,7 +77,7 @@ Creates a reader for a chunked Transfer-Encoding from a borrowed span source. Th
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/body/reader.h:72](../../../../../../include/protocol/http/v11/body/reader.h#L72)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-chunked-2"></a>
 
@@ -106,7 +106,7 @@ Creates a reader for a chunked Transfer-Encoding from a file source. The extensi
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/body/reader.h:90](../../../../../../include/protocol/http/v11/body/reader.h#L90)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-raw"></a>
 
@@ -130,7 +130,7 @@ Creates a reader for a raw Transfer-Encoding from a borrowed span source. The co
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/body/reader.h:107](../../../../../../include/protocol/http/v11/body/reader.h#L107)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-raw-2"></a>
 
@@ -154,7 +154,7 @@ Creates a reader for a raw Transfer-Encoding from a file source. The content_len
 
 **Errors:** Directly throws `std::invalid_argument`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/body/reader.h:120](../../../../../../include/protocol/http/v11/body/reader.h#L120)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-read"></a>
 
@@ -174,7 +174,7 @@ Pulls wire bytes from the owned source, decodes them using the encoding selected
 
 **Returns:** A `reader_state` describing progress, completion, and errors.
 
-**Source:** [include/protocol/http/v11/body/reader.h:133](../../../../../../include/protocol/http/v11/body/reader.h#L133)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-take-borrowed-raw"></a>
 
@@ -195,7 +195,7 @@ Creates a raw reader over borrowed bytes.
 
 **Returns:** A `std::optional<std::span<const std::byte>>` containing the result when present; otherwise `std::nullopt`.
 
-**Source:** [include/protocol/http/v11/body/reader.h:141](../../../../../../include/protocol/http/v11/body/reader.h#L141)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-raw-3"></a>
 
@@ -216,7 +216,7 @@ Takes ownership of wire bytes, including any temporary backing file.
 
 **Returns:** A `reader` configured for the selected body format.
 
-**Source:** [include/protocol/http/v11/body/reader.h:149](../../../../../../include/protocol/http/v11/body/reader.h#L149)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-chunked-3"></a>
 
@@ -240,7 +240,7 @@ Creates a reader or writer for chunked transfer encoding.
 
 **Returns:** A `reader` configured for the selected body format.
 
-**Source:** [include/protocol/http/v11/body/reader.h:152](../../../../../../include/protocol/http/v11/body/reader.h#L152)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)
 
 <a id="method-rebind-borrowed"></a>
 
@@ -262,4 +262,4 @@ Points borrowed byte views at the replacement buffer.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/protocol/http/v11/body/reader.h:159](../../../../../../include/protocol/http/v11/body/reader.h#L159)
+**Source:** [include/protocol/http/v11/body/reader.h](../../../../../../include/protocol/http/v11/body/reader.h)

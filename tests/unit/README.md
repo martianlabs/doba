@@ -137,4 +137,4 @@ cases cover overlapping waits, out-of-order completion with ordered output,
 progress during source drain, per-turn fairness, bounded admission and byte
 limits, interim responses and cancellation. Old cross-thread completion,
 observer and pressure-hysteresis tests were replaced with the current contracts;
-see the block-4 removal/coverage ledger in out/async-processing/block-4.
+see the [execution API retirement notes](../../docs/reference/protocol/http/v11/async-retirement.md).

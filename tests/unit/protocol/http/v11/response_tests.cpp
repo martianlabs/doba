@@ -61,9 +61,7 @@ constexpr std::size_t max_response_body_size_in_memory =
 // +---------------------------------------------------------------------------+
 // | [>] read_source                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function reads the entire content from a reader source and returns   |
-// | it as a string. It is used for testing purposes to verify the             |
-// | correctness of the serialized body.                                       |
+// | Read the source to check the serialized body.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string read_source(reader& source) {
@@ -1267,7 +1265,7 @@ DOBA_TEST("deferred length respects the exact header boundary") {
 }
 
 // +===========================================================================+
-// | [>] removing one Date preserves the remaining explicit Date ( test-case ) |
+// | [>] removing Date keeps the other explicit value            ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("removing one Date preserves the remaining explicit Date") {
 
