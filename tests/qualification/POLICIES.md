@@ -1,16 +1,16 @@
 <a name="policy-checks"></a>
 <h1>
   <a href="../../resources/tests/qualification/policies/h1-policy-checks.svg#gh-light-mode-only">
-    <img src="../../resources/tests/qualification/policies/h1-policy-checks.svg" alt="Policy checks">
+    <img src="../../resources/tests/qualification/policies/h1-policy-checks.svg" alt="Do the limits hold?">
   </a>
   <a href="../../resources/tests/qualification/policies/h1-policy-checks-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/tests/qualification/policies/h1-policy-checks-dark.svg" alt="Policy checks">
+    <img src="../../resources/tests/qualification/policies/h1-policy-checks-dark.svg" alt="Do the limits hold?">
   </a>
 </h1>
 
-This inventory follows the public fields, rather than counting tests that
-only read defaults back. A limit needs an observable effect: admission,
-rejection, bounded work, storage choice or exact output.
+A setting isn't tested just because we can read its default back. We need
+to see it reject extra work, bound a buffer or choose the right storage.
+Here's where each policy gets that check.
 
 <a name="tcp"></a>
 <h2>
@@ -22,17 +22,24 @@ rejection, bounded work, storage choice or exact output.
   </a>
 </h2>
 
-Paths below start at `tests/`.
+[Socket policy tests](../integration/transport/tcp_policy_limits_tests.cpp)
+use real listeners. [Unit helpers](../unit/transport/operating_policies_tests.cpp)
+check partial-send accounting and reader ownership.
 
-| Field | Behavioral checks |
+| Field | What we check |
 | --- | --- |
-| `receive_buffer_capacity` | `integration/transport/tcp_policy_limits_tests.cpp`: three-byte input blocks and binary echo under full admission. Zero and native numeric bounds in `unit/transport/tcp_transport_tests.cpp` and native policy tests. |
-| `worker_count` | Native Linux/Windows connection and processing tests, automatic selection, independent connections; policy saturation with one/four workers. |
-| `listen_backlog` | Real listeners with 0, 1 and INT_MAX in `tcp_policy_limits_tests.cpp`; negative values rejected. The kernel may lower the requested backlog. |
-| `max_buffered_send_bytes` | Exact capacity and one-byte overflow on real sockets; `unit/transport/operating_policies_tests.cpp` keeps the whole active batch charged through partial sends and bounds reader blocks. |
-| `max_connections` | Zero, finite rejection before engine creation, factory failure and slot release. Saturation keeps sixteen live peers, rejects 32 concurrent excess peers, checks binary replies and refills freed slots over eight cycles with one/four workers. Linux worker partitions are allowed to reject early while filling; a full server must reject every excess peer. |
-| `ip` | Valid loopback and malformed addresses, including embedded/trailing NUL, in `tcp_policy_limits_tests.cpp`. |
-| `port` | Valid ephemeral port, zero, range overflow, signs, whitespace and embedded/trailing NUL in the same file. |
+| `receive_buffer_capacity` | Three-byte blocks, binary echo, zero and native size bounds. |
+| `worker_count` | Automatic selection, independent progress and one/four-worker overload. |
+| `listen_backlog` | 0, 1 and INT_MAX work; negative values fail. The kernel may cap it. |
+| `max_buffered_send_bytes` | Exact capacity, one extra byte, partial sends and reader blocks. |
+| `max_connections` | Zero, full admission, rejected factories, freed slots and recovery. |
+| `ip` | Valid loopback, malformed addresses and embedded/trailing NUL. |
+| `port` | Valid ports, zero, overflow, signs, whitespace and NUL. |
+
+Overload keeps sixteen peers connected and starts 32 extra clients together.
+Admitted clients must still get their exact replies. We free half the slots
+and refill them, for eight cycles with one/four workers. Linux's per-worker
+partition may reject early while filling; a full server must reject every extra peer.
 
 <a name="tls"></a>
 <h2>
@@ -44,21 +51,22 @@ Paths below start at `tests/`.
   </a>
 </h2>
 
-TCP settings are inherited. `encrypted_receive_buffer_capacity` becomes the
-TCP RX block size; `max_buffered_ciphertext_bytes` becomes the TCP TX budget.
-The plaintext settings remain separate inside the TLS engine.
+[Configuration](../integration/tls/configuration.cpp),
+[processing](../integration/tls/processing.cpp) and
+[socket tests](../integration/tls/exercise.cpp) cover the extra TLS fields.
 
-| Field | Behavioral checks |
+| Field | What we check |
 | --- | --- |
-| `certificate_file` | Verified native clients, missing/invalid certificate, embedded NUL and mismatch in `integration/tls/configuration.cpp` and `exercise.cpp`. |
-| `private_key_file` | Matching, missing, malformed, mismatched and encrypted keys; no password prompt. |
-| `encrypted_receive_buffer_capacity` | Zero rejected; native TLS exchanges and source/close with one/seventeen-byte encrypted RX and three-byte plaintext RX in `exercise.cpp`. |
-| `network_bio_buffer_capacity` | Zero and INT_MAX overflow rejected. Real progress with capacities 1/127/17408 in `core.cpp` and `processing.cpp`. |
-| `max_buffered_ciphertext_bytes` | Zero rejected. `processing.cpp` measures a valid encrypted batch, then checks size−1, size and size+1 for both TLS versions and each BIO capacity. Overflow emits no partial batch and cannot revive processing. Native overflow closes one connection and a fresh client still succeeds. |
-| `alpn_protocol` | Empty and 255-byte configuration accepted, 256 rejected; native exact match, absent/mismatched offers and incompatible HTTP ALPN in `exercise.cpp`. |
+| `certificate_file` | Verified peer, missing/invalid certificate, NUL and key mismatch. |
+| `private_key_file` | Missing, malformed, mismatched and encrypted keys; no prompt. |
+| `encrypted_receive_buffer_capacity` | Zero fails; one/seventeen-byte socket reads still work. |
+| `network_bio_buffer_capacity` | Zero/overflow fail; capacities 1/127/17408 make progress. |
+| `max_buffered_ciphertext_bytes` | Batch size minus one, exact and plus one, including TLS overhead. |
+| `alpn_protocol` | Empty, 255/256-byte bounds, matching and wrong offers, HTTP compatibility. |
 
-Plaintext RX is asserted at engine entry. Plaintext TX tests cover exact and
-excess inline/source output, multiple submissions and processing turns.
+Both TLS versions get the ciphertext checks. Overflow must emit no partial
+batch or revive processing. Native checks also try three-byte plaintext input
+and exact/excess plaintext output. Encrypted RX and TX limits feed through to TCP.
 
 <a name="http11"></a>
 <h2>
@@ -70,36 +78,39 @@ excess inline/source output, multiple submissions and processing turns.
   </a>
 </h2>
 
-`unit/protocol/http/v11/policy_behavior_tests.cpp` feeds whole requests and
-one-byte fragments with a following sentinel request. Rejection must prevent
-both handler invocation and sentinel dispatch, and stay terminal on later
-input/turns. Accepted controls must return both replies in order.
+[Policy cases](../unit/protocol/http/v11/policy_behavior_tests.cpp) send each
+request whole and byte by byte, with a sentinel request behind it. Rejection
+must stop both handlers and stay terminal on later input and turns.
 
-| Field | Behavioral checks |
+| Field | What we check |
 | --- | --- |
-| `max_request_body_size` | Raw/chunked 0, finite boundaries and cumulative chunks through the engine; default 16 MiB boundary in `decoder_tests.cpp`. |
-| `max_forwarding_hops` | Custom/zero limits; combined Via, Forwarded and X-Forwarded-For, including repeated fields. |
-| `max_transfer_codings` | Custom/zero limits, one list versus repeated fields and final chunked coding. |
-| `allow_chunked` | Both switch values, ordinary Content-Length positive control and terminal rejection. |
-| `allow_upgrade` | Both switch values, valid Upgrade offer and ordinary-request positive control. Acceptance stays on HTTP/1.1. |
-| `max_pending_requests` | Exact credit and resumed admission in `policy_budget_audit_tests.cpp`; windows 1/2/4 combined with turn and storage policies. |
-| `max_pending_response_bytes` | Exact serialized response boundary and queued reader headers; overflow cancels retained frames in `operating_limits_tests.cpp` and `policy_budget_audit_tests.cpp`. Combined-policy pipelines retain the configured byte budget. |
-| `max_task_steps_per_turn` | Zero rejected; exact start/resume bounds and sibling progress in `engine_concurrency_tests.cpp`; budgets 1/3 through 24-request pipelines in the combined-policy test. |
-| `max_deferred_input_size` | Zero rejected, exact boundary and byte-by-byte accumulation; repeated drain/refill and terminal overflow. |
-| `max_query_parameters` | Custom/zero limits, repeated pairs and empty separators; expanded/default limits in `decoder_tests.cpp` and native `server_limits_tests.cpp`. |
-| `max_chunk_extension_size` | Custom/zero limits and exact extension boundary with terminal sentinel check; native default boundaries. |
-| `max_trailer_section_size` | Custom/zero limits and exact wire boundary with terminal sentinel check; native default boundaries. |
-| `max_request_head_size` | Zero rejected, exact complete/incomplete limits in `operating_limits_tests.cpp`, configured limits in `decoder_tests.cpp` and native default boundary. |
-| `request_body_memory_threshold` | Zero and size−1/size/size+1 with real temporary-file observation before completion, exact raw/chunked payload and cleanup in `decoder_tests.cpp`. Chunked storage counts received framing bytes too. |
-| `max_response_head_size` | Zero rejected, custom constructor capacities, deferred Content-Length boundary, failed growth preserving previous headers/body in `response_tests.cpp`; engine propagation in `engine_tests.cpp`. |
-| `response_body_memory_threshold` | Zero and below/at/above threshold: actual inline/source choice and binary output; combined pending/turn/source policies. |
+| `max_request_body_size` | Raw/chunked boundaries, cumulative chunks and zero. |
+| `max_forwarding_hops` | Combined/repeated Via, Forwarded and X-Forwarded-For; zero. |
+| `max_transfer_codings` | Lists, repeated fields, final chunked coding and zero. |
+| `allow_chunked` | Both settings, plus an ordinary Content-Length request. |
+| `allow_upgrade` | Both settings; accepted offers still use HTTP/1.1. |
+| `max_pending_requests` | Exact window, paused admission and resumed work. |
+| `max_pending_response_bytes` | Multiple queued replies, reader headers, overflow and reusable space. |
+| `max_task_steps_per_turn` | Zero fails; starts/resumes stay within budget and all siblings progress. |
+| `max_deferred_input_size` | Fragment totals, exact capacity, overflow and repeated refill. |
+| `max_query_parameters` | Pairs, empty separators, custom/default limits and zero. |
+| `max_chunk_extension_size` | Exact extension boundary, zero and terminal rejection. |
+| `max_trailer_section_size` | Exact wire-byte boundary, zero and terminal rejection. |
+| `max_request_head_size` | Zero fails; complete/incomplete heads and native boundaries. |
+| `request_body_memory_threshold` | Real spill files below/at/above the threshold, payload and cleanup. |
+| `max_response_head_size` | Zero fails; custom capacity, framing and failed growth preserving data. |
+| `response_body_memory_threshold` | Actual inline/reader choice and exact binary bytes. |
 
-The combined-policy test checks all 18 combinations of three request windows,
-two turn budgets and three inline thresholds. Each runs 24 yielded requests,
-holds sources, advances work while output is busy, drains it, and compares the
-complete response stream to an independently constructed expected stream.
-Another case sets every numeric HTTP policy to SIZE_MAX and processes a small
-valid chunked pipeline, checking for wraparound or eager allocation of a limit.
+The [decoder](../unit/protocol/http/v11/decoder_tests.cpp),
+[response](../unit/protocol/http/v11/response_tests.cpp),
+[budget](../unit/protocol/http/v11/policy_budget_audit_tests.cpp) and
+[native limit](../integration/protocol/http/v11/server_limits_tests.cpp) cases
+fill in the storage and socket checks.
+
+Eighteen combinations of request windows, turn budgets and inline thresholds
+each run 24 yielded requests. Held readers must not break reply order or stop
+other work. Another case sets all numeric policies to SIZE_MAX and processes
+a small valid pipeline without wrapping or allocating the limit up front.
 
 <a name="cache"></a>
 <h2>
@@ -111,50 +122,43 @@ valid chunked pipeline, checking for wraparound or eager allocation of a limit.
   </a>
 </h2>
 
-The shared file cache also has policies. `unit/common/cache_tests.cpp` covers
-each field: `max_entries` evicts the LRU, `max_cost` bounds resident cost while
-responses retain ownership, and `max_loads` bounds concurrent loaders even
-after invalidation. Each zero value disables caching without invoking a loader.
-Failed loads release capacity and permit retry.
+[Cache tests](../unit/common/cache_tests.cpp) check `max_entries` eviction,
+`max_cost` accounting and `max_loads` while loads are still running, even
+after invalidation. Zero in any field disables caching without calling the
+loader. Failed loads must release their slot and allow a retry.
 
 <a name="execution-and-scope"></a>
 <h2>
   <a href="../../resources/tests/qualification/policies/h2-execution-and-scope.svg#gh-light-mode-only">
-    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope.svg" alt="Execution and scope">
+    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope.svg" alt="Where these tests run">
   </a>
   <a href="../../resources/tests/qualification/policies/h2-execution-and-scope-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope-dark.svg" alt="Execution and scope">
+    <img src="../../resources/tests/qualification/policies/h2-execution-and-scope-dark.svg" alt="Where these tests run">
   </a>
 </h2>
 
-The new HTTP and TCP files have explicit CTest groups:
-`doba_http_policy_tests` and `doba_transport_policy_tests`. CI inventory and
-qualification campaigns require both groups; sanitizer campaigns run them too.
-The complete unit suite also includes the decoder storage checks. TLS checks
-remain in the existing TLS groups, requiring a TLS-enabled build.
+`doba_http_policy_tests` and `doba_transport_policy_tests` are required by
+CI inventory and sanitizer campaigns. Decoder spill checks run in the unit
+suite; TLS checks run in the TLS-enabled groups.
 
-These are bounded correctness and overload checks. They do not establish an
-RSS ceiling, an idle/handshake timeout, a maximum shutdown duration or stability
-under hours of sustained load. Those are separate contracts or campaigns.
+These are bounded overload tests, not hours of sustained load. Byte budgets
+don't cap process RSS, and these tests don't add idle/handshake or stop timeouts.
 
 <a name="local-validation-2026-11-11"></a>
 <h2>
   <a href="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11.svg#gh-light-mode-only">
-    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11.svg" alt="Local validation, 2026-11-11">
+    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11.svg" alt="Local runs, 2026-11-11">
   </a>
   <a href="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11-dark.svg" alt="Local validation, 2026-11-11">
+    <img src="../../resources/tests/qualification/policies/h2-local-validation-2026-11-11-dark.svg" alt="Local runs, 2026-11-11">
   </a>
 </h2>
 
-- Complete Release suites with TLS and examples: Linux Clang 22/22 CTest
-  groups; Windows MSVC 24/24. The final SIZE_MAX HTTP case also passes the
-  focused Windows policy group.
-- Linux ASan/UBSan: all eleven HTTP policy cases, all 204 decoder cases,
-  all nine TCP policy cases and all 114 TLS processing invocations passed.
-  Leak detection and halt-on-error were enabled.
-- CI inventory checks passed on both platforms. One-round TLS-enabled
-  qualification campaigns passed on each platform too.
+| Run | Result |
+| --- | --- |
+| Release, TLS and examples | Linux 22/22 groups; Windows 24/24. Final SIZE_MAX case also passed the Windows policy group. |
+| Linux ASan/UBSan | 11 HTTP policy, 204 decoder, 9 TCP policy and 114 TLS processing cases passed. Leak checks enabled. |
+| Inventory and one-round TLS campaigns | Both OSes passed; 77 actions on Linux, 61 on Windows. |
 
-Logs and campaign manifests are under `out/policy-*`; these are local runs,
-not a new remote CI result or a whole-suite sanitizer run.
+Logs are in `out/policy-*`. These are local results; the sanitizer runs cover
+the listed tests, not the whole suite.

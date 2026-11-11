@@ -8,60 +8,41 @@
   </a>
 </h1>
 
-These tests give the HTTP decoder and chunked-body machinery malformed input
-and check that valid messages still mean the same thing when delivered in
-pieces. libFuzzer supplies the bytes; explicit property checks stay active
-in optimized Release builds, including when assertions are disabled.
+Give the parser strange bytes. Split the good messages into awkward pieces.
+See whether the answers still make sense. That's the job here.
 
-The canonical corpus contains **36 decoder seeds and 13 chunked seeds**:
-valid pipelines, incomplete messages, conflicting framing, overflow,
-extensions, trailers, query limits, body/head limits and fragmented URI targets.
-Generated valid messages provide known answers alongside arbitrary input.
-
-There are also **12 engine-model seeds**. `fuzz_engine` shares an independent
-state model with `doba_security_model_tests` (144 deterministic configurations).
-It generates mixed synchronous/asynchronous pipelines, fragments and poisons
-RX, delays source consumption and checks exact ordered binary output, terminal
-rejection/close and coroutine/source ownership after engine destruction.
-Its control input is capped at 512 bytes, with at most twelve requests and
-128-byte bodies. It is not a raw HTTP or native transport/TLS fuzzer.
-
-Existing decoder CI jobs additionally replay and fuzz the engine model for
-60 seconds normally and 600 seconds nightly on Linux and Windows under
-ASan/UBSan. This preserves required-check names. Evolving engine corpora are
-cached separately; corpora and reproducers accompany the harness/build details.
-See the [security audit](../security-audit.md) for remaining coverage limits.
+libFuzzer starts with 36 decoder seeds, 13 chunked-body seeds and 12 engine
+seeds. CI replays them, then explores for 60 seconds per harness and OS,
+or 600 seconds nightly, under ASan/UBSan. It keeps the growing corpora and
+anything needed to reproduce a failure.
 
 <a name="properties"></a>
 <h2>
   <a href="../../resources/tests/fuzz/h2-properties.svg#gh-light-mode-only">
-    <img src="../../resources/tests/fuzz/h2-properties.svg" alt="Properties">
+    <img src="../../resources/tests/fuzz/h2-properties.svg" alt="What we check">
   </a>
   <a href="../../resources/tests/fuzz/h2-properties-dark.svg#gh-dark-mode-only">
-    <img src="../../resources/tests/fuzz/h2-properties-dark.svg" alt="Properties">
+    <img src="../../resources/tests/fuzz/h2-properties-dark.svg" alt="What we check">
   </a>
 </h2>
 
-`fuzz_decoder` checks input consumption, progress, accepted message boundaries,
-fields, headers, query parameters and payload equivalence across whole and
-fragmented delivery under identical policies. It compares memory storage with
-immediate or threshold-based disk spill. Requests are made owned, caller buffers
-are overwritten, and bodies and views are accessed after decoder destruction.
-Every input also supplies binary payload bytes for a generated valid pipeline
-with a known body, target paths and exact message boundaries.
+| Harness | What must stay right |
+| --- | --- |
+| `fuzz_decoder` | Message boundaries, fields and body bytes match across whole/fragmented input and memory/disk storage. Owned requests survive overwritten buffers and decoder destruction. |
+| `fuzz_chunked` | Payload, progress and message boundaries survive different fragments and output buffer sizes. Finishing or failing stays terminal. |
+| `fuzz_engine` | Mixed handlers reply in order, rejected successors stay out, and coroutine/reader owners get released. |
 
-Invalid streams stop at rejection. Fragmentation can change how many bytes were
-scanned before an error, so rejected-byte counts are not compared. Interim
-responses are excluded from semantic comparison. This harness exercises the
-decoder; dispatch after rejection is an engine/integration-test responsibility.
+Generated valid messages supply known answers too. Comparing two broken paths
+wouldn't tell us much. Checks stay active in Release, including with `NDEBUG`.
 
-`fuzz_chunked` checks consumption, terminal-state stability, fragmentation,
-output-capacity equivalence and reader/framer message boundaries. Generated
-valid bodies additionally check exact payload and preservation of a successor.
-Reader and framer errors are not equated: only the framer has a payload budget.
-Property checks use an explicit abort and remain active under `NDEBUG`.
+Decoder/chunked input is capped at 16 KiB, accepted bodies at 4 KiB and generated
+payloads at 512 bytes. Rejected-byte counts may differ with fragmentation;
+we don't pretend they must match.
 
-Inputs are capped at 16 KiB, accepted request payloads at 4 KiB, and generated
-known payloads at 512 bytes. Head, extension and trailer budgets vary with input
-size; each equivalence comparison keeps the same policy. These bounds define
-the short campaigns' scope rather than covering every production configuration.
+The engine takes a small control input: up to 512 bytes, twelve requests and
+128-byte bodies. The same model runs 144 fixed configurations in the unit
+suite. It doesn't fuzz raw HTTP, native sockets or TLS.
+
+Build targets and flags live in [CMakeLists.txt](CMakeLists.txt).
+[Still on the list](../security-audit.md#prioritized-remaining-work): broader
+stateful fuzzing and longer stress runs.
