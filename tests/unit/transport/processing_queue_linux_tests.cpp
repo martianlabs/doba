@@ -34,8 +34,7 @@
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 namespace {
-using queue_type = martianlabs::doba::transport::detail::
-    linux_processing_queue;
+using queue_type = martianlabs::doba::transport::detail::linux_processing_queue;
 using result_type = martianlabs::doba::protocol::processing_result;
 using clock_type = queue_type::clock;
 const auto origin = clock_type::time_point{};

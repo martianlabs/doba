@@ -33,11 +33,12 @@
 #endif
 #include <windows.h>
 #else
-#include <cerrno>
-#include <csignal>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <cerrno>
+#include <csignal>
 extern char** environ;
 #endif
 
@@ -63,12 +64,12 @@ class process {
   // | [>] wide                                                    ( private ) |
   // +-------------------------------------------------------------------------+
   static std::wstring wide(const std::string& value) {
-    int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-      value.data(), static_cast<int>(value.size()), nullptr, 0);
+    int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
+                                   static_cast<int>(value.size()), nullptr, 0);
     require(size > 0 || value.empty(), "Invalid UTF-8 process argument");
     std::wstring result(static_cast<size_t>(size), L'\0');
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
-      static_cast<int>(value.size()), result.data(), size);
+                        static_cast<int>(value.size()), result.data(), size);
     return result;
   }
   // +=========================================================================+
@@ -78,7 +79,10 @@ class process {
     std::wstring result = L"\"";
     unsigned slashes = 0;
     for (wchar_t character : wide(argument)) {
-      if (character == L'\\') { ++slashes; continue; }
+      if (character == L'\\') {
+        ++slashes;
+        continue;
+      }
       result.append(character == L'"' ? slashes * 2 + 1 : slashes, L'\\');
       result += character;
       slashes = 0;
@@ -106,14 +110,16 @@ class process {
     SECURITY_ATTRIBUTES security{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
     HANDLE reader{};
     require(CreatePipe(&reader, &input_, &security, 0) != 0,
-      "Cannot create child stdin");
+            "Cannot create child stdin");
     SetHandleInformation(input_, HANDLE_FLAG_INHERIT, 0);
-    HANDLE output = CreateFileW((directory_.path() / "stdout").c_str(),
-      GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
-      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    HANDLE error = CreateFileW((directory_.path() / "stderr").c_str(),
-      GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
-      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE output =
+        CreateFileW((directory_.path() / "stdout").c_str(), GENERIC_WRITE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
+                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE error =
+        CreateFileW((directory_.path() / "stderr").c_str(), GENERIC_WRITE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
+                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     std::map<std::wstring, std::wstring> variables;
     auto block = GetEnvironmentStringsW();
     require(block != nullptr, "Cannot read child environment");
@@ -148,10 +154,11 @@ class process {
     startup.hStdOutput = output;
     startup.hStdError = error;
     PROCESS_INFORMATION information{};
-    BOOL created = CreateProcessW(nullptr, arguments.data(), nullptr, nullptr,
-      TRUE, (console ? CREATE_NEW_CONSOLE : CREATE_NO_WINDOW) |
-        CREATE_UNICODE_ENVIRONMENT,
-      environment_block.data(), nullptr, &startup, &information);
+    BOOL created = CreateProcessW(
+        nullptr, arguments.data(), nullptr, nullptr, TRUE,
+        (console ? CREATE_NEW_CONSOLE : CREATE_NO_WINDOW) |
+            CREATE_UNICODE_ENVIRONMENT,
+        environment_block.data(), nullptr, &startup, &information);
     CloseHandle(reader);
     CloseHandle(output);
     CloseHandle(error);
@@ -179,8 +186,8 @@ class process {
     std::vector<char*> environment_block, arguments;
     for (auto& item : storage) environment_block.push_back(item.data());
     environment_block.push_back(nullptr);
-    for (const auto& item : command) arguments.push_back(
-      const_cast<char*>(item.c_str()));
+    for (const auto& item : command)
+      arguments.push_back(const_cast<char*>(item.c_str()));
     arguments.push_back(nullptr);
     // Find the executable before fork(); the child must avoid unsafe calls.
     fs::path executable = command.front();
@@ -196,12 +203,13 @@ class process {
     }
     int pipes[2];
     require(pipe2(pipes, O_CLOEXEC) == 0, "Cannot create child stdin");
-    int output = open((directory_.path() / "stdout").c_str(),
-      O_WRONLY | O_CLOEXEC);
-    int error = open((directory_.path() / "stderr").c_str(),
-      O_WRONLY | O_CLOEXEC);
+    int output =
+        open((directory_.path() / "stdout").c_str(), O_WRONLY | O_CLOEXEC);
+    int error =
+        open((directory_.path() / "stderr").c_str(), O_WRONLY | O_CLOEXEC);
     if (output < 0 || error < 0) {
-      close(pipes[0]); close(pipes[1]);
+      close(pipes[0]);
+      close(pipes[1]);
       if (output >= 0) close(output);
       if (error >= 0) close(error);
       throw std::runtime_error("Cannot redirect child output");
@@ -211,11 +219,16 @@ class process {
       dup2(pipes[0], STDIN_FILENO);
       dup2(output, STDOUT_FILENO);
       dup2(error, STDERR_FILENO);
-      close(pipes[0]); close(pipes[1]); close(output); close(error);
+      close(pipes[0]);
+      close(pipes[1]);
+      close(output);
+      close(error);
       execve(executable.c_str(), arguments.data(), environment_block.data());
       _exit(127);
     }
-    close(pipes[0]); close(output); close(error);
+    close(pipes[0]);
+    close(output);
+    close(error);
     input_ = pipes[1];
     if (child_ < 0) {
       close(input_);
@@ -231,7 +244,10 @@ class process {
   ~process() {
     if (!finished_) {
       kill();
-      try { wait(5s); } catch (...) {}
+      try {
+        wait(5s);
+      } catch (...) {
+      }
     }
 #ifdef _WIN32
     if (input_) CloseHandle(input_);
@@ -253,8 +269,9 @@ class process {
 #else
     int status{};
     pid_t result;
-    do { result = waitpid(child_, &status, WNOHANG); }
-    while (result < 0 && errno == EINTR);
+    do {
+      result = waitpid(child_, &status, WNOHANG);
+    } while (result < 0 && errno == EINTR);
     require(result >= 0, "Cannot reap child");
     if (!result) return false;
     code_ = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
@@ -302,9 +319,10 @@ class process {
     while (!text.empty()) {
 #ifdef _WIN32
       DWORD size{};
-      require(WriteFile(input_, text.data(),
-        static_cast<DWORD>(text.size()), &size, nullptr) != 0 && size,
-        "Cannot write child stdin");
+      require(WriteFile(input_, text.data(), static_cast<DWORD>(text.size()),
+                        &size, nullptr) != 0 &&
+                  size,
+              "Cannot write child stdin");
 #else
       auto size = ::write(input_, text.data(), text.size());
       if (size < 0 && errno == EINTR) continue;
@@ -320,7 +338,8 @@ class process {
     size_t output = 0;
     for (size_t input = 0; input < value.size(); ++input) {
       if (value[input] == '\r' && input + 1 < value.size() &&
-          value[input + 1] == '\n') continue;
+          value[input + 1] == '\n')
+        continue;
       value[output++] = value[input];
     }
     value.resize(output);
@@ -371,13 +390,13 @@ struct process_result {
 };
 
 inline process_result run(const std::vector<std::string>& command,
-  clock::duration timeout = 180s,
-  const process::environment& environment = {}) {
+                          clock::duration timeout = 180s,
+                          const process::environment& environment = {}) {
   process child(command, environment);
   int code = child.wait(timeout);
   return {code, child.output(), child.errors()};
 }
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

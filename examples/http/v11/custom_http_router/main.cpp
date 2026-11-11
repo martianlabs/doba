@@ -45,8 +45,8 @@ class custom_router : public router<request, response> {
   // | [>] match                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   [[nodiscard]]
-  router_match_result<request, response> match(
-      std::string_view method, std::string_view path) const {
+  router_match_result<request, response> match(std::string_view method,
+                                               std::string_view path) const {
     if (path == "/alias") path = "/hello";
     return router<request, response>::match(method, path);
   }

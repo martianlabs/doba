@@ -30,16 +30,16 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <vector>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
+#include "common/cache.h"
 #include "common/date_server.h"
 #include "common/filesystem.h"
 #include "common/filesystem_metadata.h"
-#include "common/cache.h"
 #include "common/reader.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/v11/request.h"
@@ -140,14 +140,17 @@ class static_file_server {
     };
     if (!valid_relative(policies_.index_file) ||
         policies_.index_file.find('/') != policies_.index_file.npos ||
-        !valid_relative(policies_.spa_fallback))
+        !valid_relative(policies_.spa_fallback)) {
       throw std::invalid_argument("Invalid static file index or fallback");
-    if (policies_.cache_control.find_first_of("\r\n") != std::string::npos)
+    }
+    if (policies_.cache_control.find_first_of("\r\n") != std::string::npos) {
       throw std::invalid_argument("Invalid static file cache policy");
+    }
     for (const auto& [extension, mime] : policies_.mime_types) {
       if (extension.empty() || extension.front() != '.' || mime.empty() ||
-          mime.find_first_of("\r\n") != mime.npos)
+          mime.find_first_of("\r\n") != mime.npos) {
         throw std::invalid_argument("Invalid static file MIME mapping");
+      }
     }
     const auto root_key = root_.generic_u8string();
     key_prefix_.assign(root_key.begin(), root_key.end());
@@ -179,10 +182,11 @@ class static_file_server {
   // | Use no leading slash. Active responses keep their bytes.                |
   // +-------------------------------------------------------------------------+
   void invalidate(std::string_view relative) const {
-    if (policies_.cache)
+    if (policies_.cache) {
       for (std::string_view suffix : {"", ".br", ".gz"})
         policies_.cache->erase(key_prefix_ + std::string(relative) +
                                std::string(suffix));
+    }
   }
   // +=========================================================================+
   // | [>] clear_cache                                              ( public ) |
@@ -240,13 +244,15 @@ class static_file_server {
     for (const auto& excluded : policies_.excluded) {
       if (relative == excluded || (relative.starts_with(excluded) &&
                                    relative.size() > excluded.size() &&
-                                   relative[excluded.size()] == '/'))
+                                   relative[excluded.size()] == '/')) {
         return true;
+      }
     }
     if (policies_.deny_hidden) {
       for (std::size_t pos = 0; pos < relative.size(); ++pos)
-        if ((pos == 0 || relative[pos - 1] == '/') && relative[pos] == '.')
+        if ((pos == 0 || relative[pos - 1] == '/') && relative[pos] == '.') {
           return true;
+        }
     }
     return false;
   }
@@ -258,14 +264,15 @@ class static_file_server {
   static void file_error(response& result, const std::error_code& error) {
     if (error == std::errc::no_such_file_or_directory ||
         error == std::errc::not_a_directory ||
-        error == std::errc::is_a_directory)
+        error == std::errc::is_a_directory) {
       result.not_found_404();
-    else if (error == std::errc::permission_denied ||
-             error == std::errc::operation_not_permitted ||
-             error == std::errc::too_many_symbolic_link_levels)
+    } else if (error == std::errc::permission_denied ||
+               error == std::errc::operation_not_permitted ||
+               error == std::errc::too_many_symbolic_link_levels) {
       result.forbidden_403();
-    else
+    } else {
       result.internal_server_error_500();
+    }
   }
   // +=========================================================================+
   // | [>] field                                                   ( private ) |
@@ -306,9 +313,9 @@ class static_file_server {
     for (unsigned char c : path) {
       if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
           (c >= '0' && c <= '9') || c == '/' || c == '-' || c == '_' ||
-          c == '.' || c == '~')
+          c == '.' || c == '~') {
         location += char(c);
-      else {
+      } else {
         location += '%';
         location += hex[c >> 4];
         location += hex[c & 15];
@@ -348,9 +355,9 @@ class static_file_server {
         if (weight.starts_with("q=") || weight.starts_with("Q=")) {
           weight.remove_prefix(2);
           q = 0;
-          if (!weight.empty() && weight.front() == '1')
+          if (!weight.empty() && weight.front() == '1') {
             q = 1000;
-          else if (weight.starts_with("0.")) {
+          } else if (weight.starts_with("0.")) {
             int multiplier = 100;
             for (char c : weight.substr(2)) {
               if (c < '0' || c > '9') {
@@ -461,8 +468,9 @@ class static_file_server {
         common::filesystem original;
         if (original.open(root_, relative, error)) {
           result.not_acceptable_406();
-          if (policies_.precompressed)
+          if (policies_.precompressed) {
             result.set_header("Vary", "Accept-Encoding");
+          }
           return;
         }
       }
@@ -508,10 +516,11 @@ class static_file_server {
                     std::as_writable_bytes(
                         std::span(value->bytes.data(), value->bytes.size()))
                         .subspan(position));
-                if (!count)
+                if (!count) {
                   throw std::filesystem::filesystem_error(
                       "Static file read failed",
                       std::make_error_code(std::errc::io_error));
+                }
                 position += count;
               }
               auto after = file.metadata(error);
@@ -568,14 +577,16 @@ class static_file_server {
     const auto decorate = [&] {
       result.set_header("ETag", etag);
       if (cached && modified == metadata.modified_seconds &&
-          cached->last_modified[0])
+          cached->last_modified[0]) {
         result.set_header("Last-Modified",
                           std::string_view(cached->last_modified.data()));
-      else
+      } else {
         result.set_header("Last-Modified",
                           common::date_server::format(modified));
-      if (!policies_.cache_control.empty())
+      }
+      if (!policies_.cache_control.empty()) {
         result.set_header("Cache-Control", policies_.cache_control);
+      }
       if (policies_.precompressed) result.set_header("Vary", "Accept-Encoding");
     };
     const auto match = field(req, "If-Match"),

@@ -25,8 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_headers_via_h
 #define martianlabs_doba_protocol_http_v11_headers_via_h
 
-#include "protocol/http/v11/connection.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/connection.h"
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/verdict.h"
@@ -118,16 +118,18 @@ class via {
     // received-protocol = [ protocol-name "/" ] protocol-version.
     const std::size_t protocol_start = off;
     if (!consume_received_protocol(sv, off)) return false;
-    if (out)
+    if (out) {
       out->received_protocol = sv.substr(protocol_start, off - protocol_start);
+    }
     // RWS = 1*( SP / HTAB ) is mandatory between received-protocol and
     // received-by.
     if (!consume_rws(sv, off)) return false;
     // received-by = pseudonym [ ":" port ].
     const std::size_t received_by_start = off;
     if (!consume_received_by(sv, off)) return false;
-    if (out)
+    if (out) {
       out->received_by = sv.substr(received_by_start, off - received_by_start);
+    }
     if (off >= sv.size()) return true;
     // [ RWS comment ] is optional, but when a comment is present it MUST be
     // preceded by RWS.

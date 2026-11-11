@@ -42,8 +42,9 @@ inline resilience_resources measure_resilience_resources() {
     ++result.handles;
   std::ifstream statm("/proc/self/statm");
   std::size_t virtual_pages = 0, resident_pages = 0;
-  if (!(statm >> virtual_pages >> resident_pages))
+  if (!(statm >> virtual_pages >> resident_pages)) {
     throw std::runtime_error("Cannot measure resident memory");
+  }
   result.memory_bytes =
       resident_pages * static_cast<std::size_t>(::sysconf(_SC_PAGESIZE));
   return result;
@@ -53,27 +54,24 @@ inline resilience_resources measure_resilience_resources() {
 // | [>] resilience_process_id                                    ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-inline auto resilience_process_id() {
-  return ::getpid();
-}
+inline auto resilience_process_id() { return ::getpid(); }
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] resilience_temp_variable                                 ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-inline const char* resilience_temp_variable() {
-  return "TMPDIR";
-}
+inline const char* resilience_temp_variable() { return "TMPDIR"; }
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] set_resilience_temp_variable                             ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline void set_resilience_temp_variable(const char* value) {
-  if (value)
+  if (value) {
     ::setenv(resilience_temp_variable(), value, 1);
-  else
+  } else {
     ::unsetenv(resilience_temp_variable());
+  }
 }
 }  // namespace martianlabs::doba::tests::integration
 

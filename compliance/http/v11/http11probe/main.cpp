@@ -42,45 +42,37 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  http_server.add_route(
-      "GET", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Content-Type", "text/plain").set_body("OK");
-      });
-  http_server.add_route(
-      "HEAD", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Content-Type", "text/plain");
-      });
-  http_server.add_route(
-      "OPTIONS", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Allow", "GET, HEAD, POST, OPTIONS");
-      });
+  http_server.add_route("GET", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Content-Type", "text/plain").set_body("OK");
+  });
+  http_server.add_route("HEAD", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Content-Type", "text/plain");
+  });
+  http_server.add_route("OPTIONS", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Allow", "GET, HEAD, POST, OPTIONS");
+  });
   // Echo the decoded body for Content-Length and chunked requests.
-  http_server.add_route(
-      "POST", "/",
-      [](const request& req, response& res) {
-        res.ok_200();
-        std::string body;
-        if (req.has_body_reader()) {
-          std::array<std::byte, 4096> buffer{};
-          for (;;) {
-            const auto state = req.get_body_reader()->read(buffer);
-            if (state.has_error) {
-              res.bad_request_400();
-              return;
-            }
-            body.append(reinterpret_cast<const char*>(buffer.data()),
-                        state.produced);
-            if (state.complete) break;
-          }
+  http_server.add_route("POST", "/", [](const request& req, response& res) {
+    res.ok_200();
+    std::string body;
+    if (req.has_body_reader()) {
+      std::array<std::byte, 4096> buffer{};
+      for (;;) {
+        const auto state = req.get_body_reader()->read(buffer);
+        if (state.has_error) {
+          res.bad_request_400();
+          return;
         }
-        res.add_header("Content-Type", "text/plain").set_body(body);
-      });
+        body.append(reinterpret_cast<const char*>(buffer.data()),
+                    state.produced);
+        if (state.complete) break;
+      }
+    }
+    res.add_header("Content-Type", "text/plain").set_body(body);
+  });
   // Return the parsed headers for the /echo checks.
   const auto echo_headers = [](const request& req, response& res) {
     res.ok_200();
@@ -98,8 +90,7 @@ int main() {
   http_server.add_route("POST", "/echo", echo_headers);
   // Http11Probe queries these four cookie names.
   http_server.add_route(
-      "GET", "/cookie",
-      [](const request& req, response& res) {
+      "GET", "/cookie", [](const request& req, response& res) {
         res.ok_200();
         constexpr std::string_view cookie_names[] = {"foo", "a", "b", "c"};
         std::string body;

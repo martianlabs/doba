@@ -22,11 +22,10 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/hash_map.h"
-
 #include <string>
 #include <string_view>
 
+#include "common/hash_map.h"
 #include "test_helper.h"
 
 namespace {

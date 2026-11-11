@@ -27,8 +27,8 @@
 
 #include <cstddef>
 
-#include "protocol/http/v11/connection.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/connection.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/verdict.h"
 
@@ -75,8 +75,8 @@ class max_forwards {
   // +=========================================================================+
   // | [>] interpret                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  static constexpr verdict interpret(const std::size_t&,
-                                     v11::connection&, const policies&) {
+  static constexpr verdict interpret(const std::size_t&, v11::connection&,
+                                     const policies&) {
     return verdict::kAccept;
   }
 };

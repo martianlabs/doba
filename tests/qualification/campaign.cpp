@@ -23,10 +23,11 @@
 // permissions and limitations under the License.
 
 #include "campaign.h"
-#include "../helpers/tool_arguments.h"
-#include "../helpers/tool_sha256.h"
 
 #include <algorithm>
+
+#include "../helpers/tool_arguments.h"
+#include "../helpers/tool_sha256.h"
 
 using namespace martianlabs::doba::tests::tools;
 
@@ -48,18 +49,20 @@ int main(int argc, char** argv) {
     fs::create_directories(output);
     auto cache = lines(read(build / "CMakeCache.txt"));
     require(std::find(cache.begin(), cache.end(),
-      "CMAKE_BUILD_TYPE:STRING=Release") != cache.end(),
-      "Campaigns require Release builds");
+                      "CMAKE_BUILD_TYPE:STRING=Release") != cache.end(),
+            "Campaigns require Release builds");
     auto root = fs::path(DOBA_TOOL_SOURCE_ROOT);
     write_json(output / "source-sha256.json",
-      source_hashes(root, {"include", "tests"}));
+               source_hashes(root, {"include", "tests"}));
     json state = json::object{{"status", "failed"},
 #ifdef _WIN32
-      {"platform", "windows"},
+                              {"platform", "windows"},
 #else
-      {"platform", "linux"},
+                              {"platform", "linux"},
 #endif
-      {"seed", seed}, {"rounds", rounds}, {"cases", json::array{}}};
+                              {"seed", seed},
+                              {"rounds", rounds},
+                              {"cases", json::array{}}};
     for (auto key : {"ASAN_OPTIONS", "UBSAN_OPTIONS", "TSAN_OPTIONS"}) {
       auto value = environment_value(key);
       state["sanitizer_environment"][key] = value ? json(*value) : json();
@@ -67,8 +70,8 @@ int main(int argc, char** argv) {
     auto revision = environment_value("GITHUB_SHA");
     state["ci_revision"] = revision ? json(*revision) : json();
     try {
-      auto inventory_result = run({"ctest", "--test-dir", build.string(),
-        "--show-only=json-v1"}, 30s);
+      auto inventory_result = run(
+          {"ctest", "--test-dir", build.string(), "--show-only=json-v1"}, 30s);
       require(inventory_result.code == 0, "Cannot inventory CTest");
       auto inventory = json::parse(inventory_result.output);
 #ifdef _WIN32
@@ -83,30 +86,38 @@ int main(int argc, char** argv) {
       write_json(output / "ctest-inventory.json", inventory);
       std::vector<json> actions;
       for (const auto& name : groups) {
-        actions.push_back(json::object{{"id", name}, {"command", json::array{
-          "ctest", "--test-dir", build.string(), "-R", '^' + name + '$',
-          "--output-on-failure", "--no-tests=error"}}, {"selection",
-          "1/1 Test\\s+#[0-9]+: " + name + "\\b[^\\r\\n]*\\bPassed\\b"}});
+        actions.push_back(json::object{
+            {"id", name},
+            {"command", json::array{"ctest", "--test-dir", build.string(), "-R",
+                                    '^' + name + '$', "--output-on-failure",
+                                    "--no-tests=error"}},
+            {"selection",
+             "1/1 Test\\s+#[0-9]+: " + name + "\\b[^\\r\\n]*\\bPassed\\b"}});
       }
       std::vector<std::pair<std::string, size_t>> files{
-        {"common/cache_tests.cpp", 14}, {"common/byte_storage_tests.cpp", 19},
-        {"common/reader_tests.cpp", 9},
-        {"protocol/http/v11/operating_limits_tests.cpp", 1}};
-      if (!windows) files.emplace_back(
-        "transport/tcp_context_linux_tests.cpp", 17);
+          {"common/cache_tests.cpp", 14},
+          {"common/byte_storage_tests.cpp", 19},
+          {"common/reader_tests.cpp", 9},
+          {"protocol/http/v11/operating_limits_tests.cpp", 1}};
+      if (!windows) {
+        files.emplace_back("transport/tcp_context_linux_tests.cpp", 17);
+      }
       auto unit = (build / ("tests/unit/doba_unit_tests" + suffix)).string();
       size_t index = 0;
       for (const auto& [file, minimum] : files) {
-        auto listing = execute({unit, "--file", file, "--list"},
-          output / ("unit-" + std::to_string(index++) + "-inventory.log"), 30s);
+        auto listing = execute(
+            {unit, "--file", file, "--list"},
+            output / ("unit-" + std::to_string(index++) + "-inventory.log"),
+            30s);
         auto names = case_names(listing);
         std::set<std::string> distinct(names.begin(), names.end());
         require(names.size() >= minimum && distinct.size() == names.size(),
-          "Missing or duplicated fault cases: " + file);
+                "Missing or duplicated fault cases: " + file);
         for (const auto& name : names) {
-          actions.push_back(json::object{{"id", file + ':' + name},
-            {"command", json::array{unit, "--file", file, "--name", name}},
-            {"selection", "running 1 unit tests"}});
+          actions.push_back(json::object{
+              {"id", file + ':' + name},
+              {"command", json::array{unit, "--file", file, "--name", name}},
+              {"selection", "running 1 unit tests"}});
         }
       }
       state["actions_per_round"] = actions.size();
@@ -123,9 +134,10 @@ int main(int argc, char** argv) {
           for (const auto& item : action["command"].items()) {
             command.push_back(item.string());
           }
-          execute(command, output / ("round-" + std::to_string(round) +
-            "-case-" + std::to_string(index++) + ".log"), 180s,
-            action["selection"].string());
+          execute(command,
+                  output / ("round-" + std::to_string(round) + "-case-" +
+                            std::to_string(index++) + ".log"),
+                  180s, action["selection"].string());
           state["cases"].items().back()["status"] = "passed";
         }
       }
@@ -135,7 +147,7 @@ int main(int argc, char** argv) {
       throw;
     }
     write_json(output / "results.json", state);
-    std::cout << "Campaign passed: " << state["cases"].items().size() <<
-      " actions\n";
+    std::cout << "Campaign passed: " << state["cases"].items().size()
+              << " actions\n";
   });
 }

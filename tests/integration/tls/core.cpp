@@ -46,10 +46,12 @@ static_assert(!std::is_move_constructible_v<detail::tls_configuration>);
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void require(bool condition,
-              std::source_location location = std::source_location::current()) {
-  if (!condition) throw std::runtime_error(
-      "TLS core assertion failed at " + std::string(location.file_name()) +
-      ":" + std::to_string(location.line()));
+             std::source_location location = std::source_location::current()) {
+  if (!condition) {
+    throw std::runtime_error("TLS core assertion failed at " +
+                             std::string(location.file_name()) + ":" +
+                             std::to_string(location.line()));
+  }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -124,13 +126,13 @@ void exercise(const char* certificate, const char* key, int version,
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context(
       SSL_CTX_new(TLS_client_method()), SSL_CTX_free);
   require(context != nullptr);
-  require(SSL_CTX_load_verify_locations(context.get(), certificate, nullptr)
-          == 1);
+  require(SSL_CTX_load_verify_locations(context.get(), certificate, nullptr) ==
+          1);
   SSL_CTX_set_verify(context.get(), SSL_VERIFY_PEER, nullptr);
   require(SSL_CTX_set_min_proto_version(context.get(), version) == 1);
   require(SSL_CTX_set_max_proto_version(context.get(), version) == 1);
   std::unique_ptr<SSL, decltype(&SSL_free)> client(SSL_new(context.get()),
-                                                  SSL_free);
+                                                   SSL_free);
   require(client != nullptr);
   BIO* input = BIO_new(BIO_s_mem());
   BIO* output = BIO_new(BIO_s_mem());
@@ -146,12 +148,15 @@ void exercise(const char* certificate, const char* key, int version,
     require(BIO_write(input, bytes.data(), static_cast<int>(bytes.size())) ==
             static_cast<int>(bytes.size()));
   });
-  server.set_on_close([&] { closed = true; ++close_calls; });
+  server.set_on_close([&] {
+    closed = true;
+    ++close_calls;
+  });
   auto transfer = [&] {
     std::array<char, 8192> block;
     while (BIO_ctrl_pending(output)) {
-      const int count = BIO_read(
-          output, block.data(), static_cast<int>(block.size()));
+      const int count =
+          BIO_read(output, block.data(), static_cast<int>(block.size()));
       require(count > 0);
       last_result = server.on_bytes_received(
           {block.data(), static_cast<std::size_t>(count)});
@@ -162,8 +167,8 @@ void exercise(const char* certificate, const char* key, int version,
   for (int turn = 0; turn < 100 && !established; ++turn) {
     ERR_clear_error();
     const int result = SSL_do_handshake(client.get());
-    const int error = result == 1 ? SSL_ERROR_NONE :
-        SSL_get_error(client.get(), result);
+    const int error =
+        result == 1 ? SSL_ERROR_NONE : SSL_get_error(client.get(), result);
     require(result == 1 || error == SSL_ERROR_WANT_READ);
     transfer();
     established = result == 1;
@@ -173,8 +178,9 @@ void exercise(const char* certificate, const char* key, int version,
     constexpr std::string_view message = "verified plaintext";
     std::size_t size = 0;
     ERR_clear_error();
-    require(SSL_write_ex(client.get(), message.data(), message.size(), &size)
-            == 1 && size == message.size());
+    require(SSL_write_ex(client.get(), message.data(), message.size(), &size) ==
+                1 &&
+            size == message.size());
     transfer();
     require(last_result.turn_requested == progress.turn_requested &&
             last_result.turn_at == progress.turn_at &&
@@ -202,7 +208,8 @@ void exercise(const char* certificate, const char* key, int version,
   std::size_t written = 0;
   ERR_clear_error();
   require(SSL_write_ex(client.get(), forbidden.data(), forbidden.size(),
-                       &written) == 1 && written == forbidden.size());
+                       &written) == 1 &&
+          written == forbidden.size());
   std::string corrupt;
   std::array<char, 8192> block{};
   while (BIO_ctrl_pending(output)) {

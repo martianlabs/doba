@@ -61,7 +61,7 @@ inline std::optional<std::string> environment_value(const char* name) {
   char* data = nullptr;
   size_t size = 0;
   require(_dupenv_s(&data, &size, name) == 0,
-    "Cannot read environment variable");
+          "Cannot read environment variable");
   if (!data) return std::nullopt;
   std::string result(data);
   std::free(data);
@@ -123,8 +123,8 @@ class temporary_directory {
     std::random_device random;
     for (int attempt = 0; attempt != 100; ++attempt) {
       path_ = fs::temp_directory_path() /
-        ("doba-native-" + std::to_string(random()) + "-" +
-         std::to_string(random()));
+              ("doba-native-" + std::to_string(random()) + "-" +
+               std::to_string(random()));
       if (fs::create_directory(path_)) return;
     }
     throw std::runtime_error("Cannot create private temporary directory");
@@ -143,15 +143,15 @@ class temporary_directory {
 
 inline void clean_diagnostics(const std::string& text) {
   static const std::regex report(
-    "(?:ERROR|WARNING|SUMMARY|FATAL):\\s*"
-    "(?:Address|Leak|Memory|Thread|UndefinedBehavior)Sanitizer|"
-    "(?:Address|Leak|Memory|Thread|UndefinedBehavior)Sanitizer:"
-    "\\s*(?:DEADLYSIGNAL|reported [0-9]+ warnings)|runtime error:");
+      "(?:ERROR|WARNING|SUMMARY|FATAL):\\s*"
+      "(?:Address|Leak|Memory|Thread|UndefinedBehavior)Sanitizer|"
+      "(?:Address|Leak|Memory|Thread|UndefinedBehavior)Sanitizer:"
+      "\\s*(?:DEADLYSIGNAL|reported [0-9]+ warnings)|runtime error:");
   require(!std::regex_search(text, report),
-    "Sanitizer diagnostic in child process:\n" + text);
+          "Sanitizer diagnostic in child process:\n" + text);
 }
 
-template<class Function>
+template <class Function>
 int guarded(Function function) {
   try {
     function();
@@ -162,6 +162,6 @@ int guarded(Function function) {
   }
 }
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

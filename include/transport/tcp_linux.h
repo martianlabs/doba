@@ -26,8 +26,8 @@
 #define martianlabs_doba_transport_tcp_linux_h
 
 #include "transport/contracts.h"
-#include "transport/tcp_policies.h"
 #include "transport/tcp_linux_transport.h"
+#include "transport/tcp_policies.h"
 
 namespace martianlabs::doba::transport {
 // /////////////////////////////////////////////////////////////////////////////

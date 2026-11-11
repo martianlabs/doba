@@ -61,7 +61,8 @@ struct processing_engine {
   // +=========================================================================+
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
-  Turn on_processing_turn(Idle) requires(HasTurn);
+  Turn on_processing_turn(Idle)
+    requires(HasTurn);
 };
 }  // namespace martianlabs::doba::tests::unit
 

@@ -46,9 +46,9 @@ using response = probe::response;
 using router = probe::router;
 using policies = probe::policies;
 using clock_type = probe::clock;
+using common::sleep_for;
 using common::task;
 using common::yield;
-using common::sleep_for;
 using namespace std::chrono_literals;
 }  // namespace
 

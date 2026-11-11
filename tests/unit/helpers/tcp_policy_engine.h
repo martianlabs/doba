@@ -28,8 +28,8 @@
 #include <functional>
 #include <string_view>
 
-#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::tests::unit {
 using martianlabs::doba::protocol::processing_result;
@@ -51,14 +51,11 @@ struct policy_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  processing_result on_bytes_received(std::string_view) {
-    return {};
-  }
+  processing_result on_bytes_received(std::string_view) { return {}; }
   // +=========================================================================+
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 };
 
 }  // namespace martianlabs::doba::tests::unit

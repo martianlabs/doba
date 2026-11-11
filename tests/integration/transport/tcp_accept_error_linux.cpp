@@ -22,18 +22,19 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <fcntl.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
-#include <fcntl.h>
 #include <functional>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <sys/resource.h>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -173,7 +174,8 @@ bool exercise() {
       factory);
   transport.start();
   if (!existing.connect(port) || !existing.send_all("ready") ||
-      existing.receive(5) != std::optional<std::string>("ready")) return false;
+      existing.receive(5) != std::optional<std::string>("ready"))
+    return false;
   {
     descriptor_budget budget;
     budget.leave_slots(1);
@@ -217,8 +219,11 @@ bool partial_start() {
     // both.
     budget.leave_slots(4);
     bool rejected = false;
-    try { transport.start(); }
-    catch (const std::runtime_error&) { rejected = true; }
+    try {
+      transport.start();
+    } catch (const std::runtime_error&) {
+      rejected = true;
+    }
     if (!rejected) return false;
     std::vector<int> recovered;
     for (int index = 0; index < 4; ++index) {

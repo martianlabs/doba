@@ -22,10 +22,10 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "fixture_process.h"
-#include "../../helpers/tool_response.h"
-
 #include <future>
+
+#include "../../helpers/tool_response.h"
+#include "fixture_process.h"
 
 using namespace martianlabs::doba::tests::tools;
 
@@ -46,7 +46,11 @@ int main(int argc, char** argv) {
     };
     auto rejected = [&](auto function) {
       bool failed = false;
-      try { function(); } catch (const std::exception&) { failed = true; }
+      try {
+        function();
+      } catch (const std::exception&) {
+        failed = true;
+      }
       require(failed, "TLS rejection control was accepted");
     };
     auto exchange = [&](uint16_t port, int index) {
@@ -63,15 +67,19 @@ int main(int argc, char** argv) {
         require(connection->alpn() == "doba-echo", "Echo ALPN mismatch");
         std::string input, output;
         for (int index = 0; index < 16; ++index) {
-          input += "a\nb\n"; output += "echo:a\necho:b\n";
+          input += "a\nb\n";
+          output += "echo:a\necho:b\n";
         }
-        connection->send(input); connection->expect(output);
+        connection->send(input);
+        connection->expect(output);
         for (const auto& [command, expected] :
-          std::vector<std::pair<std::string, std::string>>{
-            {"source", "pre:body:tail"}, {"empty", "pre:body:"},
-            {"large", "pre:" + std::string(128 * 1024, 's')},
-            {"source-close", "pre:body:tail"}}) {
-          connection->send(command + '\n'); connection->expect(expected);
+             std::vector<std::pair<std::string, std::string>>{
+                 {"source", "pre:body:tail"},
+                 {"empty", "pre:body:"},
+                 {"large", "pre:" + std::string(128 * 1024, 's')},
+                 {"source-close", "pre:body:tail"}}) {
+          connection->send(command + '\n');
+          connection->expect(expected);
         }
         require(connection->receive(1).empty(), "Source close failed");
         connection->shutdown_tls();
@@ -80,13 +88,16 @@ int main(int argc, char** argv) {
         auto connection = connect(port);
         connection->send(std::string(33000, 'x') + '\n');
         connection->expect("echo:" + std::string(33000, 'x') + '\n');
-        connection->send("released\n"); connection->expect("tail");
-        connection->send("after\n"); connection->expect("echo:after\n");
+        connection->send("released\n");
+        connection->expect("tail");
+        connection->send("after\n");
+        connection->expect("echo:after\n");
         connection->shutdown_tls();
       }
       {
         auto connection = connect(port);
-        connection->send("empty-close\n"); connection->expect("pre:body:");
+        connection->send("empty-close\n");
+        connection->expect("pre:body:");
         require(connection->receive(1).empty(), "Empty source close failed");
         connection->shutdown_tls();
       }
@@ -101,7 +112,8 @@ int main(int argc, char** argv) {
         connection->expect("echo:fragmented\n");
       }
       rejected([&] {
-        peer connection(port); connection.tls({}, 0, "", false);
+        peer connection(port);
+        connection.tls({}, 0, "", false);
       });
       rejected([&] {
         peer connection(port);
@@ -110,8 +122,9 @@ int main(int argc, char** argv) {
       for (int batch = 0; batch < 4; ++batch) {
         std::vector<std::future<void>> exchanges;
         for (int index = 0; index < 8; ++index) {
-          exchanges.push_back(std::async(std::launch::async,
-            [&, index, batch] { exchange(port, batch * 8 + index); }));
+          exchanges.push_back(std::async(std::launch::async, [&, index, batch] {
+            exchange(port, batch * 8 + index);
+          }));
         }
         for (auto& future : exchanges) future.get();
       }
@@ -119,16 +132,19 @@ int main(int argc, char** argv) {
         rejected([&] { connect(port, token); });
       }
       {
-        peer bad(port); bad.send("not TLS\n");
+        peer bad(port);
+        bad.send("not TLS\n");
         require(bad.receive(1).empty(), "Plaintext was accepted by TLS");
       }
       for (auto command : {"bad\n", "failed\n"}) {
-        auto bad = connect(port); bad->send(command);
+        auto bad = connect(port);
+        bad->send(command);
         require(bad->receive(1).empty(), "Invalid engine batch accepted");
       }
       exchange(port, 99);
       {
-        peer truncated(port); truncated.send(std::string("\x16\x03", 2));
+        peer truncated(port);
+        truncated.send(std::string("\x16\x03", 2));
       }
       exchange(port, 100);
       {
@@ -143,15 +159,17 @@ int main(int argc, char** argv) {
       server.stop();
     }
     std::cout << "TLS versions, pipeline, source, close, fragmentation, "
-      "verification and isolation: PASS\n";
+                 "verification and isolation: PASS\n";
     {
       fixture_process server(binary, certificate, key, "echo", 4096, 127);
       for (const auto& [command, expected] :
-        std::vector<std::pair<std::string, std::string>>{
-          {"exact", std::string(4096, 'e')}, {"ok", "echo:ok\n"},
-          {"inline-exact", "pre:" + std::string(4092, 'e')}}) {
+           std::vector<std::pair<std::string, std::string>>{
+               {"exact", std::string(4096, 'e')},
+               {"ok", "echo:ok\n"},
+               {"inline-exact", "pre:" + std::string(4092, 'e')}}) {
         auto connection = connect(server.port());
-        connection->send(command + '\n'); connection->expect(expected);
+        connection->send(command + '\n');
+        connection->expect(expected);
       }
       for (auto command : {"over", "inline-over", "sum-over"}) {
         auto connection = connect(server.port());
@@ -161,8 +179,8 @@ int main(int argc, char** argv) {
       server.stop();
     }
     {
-      fixture_process server(binary, certificate, key, "echo", 1048576,
-        17408, 65536);
+      fixture_process server(binary, certificate, key, "echo", 1048576, 17408,
+                             65536);
       auto connection = connect(server.port());
       connection->send("large\n");
       require(connection->receive(1).empty(), "Ciphertext budget ignored");
@@ -172,20 +190,23 @@ int main(int argc, char** argv) {
     {
       fixture_process server(binary, certificate, key, "admission");
       {
-        peer first(server.port()); first.send(std::string("\x16\x03", 2));
+        peer first(server.port());
+        first.send(std::string("\x16\x03", 2));
         server.child().expect_output("ADMITTED\n");
         rejected([&] { connect(server.port()); });
       }
       std::unique_ptr<peer> recovered;
       auto deadline = clock::now() + 5s;
       while (!recovered) {
-        try { recovered = connect(server.port()); }
-        catch (const std::exception&) {
+        try {
+          recovered = connect(server.port());
+        } catch (const std::exception&) {
           require(clock::now() < deadline, "TLS admission did not recover");
           std::this_thread::sleep_for(10ms);
         }
       }
-      recovered->send("recovered\n"); recovered->expect("echo:recovered\n");
+      recovered->send("recovered\n");
+      recovered->expect("echo:recovered\n");
       recovered.reset();
       server.stop();
     }
@@ -198,7 +219,7 @@ int main(int argc, char** argv) {
         auto output = server.child().output();
         if (output.find("READY\n", 6) != std::string::npos) break;
         require(!server.child().poll() && clock::now() < deadline,
-          "TLS fixture did not restart");
+                "TLS fixture did not restart");
         std::this_thread::sleep_for(1ms);
       }
       exchange(server.port(), 105);
@@ -206,23 +227,25 @@ int main(int argc, char** argv) {
     }
     {
       fixture_process server(binary, certificate, key, "echo", 5 * 1024 * 1024,
-        17408, 6 * 1024 * 1024);
+                             17408, 6 * 1024 * 1024);
       {
         auto connection = connect(server.port());
         connection->receive_buffer(65536);
         connection->send("slow\n");
         std::this_thread::sleep_for(100ms);
         connection->expect("pre:" + std::string(4 * 1024 * 1024, 's'));
-        connection->send("after\n"); connection->expect("echo:after\n");
+        connection->send("after\n");
+        connection->expect("echo:after\n");
       }
       {
-        auto connection = connect(server.port()); connection->send("slow\n");
+        auto connection = connect(server.port());
+        connection->send("slow\n");
       }
       server.stop();
     }
     {
-      fixture_process server(binary, certificate, key, "echo", 1048576,
-        17408, 1);
+      fixture_process server(binary, certificate, key, "echo", 1048576, 17408,
+                             1);
       rejected([&] { connect(server.port()); });
       server.stop();
     }
@@ -250,8 +273,8 @@ int main(int argc, char** argv) {
       require(connection->alpn() == "http/1.1", "Auth ALPN mismatch");
       connection->send(request("/private"));
       require(response(*connection).status == 401, "Missing auth challenge");
-      connection->send(request("/private",
-        "Authorization: Basic YWxpY2U6c2VjcmV0\r\n"));
+      connection->send(
+          request("/private", "Authorization: Basic YWxpY2U6c2VjcmV0\r\n"));
       expect_response(*connection, 200, "private");
       connection.reset();
       server.stop();
@@ -262,19 +285,20 @@ int main(int argc, char** argv) {
       command.insert(command.end(), arguments.begin(), arguments.end());
       auto result = run(command, 5s);
       clean_diagnostics(result.errors);
-      require(result.code == 1 && result.errors.find(message) !=
-        std::string::npos, "TLS configuration rejection mismatch");
+      require(
+          result.code == 1 && result.errors.find(message) != std::string::npos,
+          "TLS configuration rejection mismatch");
     };
     for (auto budgets : std::vector<std::vector<std::string>>{
-      {"0", "1", "1"}, {"1", "0", "1"}, {"1", "1", "0"}}) {
+             {"0", "1", "1"}, {"1", "0", "1"}, {"1", "1", "0"}}) {
       std::vector<std::string> values{certificate, key, "8443", "echo"};
       values.insert(values.end(), budgets.begin(), budgets.end());
       invalid(values, "Invalid TLS policies");
     }
     invalid({certificate + ".missing", key, "8443", "echo"},
-      "Cannot configure TLS certificate or key");
+            "Cannot configure TLS certificate or key");
     invalid({certificate, key, "8443", "http-invalid"}, "ALPN");
     std::cout << "TLS budgets, admission, restart, slow reader, HTTPS and "
-      "invalid configuration: PASS\n";
+                 "invalid configuration: PASS\n";
   });
 }

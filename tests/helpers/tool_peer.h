@@ -34,18 +34,19 @@
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
-#include <cerrno>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#endif
 
-#include "tool_support.h"
+#include <cerrno>
+#endif
 
 #include <climits>
 #include <cstdint>
 #include <memory>
+
+#include "tool_support.h"
 
 #ifdef DOBA_TOOL_TLS
 #include <openssl/err.h>
@@ -111,9 +112,10 @@ class peer {
       int count = BIO_read(output, data, sizeof(data));
       require(count > 0, "TLS output BIO failed");
       if (fragment_) {
-        for (int index = 0; index < count; ++index) raw_send(
-          std::string_view(data + index, 1));
-      } else raw_send(std::string_view(data, static_cast<size_t>(count)));
+        for (int index = 0; index < count; ++index)
+          raw_send(std::string_view(data + index, 1));
+      } else
+        raw_send(std::string_view(data, static_cast<size_t>(count)));
     }
   }
   // +=========================================================================+
@@ -126,8 +128,9 @@ class peer {
       return false;
     }
     require(BIO_write(SSL_get_rbio(ssl_), data.data(),
-      static_cast<int>(data.size())) == static_cast<int>(data.size()),
-      "TLS input BIO failed");
+                      static_cast<int>(data.size())) ==
+                static_cast<int>(data.size()),
+            "TLS input BIO failed");
     return true;
   }
 #endif
@@ -148,7 +151,7 @@ class peer {
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = htons(port);
     if (::connect(socket_, reinterpret_cast<sockaddr*>(&address),
-        sizeof(address)) != 0) {
+                  sizeof(address)) != 0) {
       close_socket(socket_);
       socket_ = invalid;
       throw std::runtime_error("Loopback connection failed");
@@ -180,15 +183,15 @@ class peer {
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    int result = bind(probe, reinterpret_cast<sockaddr*>(&address),
-      sizeof(address));
+    int result =
+        bind(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address));
 #ifdef _WIN32
     int size = sizeof(address);
 #else
     socklen_t size = sizeof(address);
 #endif
-    int named = getsockname(probe,
-      reinterpret_cast<sockaddr*>(&address), &size);
+    int named =
+        getsockname(probe, reinterpret_cast<sockaddr*>(&address), &size);
     close_socket(probe);
     require(result == 0 && named == 0, "Cannot allocate loopback port");
     return ntohs(address.sin_port);
@@ -201,12 +204,13 @@ class peer {
     DWORD value = static_cast<DWORD>(duration.count());
 #else
     timeval value{static_cast<long>(duration.count() / 1000),
-      static_cast<long>((duration.count() % 1000) * 1000)};
+                  static_cast<long>((duration.count() % 1000) * 1000)};
 #endif
     for (int option : {SO_RCVTIMEO, SO_SNDTIMEO}) {
-      require(setsockopt(socket_, SOL_SOCKET, option,
-        reinterpret_cast<const char*>(&value), sizeof(value)) == 0,
-        "Cannot set peer deadline");
+      require(
+          setsockopt(socket_, SOL_SOCKET, option,
+                     reinterpret_cast<const char*>(&value), sizeof(value)) == 0,
+          "Cannot set peer deadline");
     }
   }
   // +=========================================================================+
@@ -214,8 +218,8 @@ class peer {
   // +-------------------------------------------------------------------------+
   void receive_buffer(int size) {
     require(setsockopt(socket_, SOL_SOCKET, SO_RCVBUF,
-      reinterpret_cast<const char*>(&size), sizeof(size)) == 0,
-      "Cannot set receive buffer");
+                       reinterpret_cast<const char*>(&size), sizeof(size)) == 0,
+            "Cannot set receive buffer");
   }
   // +=========================================================================+
   // | [>] raw_send                                                 ( public ) |
@@ -223,8 +227,9 @@ class peer {
   void raw_send(std::string_view data) {
     while (!data.empty()) {
 #ifdef _WIN32
-      int count = ::send(socket_, data.data(),
-        static_cast<int>(std::min(data.size(), size_t{INT_MAX})), 0);
+      int count =
+          ::send(socket_, data.data(),
+                 static_cast<int>(std::min(data.size(), size_t{INT_MAX})), 0);
 #else
       auto count = ::send(socket_, data.data(), data.size(), MSG_NOSIGNAL);
       if (count < 0 && errno == EINTR) continue;
@@ -242,8 +247,9 @@ class peer {
     int count = recv(socket_, data.data(), static_cast<int>(data.size()), 0);
 #else
     ssize_t count;
-    do { count = recv(socket_, data.data(), data.size(), 0); }
-    while (count < 0 && errno == EINTR);
+    do {
+      count = recv(socket_, data.data(), data.size(), 0);
+    } while (count < 0 && errno == EINTR);
 #endif
     require(count >= 0, "Peer socket receive failed or timed out");
     data.resize(static_cast<size_t>(count));
@@ -262,15 +268,16 @@ class peer {
     SSL_CTX_set_verify(context_, SSL_VERIFY_PEER, nullptr);
     if (certificate.empty()) {
       require(SSL_CTX_set_default_verify_paths(context_) == 1,
-        "Cannot load default TLS trust roots");
+              "Cannot load default TLS trust roots");
     } else {
-      require(SSL_CTX_load_verify_locations(context_,
-        certificate.string().c_str(), nullptr) == 1, "Cannot load TLS CA");
+      require(SSL_CTX_load_verify_locations(
+                  context_, certificate.string().c_str(), nullptr) == 1,
+              "Cannot load TLS CA");
     }
     if (version) {
       require(SSL_CTX_set_min_proto_version(context_, version) == 1 &&
-        SSL_CTX_set_max_proto_version(context_, version) == 1,
-        "Cannot select TLS version");
+                  SSL_CTX_set_max_proto_version(context_, version) == 1,
+              "Cannot select TLS version");
     }
     ssl_ = SSL_new(context_);
     require(ssl_ != nullptr, "Cannot allocate TLS client");
@@ -278,14 +285,16 @@ class peer {
     require(SSL_get_rbio(ssl_) && SSL_get_wbio(ssl_), "Cannot allocate BIOs");
     BIO_set_mem_eof_return(SSL_get_rbio(ssl_), -1);
     require(SSL_set_tlsext_host_name(ssl_, hostname.c_str()) == 1 &&
-      SSL_set1_host(ssl_, hostname.c_str()) == 1, "Cannot set verified host");
+                SSL_set1_host(ssl_, hostname.c_str()) == 1,
+            "Cannot set verified host");
     if (!alpn.empty()) {
       require(alpn.size() <= 255, "ALPN name too large");
       std::string wire(1, static_cast<char>(alpn.size()));
       wire += alpn;
-      require(SSL_set_alpn_protos(ssl_,
-        reinterpret_cast<const unsigned char*>(wire.data()),
-        static_cast<unsigned>(wire.size())) == 0, "Cannot select ALPN");
+      require(SSL_set_alpn_protos(
+                  ssl_, reinterpret_cast<const unsigned char*>(wire.data()),
+                  static_cast<unsigned>(wire.size())) == 0,
+              "Cannot select ALPN");
     }
     auto deadline = clock::now() + 10s;
     for (;;) {
@@ -294,14 +303,14 @@ class peer {
       drain();
       if (result == 1) break;
       require(error == SSL_ERROR_WANT_READ && clock::now() < deadline,
-        "TLS handshake rejected: " +
-        std::to_string(SSL_get_verify_result(ssl_)));
+              "TLS handshake rejected: " +
+                  std::to_string(SSL_get_verify_result(ssl_)));
       require(feed(), "EOF during TLS handshake");
     }
     require(SSL_get_verify_result(ssl_) == X509_V_OK,
-      "TLS certificate verification failed");
+            "TLS certificate verification failed");
     require(!version || SSL_version(ssl_) == version,
-      "TLS negotiated the wrong version");
+            "TLS negotiated the wrong version");
   }
   // +=========================================================================+
   // | [>] alpn                                                     ( public ) |
@@ -323,7 +332,8 @@ class peer {
       drain();
       if (result == 1) return;
       require((result == 0 || error == SSL_ERROR_WANT_READ) &&
-        clock::now() < deadline, "TLS close notification failed");
+                  clock::now() < deadline,
+              "TLS close notification failed");
       require(feed(), "Missing TLS close notification");
     }
   }
@@ -336,14 +346,16 @@ class peer {
     if (ssl_) {
       auto deadline = clock::now() + 30s;
       while (!data.empty()) {
-        int count = SSL_write(ssl_, data.data(),
-          static_cast<int>(std::min(data.size(), size_t{16384})));
+        int count =
+            SSL_write(ssl_, data.data(),
+                      static_cast<int>(std::min(data.size(), size_t{16384})));
         int error = count > 0 ? SSL_ERROR_NONE : SSL_get_error(ssl_, count);
         drain();
-        if (count > 0) data.remove_prefix(static_cast<size_t>(count));
+        if (count > 0)
+          data.remove_prefix(static_cast<size_t>(count));
         else {
           require(error == SSL_ERROR_WANT_READ && clock::now() < deadline,
-            "TLS write failed");
+                  "TLS write failed");
           require(feed(), "EOF during TLS write");
         }
       }
@@ -373,7 +385,7 @@ class peer {
         // Rejection tests may close without close_notify.
         if (error != SSL_ERROR_WANT_READ && eof) return {};
         require(error == SSL_ERROR_WANT_READ && clock::now() < deadline,
-          "TLS read failed before peer EOF");
+                "TLS read failed before peer EOF");
         eof = !feed();
       }
     }
@@ -400,6 +412,6 @@ class peer {
   }
 };
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

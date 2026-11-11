@@ -56,19 +56,19 @@ struct engine_probe {
   // +-------------------------------------------------------------------------+
   explicit engine_probe(const router& routes, policies limits = {})
       : value(limits, routes) {
-    value.set_on_send([this](auto head, auto body,
-                             std::unique_ptr<common::reader> source) {
-      outputs.emplace_back(std::string(head) + std::string(body));
-      wire.append(head).append(body);
-      if (source) {
-        ++sources;
-        if (hold_source) {
-          held = std::move(source);
-        } else {
-          source->read_all(wire);
-        }
-      }
-    });
+    value.set_on_send(
+        [this](auto head, auto body, std::unique_ptr<common::reader> source) {
+          outputs.emplace_back(std::string(head) + std::string(body));
+          wire.append(head).append(body);
+          if (source) {
+            ++sources;
+            if (hold_source) {
+              held = std::move(source);
+            } else {
+              source->read_all(wire);
+            }
+          }
+        });
     value.set_on_close([this] { ++closes; });
   }
   // +=========================================================================+

@@ -85,7 +85,9 @@ DOBA_TEST("Winsock startup failures reject exactly and permit later recovery") {
     DOBA_EXPECT_EQUAL(startups, 1U);
     DOBA_EXPECT_EQUAL(cleanups, 0U);
     startup_result = 0;
-    { environment recovered; }
+    {
+      environment recovered;
+    }
     DOBA_EXPECT_EQUAL(startups, 2U);
     DOBA_EXPECT_EQUAL(cleanups, 1U);
   }

@@ -25,18 +25,18 @@
 #include <string>
 #include <string_view>
 
-#include "protocol/http/v11/headers/x_forwarded_host.h"
 #include "host_port_case.h"
+#include "protocol/http/v11/headers/x_forwarded_host.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::tests::unit::host_port_case;
 using martianlabs::doba::protocol::http::helpers;
 using martianlabs::doba::protocol::http::v11::connection;
 using martianlabs::doba::protocol::http::v11::parsed_host_port;
 using martianlabs::doba::protocol::http::v11::policies;
 using martianlabs::doba::protocol::http::v11::verdict;
 using martianlabs::doba::protocol::http::v11::headers::x_forwarded_host;
+using martianlabs::doba::tests::unit::host_port_case;
 }  // namespace
 
 // +===========================================================================+

@@ -41,9 +41,8 @@ namespace auth = doba::protocol::http::auth;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  auth::bearer provider("demo", [](std::string_view token) {
-    return token == "demo-token";
-  });
+  auth::bearer provider(
+      "demo", [](std::string_view token) { return token == "demo-token"; });
   doba::http_server<
       request, response, doba::protocol::http::router<request, response>,
       engine<request, response>, doba::transport::tcp, auth::bearer>
@@ -52,8 +51,8 @@ int main() {
   server.add_route("GET", "/health", [](const request&, response& res) {
     res.ok_200().set_body("ok");
   });
-  server.add_route<auth::bearer>("GET", "/private",
-      [](const request&, response& res) {
+  server.add_route<auth::bearer>(
+      "GET", "/private", [](const request&, response& res) {
         res.ok_200().set_body("Authenticated with Bearer");
       });
   server.start();

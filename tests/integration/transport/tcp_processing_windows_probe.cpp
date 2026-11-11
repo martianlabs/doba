@@ -81,13 +81,13 @@ PTP_TIMER WINAPI tracked_create(PTP_TIMER_CALLBACK callback, void* state,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
-                         DWORD window) {
+                        DWORD window) {
   if (due) ++timer_arms;
   // Force a timer wake for cancellation; do not rely on a one-millisecond
   // deadline.
   FILETIME forced{0xffffffffU, 0xffffffffU};
-  ::SetThreadpoolTimer(timer, due && hold_timer ? &forced : due,
-                       period, window);
+  ::SetThreadpoolTimer(timer, due && hold_timer ? &forced : due, period,
+                       window);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -98,8 +98,9 @@ void WINAPI tracked_arm(PTP_TIMER timer, PFILETIME due, DWORD period,
 bool reject_timer_post() {
   auto remaining = fail_timer_posts.load();
   while (remaining) {
-    if (fail_timer_posts.compare_exchange_strong(remaining, remaining - 1))
+    if (fail_timer_posts.compare_exchange_strong(remaining, remaining - 1)) {
       return true;
+    }
   }
   return false;
 }
@@ -110,7 +111,7 @@ bool reject_timer_post() {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
-                          LPOVERLAPPED packet) {
+                         LPOVERLAPPED packet) {
   const auto type = packet ? static_cast<overlapped_base*>(packet)->get_type()
                            : io_type::kAccept;
   if (type == io_type::kProcessingTimer) ++timer_posts;
@@ -137,9 +138,9 @@ BOOL WINAPI tracked_post(HANDLE port, DWORD bytes, ULONG_PTR key,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
-                                LPOVERLAPPED* packet, DWORD timeout) {
-  const auto result = ::GetQueuedCompletionStatus(port, bytes, key,
-                                                 packet, timeout);
+                               LPOVERLAPPED* packet, DWORD timeout) {
+  const auto result =
+      ::GetQueuedCompletionStatus(port, bytes, key, packet, timeout);
   const auto error = GetLastError();
   if (*packet) {
     const auto type = static_cast<overlapped_base*>(*packet)->get_type();
@@ -331,9 +332,8 @@ DOBA_TEST(
     auto factory = [timer] {
       publication_engine engine;
       engine.input = [timer](auto&, auto) {
-        return timer
-            ? processing_result{false, clock_type::now() + 1h, false}
-            : processing_result{true, {}, false};
+        return timer ? processing_result{false, clock_type::now() + 1h, false}
+                     : processing_result{true, {}, false};
       };
       engine.turn = [](auto&, bool) { return processing_result{}; };
       return engine;
@@ -360,7 +360,8 @@ DOBA_TEST("Windows creates no sync timer and one timer for many deadlines") {
     engine.input = [](auto& current, auto bytes) {
       current.send("ok", {}, nullptr);
       return bytes == "s" ? processing_result{}
-          : processing_result{false, clock_type::time_point::max(), false};
+                          : processing_result{
+                                false, clock_type::time_point::max(), false};
     };
     engine.turn = [](auto&, bool) { return processing_result{}; };
     return engine;
@@ -437,17 +438,24 @@ DOBA_TEST("Windows discards a queued timer wake after its connection closes") {
   timer_seen = false;
   timed_out = false;
   hold_timer = true;
-  tests::scope_exit release([] { hold_timer = false; release_timer.open(); });
+  tests::scope_exit release([] {
+    hold_timer = false;
+    release_timer.open();
+  });
   std::atomic<unsigned> turns{0}, disconnected{0};
   auto factory = [&] {
     publication_engine engine;
     engine.input = [](auto& current, auto bytes) {
       current.send("ok", {}, nullptr);
       return bytes == "a"
-          ? processing_result{false, clock_type::time_point::max(), false}
-          : processing_result{};
+                 ? processing_result{false, clock_type::time_point::max(),
+                                     false}
+                 : processing_result{};
     };
-    engine.turn = [&](auto&, bool) { ++turns; return processing_result{}; };
+    engine.turn = [&](auto&, bool) {
+      ++turns;
+      return processing_result{};
+    };
     return engine;
   };
   tcpip_client peer;
@@ -457,7 +465,10 @@ DOBA_TEST("Windows discards a queued timer wake after its connection closes") {
       factory);
   server.set_on_disconnection([&] { ++disconnected; });
   server.start();
-  tests::scope_exit unblock([] { hold_timer = false; release_timer.open(); });
+  tests::scope_exit unblock([] {
+    hold_timer = false;
+    release_timer.open();
+  });
   DOBA_EXPECT(peer.connect(port));
   DOBA_EXPECT(peer.send_all("a"));
   const auto first = peer.receive(2);

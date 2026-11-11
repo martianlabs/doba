@@ -75,13 +75,13 @@ class custom_transport {
   // +-------------------------------------------------------------------------+
   void start() {
     connection_.reset(new ENty(create_engine_()));
-    connection_->set_on_send(
-        [this](std::string_view head, std::string_view body,
-               std::unique_ptr<common::reader> source) {
-          output_->append(head);
-          output_->append(body);
-          if (source) source->read_all(*output_);
-        });
+    connection_->set_on_send([this](std::string_view head,
+                                    std::string_view body,
+                                    std::unique_ptr<common::reader> source) {
+      output_->append(head);
+      output_->append(body);
+      if (source) source->read_all(*output_);
+    });
     connection_->set_on_close([this]() { close_requested_ = true; });
     on_connection_();
 

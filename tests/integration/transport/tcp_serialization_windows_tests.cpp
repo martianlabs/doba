@@ -32,11 +32,11 @@
 #include <string_view>
 #include <utility>
 
+#include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -123,8 +123,10 @@ DOBA_TEST("Windows serializes engine input and batches synchronous callbacks") {
     tcpip_client client;
     const auto port = client.find_available_port();
     tr::tcp<serial_engine, decltype(factory)> transport(
-        {.worker_count = workers, .ip = "127.0.0.1",
-         .port = std::to_string(port)}, factory);
+        {.worker_count = workers,
+         .ip = "127.0.0.1",
+         .port = std::to_string(port)},
+        factory);
     transport.set_on_connection([] {});
     transport.set_on_disconnection([] {});
     martianlabs::doba::tests::scope_exit cleanup([&] {
@@ -137,8 +139,7 @@ DOBA_TEST("Windows serializes engine input and batches synchronous callbacks") {
       DOBA_EXPECT(client.send_all("abc"));
       DOBA_EXPECT(client.send_all("def"));
       std::string expected;
-      for (char byte : std::string_view("abcdef"))
-        expected.append(4096, byte);
+      for (char byte : std::string_view("abcdef")) expected.append(4096, byte);
       const auto bytes = client.receive(expected.size(), 5s);
       DOBA_EXPECT(bytes.has_value());
       if (bytes) DOBA_EXPECT_EQUAL(*bytes, expected);

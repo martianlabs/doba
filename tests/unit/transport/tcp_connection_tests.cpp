@@ -43,8 +43,8 @@ using martianlabs::doba::protocol::processing_result;
 // | [>] usings                                                     ( public ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::common::reader;
+using martianlabs::doba::protocol::send_delegate;
 using martianlabs::doba::transport::detail::tcp_connection;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -184,15 +184,14 @@ DOBA_TEST("TCP RX adapter invokes callbacks during engine input") {
   DOBA_EXPECT(closed);
 }
 
-
 // +===========================================================================+
 // | [>] Scheduling does not acknowledge input                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("tcp connection returns processing needs without retaining RX") {
   auto factory = [] { return test_engine{}; };
   tcp_connection<test_engine> input(8, factory);
-  const auto due = processing_result::clock::time_point{} +
-                   std::chrono::seconds(9);
+  const auto due =
+      processing_result::clock::time_point{} + std::chrono::seconds(9);
   input.engine.progress = {true, due, true};
   std::string received;
   input.engine.receive = [&](const char* bytes, std::size_t size) {

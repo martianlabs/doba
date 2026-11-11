@@ -29,24 +29,24 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <new>
+#include <optional>
 #include <string_view>
 #include <utility>
 
 #include "platform.h"
-#include "transport/contracts.h"
 #include "transport/connection_reservation.h"
+#include "transport/contracts.h"
 #include "transport/send_state.h"
 #include "transport/tcp_connection.h"
-#include "transport/tcp_windows_overlapped_receive.h"
 #include "transport/tcp_windows_overlapped_processing.h"
-#include "transport/tcp_windows_processing_timer.h"
+#include "transport/tcp_windows_overlapped_receive.h"
 #include "transport/tcp_windows_overlapped_send.h"
+#include "transport/tcp_windows_processing_timer.h"
 
 namespace martianlabs::doba::transport::detail {
 // /////////////////////////////////////////////////////////////////////////////
@@ -157,12 +157,13 @@ struct context : public std::enable_shared_from_this<context<ENty>> {
   // +-------------------------------------------------------------------------+
   bool processing_completed(std::uint64_t version = 0) {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    if (!version)
+    if (!version) {
       processing_posted_ = false;
-    else if (version != timer_version_)
+    } else if (version != timer_version_) {
       return finished_();
-    else
+    } else {
       scheduled_.reset();
+    }
     if (stopping_.load()) close();
     if (state_ == state::kOpen && ready_()) {
       try {

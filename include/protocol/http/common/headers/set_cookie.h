@@ -155,8 +155,9 @@ class set_cookie {
         const std::string_view segment = sv.substr(start, i - start);
         // The leading segment is a cookie-pair; every later one is a cookie-av.
         if (first ? !helpers::is_cookie_pair(segment)
-                  : !helpers::is_cookie_av(segment))
+                  : !helpers::is_cookie_av(segment)) {
           return false;
+        }
         first = false;
         i += 2;
         start = i;

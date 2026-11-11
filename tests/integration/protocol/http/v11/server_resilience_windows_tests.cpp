@@ -35,12 +35,12 @@
 #include <thread>
 #include <vector>
 
+#include "../../../../helpers/concurrency.h"
 #include "http_server.h"
 #include "resilience_resources.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"
-#include "../../../../helpers/concurrency.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -339,4 +339,3 @@ DOBA_TEST(
       http);
   run_cycles<plain_peer>(server, port, "TCP", temporary);
 }
-

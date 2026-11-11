@@ -200,10 +200,11 @@ class tcpip_client {
           ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
       if (count < 0 && pending(socket_error())) continue;
       if (count <= 0) {
-        if (count == 0)
+        if (count == 0) {
           error_ = "eof";
-        else
+        } else {
           fail_socket();
+        }
         return std::nullopt;
       }
       result.resize(static_cast<std::size_t>(count));
@@ -342,9 +343,7 @@ class tcpip_client {
   // +=========================================================================+
   // | [>] socket_error                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  static int socket_error() {
-    return ::WSAGetLastError();
-  }
+  static int socket_error() { return ::WSAGetLastError(); }
   // +=========================================================================+
   // | [>] pending                                                 ( private ) |
   // +-------------------------------------------------------------------------+

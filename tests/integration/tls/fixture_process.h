@@ -45,18 +45,21 @@ class fixture_process {
   // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   fixture_process(const std::string& binary, const std::string& certificate,
-    const std::string& key, const std::string& mode = "echo",
-    size_t plain = 1048576, size_t bio = 17408, size_t cipher = 2097152) :
-    child_({binary, certificate, key, std::to_string(port_), mode,
-      std::to_string(plain), std::to_string(bio), std::to_string(cipher)}) {
+                  const std::string& key, const std::string& mode = "echo",
+                  size_t plain = 1048576, size_t bio = 17408,
+                  size_t cipher = 2097152)
+      : child_({binary, certificate, key, std::to_string(port_), mode,
+                std::to_string(plain), std::to_string(bio),
+                std::to_string(cipher)}) {
     child_.expect_output("READY\n");
   }
   fixture_process(const fixture_process&) = delete;
   fixture_process& operator=(const fixture_process&) = delete;
   ~fixture_process() {
     if (!stopped_) {
-      try { stop(); }
-      catch (const std::exception& error) {
+      try {
+        stop();
+      } catch (const std::exception& error) {
         // Failed cleanup must fail the test, even while unwinding.
         std::cerr << "TLS fixture cleanup failed: " << error.what() << '\n';
         std::abort();
@@ -84,6 +87,6 @@ class fixture_process {
   }
 };
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

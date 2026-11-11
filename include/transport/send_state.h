@@ -61,8 +61,9 @@ struct send_state {
     if (head.empty() && body.empty() && !source) return true;
     if (source_) return false;
     const auto available = capacity_ - buffer.size() - pending_.size();
-    if (head.size() > available || body.size() > available - head.size())
+    if (head.size() > available || body.size() > available - head.size()) {
       return false;
+    }
     pending_.append(head);
     pending_.append(body);
     source_ = std::move(source);
@@ -91,8 +92,9 @@ struct send_state {
     buffer.resize(std::min<std::size_t>(8192, capacity_));
     const auto count = source_->read(std::as_writable_bytes(std::span(buffer)));
     if (count > buffer.size() || source_->failed() ||
-        (!count && !source_->eof()))
+        (!count && !source_->eof())) {
       return false;
+    }
     buffer.resize(count);
     if (!count) source_.reset();
     return true;

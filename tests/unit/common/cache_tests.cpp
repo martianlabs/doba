@@ -73,7 +73,8 @@ DOBA_TEST("cache bounds resident cost independently of retained responses") {
   value.clear();
   DOBA_EXPECT_EQUAL(*fresh, "new");
   DOBA_EXPECT(!value.find("new"));
-  DOBA_EXPECT(value.try_get_or_load("full", 6, [] { return text("full"); }) != nullptr);
+  DOBA_EXPECT(value.try_get_or_load("full", 6, [] { return text("full"); }) !=
+              nullptr);
 }
 
 // +===========================================================================+
@@ -251,7 +252,8 @@ DOBA_TEST("cache obsolete completion cannot remove or overwrite a newer load") {
       DOBA_EXPECT(!old);
       DOBA_EXPECT_EQUAL(failed.load(), fail);
       // The old load frees its slot and leaves the new one alone.
-      DOBA_EXPECT(value.try_get_or_load("probe", 1, [] { return text("probe"); }) != nullptr);
+      DOBA_EXPECT(value.try_get_or_load(
+                      "probe", 1, [] { return text("probe"); }) != nullptr);
       bool called = false;
       DOBA_EXPECT(!value.try_get_or_load("file", 1, [&] {
         called = true;
@@ -381,7 +383,10 @@ DOBA_TEST("cache concurrent publication respects resident and loader bounds") {
   cache<int> bounded({.max_entries = 3, .max_cost = 5, .max_loads = 8});
   manual_event entered, release;
   std::atomic<unsigned> arrivals{0};
-  scope_exit cleanup([&] { release.open(); workers.clear(); });
+  scope_exit cleanup([&] {
+    release.open();
+    workers.clear();
+  });
   for (int key = 0; key < 8; ++key)
     workers.emplace_back([&, key] {
       bounded.try_get_or_load(std::to_string(key), 2, [&] {

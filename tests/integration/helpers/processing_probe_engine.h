@@ -49,15 +49,11 @@ struct processing_probe_engine {
   // +=========================================================================+
   // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_send(protocol::send_delegate value) {
-    output = std::move(value);
-  }
+  void set_on_send(protocol::send_delegate value) { output = std::move(value); }
   // +=========================================================================+
   // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
-  void set_on_close(std::function<void()> value) {
-    close = std::move(value);
-  }
+  void set_on_close(std::function<void()> value) { close = std::move(value); }
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+

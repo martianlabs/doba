@@ -98,8 +98,8 @@ struct turn_engine {
 // /////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<common::reader> source(std::string text) {
   auto owner = std::make_shared<const std::string>(std::move(text));
-  return std::make_unique<common::reader>(common::reader::shared(
-      owner, std::as_bytes(std::span(*owner))));
+  return std::make_unique<common::reader>(
+      common::reader::shared(owner, std::as_bytes(std::span(*owner))));
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -109,7 +109,7 @@ std::unique_ptr<common::reader> source(std::string text) {
 // /////////////////////////////////////////////////////////////////////////////
 bool same(const processing_result& a, const processing_result& b) {
   return a.turn_requested == b.turn_requested && a.turn_at == b.turn_at &&
-      a.turn_after_output_drained == b.turn_after_output_drained;
+         a.turn_after_output_drained == b.turn_after_output_drained;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -135,8 +135,9 @@ void snapshots(tr::tls_policies settings, int version) {
         ++calls;
         if (calls == 1) {
           auto owner = std::make_shared<const std::string>("tail");
-          current.send("pre:", "body:", std::make_unique<common::reader>(
-              common::reader::shared(owner, std::as_bytes(std::span(*owner)))));
+          current.send("pre:", "body:",
+                       std::make_unique<common::reader>(common::reader::shared(
+                           owner, std::as_bytes(std::span(*owner)))));
           require(owner.use_count() == 1, "TLS retained an exhausted reader");
           current.send({}, {}, nullptr);
           return next;
@@ -186,7 +187,8 @@ void errors(tr::tls_policies settings, int version) {
         return processing_result{true, {}, false};
       };
       engine.turn = [failure](auto& current, bool) {
-        if (failure < 2) current.send({}, std::string(4096 + failure, 'a'), {});
+        if (failure < 2)
+          current.send({}, std::string(4096 + failure, 'a'), {});
         else if (failure < 4) {
           current.send({}, {}, source(std::string(4094 + failure, 'b')));
         } else if (failure == 4) {
@@ -218,7 +220,8 @@ void errors(tr::tls_policies settings, int version) {
     require(session.closed() != accepted, "turn limit/failure not enforced");
     const auto result = session.read();
     require(accepted ? result == std::string(4096, failure == 0 ? 'a' : 'b')
-                     : result.empty(), "partial failed turn escaped");
+                     : result.empty(),
+            "partial failed turn escaped");
     require(same(session.progress(), {}), "failed turn left scheduling");
   }
 }
@@ -258,14 +261,14 @@ void concurrent_http(tr::tls_policies settings, int version) {
   protocol::http::router<request, response> routes;
   unsigned started = 0, completed = 0;
   bool progressed_busy = false;
-  routes.add("GET", "/wait/:id", [&](const request&, response& result,
-                                      int id) -> common::task<> {
-    ++started;
-    co_await common::yield();
-    ++completed;
-    if (id == 2) progressed_busy = true;
-    result.ok_200().set_body(std::to_string(id));
-  });
+  routes.add("GET", "/wait/:id",
+             [&](const request&, response& result, int id) -> common::task<> {
+               ++started;
+               co_await common::yield();
+               ++completed;
+               if (id == 2) progressed_busy = true;
+               result.ok_200().set_body(std::to_string(id));
+             });
   routes.add("GET", "/source", [](const request&, response& result) {
     result.ok_200().set_body(std::move(*source("source")), 6);
   });
@@ -274,7 +277,7 @@ void concurrent_http(tr::tls_policies settings, int version) {
   });
   auto factory = [&] { return engine<request, response>({}, routes); };
   processing_session<engine<request, response>> session(settings, factory,
-                                                       version);
+                                                        version);
   const std::string batch =
       "GET /source HTTP/1.1\r\nHost: local\r\n\r\n"
       "GET /wait/1 HTTP/1.1\r\nHost: local\r\n\r\n"
@@ -287,7 +290,8 @@ void concurrent_http(tr::tls_policies settings, int version) {
   require(completed == 2 && progressed_busy, "busy TLS output stalled tasks");
   std::string wire = session.read();
   for (unsigned i = 0; i < 8 && (session.progress().turn_requested ||
-       session.progress().turn_after_output_drained); ++i) {
+                                 session.progress().turn_after_output_drained);
+       ++i) {
     session.turn(true);
     wire += session.read();
   }
@@ -330,5 +334,3 @@ int main(int count, char** args) {
     return 1;
   }
 }
-
-

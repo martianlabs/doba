@@ -25,10 +25,10 @@
 #include <string>
 
 #include "../../../../helpers/concurrency.h"
-#include "protocol/http/v11/request.h"
-#include "protocol/http/v11/response.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/engine.h"
+#include "protocol/http/v11/request.h"
+#include "protocol/http/v11/response.h"
 #include "test_helper.h"
 
 namespace {

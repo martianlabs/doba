@@ -22,17 +22,18 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "protocol/processing_result.h"
-#include "../../helpers/concurrency.h"
-#include "http_server.h"
-#include "tcpip_client.h"
-#include "test_helper.h"
-#include "wait_count.h"
 #include <atomic>
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "../../helpers/concurrency.h"
+#include "http_server.h"
+#include "protocol/processing_result.h"
+#include "tcpip_client.h"
+#include "test_helper.h"
+#include "wait_count.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -72,7 +73,6 @@ struct echo_engine {
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -96,26 +96,30 @@ struct plain_peer {
   auto receive(std::size_t size) { return socket.receive(size); }
 };
 
-template <class Peer> bool reply(Peer &peer, std::string_view expected) {
+template <class Peer>
+bool reply(Peer& peer, std::string_view expected) {
   std::string head;
   while (!head.ends_with("\r\n\r\n") && head.size() < 4096) {
     auto byte = peer.receive(1);
-    if (!byte)
+    if (!byte) {
       return false;
+    }
     head += *byte;
   }
-  if (!head.starts_with("HTTP/1.1 200"))
+  if (!head.starts_with("HTTP/1.1 200")) {
     return false;
+  }
   while (!expected.empty()) {
     const auto size = std::min<std::size_t>(65536, expected.size());
     auto body = peer.receive(size);
-    if (!body || *body != expected.substr(0, size))
+    if (!body || *body != expected.substr(0, size)) {
       return false;
+    }
     expected.remove_prefix(size);
   }
   return true;
 }
-bool closed(tcpip_client &client) {
+bool closed(tcpip_client& client) {
   return client.wait_for_close(3s) || client.connection_reset();
 }
 
@@ -148,7 +152,8 @@ void factory_failure(Policies p) {
   DOBA_EXPECT_EQUAL(disconnected.load(), 1);
 }
 
-template <class Server, class Peer, class Policies> void admission(Policies p) {
+template <class Server, class Peer, class Policies>
+void admission(Policies p) {
   tcpip_client probe;
   const auto port = probe.find_available_port();
   p.ip = "127.0.0.1";
@@ -156,7 +161,7 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   p.max_connections = 2;
   p.worker_count = 4;
   Server server(p);
-  server.add_route("GET", "/", [](const request &, response &r) {
+  server.add_route("GET", "/", [](const request&, response& r) {
     r.ok_200().set_body("ok");
   });
   server.start();
@@ -175,11 +180,11 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   for (int i = 0; i < 8; ++i)
     burst.emplace_back([&] {
       tcpip_client client;
-      if (client.connect(port) && closed(client))
+      if (client.connect(port) && closed(client)) {
         ++rejected;
+      }
     });
-  for (auto &thread : burst)
-    thread.join();
+  for (auto& thread : burst) thread.join();
   DOBA_EXPECT_EQUAL(rejected.load(), 8);
   // Another transport must still accept while this one is full.
   auto independent_configuration = p;
@@ -187,7 +192,7 @@ template <class Server, class Peer, class Policies> void admission(Policies p) {
   independent_configuration.port = std::to_string(independent_port);
   independent_configuration.max_connections = 1;
   Server independent(independent_configuration);
-  independent.add_route("GET", "/", [](const request &, response &r) {
+  independent.add_route("GET", "/", [](const request&, response& r) {
     r.ok_200().set_body("ok");
   });
   independent.start();
@@ -221,6 +226,5 @@ DOBA_TEST("TCP policies enforce global admission and recover on restart") {
   admission<http_server<>, plain_peer>(transport::tcp_policies{});
 }
 DOBA_TEST("TCP admission releases its reservation on engine factory failure") {
-  factory_failure<transport::tcp, plain_peer>(
-      transport::tcp_policies{});
+  factory_failure<transport::tcp, plain_peer>(transport::tcp_policies{});
 }

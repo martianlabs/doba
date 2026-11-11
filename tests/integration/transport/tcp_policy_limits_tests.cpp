@@ -34,11 +34,11 @@
 #include <utility>
 #include <vector>
 
+#include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -94,8 +94,10 @@ struct policy_engine {
       return {};
     }
     send("123", "45", nullptr);
-    if (bytes == "X") send("6", {}, nullptr);
-    else close();
+    if (bytes == "X")
+      send("6", {}, nullptr);
+    else
+      close();
     return {};
   }
   // +=========================================================================+
@@ -133,8 +135,11 @@ bool rejected_endpoint(bool address, bool suffix) {
   text.push_back('\0');
   if (suffix) text += "ignored";
   tr::tcp<policy_engine, decltype(factory)> transport(policies, factory);
-  try { transport.start(); }
-  catch (const std::runtime_error&) { return true; }
+  try {
+    transport.start();
+  } catch (const std::runtime_error&) {
+    return true;
+  }
   transport.stop();
   return false;
 }
@@ -164,17 +169,20 @@ DOBA_TEST("TCP rejects malformed IPv4 addresses and decimal ports") {
   auto rejects = [&](const std::string& ip, const std::string& text) {
     tr::tcp<policy_engine, decltype(factory)> transport(
         {.worker_count = 1, .ip = ip, .port = text}, factory);
-    try { transport.start(); }
-    catch (const std::runtime_error&) { return true; }
+    try {
+      transport.start();
+    } catch (const std::runtime_error&) {
+      return true;
+    }
     transport.stop();
     return false;
   };
-  for (const std::string ip : {"", "localhost", "127.0.0", "256.0.0.1",
-                               "127.0.0.1 ", "::1"}) {
+  for (const std::string ip :
+       {"", "localhost", "127.0.0", "256.0.0.1", "127.0.0.1 ", "::1"}) {
     DOBA_EXPECT(rejects(ip, std::to_string(port)));
   }
-  for (const std::string text : {"", "0", "65536", "+1", "-1", " 80",
-                                 "80 ", "80x", "99999999999999999999"}) {
+  for (const std::string text : {"", "0", "65536", "+1", "-1", " 80", "80 ",
+                                 "80x", "99999999999999999999"}) {
     DOBA_EXPECT(rejects("127.0.0.1", text));
   }
 }
@@ -252,8 +260,11 @@ DOBA_TEST("TCP zero admission limit accepts multiple live connections") {
   const auto port = probe.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<policy_engine, decltype(factory)> transport(
-      {.worker_count = 4, .max_connections = 0,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 4,
+       .max_connections = 0,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   std::vector<std::unique_ptr<tcpip_client>> peers;
   martianlabs::doba::tests::scope_exit cleanup([&] {
     peers.clear();
@@ -282,9 +293,12 @@ DOBA_TEST("TCP accepts exact TX capacity and isolates one-byte overflow") {
   const auto port = probe.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<policy_engine, decltype(factory)> transport(
-      {.receive_buffer_capacity = 1, .worker_count = 1,
+      {.receive_buffer_capacity = 1,
+       .worker_count = 1,
        .max_buffered_send_bytes = 5,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   martianlabs::doba::tests::scope_exit cleanup([&] { transport.stop(); });
   transport.start();
   for (const std::string command : {"E", "X", "E"}) {
@@ -316,8 +330,11 @@ DOBA_TEST("TCP finite admission rejects before allocation and recovers") {
   const auto port = live.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<policy_engine, decltype(factory)> transport(
-      {.worker_count = 1, .max_connections = 1,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 1,
+       .max_connections = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   martianlabs::doba::tests::scope_exit cleanup([&] {
     live.close();
     excess.close();

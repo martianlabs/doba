@@ -44,11 +44,11 @@ namespace {
 using namespace martianlabs::doba;
 using protocol::processing_result;
 using clock_type = processing_result::clock;
-using tests::integration::tcpip_client;
-using tests::integration::receive_http_response;
-using tests::integration::wait_for_http_count;
 using protocol::http::v11::request;
 using protocol::http::v11::response;
+using tests::integration::receive_http_response;
+using tests::integration::tcpip_client;
+using tests::integration::wait_for_http_count;
 using namespace std::chrono_literals;
 namespace tr = transport;
 
@@ -170,14 +170,14 @@ DOBA_TEST(
   std::atomic<std::size_t> started{0}, completed{0};
   http_server<> server(
       {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
-  server.add_route("GET", "/wait/:id",
-                   [&](const request&, response& res,
-                       int id) -> common::task<> {
-    ++started;
-    co_await common::sleep_for(id == 1 ? 5ms : 1ms);
-    ++completed;
-    res.ok_200().set_body(std::to_string(id));
-  });
+  server.add_route(
+      "GET", "/wait/:id",
+      [&](const request&, response& res, int id) -> common::task<> {
+        ++started;
+        co_await common::sleep_for(id == 1 ? 5ms : 1ms);
+        ++completed;
+        res.ok_200().set_body(std::to_string(id));
+      });
   server.add_route("GET", "/sync", [](const request&, response& res) {
     res.ok_200().set_body("sync");
   });
@@ -185,8 +185,8 @@ DOBA_TEST(
   DOBA_EXPECT(peer.connect(port));
   std::string batch;
   for (int i = 1; i <= 3; ++i) {
-    batch += "GET /wait/" + std::to_string(i) +
-             " HTTP/1.1\r\nHost: local\r\n\r\n";
+    batch +=
+        "GET /wait/" + std::to_string(i) + " HTTP/1.1\r\nHost: local\r\n\r\n";
   }
   batch += "GET /sync HTTP/1.1\r\nHost: local\r\n\r\n";
   DOBA_EXPECT(peer.send_all(batch));
@@ -206,16 +206,16 @@ DOBA_TEST("Windows sleeping HTTP connection leaves the same worker available") {
   std::atomic<std::size_t> started{0}, live{0};
   http_server<> server(
       {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
-  server.add_route("GET", "/wait",
-                   [&](const request&, response&) -> common::task<> {
-    ++live;
-    auto guard = std::shared_ptr<int>(new int, [&](int* value) {
-      delete value;
-      --live;
-    });
-    ++started;
-    co_await common::sleep_for(1h);
-  });
+  server.add_route(
+      "GET", "/wait", [&](const request&, response&) -> common::task<> {
+        ++live;
+        auto guard = std::shared_ptr<int>(new int, [&](int* value) {
+          delete value;
+          --live;
+        });
+        ++started;
+        co_await common::sleep_for(1h);
+      });
   server.add_route("GET", "/fast", [](const request&, response& res) {
     res.ok_200().set_body("fast");
   });
@@ -242,9 +242,10 @@ DOBA_TEST(
       engine.input = [condition](auto& current, auto) {
         current.send("rx", {}, nullptr);
         const auto due = (condition & 2)
-            ? std::optional{clock_type::time_point::max()} : std::nullopt;
+                             ? std::optional{clock_type::time_point::max()}
+                             : std::nullopt;
         return processing_result{(condition & 1) != 0, due,
-                                  (condition & 4) != 0};
+                                 (condition & 4) != 0};
       };
       engine.turn = [&](auto& current, bool) {
         ++turns;
@@ -286,8 +287,9 @@ DOBA_TEST("Windows deadlines progress while a source keeps output busy") {
   auto factory = [&] {
     turn_engine engine;
     engine.input = [&](auto& current, auto) {
-      current.send("prefix", {}, std::make_unique<common::reader>(
-          common::reader::borrowed(std::as_bytes(std::span(body)))));
+      current.send("prefix", {},
+                   std::make_unique<common::reader>(common::reader::borrowed(
+                       std::as_bytes(std::span(body)))));
       current.due = clock_type::now() + 5ms;
       return processing_result{false, current.due, true};
     };
@@ -325,7 +327,10 @@ DOBA_TEST("Windows replaces deadline interests and cancels across restart") {
       }
       return processing_result{};
     };
-    engine.turn = [&](auto&, bool) { ++turns; return processing_result{}; };
+    engine.turn = [&](auto&, bool) {
+      ++turns;
+      return processing_result{};
+    };
     return engine;
   };
   tcpip_client peer;

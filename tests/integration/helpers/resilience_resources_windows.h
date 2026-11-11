@@ -25,8 +25,9 @@
 #ifndef martianlabs_doba_tests_resilience_resources_windows_h
 #define martianlabs_doba_tests_resilience_resources_windows_h
 
-#include "platform.h"
 #include <psapi.h>
+
+#include "platform.h"
 
 namespace martianlabs::doba::tests::integration {
 // /////////////////////////////////////////////////////////////////////////////
@@ -41,8 +42,10 @@ inline resilience_resources measure_resilience_resources() {
   if (!GetProcessHandleCount(GetCurrentProcess(), &handles) ||
       !K32GetProcessMemoryInfo(
           GetCurrentProcess(),
-          reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory), sizeof(memory)))
+          reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&memory),
+          sizeof(memory))) {
     throw std::runtime_error("Cannot measure process resources");
+  }
   result.handles = handles;
   result.memory_bytes = memory.PrivateUsage;
   return result;
@@ -52,17 +55,13 @@ inline resilience_resources measure_resilience_resources() {
 // | [>] resilience_process_id                                    ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-inline auto resilience_process_id() {
-  return GetCurrentProcessId();
-}
+inline auto resilience_process_id() { return GetCurrentProcessId(); }
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] resilience_temp_variable                                 ( function ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-inline const char* resilience_temp_variable() {
-  return "TMP";
-}
+inline const char* resilience_temp_variable() { return "TMP"; }
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] set_resilience_temp_variable                             ( function ) |

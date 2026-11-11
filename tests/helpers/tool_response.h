@@ -25,10 +25,10 @@
 #ifndef martianlabs_doba_tests_helpers_tool_response_h
 #define martianlabs_doba_tests_helpers_tool_response_h
 
-#include "tool_support.h"
-
 #include <cctype>
 #include <set>
+
+#include "tool_support.h"
 
 namespace martianlabs::doba::tests::tools {
 
@@ -44,7 +44,7 @@ struct wire_response {
 };
 
 // Read one Content-Length response without eating the next reply.
-template<class Stream>
+template <class Stream>
 wire_response response(Stream& stream, bool unique_headers = false) {
   size_t total = 0;
   auto line = [&] {
@@ -59,14 +59,15 @@ wire_response response(Stream& stream, bool unique_headers = false) {
   };
   auto status = line();
   require(status.size() >= 15 && status.starts_with("HTTP/1.1 ") &&
-    status[12] == ' ' && status[9] >= '0' && status[9] <= '9' &&
-    status[10] >= '0' && status[10] <= '9' &&
-    status[11] >= '0' && status[11] <= '9', "Invalid response status syntax");
+              status[12] == ' ' && status[9] >= '0' && status[9] <= '9' &&
+              status[10] >= '0' && status[10] <= '9' && status[11] >= '0' &&
+              status[11] <= '9',
+          "Invalid response status syntax");
   wire_response result;
-  result.status = (status[9] - '0') * 100 + (status[10] - '0') * 10 +
-    status[11] - '0';
+  result.status =
+      (status[9] - '0') * 100 + (status[10] - '0') * 10 + status[11] - '0';
   require(result.status >= 200 && result.status <= 599,
-    "Expected a final response status");
+          "Expected a final response status");
   auto printable = [](std::string_view value) {
     for (unsigned char character : value) {
       if ((character < 32 || character == 127) && character != 9) return false;
@@ -74,34 +75,35 @@ wire_response response(Stream& stream, bool unique_headers = false) {
     return true;
   };
   require(printable(std::string_view(status).substr(13, status.size() - 15)),
-    "Control byte in response reason");
+          "Control byte in response reason");
   for (;;) {
     auto field = line();
     if (field == "\r\n") break;
     field.resize(field.size() - 2);
     auto colon = field.find(':');
     require(colon != std::string::npos && colon > 0,
-      "Invalid response field name");
+            "Invalid response field name");
     auto name = field.substr(0, colon);
     for (char& character : name) {
       unsigned char byte = static_cast<unsigned char>(character);
-      require((byte >= 'A' && byte <= 'Z') ||
-        (byte >= 'a' && byte <= 'z') || (byte >= '0' && byte <= '9') ||
-        std::string_view("!#$%&'*+-.^_`|~").find(character) !=
-          std::string_view::npos, "Invalid response field name");
+      require((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+                  (byte >= '0' && byte <= '9') ||
+                  std::string_view("!#$%&'*+-.^_`|~").find(character) !=
+                      std::string_view::npos,
+              "Invalid response field name");
       if (byte >= 'A' && byte <= 'Z') character += 'a' - 'A';
     }
     auto value = field.substr(colon + 1);
     require(printable(value), "Control byte in response field");
     bool singleton = name == "content-length" || name == "date" ||
-      name == "transfer-encoding";
+                     name == "transfer-encoding";
     require(!(unique_headers || singleton) || !result.headers.contains(name),
-      "Duplicate response singleton");
+            "Duplicate response singleton");
     result.headers[name] = trim(value);
   }
   require(result.headers.contains("content-length") &&
-    !result.headers.contains("transfer-encoding"),
-    "Ambiguous response framing");
+              !result.headers.contains("transfer-encoding"),
+          "Ambiguous response framing");
   auto& length = result.headers.at("content-length");
   require(!length.empty(), "Missing Content-Length");
   size_t size = 0;
@@ -123,15 +125,15 @@ inline std::string request(const std::string& path,
   return "GET " + path + " HTTP/1.1\r\nHost: localhost\r\n" + extra + "\r\n";
 }
 
-template<class Stream>
+template <class Stream>
 void expect_response(Stream& stream, int code, const std::string& body,
                      bool unique_headers = false) {
   auto value = response(stream, unique_headers);
   require(value.status == code && value.body == body,
-    "HTTP status/body mismatch: " + std::to_string(value.status) +
-    ", body bytes=" + std::to_string(value.body.size()));
+          "HTTP status/body mismatch: " + std::to_string(value.status) +
+              ", body bytes=" + std::to_string(value.body.size()));
 }
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

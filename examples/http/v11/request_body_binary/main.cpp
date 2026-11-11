@@ -27,8 +27,8 @@
 #include <utility>
 
 #include "common/signaler.h"
-#include "protocol/http/v11/body/writer.h"
 #include "http_server.h"
+#include "protocol/http/v11/body/writer.h"
 
 using namespace martianlabs::doba::common;
 using martianlabs::doba::http_server;

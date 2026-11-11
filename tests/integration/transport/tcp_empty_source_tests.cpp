@@ -31,12 +31,12 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/processing_result.h"
+#include "../../helpers/concurrency.h"
 #include "common/reader.h"
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -52,8 +52,12 @@ using namespace std::chrono_literals;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class output_case {
-  kSource, kEmptySource, kCloseSource, kCloseEmptySource,
-  kLaterBytes, kSecondReader
+  kSource,
+  kEmptySource,
+  kCloseSource,
+  kCloseEmptySource,
+  kLaterBytes,
+  kSecondReader
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -105,16 +109,19 @@ struct empty_engine {
     send({}, {}, nullptr);
     send("pre", {}, nullptr);
     send({}, {}, nullptr);
-    send("h", "b", std::make_unique<reader>(reader::shared(
-        state->bytes, std::as_bytes(std::span(*state->bytes)))));
+    send("h", "b",
+         std::make_unique<reader>(reader::shared(
+             state->bytes, std::as_bytes(std::span(*state->bytes)))));
     send({}, {}, nullptr);
     send({}, {}, nullptr);
     if (state->selected == output_case::kLaterBytes) send("!", {}, nullptr);
-    if (state->selected == output_case::kSecondReader)
+    if (state->selected == output_case::kSecondReader) {
       send({}, {}, std::make_unique<reader>());
+    }
     send({}, {}, nullptr);
     if (state->selected == output_case::kCloseSource ||
-        state->selected == output_case::kCloseEmptySource) close();
+        state->selected == output_case::kCloseEmptySource)
+      close();
     return {};
   }
   // +=========================================================================+
@@ -149,9 +156,12 @@ void exercise(output_case selected) {
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     tr::tcp<empty_engine, decltype(factory)> transport(
-        {.receive_buffer_capacity = 1, .worker_count = workers,
-         .max_buffered_send_bytes = 5, .ip = "127.0.0.1",
-         .port = std::to_string(port)}, factory);
+        {.receive_buffer_capacity = 1,
+         .worker_count = workers,
+         .max_buffered_send_bytes = 5,
+         .ip = "127.0.0.1",
+         .port = std::to_string(port)},
+        factory);
     martianlabs::doba::tests::scope_exit cleanup([&] {
       client.close();
       transport.stop();

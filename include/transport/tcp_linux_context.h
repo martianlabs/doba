@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_transport_tcp_linux_context_h
 #define martianlabs_doba_transport_tcp_linux_context_h
 
+#include <sys/socket.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <cstddef>
@@ -33,7 +35,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <sys/socket.h>
 #include <utility>
 
 #include "common/reader.h"
@@ -187,8 +188,9 @@ class linux_context {
   void append(std::string_view prefix, std::string_view body,
               std::unique_ptr<common::reader> source) noexcept {
     if (failed_) return;
-    if (processing_ && !closing_ && prefix.empty() && body.empty() && !source)
+    if (processing_ && !closing_ && prefix.empty() && body.empty() && !source) {
       return;
+    }
     if (!processing_ || closing_ || source_ ||
         prefix.size() > send_limit_ - output_.size() ||
         body.size() > send_limit_ - output_.size() - prefix.size()) {

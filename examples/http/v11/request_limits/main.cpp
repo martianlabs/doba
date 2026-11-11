@@ -50,11 +50,10 @@ int main() {
 #ifdef _WIN32
 #endif
   http_server<> http_server(io, limits);
-  http_server.add_route("POST", "/upload",
-                        [](const request&, response& res) {
-                          res.ok_200().set_body("accepted");
-                          return;
-                        });
+  http_server.add_route("POST", "/upload", [](const request&, response& res) {
+    res.ok_200().set_body("accepted");
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;

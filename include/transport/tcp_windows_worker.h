@@ -461,15 +461,17 @@ struct worker {
     const SOCKET accepted = ova->socket;
     if (setsockopt(accepted, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                    reinterpret_cast<const char*>(&listener),
-                   sizeof(listener)) == SOCKET_ERROR)
+                   sizeof(listener)) == SOCKET_ERROR) {
       return;
+    }
     ULONG mode = 1;
     if (ioctlsocket(accepted, FIONBIO, &mode) != NO_ERROR) return;
     int no_delay = 1;
     if (setsockopt(accepted, IPPROTO_TCP, TCP_NODELAY,
                    reinterpret_cast<const char*>(&no_delay),
-                   sizeof(no_delay)) == SOCKET_ERROR)
+                   sizeof(no_delay)) == SOCKET_ERROR) {
       return;
+    }
     auto reservation = connection_reservation::acquire(budget_);
     if (!reservation) return;
     std::shared_ptr<context<ENty>> ctx;

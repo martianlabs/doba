@@ -27,8 +27,8 @@
 
 #include <utility>
 
-#include "protocol/http/v11/connection.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/connection.h"
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/verdict.h"

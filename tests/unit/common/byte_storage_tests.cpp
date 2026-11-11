@@ -23,15 +23,15 @@
 // permissions and limitations under the License.
 
 #include <array>
-#include <barrier>
 #include <atomic>
+#include <barrier>
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <thread>
 #include <string>
+#include <thread>
 
 #include "common/byte_storage.h"
 #include "only_spill_file.h"
@@ -39,11 +39,10 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::tests::spill_directory;
-using martianlabs::doba::tests::only_spill_file;
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
-
+using martianlabs::doba::tests::only_spill_file;
+using martianlabs::doba::tests::spill_directory;
 
 }  // namespace
 
@@ -54,8 +53,8 @@ DOBA_TEST("default spill threshold and explicit disable") {
   DOBA_EXPECT_EQUAL(byte_storage_options::kDefaultSpillToDiskThreshold,
                     128 * 1024);
   spill_directory directory{"doba_byte_storage_"};
-  const std::string bytes(
-      byte_storage_options::kDefaultSpillToDiskThreshold, 'x');
+  const std::string bytes(byte_storage_options::kDefaultSpillToDiskThreshold,
+                          'x');
   {
     byte_storage storage(
         byte_storage_options{.spill_dir = directory.path().string()});
@@ -265,9 +264,9 @@ DOBA_TEST("memory move construction preserves the cursor") {
   {
     std::optional<byte_storage> destination;
     {
-      byte_storage storage(byte_storage_options{
-          .spill_to_disk_threshold = 0,
-          .spill_dir = directory.path().string()});
+      byte_storage storage(
+          byte_storage_options{.spill_to_disk_threshold = 0,
+                               .spill_dir = directory.path().string()});
       DOBA_EXPECT(storage.write("abcdef", 6));
       storage.finish(6);
       std::array<char, 2> prefix{};
@@ -294,9 +293,9 @@ DOBA_TEST("spill move construction transfers cursor and ownership") {
   {
     std::optional<byte_storage> destination;
     {
-      byte_storage storage(byte_storage_options{
-          .spill_to_disk_threshold = 1,
-          .spill_dir = directory.path().string()});
+      byte_storage storage(
+          byte_storage_options{.spill_to_disk_threshold = 1,
+                               .spill_dir = directory.path().string()});
       DOBA_EXPECT(storage.write("abcdef", 6));
       storage.finish(6);
       std::array<char, 2> prefix{};
@@ -327,9 +326,9 @@ DOBA_TEST("spill move assignment releases the previous file") {
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(byte_storage_options{
-          .spill_to_disk_threshold = 1,
-          .spill_dir = directory.path().string()});
+      byte_storage source(
+          byte_storage_options{.spill_to_disk_threshold = 1,
+                               .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -366,9 +365,9 @@ DOBA_TEST("memory move assignment releases a spilled destination") {
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(byte_storage_options{
-          .spill_to_disk_threshold = 0,
-          .spill_dir = directory.path().string()});
+      byte_storage source(
+          byte_storage_options{.spill_to_disk_threshold = 0,
+                               .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -405,9 +404,9 @@ DOBA_TEST("spill move assignment replaces memory and preserves cursor") {
     destination.finish(3);
     const auto previous_file = only_spill_file(directory.path());
     {
-      byte_storage source(byte_storage_options{
-          .spill_to_disk_threshold = 1,
-          .spill_dir = directory.path().string()});
+      byte_storage source(
+          byte_storage_options{.spill_to_disk_threshold = 1,
+                               .spill_dir = directory.path().string()});
       DOBA_EXPECT(source.write("abcdef", 6));
       source.finish(6);
       std::array<char, 2> prefix{};
@@ -503,9 +502,9 @@ DOBA_TEST("concurrent spill owners keep distinct files and contents") {
     for (std::size_t i = 0; i < count; i++) {
       workers[i] = std::jthread([&, i]() {
         start.arrive_and_wait();
-        storage[i] = byte_storage(byte_storage_options{
-            .spill_to_disk_threshold = 1,
-            .spill_dir = directory.path().string()});
+        storage[i] = byte_storage(
+            byte_storage_options{.spill_to_disk_threshold = 1,
+                                 .spill_dir = directory.path().string()});
         const std::string value = "owner-" + std::to_string(i);
         written[i] = storage[i].write(value.data(), value.size());
         storage[i].finish(value.size());

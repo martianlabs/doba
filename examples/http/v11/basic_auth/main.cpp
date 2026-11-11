@@ -41,10 +41,10 @@ namespace auth = doba::protocol::http::auth;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  auth::basic provider("demo", [](std::string_view user,
-                                 std::string_view password) {
-    return user == "alice" && password == "secret";
-  });
+  auth::basic provider("demo",
+                       [](std::string_view user, std::string_view password) {
+                         return user == "alice" && password == "secret";
+                       });
   doba::http_server<
       request, response, doba::protocol::http::router<request, response>,
       engine<request, response>, doba::transport::tcp, auth::basic>
@@ -53,8 +53,8 @@ int main() {
   server.add_route("GET", "/health", [](const request&, response& res) {
     res.ok_200().set_body("ok");
   });
-  server.add_route<auth::basic>("GET", "/private",
-      [](const request&, response& res) {
+  server.add_route<auth::basic>(
+      "GET", "/private", [](const request&, response& res) {
         res.ok_200().set_body("Authenticated with Basic");
       });
   server.start();

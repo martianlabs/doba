@@ -118,13 +118,15 @@ DOBA_TEST("TCP preserves factory state with only the current engine contract") {
       const auto port = client.find_available_port();
       DOBA_EXPECT(port != 0);
       tr::tcp<factory_engine, decltype(factory)> transport(
-          {.worker_count = workers, .ip = "127.0.0.1",
-           .port = std::to_string(port)}, factory);
+          {.worker_count = workers,
+           .ip = "127.0.0.1",
+           .port = std::to_string(port)},
+          factory);
       transport.set_on_disconnection([probe] { ++probe->disconnected; });
       transport.start();
       DOBA_EXPECT(client.connect(port));
-      for (const auto& batch : {std::string("first"),
-                                std::string(64 * 1024, 'b')}) {
+      for (const auto& batch :
+           {std::string("first"), std::string(64 * 1024, 'b')}) {
         DOBA_EXPECT(client.send_all(batch));
         const auto received = client.receive(batch.size());
         DOBA_EXPECT(received.has_value());

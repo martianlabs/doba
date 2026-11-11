@@ -36,8 +36,8 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::common::reader;
+using martianlabs::doba::protocol::processing_result;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] line_engine                                                ( struct ) |
@@ -67,7 +67,6 @@ struct line_engine {
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 
   martianlabs::doba::protocol::send_delegate on_send;
 };

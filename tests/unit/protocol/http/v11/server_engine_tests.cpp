@@ -29,10 +29,10 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "http_server.h"
 #include "protocol/http/common/auth/basic.h"
 #include "protocol/http/common/auth/bearer.h"
+#include "protocol/processing_result.h"
 #include "test_helper.h"
 
 #ifdef DOBA_ENABLE_TLS
@@ -50,8 +50,8 @@ using martianlabs::doba::http_server;
 #ifdef DOBA_ENABLE_TLS
 using martianlabs::doba::https_server;
 #endif
-using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::common::reader;
+using martianlabs::doba::protocol::http::router;
 namespace protocol = martianlabs::doba::protocol;
 namespace http = martianlabs::doba::protocol::http::v11;
 namespace tr = martianlabs::doba::transport;
@@ -259,14 +259,11 @@ struct custom_engine {
   // +=========================================================================+
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
-  processing_result on_bytes_received(std::string_view) {
-    return {};
-  }
+  processing_result on_bytes_received(std::string_view) { return {}; }
   // +=========================================================================+
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -341,8 +338,8 @@ static_assert(
 static_assert(
     !accepts_custom_http_server<http::request, custom_response,
                                 router<http::request, http::response>>);
-static_assert(!accepts_custom_http_server<http::request, http::response,
-                                          custom_routes>);
+static_assert(
+    !accepts_custom_http_server<http::request, http::response, custom_routes>);
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -384,7 +381,7 @@ concept registered_auth = requires(
                 http::engine<http::request, http::response>, fake_transport,
                 auth::basic, auth::bearer, custom_auth>& server) {
   server.template add_route<Aty>("GET", "/",
-      [](const http::request&, http::response&) {});
+                                 [](const http::request&, http::response&) {});
 };
 static_assert(registered_auth<custom_auth>);
 static_assert(!registered_auth<invalid_auth>);
@@ -648,14 +645,15 @@ DOBA_TEST("server owns and selects authentication providers across engines") {
             std::tuple{auth::basic{"demo", [](auto, auto) { return false; }},
                        auth::bearer{"demo", [](auto) { return false; }},
                        custom_auth{checks}});
-  value.add_route<custom_auth>("GET", "/",
+  value.add_route<custom_auth>(
+      "GET", "/",
       [](const http::request&, http::response& res) { res.ok_200(); });
   value.start();
   DOBA_EXPECT_EQUAL(checks, 2);
   bool rejected = false;
   try {
     value.add_route<custom_auth>("GET", "/late",
-        [](const http::request&, http::response&) {});
+                                 [](const http::request&, http::response&) {});
   } catch (const std::runtime_error&) {
     rejected = true;
   }

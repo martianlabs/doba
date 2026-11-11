@@ -78,7 +78,10 @@ struct foreign_awaiter {
   // +=========================================================================+
   // | [>] await_ready                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  bool await_ready() const noexcept { touched = true; return ready; }
+  bool await_ready() const noexcept {
+    touched = true;
+    return ready;
+  }
   // +=========================================================================+
   // | [>] await_suspend                                            ( public ) |
   // +-------------------------------------------------------------------------+
@@ -119,9 +122,7 @@ struct awaitable {
   }
 };
 
-task<> foreign_operator(bool& touched) {
-  co_await awaitable{touched};
-}
+task<> foreign_operator(bool& touched) { co_await awaitable{touched}; }
 }  // namespace
 
 DOBA_TEST("controlled task adopts lazily and retains its completed frame") {
@@ -256,8 +257,7 @@ DOBA_TEST("controlled task rejects foreign awaiters before invoking them") {
 }
 
 DOBA_TEST("controlled task skips nonpositive sleeps in the same turn") {
-  for (auto duration : {clock_type::duration::zero(),
-                        clock_type::duration(-1),
+  for (auto duration : {clock_type::duration::zero(), clock_type::duration(-1),
                         clock_type::duration::min()}) {
     int steps = 0;
     task_execution work(sleep_once(duration, steps));
@@ -276,8 +276,8 @@ DOBA_TEST("task sleep saturates overflowing positive deadlines") {
   DOBA_EXPECT_EQUAL(steps, 1);
   DOBA_EXPECT(work.deadline().has_value());
   DOBA_EXPECT_EQUAL(*work.deadline(), clock_type::time_point::max());
-  DOBA_EXPECT(!work.resume(clock_type::time_point::max() -
-                           clock_type::duration(1)));
+  DOBA_EXPECT(
+      !work.resume(clock_type::time_point::max() - clock_type::duration(1)));
   work.cancel();
   DOBA_EXPECT_EQUAL(steps, 1);
 }

@@ -25,25 +25,26 @@
 #ifndef martianlabs_doba_transport_tcp_linux_worker_h
 #define martianlabs_doba_transport_tcp_linux_worker_h
 
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
-#include <chrono>
-#include <arpa/inet.h>
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <netinet/tcp.h>
 #include <stdexcept>
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
-#include <sys/socket.h>
-#include <sys/timerfd.h>
 #include <thread>
-#include <unistd.h>
 #include <unordered_map>
 #include <utility>
 
@@ -204,10 +205,11 @@ class linux_worker {
         contexts_.emplace(identity, std::move(context));
         if (connected_) connected_();
       } catch (...) {
-        if (contexts_.contains(identity))
+        if (contexts_.contains(identity)) {
           close(identity);
-        else
+        } else {
           ::close(socket);
+        }
       }
     }
   }

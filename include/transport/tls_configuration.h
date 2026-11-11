@@ -25,14 +25,14 @@
 #ifndef martianlabs_doba_transport_tls_configuration_h
 #define martianlabs_doba_transport_tls_configuration_h
 
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+
 #include <climits>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
-
-#include <openssl/err.h>
-#include <openssl/ssl.h>
 
 #include "transport/tls_policies.h"
 

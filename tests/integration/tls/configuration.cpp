@@ -22,6 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <openssl/pem.h>
+
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -30,8 +32,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-
-#include <openssl/pem.h>
 
 #include "transport/tls_configuration.h"
 
@@ -61,7 +61,7 @@ struct temporary_files {
   temporary_files() {
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch();
     directory = std::filesystem::temp_directory_path() /
-        ("doba-tls-configuration-" + std::to_string(stamp.count()));
+                ("doba-tls-configuration-" + std::to_string(stamp.count()));
     require(std::filesystem::create_directory(directory));
   }
   ~temporary_files() {
@@ -90,8 +90,11 @@ void invalid(const tr::tls_policies& good, FNty change) {
   auto policies = good;
   change(policies);
   bool rejected = false;
-  try { detail::tls_configuration configuration(std::move(policies)); }
-  catch (const std::invalid_argument&) { rejected = true; }
+  try {
+    detail::tls_configuration configuration(std::move(policies));
+  } catch (const std::invalid_argument&) {
+    rejected = true;
+  }
   require(rejected);
 }
 
@@ -102,8 +105,11 @@ void invalid(const tr::tls_policies& good, FNty change) {
 // /////////////////////////////////////////////////////////////////////////////
 void bad_credentials(tr::tls_policies policies) {
   bool rejected = false;
-  try { detail::tls_configuration configuration(std::move(policies)); }
-  catch (const std::runtime_error&) { rejected = true; }
+  try {
+    detail::tls_configuration configuration(std::move(policies));
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
   require(rejected);
 }
 
@@ -119,11 +125,11 @@ void write_key(const std::filesystem::path& path, EVP_PKEY* key,
   require(output != nullptr);
   const std::string password = "doba-test-only";
   const auto* bytes = reinterpret_cast<const unsigned char*>(password.data());
-  require(PEM_write_bio_PrivateKey(output.get(), key,
-      encrypted ? EVP_aes_256_cbc() : nullptr,
-      encrypted ? bytes : nullptr,
-      encrypted ? static_cast<int>(password.size()) : 0,
-      nullptr, nullptr) == 1);
+  require(PEM_write_bio_PrivateKey(
+              output.get(), key, encrypted ? EVP_aes_256_cbc() : nullptr,
+              encrypted ? bytes : nullptr,
+              encrypted ? static_cast<int>(password.size()) : 0, nullptr,
+              nullptr) == 1);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -179,8 +185,8 @@ void exercise(const char* certificate, const char* key_file) {
   write_key(files.directory / "mismatch.pem", other.get(), false);
   policies.private_key_file = (files.directory / "mismatch.pem").string();
   bad_credentials(policies);
-  std::unique_ptr<BIO, decltype(&BIO_free)> input(
-      BIO_new_file(key_file, "r"), BIO_free);
+  std::unique_ptr<BIO, decltype(&BIO_free)> input(BIO_new_file(key_file, "r"),
+                                                  BIO_free);
   require(input != nullptr);
   std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> original(
       PEM_read_bio_PrivateKey(input.get(), nullptr, nullptr, nullptr),
@@ -189,8 +195,10 @@ void exercise(const char* certificate, const char* key_file) {
   write_key(files.directory / "encrypted.pem", original.get(), true);
   policies.private_key_file = (files.directory / "encrypted.pem").string();
   bad_credentials(policies);
-  { std::ofstream invalid_file(files.directory / "invalid.pem");
-    invalid_file << "not a PEM certificate or key\n"; }
+  {
+    std::ofstream invalid_file(files.directory / "invalid.pem");
+    invalid_file << "not a PEM certificate or key\n";
+  }
   policies = good;
   policies.certificate_file = (files.directory / "invalid.pem").string();
   bad_credentials(policies);

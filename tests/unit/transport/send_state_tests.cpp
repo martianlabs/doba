@@ -123,9 +123,9 @@ DOBA_TEST("send state keeps exact capacity across partial sends") {
 DOBA_TEST("send state streams source chunks within TX capacity") {
   std::string source_bytes = "xy";
   send_state output(4);
-  DOBA_EXPECT(output.push(
-      "a", {}, std::make_unique<reader>(reader::borrowed(
-                   std::as_bytes(std::span(source_bytes))))));
+  DOBA_EXPECT(output.push("a", {},
+                          std::make_unique<reader>(reader::borrowed(
+                              std::as_bytes(std::span(source_bytes))))));
   DOBA_EXPECT(!output.push("b", {}, nullptr));
   DOBA_EXPECT(output.fill());
   DOBA_EXPECT_EQUAL(output.buffer, "a");
@@ -235,8 +235,9 @@ DOBA_TEST("send state empty sends preserve source and exact TX capacity") {
     DOBA_EXPECT(output.push({}, {}, nullptr));
     DOBA_EXPECT(output.push("pre", {}, nullptr));
     DOBA_EXPECT(output.push({}, {}, nullptr));
-    DOBA_EXPECT(output.push("h", "b", std::make_unique<reader>(
-        reader::shared(owner, std::as_bytes(std::span(*owner))))));
+    DOBA_EXPECT(output.push("h", "b",
+                            std::make_unique<reader>(reader::shared(
+                                owner, std::as_bytes(std::span(*owner))))));
     DOBA_EXPECT(output.push({}, {}, nullptr));
     DOBA_EXPECT_EQUAL(owner.use_count(), 2);
     DOBA_EXPECT(!output.push("!", {}, nullptr));

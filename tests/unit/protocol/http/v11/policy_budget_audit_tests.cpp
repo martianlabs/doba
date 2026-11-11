@@ -42,9 +42,9 @@ using response = probe::response;
 using router = probe::router;
 using policies = probe::policies;
 using clock_type = probe::clock;
+using common::sleep_for;
 using common::task;
 using common::yield;
-using common::sleep_for;
 using namespace std::chrono_literals;
 }  // namespace
 
@@ -79,8 +79,9 @@ DOBA_TEST(
   router routes;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
   routes.add("GET", "/source", [&](const request&, response& res) {
-    res.ok_200().set_body(common::reader::shared(
-        bytes, std::as_bytes(std::span(*bytes))), bytes->size());
+    res.ok_200().set_body(
+        common::reader::shared(bytes, std::as_bytes(std::span(*bytes))),
+        bytes->size());
   });
   policies limits;
   limits.max_pending_requests = 1;
@@ -104,8 +105,9 @@ DOBA_TEST("queued source headers retain the pending byte limit") {
   router routes;
   auto bytes = std::make_shared<const std::string>(1024 * 1024, 's');
   routes.add("GET", "/source", [&](const request&, response& res) {
-    res.ok_200().set_body(common::reader::shared(
-        bytes, std::as_bytes(std::span(*bytes))), bytes->size());
+    res.ok_200().set_body(
+        common::reader::shared(bytes, std::as_bytes(std::span(*bytes))),
+        bytes->size());
   });
   policies limits;
   limits.max_pending_requests = 2;

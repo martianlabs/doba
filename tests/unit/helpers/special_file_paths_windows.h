@@ -37,8 +37,8 @@
 namespace martianlabs::doba::tests::unit {
 inline std::vector<std::string_view> special_file_paths(
     const std::filesystem::path&, const std::filesystem::path&) {
-  return {"NUL", "con.txt", "COM1", "LPT1.txt", "file:stream",
-          "file.", "file ", "*.txt"};
+  return {"NUL",         "con.txt", "COM1",  "LPT1.txt",
+          "file:stream", "file.",   "file ", "*.txt"};
 }
 }  // namespace martianlabs::doba::tests::unit
 

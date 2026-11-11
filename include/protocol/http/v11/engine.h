@@ -37,7 +37,6 @@
 #include <utility>
 
 #include "protocol/contracts.h"
-#include "protocol/processing_result.h"
 #include "protocol/http/common/header_names.h"
 #include "protocol/http/common/headers/www_authenticate.h"
 #include "protocol/http/common/method_names.h"
@@ -50,6 +49,7 @@
 #include "protocol/http/v11/request_processor_async.h"
 #include "protocol/http/v11/request_processor_sync.h"
 #include "protocol/http/v11/results.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////

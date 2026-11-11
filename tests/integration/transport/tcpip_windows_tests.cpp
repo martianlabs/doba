@@ -35,12 +35,12 @@
 #include <string_view>
 #include <thread>
 
-#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "wait_count.h"
 #include "transport/tcp.h"
+#include "wait_count.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -56,8 +56,7 @@ struct byte_engine;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct byte_state {
-  std::function<void(byte_engine&, const char*, std::size_t)>
-      receive;
+  std::function<void(byte_engine&, const char*, std::size_t)> receive;
   std::atomic<int> connected{0};
   std::atomic<int> disconnected{0};
 };
@@ -95,7 +94,10 @@ struct byte_engine {
     const auto* bytes = input.data();
     [[maybe_unused]] const auto size = input.size();
     if (!size) throw std::runtime_error("Invalid input");
-    if (state->receive) { state->receive(*this, bytes, size); return {}; }
+    if (state->receive) {
+      state->receive(*this, bytes, size);
+      return {};
+    }
     echo(bytes, size);
     return {};
   }
@@ -158,12 +160,11 @@ DOBA_TEST("Windows TCP receives bytes across multiple RX blocks") {
   DOBA_EXPECT(port != 0);
   auto state = std::make_shared<byte_state>();
   auto factory = [state]() { return byte_engine{state, {}, {}}; };
-  tr::tcp<byte_engine, decltype(factory)> server(
-      {.receive_buffer_capacity = 8,
-       .worker_count = 1,
-       .ip = "127.0.0.1",
-       .port = std::to_string(port)},
-      factory);
+  tr::tcp<byte_engine, decltype(factory)> server({.receive_buffer_capacity = 8,
+                                                  .worker_count = 1,
+                                                  .ip = "127.0.0.1",
+                                                  .port = std::to_string(port)},
+                                                 factory);
   server.set_on_connection([]() {});
   server.set_on_disconnection([]() {});
   server.start();
@@ -924,10 +925,11 @@ DOBA_TEST("tcpip completes isolated empty deliveries") {
     state->receive = [&](byte_engine& engine, const char* bytes, std::size_t) {
       if (bytes[0] == 'e') {
         for (int i = 0; i < 3; i++) {
-          if (null_buffer)
+          if (null_buffer) {
             engine.send({}, {}, nullptr);
-          else
+          } else {
             engine.echo(bytes, 0);
+          }
         }
       } else {
         engine.echo("a", 1);
@@ -971,10 +973,11 @@ DOBA_TEST("tcpip rejects invalid deliveries and ignores later output") {
     server.set_on_connection([]() {});
     server.set_on_disconnection([]() {});
     state->receive = [&](byte_engine& engine, const char*, std::size_t) {
-      if (mode == 1)
+      if (mode == 1) {
         engine.send("0", std::string(16, '1'), nullptr);
-      else
+      } else {
         engine.echo("01234567890123456", 17);
+      }
       engine.echo("ignored", 7);
       engine.send({}, {}, nullptr);
       if (mode == 2) throw std::runtime_error("After rejection");
@@ -1126,4 +1129,3 @@ DOBA_TEST("Windows TCP limits accumulated inline output per input call") {
   DOBA_EXPECT(bytes.has_value() || error == "socket");
   if (bytes) DOBA_EXPECT(bytes->empty());
 }
-

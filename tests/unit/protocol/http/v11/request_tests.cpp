@@ -61,8 +61,7 @@ void with_request(std::string_view wire, FNty&& check) {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(wire.data(), wire.size());
-  const auto result =
-      value.deserialize(value_input);
+  const auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT(result.request.has_value());
   check(*result.request);
@@ -170,8 +169,7 @@ DOBA_TEST("malformed cookie syntax is rejected") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(wire.data(), wire.size());
-  const auto result =
-      value.deserialize(value_input);
+  const auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
   DOBA_EXPECT(!result.request.has_value());
 }
@@ -219,8 +217,7 @@ DOBA_TEST("owned request views remain valid when transport input changes") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(wire.data(), wire.size());
-  auto result =
-      value.deserialize(value_input);
+  auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT(result.request.has_value());
   result.request->make_owned();
@@ -278,8 +275,8 @@ DOBA_TEST("duplicate cookies retain the first exact name") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("decoded paths do not change caller storage") {
   std::string path = "/a%20b";
-  auto value = request::from("GET", path, target::kOriginForm, {}, {}, {},
-                             {}, {}, {}, {}, {}, false, {});
+  auto value = request::from("GET", path, target::kOriginForm, {}, {}, {}, {},
+                             {}, {}, {}, {}, false, {});
   DOBA_EXPECT_EQUAL(value.get_absolute_path(), "/a b");
   DOBA_EXPECT_EQUAL(path, "/a%20b");
 }
@@ -288,11 +285,11 @@ DOBA_TEST("decoded paths do not change caller storage") {
 // | [>] encoded literal path survives request moves             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("encoded literal path survives request moves") {
-  auto value = request::from("GET", "/a%252F%2Fb", target::kOriginForm, {},
-                             {}, {}, {}, {}, {}, {}, {}, false, {});
+  auto value = request::from("GET", "/a%252F%2Fb", target::kOriginForm, {}, {},
+                             {}, {}, {}, {}, {}, {}, false, {});
   auto moved = std::move(value);
-  auto assigned = request::from("GET", "/", target::kOriginForm, {}, {},
-                                {}, {}, {}, {}, {}, {}, false, {});
+  auto assigned = request::from("GET", "/", target::kOriginForm, {}, {}, {}, {},
+                                {}, {}, {}, {}, false, {});
   assigned = std::move(moved);
   DOBA_EXPECT_EQUAL(assigned.get_absolute_path(), "/a%2F/b");
 }
@@ -304,8 +301,8 @@ DOBA_TEST("decoded path outlives caller storage") {
   std::optional<request> retained;
   {
     std::string path = "/a%20b";
-    retained.emplace(request::from("GET", path, target::kOriginForm, {},
-                                   {}, {}, {}, {}, {}, {}, {}, false, {}));
+    retained.emplace(request::from("GET", path, target::kOriginForm, {}, {}, {},
+                                   {}, {}, {}, {}, {}, false, {}));
   }
   DOBA_EXPECT_EQUAL(retained->get_absolute_path(), "/a b");
 }
@@ -319,8 +316,8 @@ DOBA_TEST("request factory copies fields and borrowed body bytes") {
     auto body = martianlabs::doba::protocol::http::v11::body::reader::raw(
         std::as_bytes(std::span(payload)), payload.size());
     retained.emplace(request::from(method, path, target::kOriginForm,
-        {{name, value}}, {{key, value}}, host, {}, {}, {}, {}, {},
-        false, std::move(body)));
+                                   {{name, value}}, {{key, value}}, host, {},
+                                   {}, {}, {}, {}, false, std::move(body)));
     method.assign(method.size(), '!');
     path.assign(path.size(), '!');
     value.assign(value.size(), '!');
@@ -335,13 +332,16 @@ DOBA_TEST("request factory copies fields and borrowed body bytes") {
   DOBA_EXPECT_EQUAL(moved.get_query_parameter("query")->second, "value");
   std::array<std::byte, 7> bytes{};
   DOBA_EXPECT(moved.get_body_reader()->read(bytes).complete);
-  DOBA_EXPECT_EQUAL(std::string_view(
-      reinterpret_cast<const char*>(bytes.data()), bytes.size()), "payload");
+  DOBA_EXPECT_EQUAL(
+      std::string_view(reinterpret_cast<const char*>(bytes.data()),
+                       bytes.size()),
+      "payload");
 }
 
 DOBA_TEST("making a request owned preserves partial body reader progress") {
   for (const bool chunked : {false, true}) {
-    std::string wire = std::string("POST / HTTP/1.1\r\nHost: retained\r\n") +
+    std::string wire =
+        std::string("POST / HTTP/1.1\r\nHost: retained\r\n") +
         (chunked ? "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
                  : "Content-Length: 3\r\n\r\nabc");
     decoder<request, response> value;

@@ -32,13 +32,13 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/processing_result.h"
+#include "../../helpers/concurrency.h"
 #include "common/reader.h"
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
 #include "wait_count.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -88,11 +88,13 @@ struct source_engine {
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view) {
     if (state->calls.fetch_add(1) == 0) {
-      output("head", {}, std::make_unique<reader>(reader::shared(
-          state->bytes, std::as_bytes(std::span(*state->bytes)))));
+      output("head", {},
+             std::make_unique<reader>(reader::shared(
+                 state->bytes, std::as_bytes(std::span(*state->bytes)))));
       if (state->incompatible == 1) output("later", {}, nullptr);
-      if (state->incompatible == 2)
+      if (state->incompatible == 2) {
         output({}, {}, std::make_unique<reader>());
+      }
     } else {
       state->source_released = state->bytes.use_count() == 1;
       output("done", {}, nullptr);
@@ -130,8 +132,11 @@ void exercise(int incompatible) {
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     tr::tcp<source_engine, decltype(factory)> transport(
-        {.worker_count = workers, .max_buffered_send_bytes = 8192,
-         .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+        {.worker_count = workers,
+         .max_buffered_send_bytes = 8192,
+         .ip = "127.0.0.1",
+         .port = std::to_string(port)},
+        factory);
     transport.set_on_connection([] {});
     transport.set_on_disconnection([] {});
     martianlabs::doba::tests::scope_exit cleanup([&] {
@@ -185,6 +190,4 @@ DOBA_TEST("Windows terminal reader rejects subsequent inline output") {
 // +===========================================================================+
 // | [>] second reader closes the connection                     ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("Windows terminal reader rejects a second reader") {
-  exercise(2);
-}
+DOBA_TEST("Windows terminal reader rejects a second reader") { exercise(2); }

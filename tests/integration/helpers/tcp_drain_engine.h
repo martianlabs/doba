@@ -35,8 +35,8 @@
 #include <thread>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::tests::integration {
 using martianlabs::doba::protocol::processing_result;

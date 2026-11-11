@@ -125,4 +125,3 @@ DOBA_TEST("moves preserve encoding mode and payload accounting") {
                       chunked ? "1\r\na\r\n2\r\nbc\r\n0\r\n\r\n" : "abc");
   }
 }
-

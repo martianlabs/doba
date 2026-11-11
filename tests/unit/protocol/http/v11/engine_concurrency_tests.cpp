@@ -47,9 +47,9 @@ using response = probe::response;
 using router = probe::router;
 using policies = probe::policies;
 using clock_type = probe::clock;
+using common::sleep_for;
 using common::task;
 using common::yield;
-using common::sleep_for;
 using namespace std::chrono_literals;
 }  // namespace
 
@@ -222,19 +222,18 @@ DOBA_TEST("turn budget bounds starts and fairly resumes all yielded siblings") {
     for (int i = 0; i < 3; ++i) {
       routes.add("GET", "/" + std::to_string(i),
                  [&, i](const request&, response& res) -> task<> {
-        for (int j = 0; j < 4; ++j) {
-          ++steps[i];
-          co_await yield();
-        }
-        res.ok_200().set_body(std::to_string(i));
-      });
+                   for (int j = 0; j < 4; ++j) {
+                     ++steps[i];
+                     co_await yield();
+                   }
+                   res.ok_200().set_body(std::to_string(i));
+                 });
     }
     policies limits;
     limits.max_task_steps_per_turn = budget;
     probe current(routes, limits);
     current.receive(probe::get("/0") + probe::get("/1") + probe::get("/2"));
-    DOBA_EXPECT_EQUAL(steps[0] + steps[1] + steps[2],
-                      static_cast<int>(budget));
+    DOBA_EXPECT_EQUAL(steps[0] + steps[1] + steps[2], static_cast<int>(budget));
     for (int turn = 0; turn < 32 && current.needs.turn_requested; ++turn) {
       const auto before = steps[0] + steps[1] + steps[2];
       current.turn();
@@ -320,8 +319,8 @@ DOBA_TEST(
   });
   probe current(routes);
   current.receive(probe::get("/first") +
-      "POST /upload HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\n"
-      "Content-Length: 4\r\n\r\n");
+                  "POST /upload HTTP/1.1\r\nHost: x\r\nExpect: 100-continue\r\n"
+                  "Content-Length: 4\r\n\r\n");
   current.receive("data");
   DOBA_EXPECT(current.outputs.empty());
   current.turn();
@@ -366,11 +365,11 @@ DOBA_TEST(
   routes.add("GET", "/name/:name",
              [&](const request& req, response& res,
                  const std::string& name) -> task<> {
-    ++started;
-    const auto host = req.get_host();
-    co_await yield();
-    res.ok_200().set_body(name + ":" + std::string(host));
-  });
+               ++started;
+               const auto host = req.get_host();
+               co_await yield();
+               res.ok_200().set_body(name + ":" + std::string(host));
+             });
   probe current(routes);
   auto bytes = probe::get("/name/alpha") + probe::get("/name/beta");
   current.receive(bytes);

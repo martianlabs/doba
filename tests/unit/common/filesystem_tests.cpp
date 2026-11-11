@@ -194,9 +194,9 @@ DOBA_TEST("filesystem resolves roots and clears errors") {
                   directory.path() / "file", error)
                   .empty());
   DOBA_EXPECT(error == std::errc::not_a_directory);
-  DOBA_EXPECT_EQUAL(
-      martianlabs::doba::common::filesystem::root(directory.path() / ".", error),
-      fs::canonical(directory.path()));
+  DOBA_EXPECT_EQUAL(martianlabs::doba::common::filesystem::root(
+                        directory.path() / ".", error),
+                    fs::canonical(directory.path()));
   DOBA_EXPECT(!error);
 }
 
@@ -354,8 +354,7 @@ DOBA_TEST("filesystem rejects directory links") {
   martianlabs::doba::tests::unit::create_directory_link(link, outside.path());
   filesystem file;
   std::error_code error;
-  DOBA_EXPECT(
-      !filesystem::inspect(directory.path(), "linked/secret", error));
+  DOBA_EXPECT(!filesystem::inspect(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
   DOBA_EXPECT(!file.open(directory.path(), "linked/secret", error));
   DOBA_EXPECT(error == std::errc::permission_denied);
@@ -478,8 +477,7 @@ DOBA_TEST(
   fs::rename(directory.path() / "data", directory.path() / "previous");
   directory.write("data", "abcdefghij");
   fs::last_write_time(directory.path() / "data", timestamp);
-  const auto replaced =
-      filesystem::inspect(directory.path(), "data", error);
+  const auto replaced = filesystem::inspect(directory.path(), "data", error);
   DOBA_EXPECT(replaced.has_value());
   DOBA_EXPECT(replaced->identity != before->identity);
   DOBA_EXPECT_EQUAL(replaced->size, before->size);
@@ -522,8 +520,7 @@ DOBA_TEST(
       FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, 0, nullptr);
   DOBA_EXPECT(handle != INVALID_HANDLE_VALUE);
   std::error_code error;
-  const auto attributes =
-      filesystem::inspect(directory.path(), "file", error);
+  const auto attributes = filesystem::inspect(directory.path(), "file", error);
   CloseHandle(handle);
   DOBA_EXPECT(attributes.has_value());
   DOBA_EXPECT(!error);

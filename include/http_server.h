@@ -33,7 +33,6 @@
 
 #include "common/date_server.h"
 #include "contracts.h"
-#include "transport/tcp.h"
 #include "protocol/http/common/auth/contracts.h"
 #include "protocol/http/common/router.h"
 #include "protocol/http/v11/contracts.h"
@@ -41,6 +40,7 @@
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
 #include "server.h"
+#include "transport/tcp.h"
 
 namespace martianlabs::doba {
 // /////////////////////////////////////////////////////////////////////////////
@@ -144,18 +144,18 @@ class http_server
              (std::same_as<Aty, AUty> || ...)
   http_server& add_route(std::string_view method, std::string_view route,
                          Hty handler) {
-    static_assert((std::size_t{0} + ... +
-                   std::size_t{std::same_as<Aty, AUty>}) == 1,
-                  "An authentication provider type must be unique");
+    static_assert(
+        (std::size_t{0} + ... + std::size_t{std::same_as<Aty, AUty>}) == 1,
+        "An authentication provider type must be unique");
     std::lock_guard<std::mutex> lock(registration_mutex_);
     if (registration_closed_) {
       throw std::runtime_error("Cannot add route when the server is running");
     }
     const auto& provider = std::get<Aty>(authentication_);
     this->router_.add(method, route, std::move(handler),
-                     [&provider](const RQty& request) {
-                       return provider.authenticate(request);
-                     });
+                      [&provider](const RQty& request) {
+                        return provider.authenticate(request);
+                      });
     return *this;
   }
   // +=========================================================================+

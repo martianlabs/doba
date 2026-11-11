@@ -57,8 +57,7 @@ int main(int argc, char* argv[]) {
   const std::string relative_file(argv[2]);
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      "GET", "/download",
-      [root, relative_file](const request&, response& res) {
+      "GET", "/download", [root, relative_file](const request&, response& res) {
         filesystem file;
         std::error_code error;
         if (!file.open(root, relative_file, error)) {

@@ -90,8 +90,9 @@ class reader_raw {
   std::optional<std::span<const std::byte>> take_view(
       std::span<const std::byte> source, std::size_t maximum) {
     if (has_error_ || source.size() < expected_ ||
-        expected_ - accumulated_ > maximum)
+        expected_ - accumulated_ > maximum) {
       return std::nullopt;
+    }
     const auto result = source.subspan(accumulated_, expected_ - accumulated_);
     accumulated_ = expected_;
     return result;

@@ -47,10 +47,9 @@ namespace {
 using namespace martianlabs::doba::transport;
 using namespace martianlabs::doba::transport::detail;
 using namespace std::chrono_literals;
-} // namespace
+}  // namespace
 
-DOBA_TEST(
-    "operating policies have finite agreed defaults") {
+DOBA_TEST("operating policies have finite agreed defaults") {
   tcp_policies p;
   DOBA_EXPECT_EQUAL(p.max_connections, 65535);
   DOBA_EXPECT_EQUAL(p.max_buffered_send_bytes, 1024 * 1024);
@@ -99,18 +98,18 @@ DOBA_TEST("connection admission never exceeds a concurrent global maximum") {
     threads.emplace_back([&] {
       for (int n = 0; n < 2000; ++n) {
         auto lease = connection_reservation::acquire(budget);
-        if (budget->used.load() > 3)
+        if (budget->used.load() > 3) {
           exceeded = true;
-        if (lease)
+        }
+        if (lease) {
           std::this_thread::yield();
+        }
       }
     });
-  for (auto &thread : threads)
-    thread.join();
+  for (auto& thread : threads) thread.join();
   DOBA_EXPECT(!exceeded.load());
   DOBA_EXPECT_EQUAL(budget->used.load(), 0);
 }
-
 
 DOBA_TEST("source blocks use the send capacity after their prefix drains") {
   const std::string bytes = "abcdefgh";

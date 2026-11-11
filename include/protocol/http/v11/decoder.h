@@ -38,12 +38,7 @@
 #include <vector>
 
 #include "common/hash_map.h"
-#include "protocol/http/v11/results.h"
 #include "protocol/http/common/header.h"
-#include "protocol/http/common/helpers.h"
-#include "protocol/http/common/method_names.h"
-#include "protocol/http/common/query_parameter.h"
-#include "protocol/http/common/target.h"
 #include "protocol/http/common/headers/accept.h"
 #include "protocol/http/common/headers/accept_charset.h"
 #include "protocol/http/common/headers/accept_encoding.h"
@@ -96,8 +91,12 @@
 #include "protocol/http/common/headers/user_agent.h"
 #include "protocol/http/common/headers/vary.h"
 #include "protocol/http/common/headers/www_authenticate.h"
-#include "protocol/http/v11/body/framer_raw.h"
+#include "protocol/http/common/helpers.h"
+#include "protocol/http/common/method_names.h"
+#include "protocol/http/common/query_parameter.h"
+#include "protocol/http/common/target.h"
 #include "protocol/http/v11/body/framer_chunked.h"
+#include "protocol/http/v11/body/framer_raw.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/context.h"
 #include "protocol/http/v11/contracts.h"
@@ -107,6 +106,10 @@
 #include "protocol/http/v11/headers/forwarded.h"
 #include "protocol/http/v11/headers/host.h"
 #include "protocol/http/v11/headers/max_forwards.h"
+#include "protocol/http/v11/headers/rules/directives.h"
+#include "protocol/http/v11/headers/rules/framing.h"
+#include "protocol/http/v11/headers/rules/policy.h"
+#include "protocol/http/v11/headers/rules/routing.h"
 #include "protocol/http/v11/headers/te.h"
 #include "protocol/http/v11/headers/trailer.h"
 #include "protocol/http/v11/headers/transfer_encoding.h"
@@ -115,13 +118,10 @@
 #include "protocol/http/v11/headers/x_forwarded_for.h"
 #include "protocol/http/v11/headers/x_forwarded_host.h"
 #include "protocol/http/v11/headers/x_forwarded_proto.h"
-#include "protocol/http/v11/headers/rules/directives.h"
-#include "protocol/http/v11/headers/rules/framing.h"
-#include "protocol/http/v11/headers/rules/policy.h"
-#include "protocol/http/v11/headers/rules/routing.h"
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/rejection_reason.h"
+#include "protocol/http/v11/results.h"
 #include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -210,8 +210,9 @@ class decoder {
                  .find("\r\n\r\n") != std::string_view::npos)) {
       // A complete head cannot need more syntax bytes. In particular, a
       // malformed CONNECT target must not wait for a colon in later data.
-      if (reminder_.size() >= context_.policies.max_request_head_size)
+      if (reminder_.size() >= context_.policies.max_request_head_size) {
         context_.rejection_reason = rejection_reason::kHeaderFieldsTooLarge;
+      }
       result.code = deserialization_status::kInvalidSource;
     }
     if (result.code == deserialization_status::kSucceeded) {
@@ -303,8 +304,8 @@ class decoder {
   }
   RSty make_response(std::string& head, std::string& body) {
     return RSty::from(context_.policies.max_response_head_size,
-                      context_.policies.response_body_memory_threshold,
-                      head, body);
+                      context_.policies.response_body_memory_threshold, head,
+                      body);
   }
 
  private:
@@ -494,8 +495,9 @@ class decoder {
       if (!field_name_decoded) {
         if (sv[i] == '\r') {
           if (i != fn_start) return deserialization_status::kInvalidSource;
-          if (i + 1 >= sv.size())
+          if (i + 1 >= sv.size()) {
             return deserialization_status::kMoreBytesNeeded;
+          }
           if (sv[i + 1] != '\n') return deserialization_status::kInvalidSource;
           i += 2;
           // Every modelled header was already parsed once and interpreted in

@@ -69,9 +69,10 @@ class resilience_temp_directory {
     path = std::filesystem::temp_directory_path() /
            ("doba_resilience_" + std::to_string(pid) + "_" +
             std::to_string(sequence++));
-    if (!std::filesystem::create_directory(path))
+    if (!std::filesystem::create_directory(path)) {
       throw std::runtime_error(
           "Cannot create isolated resilience temporary directory");
+    }
     set(path.string().c_str());
   }
   ~resilience_temp_directory() {

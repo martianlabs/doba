@@ -38,18 +38,17 @@
 #include "common/reader.h"
 #include "directory_link.h"
 #include "file_directory.h"
-#include "test_helper.h"
-
-#include "protocol/http/v11/static_file_server.h"
-#include "protocol/http/v11/decoder.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/v11/decoder.h"
+#include "protocol/http/v11/static_file_server.h"
+#include "test_helper.h"
 
 namespace {
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem;
 using martianlabs::doba::common::date_server;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 namespace {
@@ -78,8 +77,7 @@ response file_request(router<request, response>& routes,
   std::optional<response> result;
   result.emplace();
   decoder_input = std::string_view(wire.data(), wire.size());
-  auto decoded =
-      decoder.deserialize(decoder_input);
+  auto decoded = decoder.deserialize(decoder_input);
   if (decoded.code !=
           martianlabs::doba::protocol::deserialization_status::kSucceeded ||
       !decoded.request) {
@@ -226,10 +224,10 @@ DOBA_TEST("static invalidation removes all variants and preserves snapshots") {
   router<request, response> routes;
   routes.add_controller<static_file_server>("/", directory.path(), policies);
   auto identity = file_request(routes, "GET", "/asset");
-  auto brotli = file_request(routes, "GET", "/asset",
-                             "Accept-Encoding: br\r\n");
-  auto gzip = file_request(routes, "GET", "/asset",
-                           "Accept-Encoding: gzip\r\n");
+  auto brotli =
+      file_request(routes, "GET", "/asset", "Accept-Encoding: br\r\n");
+  auto gzip =
+      file_request(routes, "GET", "/asset", "Accept-Encoding: gzip\r\n");
   auto unrelated = file_request(routes, "GET", "/unrelated");
   const auto root_key = fs::canonical(directory.path()).generic_u8string();
   std::string key(root_key.begin(), root_key.end());
@@ -316,10 +314,11 @@ DOBA_TEST("static file server never escapes its root") {
   const auto absolute = (outer.path() / "secret").generic_string();
   std::string encoded;
   for (const char c : absolute) {
-    if (c == ':')
+    if (c == ':') {
       encoded += "%3a";
-    else
+    } else {
       encoded += c;
+    }
   }
   vectors.push_back("/files/" + encoded);
   for (const auto& path : vectors) {
@@ -329,8 +328,7 @@ DOBA_TEST("static file server never escapes its root") {
     decoder<request, response> value;
     std::string_view value_input;
     value_input = std::string_view(wire.data(), wire.size());
-    auto decoded =
-        value.deserialize(value_input);
+    auto decoded = value.deserialize(value_input);
     if (!decoded.request) {
       DOBA_EXPECT_EQUAL(
           decoded.code,
@@ -455,8 +453,8 @@ DOBA_TEST(
   DOBA_EXPECT_EQUAL(file_body(first), "old");
   auto head = file_request(routes, "HEAD", "/file.txt");
   DOBA_EXPECT(head.get_header("ETag").second != tag);
-  auto old_match = file_request(routes, "GET", "/file.txt",
-                                "If-Match: " + tag + "\r\n");
+  auto old_match =
+      file_request(routes, "GET", "/file.txt", "If-Match: " + tag + "\r\n");
   DOBA_EXPECT(file_status(old_match).starts_with("HTTP/1.1 412"));
   auto old_range =
       file_request(routes, "GET", "/file.txt",
@@ -475,11 +473,12 @@ DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
   auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
-      "/", directory.path(), static_file_policies{
-          .cache = cache, .precompressed = true,
-          .spa_fallback = "fallback.html"});
-  auto encoded = file_request(routes, "GET", "/app.js",
-                               "Accept-Encoding: br\r\n");
+      "/", directory.path(),
+      static_file_policies{.cache = cache,
+                           .precompressed = true,
+                           .spa_fallback = "fallback.html"});
+  auto encoded =
+      file_request(routes, "GET", "/app.js", "Accept-Encoding: br\r\n");
   auto fallback = file_request(routes, "GET", "/missing");
   const auto encoded_time = fs::last_write_time(directory.path() / "app.js.br");
   const auto fallback_time =
@@ -490,16 +489,15 @@ DOBA_TEST("static file cache revalidates encoded variants and SPA fallback") {
                       encoded_time + std::chrono::seconds(2));
   fs::last_write_time(directory.path() / "fallback.html",
                       fallback_time + std::chrono::seconds(2));
-  auto next = file_request(routes, "GET", "/app.js",
-                            "Accept-Encoding: br\r\n");
+  auto next = file_request(routes, "GET", "/app.js", "Accept-Encoding: br\r\n");
   auto next_fallback = file_request(routes, "GET", "/missing");
   DOBA_EXPECT_EQUAL(file_body(next), "new");
   DOBA_EXPECT_EQUAL(file_body(next_fallback), "other");
   DOBA_EXPECT_EQUAL(file_body(encoded), "old");
   DOBA_EXPECT_EQUAL(file_body(fallback), "first");
   fs::remove(directory.path() / "app.js.br");
-  auto identity = file_request(routes, "GET", "/app.js",
-                                "Accept-Encoding: br\r\n");
+  auto identity =
+      file_request(routes, "GET", "/app.js", "Accept-Encoding: br\r\n");
   DOBA_EXPECT_EQUAL(file_body(identity), "identity");
 }
 
@@ -539,8 +537,8 @@ DOBA_TEST(
   fs::rename(directory.path() / "file", directory.path() / "previous");
   directory.write("file", body);
   fs::last_write_time(directory.path() / "file", timestamp);
-  auto next = file_request(routes, "GET", "/file",
-                            "If-None-Match: " + tag + "\r\n");
+  auto next =
+      file_request(routes, "GET", "/file", "If-None-Match: " + tag + "\r\n");
   DOBA_EXPECT(next.get_header("ETag").second != tag);
   DOBA_EXPECT_EQUAL(file_body(next), body);
   auto range = file_request(routes, "GET", "/file", "Range: bytes=-1\r\n");
@@ -579,8 +577,10 @@ DOBA_TEST(
   DOBA_EXPECT(reloaded != original);
   DOBA_EXPECT_EQUAL(modified.get_header("ETag").second, tag);
   const auto original_permissions = fs::status(path).permissions();
-  fs::permissions(path, fs::perms::owner_write | fs::perms::group_write |
-                            fs::perms::others_write, fs::perm_options::remove);
+  fs::permissions(
+      path,
+      fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write,
+      fs::perm_options::remove);
   auto permissions = file_request(routes, "GET", "/file");
   // Restore write permissions before checks, so Windows cleanup works too.
   fs::permissions(path, original_permissions);
@@ -619,9 +619,11 @@ DOBA_TEST("static file cache rejects a directory link after warming") {
   fs::remove(link);
 }
 
-DOBA_TEST("static file cache isolates roots and evicts within the resident budget") {
+DOBA_TEST(
+    "static file cache isolates roots and evicts within the resident budget") {
   file_directory a, b;
-  a.write("file", "first"); b.write("file", "other");
+  a.write("file", "first");
+  b.write("file", "other");
   auto cached = std::make_shared<static_file_cache>(
       martianlabs::doba::common::cache_policies{
           .max_cost = sizeof(static_file_representation) + 66 + 5});
@@ -661,7 +663,10 @@ DOBA_TEST(
       tag,
       "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\"");
   const auto date = std::string(original.get_header("Last-Modified").second);
-  struct check { std::string headers; std::string_view status; };
+  struct check {
+    std::string headers;
+    std::string_view status;
+  };
   const check cases[] = {
       {"If-None-Match: W/" + tag + "\r\n", "304"},
       {"If-None-Match: \"a,b\", " + tag + "\r\n", "304"},
@@ -701,27 +706,35 @@ DOBA_TEST(
   DOBA_EXPECT_EQUAL(
       static_file_etag(""),
       "\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"");
-  DOBA_EXPECT_EQUAL(static_file_etag(std::string(64, 'a')),
+  DOBA_EXPECT_EQUAL(
+      static_file_etag(std::string(64, 'a')),
       "\"ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb\"");
 }
 
 DOBA_TEST("static file ranges work for cached and streamed representations") {
   for (bool cache_enabled : {false, true}) {
     file_directory directory;
-    directory.write("file", "0123456789"); directory.write("empty", "");
+    directory.write("file", "0123456789");
+    directory.write("empty", "");
     router<request, response> routes;
     routes.add_controller<static_file_server>(
         "/", directory.path(),
         static_file_policies{
             .cache = cache_enabled ? std::make_shared<static_file_cache>()
                                    : nullptr});
-    struct range_case { std::string_view range, status, body; };
+    struct range_case {
+      std::string_view range, status, body;
+    };
     const range_case cases[] = {
-        {"bytes=2-4", "206", "234"}, {"bytes=8-", "206", "89"},
-        {"bytes=-3", "206", "789"}, {"bytes=0-999", "206", "0123456789"},
+        {"bytes=2-4", "206", "234"},
+        {"bytes=8-", "206", "89"},
+        {"bytes=-3", "206", "789"},
+        {"bytes=0-999", "206", "0123456789"},
         {"BYTES=2-3", "206", "23"},
-        {"bytes=10-", "416", ""}, {"bytes=-0", "416", ""},
-        {"bytes=4-2", "200", "0123456789"}, {"other=0-1", "200", "0123456789"},
+        {"bytes=10-", "416", ""},
+        {"bytes=-0", "416", ""},
+        {"bytes=4-2", "200", "0123456789"},
+        {"other=0-1", "200", "0123456789"},
         {"bytes=0-1,4-5", "200", "0123456789"},
         {"bytes=999999999999999999999999-", "200", "0123456789"},
     };
@@ -751,8 +764,10 @@ DOBA_TEST("static file ranges work for cached and streamed representations") {
 
 DOBA_TEST("static files negotiate compressed variants and enforce exclusions") {
   file_directory directory;
-  directory.write("app.js", "identity"); directory.write("app.js.br", "brotli");
-  directory.write("app.js.gz", "gzip"); directory.write(".env", "secret");
+  directory.write("app.js", "identity");
+  directory.write("app.js.br", "brotli");
+  directory.write("app.js.gz", "gzip");
+  directory.write(".env", "secret");
   fs::create_directory(directory.path() / "private");
   directory.write("private/key", "secret");
   router<request, response> routes;
@@ -761,21 +776,25 @@ DOBA_TEST("static files negotiate compressed variants and enforce exclusions") {
       static_file_policies{.cache = std::make_shared<static_file_cache>(),
                            .precompressed = true,
                            .excluded = {"private"}});
-  struct variant_case { std::string_view accept, body, coding; };
-  const variant_case cases[] = {
-      {"br, gzip", "brotli", "br"}, {"gzip", "gzip", "gzip"},
-      {"br;q=0, gzip;q=0.5", "identity", ""},
-      {"br;q=0.5, identity;q=0", "brotli", "br"},
-      {"*;q=0, gzip;q=1", "gzip", "gzip"}, {"", "identity", ""}};
+  struct variant_case {
+    std::string_view accept, body, coding;
+  };
+  const variant_case cases[] = {{"br, gzip", "brotli", "br"},
+                                {"gzip", "gzip", "gzip"},
+                                {"br;q=0, gzip;q=0.5", "identity", ""},
+                                {"br;q=0.5, identity;q=0", "brotli", "br"},
+                                {"*;q=0, gzip;q=1", "gzip", "gzip"},
+                                {"", "identity", ""}};
   for (const auto& test : cases) {
     auto result =
         file_request(routes, "GET", "/app.js",
                      "Accept-Encoding: " + std::string(test.accept) + "\r\n");
     DOBA_EXPECT_EQUAL(result.get_header("Content-Type").second,
                       "text/javascript");
-    if (!test.coding.empty())
+    if (!test.coding.empty()) {
       DOBA_EXPECT_EQUAL(result.get_header("Content-Encoding").second,
                         test.coding);
+    }
     DOBA_EXPECT_EQUAL(result.get_header("Vary").second, "Accept-Encoding");
     DOBA_EXPECT_EQUAL(file_body(result), test.body);
   }
@@ -836,17 +855,18 @@ DOBA_TEST("static redirects escape paths and preserve encoded query values") {
   routes.add_controller<static_file_server>(
       "/files", directory.path(),
       static_file_policies{.redirect_directories = true});
-  auto result = file_request(routes, "GET",
-      "/files/a%20b?q=one%20two&x=a%2Fb");
+  auto result = file_request(routes, "GET", "/files/a%20b?q=one%20two&x=a%2Fb");
   DOBA_EXPECT(file_status(result).starts_with("HTTP/1.1 301"));
   DOBA_EXPECT_EQUAL(result.get_header("Location").second,
                     "/files/a%20b/?q=one%20two&x=a%2Fb");
 }
 
 DOBA_TEST(
-    "static file cache revalidates changes and large files preserve direct reading") {
+    "static file cache revalidates changes and large files preserve direct "
+    "reading") {
   file_directory directory;
-  directory.write("small", "old"); directory.write("large", "long");
+  directory.write("small", "old");
+  directory.write("large", "long");
   auto cached = std::make_shared<static_file_cache>();
   router<request, response> routes;
   routes.add_controller<static_file_server>(
@@ -881,7 +901,8 @@ DOBA_TEST("static file cache keeps hits after requests for missing files") {
   auto first = file_request(routes, "GET", "/file");
   const auto root_key = fs::canonical(directory.path()).generic_u8string();
   std::string key(root_key.begin(), root_key.end());
-  key += '\0'; key += "file";
+  key += '\0';
+  key += "file";
   const auto original = cache->find(key);
   auto missing = file_request(routes, "GET", "/missing");
   DOBA_EXPECT(file_status(missing).starts_with("HTTP/1.1 404"));
@@ -901,14 +922,16 @@ DOBA_TEST(
   directory.write("nested/asset.webp", "identity");
   auto cache = std::make_shared<static_file_cache>();
   router<request, response> routes;
-  routes.add_controller<static_file_server>("/", directory.path(),
+  routes.add_controller<static_file_server>(
+      "/", directory.path(),
       static_file_policies{.cache = cache, .precompressed = true});
   const auto get = [&] {
     return file_request(routes, "GET", "/nested/asset.webp",
                         "Accept-Encoding: br, gzip\r\n");
   };
   for (int i = 0; i < 3; ++i) {
-    auto plain = get(); DOBA_EXPECT_EQUAL(file_body(plain), "identity");
+    auto plain = get();
+    DOBA_EXPECT_EQUAL(file_body(plain), "identity");
   }
   directory.write("nested/asset.webp.gz", "gzip");
   auto gzip = get();
@@ -924,14 +947,17 @@ DOBA_TEST(
              directory.path() / "previous");
   directory.write("nested/asset.webp.br", "update");
   fs::last_write_time(directory.path() / "nested/asset.webp.br", timestamp);
-  auto updated = get(); DOBA_EXPECT_EQUAL(file_body(updated), "update");
+  auto updated = get();
+  DOBA_EXPECT_EQUAL(file_body(updated), "update");
   fs::remove(directory.path() / "nested/asset.webp.br");
-  auto fallback = get(); DOBA_EXPECT_EQUAL(file_body(fallback), "gzip");
+  auto fallback = get();
+  DOBA_EXPECT_EQUAL(file_body(fallback), "gzip");
   fs::rename(directory.path() / "nested", directory.path() / "old-directory");
   fs::create_directory(directory.path() / "nested");
   directory.write("nested/asset.webp", "new-root");
   directory.write("nested/asset.webp.br", "new-variant");
-  auto replaced = get(); DOBA_EXPECT_EQUAL(file_body(replaced), "new-variant");
+  auto replaced = get();
+  DOBA_EXPECT_EQUAL(file_body(replaced), "new-variant");
 }
 
 // +===========================================================================+
@@ -940,19 +966,23 @@ DOBA_TEST(
 DOBA_TEST("static cached dates never advertise a future last modified time") {
   file_directory directory;
   directory.write("file", "contents");
-  fs::last_write_time(directory.path() / "file",
+  fs::last_write_time(
+      directory.path() / "file",
       fs::file_time_type::clock::now() + std::chrono::hours(24));
   router<request, response> routes;
-  routes.add_controller<static_file_server>("/", directory.path(),
+  routes.add_controller<static_file_server>(
+      "/", directory.path(),
       static_file_policies{.cache = std::make_shared<static_file_cache>()});
   const auto before = std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count();
   for (int i = 0; i < 2; ++i) {
     auto result = file_request(routes, "HEAD", "/file");
     const auto modified =
         detail::static_file_time(result.get_header("Last-Modified").second);
     const auto after = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
     DOBA_EXPECT(modified.has_value());
     DOBA_EXPECT(*modified >= before && *modified <= after);
   }

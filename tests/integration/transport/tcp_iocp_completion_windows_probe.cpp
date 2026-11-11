@@ -31,10 +31,10 @@
 #include <thread>
 #include <utility>
 
+#include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -54,8 +54,8 @@ std::atomic<bool> timed_out{false};
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void wait_for_packet(const std::atomic<bool>& seen) {
-  const auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::seconds{5};
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds{5};
   while (!seen.load()) {
     if (std::chrono::steady_clock::now() >= deadline) {
       timed_out = true;
@@ -71,16 +71,17 @@ void wait_for_packet(const std::atomic<bool>& seen) {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
-                          LPDWORD bytes, LPDWORD flags,
-                          LPWSAOVERLAPPED operation,
-                          LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
+                           LPDWORD bytes, LPDWORD flags,
+                           LPWSAOVERLAPPED operation,
+                           LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
   const bool watch = !receive_watched.exchange(true);
   if (watch) receive_operation = operation;
-  const int result = ::WSARecv(socket, buffers, count, bytes, flags,
-                                operation, completion);
+  const int result =
+      ::WSARecv(socket, buffers, count, bytes, flags, operation, completion);
   const int error = WSAGetLastError();
-  if (watch && (result == 0 || error == WSA_IO_PENDING))
+  if (watch && (result == 0 || error == WSA_IO_PENDING)) {
     wait_for_packet(receive_seen);
+  }
   WSASetLastError(error);
   return result;
 }
@@ -91,16 +92,16 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
-                       LPDWORD bytes, DWORD flags,
-                       LPWSAOVERLAPPED operation,
-                       LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
+                        LPDWORD bytes, DWORD flags, LPWSAOVERLAPPED operation,
+                        LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
   const bool watch = !send_watched.exchange(true);
   if (watch) send_operation = operation;
-  const int result = ::WSASend(socket, buffers, count, bytes, flags,
-                                operation, completion);
+  const int result =
+      ::WSASend(socket, buffers, count, bytes, flags, operation, completion);
   const int error = WSAGetLastError();
-  if (watch && (result == 0 || error == WSA_IO_PENDING))
+  if (watch && (result == 0 || error == WSA_IO_PENDING)) {
     wait_for_packet(send_seen);
+  }
   WSASetLastError(error);
   return result;
 }
@@ -112,13 +113,14 @@ int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
 // /////////////////////////////////////////////////////////////////////////////
 BOOL WINAPI tracked_completion(HANDLE port, LPDWORD bytes, PULONG_PTR key,
                                LPOVERLAPPED* operation, DWORD timeout) {
-  const BOOL result = ::GetQueuedCompletionStatus(port, bytes, key,
-                                                 operation, timeout);
+  const BOOL result =
+      ::GetQueuedCompletionStatus(port, bytes, key, operation, timeout);
   const DWORD error = GetLastError();
   if (!receive_seen.load() && *operation &&
-      *operation == receive_operation.load()) receive_seen = true;
-  if (!send_seen.load() && *operation &&
-      *operation == send_operation.load()) send_seen = true;
+      *operation == receive_operation.load())
+    receive_seen = true;
+  if (!send_seen.load() && *operation && *operation == send_operation.load())
+    send_seen = true;
   SetLastError(error);
   return result;
 }

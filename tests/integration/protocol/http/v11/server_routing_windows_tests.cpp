@@ -65,10 +65,9 @@ DOBA_TEST("HTTP/1.1 runs synchronous pipelines with multiple IOCP workers") {
   DOBA_EXPECT(port != 0);
   http_server<> http_server(
       {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/wait",
-                        [](const request&, response& res) {
-                          text_response(res, "ready");
-                        });
+  http_server.add_route("GET", "/wait", [](const request&, response& res) {
+    text_response(res, "ready");
+  });
   http_server.start();
   std::atomic<int> connected{0};
   std::atomic<int> sent{0};

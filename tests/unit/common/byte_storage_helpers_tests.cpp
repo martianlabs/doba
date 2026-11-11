@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -35,8 +34,8 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::tests::spill_directory;
 using martianlabs::doba::common::detail::byte_storage_file;
+using martianlabs::doba::tests::spill_directory;
 
 }  // namespace
 

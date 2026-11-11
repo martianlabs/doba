@@ -38,6 +38,7 @@
 
 #include "common/reader.h"
 #include "common/task.h"
+#include "protocol/contracts.h"
 #include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/common/query_parameter.h"
@@ -45,7 +46,6 @@
 #include "protocol/http/common/target.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
-#include "protocol/contracts.h"
 #include "protocol/http/v11/results.h"
 
 namespace martianlabs::doba::protocol::http::v11 {

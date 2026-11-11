@@ -30,16 +30,16 @@
 // | [>] PLATFORM-INDEPENDENT-INCLUDEs                             ( section ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+#include <cstring>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <system_error>
 #include <thread>
-#include <vector>
-#include <memory>
-#include <cstring>
-#include <string>
 #include <variant>
+#include <vector>
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] PLATFORM-DEPENDENT-INCLUDEs [windowsTM]                   ( section ) |
@@ -48,9 +48,9 @@
 #ifdef _WIN32
 #define _WIN32_DCOM
 #define NOMINMAX
+#include <mswsock.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <mswsock.h>
 #pragma warning(disable : 4996)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "wbemuuid.lib")
@@ -62,13 +62,13 @@
 // /////////////////////////////////////////////////////////////////////////////
 #elif __linux__
 #include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #endif

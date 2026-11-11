@@ -78,15 +78,14 @@ class command_progress {
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  command_progress(process& child, std::string name,
-                   const fs::path& log = {}) :
-    child_(child), name_(std::move(name)) {
+  command_progress(process& child, std::string name, const fs::path& log = {})
+      : child_(child), name_(std::move(name)) {
     if (!log.empty()) {
       log_.open(log, std::ios::binary);
       output_.open(child.output_path(), std::ios::binary);
       errors_.open(child.error_path(), std::ios::binary);
       require(log_.is_open() && output_.is_open() && errors_.is_open(),
-        "Cannot open command progress log");
+              "Cannot open command progress log");
     }
     std::cout << "[coverage] " << name_ << " started" << std::endl;
   }
@@ -107,16 +106,16 @@ class command_progress {
         }
         require(now < deadline, "Child deadline exceeded: " + name_);
         if (now >= next) {
-          std::cout << "[coverage] " << name_ << " running: " <<
-            elapsed() << " seconds" << std::endl;
+          std::cout << "[coverage] " << name_ << " running: " << elapsed()
+                    << " seconds" << std::endl;
           next = now + 15s;
         }
         std::this_thread::sleep_for(10ms);
       }
       drain();
       int code = child_.wait(0s);
-      std::cout << "[coverage] " << name_ << " finished: " << elapsed() <<
-        " seconds; exit " << code << std::endl;
+      std::cout << "[coverage] " << name_ << " finished: " << elapsed()
+                << " seconds; exit " << code << std::endl;
       return code;
     } catch (...) {
       child_.kill();
@@ -126,13 +125,13 @@ class command_progress {
         log_ << "\nCommand failed or deadline exceeded\n";
         log_.flush();
       }
-      std::cout << "[coverage] " << name_ << " failed after " << elapsed() <<
-        " seconds" << std::endl;
+      std::cout << "[coverage] " << name_ << " failed after " << elapsed()
+                << " seconds" << std::endl;
       throw;
     }
   }
 };
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

@@ -35,8 +35,8 @@
 #include <utility>
 #include <vector>
 
-#include "protocol/processing_result.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 #include "transport/tls_configuration.h"
 
 namespace martianlabs::doba::transport::detail {
@@ -208,8 +208,9 @@ class tls_engine {
       if (BIO_read_ex(network_.get(), block.data(), block.size(), &size) != 1 ||
           !size ||
           size > configuration_->policies.max_buffered_ciphertext_bytes -
-                     ciphertext_.size())
+                     ciphertext_.size()) {
         fail();
+      }
       ciphertext_.append(block.data(), size);
     }
     return ciphertext_.size() - before;
@@ -256,8 +257,9 @@ class tls_engine {
   // +-------------------------------------------------------------------------+
   void encode(std::string_view input) {
     if (input.size() >
-        configuration_->policies.max_buffered_send_bytes - accepted_)
+        configuration_->policies.max_buffered_send_bytes - accepted_) {
       fail();
+    }
     accepted_ += input.size();
     while (!input.empty()) {
       const auto size =
@@ -299,8 +301,9 @@ class tls_engine {
   void append(std::string_view prefix, std::string_view body,
               std::unique_ptr<common::reader> source) noexcept {
     if (failed_) return;
-    if (processing_ && !closing_ && prefix.empty() && body.empty() && !source)
+    if (processing_ && !closing_ && prefix.empty() && body.empty() && !source) {
       return;
+    }
     if (!processing_ || closing_ || source_seen_) {
       failed_ = true;
       return;

@@ -39,8 +39,8 @@
 
 namespace {
 using martianlabs::doba::common::date_server;
-using martianlabs::doba::tests::valid_http_date;
 using martianlabs::doba::protocol::http::v11::response;
+using martianlabs::doba::tests::valid_http_date;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] date_owner                                                  ( class ) |
@@ -91,8 +91,10 @@ DOBA_TEST("date formatting works without starting the server") {
 // | [>] date formatting rejects unsupported timestamps          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("date formatting rejects unsupported timestamps") {
-  DOBA_EXPECT(date_server::format(std::numeric_limits<std::time_t>::max()).empty());
-  DOBA_EXPECT(date_server::format(static_cast<std::time_t>(253402300800LL)).empty());
+  DOBA_EXPECT(
+      date_server::format(std::numeric_limits<std::time_t>::max()).empty());
+  DOBA_EXPECT(
+      date_server::format(static_cast<std::time_t>(253402300800LL)).empty());
 }
 
 // +===========================================================================+

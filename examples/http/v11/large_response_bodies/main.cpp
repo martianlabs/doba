@@ -27,8 +27,8 @@
 
 #include "common/byte_storage.h"
 #include "common/signaler.h"
-#include "protocol/http/v11/body/writer.h"
 #include "http_server.h"
+#include "protocol/http/v11/body/writer.h"
 
 using namespace martianlabs::doba::common;
 using martianlabs::doba::http_server;
@@ -46,8 +46,8 @@ int main() {
   http_server.add_route("GET", "/large", [](const request&, response& res) {
     res.ok_200();
     // Spill to a temporary file past this memory limit.
-    byte_storage_options options{
-        .spill_to_disk_threshold = 1024, .spill_dir = {}};
+    byte_storage_options options{.spill_to_disk_threshold = 1024,
+                                 .spill_dir = {}};
     auto writer = body::body_writer::raw(options);
     const std::string block(1024, 'x');
     for (int i = 0; i < 8; i++) {

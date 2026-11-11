@@ -25,6 +25,7 @@
 #include <memory>
 #include <span>
 #include <string>
+
 #include "common/reader.h"
 #include "test_helper.h"
 #include "transport/send_state.h"
@@ -48,10 +49,12 @@ DOBA_TEST(
     "empty terminal readers release ownership after clear or "
     "failure") {
   send_state output(16);
-  DOBA_EXPECT(output.push({}, {}, std::make_unique<reader>(
-      reader::borrowed(std::span<const std::byte>{}))));
+  DOBA_EXPECT(output.push({}, {},
+                          std::make_unique<reader>(
+                              reader::borrowed(std::span<const std::byte>{}))));
   DOBA_EXPECT(!output.push({}, {}, byte_source()));
-  DOBA_EXPECT(output.fill());  // An empty reader finishes without sending bytes.
+  DOBA_EXPECT(
+      output.fill());  // An empty reader finishes without sending bytes.
   DOBA_EXPECT(output.push("0123456789abcdef", {}, nullptr));
   output.clear();
   DOBA_EXPECT(output.push({}, {}, byte_source()));

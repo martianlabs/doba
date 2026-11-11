@@ -29,8 +29,8 @@
 #include <string>
 #include <string_view>
 
-#include "http_server.h"
 #include "echo_body.h"
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -51,9 +51,9 @@ constexpr std::size_t max_chunked_trailer_size = 4096;
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -69,8 +69,8 @@ DOBA_TEST("HTTP/1.1 enforces the 4 KiB request head limit") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls{0};
   http_server<> http_server({.receive_buffer_capacity = receive_capacity,
-                        .ip = "127.0.0.1",
-                        .port = std::to_string(port)});
+                             .ip = "127.0.0.1",
+                             .port = std::to_string(port)});
   http_server.add_route("GET", "/ok", [&calls](const request&, response& res) {
     calls.fetch_add(1);
     res.ok_200();
@@ -128,8 +128,8 @@ DOBA_TEST("HTTP/1.1 preserves every query parameter at supported boundaries") {
   DOBA_EXPECT(port != 0);
   std::atomic<std::size_t> calls{0};
   http_server<> http_server({.receive_buffer_capacity = receive_capacity,
-                        .ip = "127.0.0.1",
-                        .port = std::to_string(port)});
+                             .ip = "127.0.0.1",
+                             .port = std::to_string(port)});
   http_server.add_route("GET", "/query",
                         [&calls](const request& req, response& res) {
                           calls.fetch_add(1);
@@ -182,8 +182,8 @@ DOBA_TEST("HTTP/1.1 enforces chunk extension and trailer wire limits") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.receive_buffer_capacity = receive_capacity,
-                        .ip = "127.0.0.1",
-                        .port = std::to_string(port)});
+                             .ip = "127.0.0.1",
+                             .port = std::to_string(port)});
   http_server.add_route("POST", "/body", [](const request& req, response& res) {
     echo_body(req, res);
   });
@@ -231,17 +231,17 @@ DOBA_TEST("HTTP/1.1 receives heads across one byte transport blocks") {
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> server({.receive_buffer_capacity = 1,
-                         .worker_count = 1,
-                         .ip = "127.0.0.1",
-                         .port = std::to_string(port)});
+                        .worker_count = 1,
+                        .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
   server.add_route("GET", "/ok", [](const request& req, response& res) {
     res.ok_200().set_body(req.get_header("X-Pad").second);
   });
   server.start();
   DOBA_EXPECT(client.connect(port));
   const std::string pad(256, 'x');
-  DOBA_EXPECT(client.send_all("GET /ok HTTP/1.1\r\nHost: a\r\nX-Pad: " +
-                              pad + "\r\n\r\n"));
+  DOBA_EXPECT(client.send_all("GET /ok HTTP/1.1\r\nHost: a\r\nX-Pad: " + pad +
+                              "\r\n\r\n"));
   const auto result = receive_http_response(client);
   DOBA_EXPECT(result.has_value());
   if (result) DOBA_EXPECT_EQUAL(result->body, pad);

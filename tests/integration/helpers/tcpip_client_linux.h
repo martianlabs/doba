@@ -25,13 +25,14 @@
 #ifndef martianlabs_doba_tests_integration_tcpip_client_linux_h
 #define martianlabs_doba_tests_integration_tcpip_client_linux_h
 
+#include <poll.h>
+
 #include <algorithm>
 #include <chrono>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <poll.h>
 #include <string>
 #include <string_view>
 
@@ -200,10 +201,11 @@ class tcpip_client {
           ::recv(socket_, result.data(), static_cast<int>(result.size()), 0);
       if (count < 0 && pending(socket_error())) continue;
       if (count <= 0) {
-        if (count == 0)
+        if (count == 0) {
           error_ = "eof";
-        else
+        } else {
           fail_socket();
+        }
         return std::nullopt;
       }
       result.resize(static_cast<std::size_t>(count));
@@ -216,8 +218,9 @@ class tcpip_client {
   bool has_data(std::chrono::milliseconds timeout) const {
     if (socket_ == invalid_socket()) return false;
     pollfd descriptor{socket_, POLLIN, 0};
-    const auto count = (std::clamp)(timeout.count(),
-        decltype(timeout.count()){0}, decltype(timeout.count()){INT_MAX});
+    const auto count =
+        (std::clamp)(timeout.count(), decltype(timeout.count()){0},
+                     decltype(timeout.count()){INT_MAX});
     return ::poll(&descriptor, 1, static_cast<int>(count)) > 0;
   }
   // +=========================================================================+
@@ -338,9 +341,7 @@ class tcpip_client {
   // +=========================================================================+
   // | [>] socket_error                                            ( private ) |
   // +-------------------------------------------------------------------------+
-  static int socket_error() {
-    return errno;
-  }
+  static int socket_error() { return errno; }
   // +=========================================================================+
   // | [>] pending                                                 ( private ) |
   // +-------------------------------------------------------------------------+
@@ -377,8 +378,9 @@ class tcpip_client {
       pollfd descriptor{socket_, static_cast<short>(writing ? POLLOUT : POLLIN),
                         0};
       auto milliseconds = (remaining.count() + 999) / 1000;
-      const int timeout = static_cast<int>((std::min)(
-          milliseconds, static_cast<decltype(milliseconds)>(INT_MAX)));
+      const int timeout = static_cast<int>(
+          (std::min)(milliseconds,
+                     static_cast<decltype(milliseconds)>(INT_MAX)));
       const int count = ::poll(&descriptor, 1, timeout);
       if (count > 0) return true;
       if (count == 0) {

@@ -22,7 +22,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
 #ifndef martianlabs_doba_protocol_http_v11_headers_rules_policy_h
 #define martianlabs_doba_protocol_http_v11_headers_rules_policy_h
 

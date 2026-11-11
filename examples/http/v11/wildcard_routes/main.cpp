@@ -25,8 +25,8 @@
 #include <string>
 
 #include "common/signaler.h"
-#include "protocol/http/common/method_names.h"
 #include "http_server.h"
+#include "protocol/http/common/method_names.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;

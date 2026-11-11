@@ -25,8 +25,8 @@
 #include <string>
 #include <string_view>
 
-#include "version.h"
 #include "test_helper.h"
+#include "version.h"
 
 // +===========================================================================+
 // | [>] version string matches its numeric components           ( test-case ) |

@@ -27,9 +27,9 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "common/signaler.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 #include "server.h"
 #include "transport/tcp.h"
 
@@ -89,7 +89,6 @@ struct custom_protocol {
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 
  private:
   // +=========================================================================+

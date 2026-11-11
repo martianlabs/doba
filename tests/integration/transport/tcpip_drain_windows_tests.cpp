@@ -37,23 +37,23 @@
 #include <thread>
 #include <utility>
 
-#include "protocol/processing_result.h"
+#include "../../helpers/concurrency.h"
 #include "common/byte_storage.h"
 #include "common/reader.h"
 #include "http_server.h"
+#include "protocol/processing_result.h"
 #include "tcp_drain_engine.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "../../helpers/concurrency.h"
-#include "wait_count.h"
 #include "transport/tcp.h"
+#include "wait_count.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
 namespace tr = martianlabs::doba::transport;
 using martianlabs::doba::protocol::send_delegate;
-using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::scope_exit;
+using martianlabs::doba::tests::integration::tcpip_client;
 using namespace std::chrono_literals;
 
 using martianlabs::doba::tests::integration::drain_engine;
@@ -67,8 +67,7 @@ using martianlabs::doba::tests::integration::drain_state;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool wait_count(const std::atomic<int>& value, int expected) {
-  return martianlabs::doba::tests::integration::wait_count(value, expected,
-                                                         5s);
+  return martianlabs::doba::tests::integration::wait_count(value, expected, 5s);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -259,10 +258,11 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
   DOBA_EXPECT(client.send_all("x"));
   DOBA_EXPECT(wait_count(state->queued, 1));
   auto stopped = std::async(std::launch::async, [&]() {
-    if (destroy)
+    if (destroy) {
       transport.reset();
-    else if (!close)
+    } else if (!close) {
       transport->stop();
+    }
   });
   bool waited = true;
   if (!close) {
@@ -284,16 +284,12 @@ void check_reader_drain(bool destroy, bool close, bool empty = false) {
 // +===========================================================================+
 // | [>] stop drains pending bytes                               ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("stop drains pending bytes") {
-  check_drain(false, false);
-}
+DOBA_TEST("stop drains pending bytes") { check_drain(false, false); }
 
 // +===========================================================================+
 // | [>] destruction drains pending bytes                        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("destruction drains pending bytes") {
-  check_drain(true, false);
-}
+DOBA_TEST("destruction drains pending bytes") { check_drain(true, false); }
 
 // +===========================================================================+
 // | [>] stop lets an active engine callback finish              ( test-case ) |
@@ -357,7 +353,10 @@ DOBA_TEST("stop rejects new engine input") {
   transport.set_on_disconnection([]() {});
   std::future<void> stopped;
   // Release the callback and abort the peer before cleanup waits.
-  scope_exit release([&] { state->release = true; client.abort(); });
+  scope_exit release([&] {
+    state->release = true;
+    client.abort();
+  });
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));
@@ -368,8 +367,7 @@ DOBA_TEST("stop rejects new engine input") {
   while (std::chrono::steady_clock::now() < deadline) {
     tcpip_client probe;
     // Loopback refusal can take Winsock about two seconds.
-    if (!probe.connect(port, 3s) &&
-        probe.native_error() == WSAECONNREFUSED) {
+    if (!probe.connect(port, 3s) && probe.native_error() == WSAECONNREFUSED) {
       listener_closed = true;
       break;
     }

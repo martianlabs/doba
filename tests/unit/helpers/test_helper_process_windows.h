@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_tests_unit_test_helper_process_windows_h
 #define martianlabs_doba_tests_unit_test_helper_process_windows_h
 
+#include <windows.h>
+
 #include <chrono>
 #include <filesystem>
 #include <initializer_list>
@@ -32,8 +34,6 @@
 #include <system_error>
 #include <thread>
 #include <vector>
-
-#include <windows.h>
 
 namespace martianlabs::doba::tests {
 // /////////////////////////////////////////////////////////////////////////////

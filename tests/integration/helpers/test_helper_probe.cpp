@@ -30,10 +30,10 @@
 #include <string>
 #include <thread>
 
+#include "../../helpers/concurrency.h"
 #include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "../../helpers/concurrency.h"
 
 // +===========================================================================+
 // | [>] probe passes                                            ( test-case ) |
@@ -46,9 +46,7 @@ DOBA_TEST("probe passes") {
 // +===========================================================================+
 // | [>] probe assertion fails                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("probe assertion fails") {
-  DOBA_EXPECT(2 + 2 == 5);
-}
+DOBA_TEST("probe assertion fails") { DOBA_EXPECT(2 + 2 == 5); }
 
 // +===========================================================================+
 // | [>] probe standard exception                                ( test-case ) |
@@ -60,9 +58,7 @@ DOBA_TEST("probe standard exception") {
 // +===========================================================================+
 // | [>] probe unknown exception                                 ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("probe unknown exception") {
-  throw 7;
-}
+DOBA_TEST("probe unknown exception") { throw 7; }
 
 // +===========================================================================+
 // | [>] probe continues after failures                          ( test-case ) |
@@ -99,21 +95,20 @@ DOBA_TEST("probe failure releases a blocked handler and joins threads") {
   http_server<> server(
       {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
   tests::scope_exit release_on_failure([&] { pending.open(); });
-  server.add_route("GET", "/", [&](const protocol::http::v11::request&,
-                                   protocol::http::v11::response& res) {
-    entered.open();
-    pending.wait();
-    completed = true;
-    res.ok_200().set_body("done");
-  });
+  server.add_route("GET", "/",
+                   [&](const protocol::http::v11::request&,
+                       protocol::http::v11::response& res) {
+                     entered.open();
+                     pending.wait();
+                     completed = true;
+                     res.ok_200().set_body("done");
+                   });
   server.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("GET / HTTP/1.1\r\nHost: a\r\n\r\n"));
   DOBA_EXPECT(entered.wait_for());
   const auto exercise = [&]() {
-    std::jthread waiter([&] {
-      server.stop();
-    });
+    std::jthread waiter([&] { server.stop(); });
     tests::scope_exit release([&] { pending.open(); });
     DOBA_EXPECT(false);
   };

@@ -24,10 +24,10 @@
 
 #include <charconv>
 #include <chrono>
-#include <string_view>
-#include <system_error>
 #include <iostream>
 #include <string>
+#include <string_view>
+#include <system_error>
 
 #include "http_server.h"
 
@@ -47,18 +47,20 @@ int main(int count, char** args) {
   unsigned port = 8080;
   if (count == 2) {
     const std::string_view value(args[1]);
-    const auto [end, error] = std::from_chars(
-        value.data(), value.data() + value.size(), port);
-    if (error != std::errc{} || end != value.data() + value.size() ||
-        !port || port > 65535) return 1;
+    const auto [end, error] =
+        std::from_chars(value.data(), value.data() + value.size(), port);
+    if (error != std::errc{} || end != value.data() + value.size() || !port ||
+        port > 65535) {
+      return 1;
+    }
   }
-  http_server<> server({.worker_count = 1, .ip = "127.0.0.1",
-                        .port = std::to_string(port)});
+  http_server<> server(
+      {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
   server.add_route("GET", "/wait/:id",
                    [](const request&, response& res, int id) -> common::task<> {
-    co_await common::sleep_for(std::chrono::milliseconds(10));
-    res.ok_200().set_body(std::to_string(id));
-  });
+                     co_await common::sleep_for(std::chrono::milliseconds(10));
+                     res.ok_200().set_body(std::to_string(id));
+                   });
   server.add_route("GET", "/sync", [](const request&, response& res) {
     res.ok_200().set_body("sync");
   });

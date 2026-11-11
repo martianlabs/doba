@@ -41,8 +41,8 @@ DOBA_TEST("security model checks ordered sources close and poisoned RX") {
           input[i] = static_cast<std::uint8_t>(i * 37 + steps * 11);
         input[0] = static_cast<std::uint8_t>(window + terminal * 16);
         input[1] = static_cast<std::uint8_t>(steps);
-        std::printf("model window=%u requests=%u terminal=%u\n",
-                     window + 1, steps + 1, terminal);
+        std::printf("model window=%u requests=%u terminal=%u\n", window + 1,
+                    steps + 1, terminal);
         std::fflush(stdout);
         doba_fuzz::engine_case::run(input);
         ++checked;

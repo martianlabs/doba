@@ -30,11 +30,11 @@
 #include <string>
 #include <string_view>
 
-#include "protocol/http/v11/body/writer.h"
+#include "file_directory.h"
 #include "http_server.h"
 #include "http_test_helper.h"
+#include "protocol/http/v11/body/writer.h"
 #include "tcpip_client.h"
-#include "file_directory.h"
 #include "test_helper.h"
 
 namespace {
@@ -60,9 +60,9 @@ constexpr std::size_t max_response_body_size_in_memory = martianlabs::doba::
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::body::body_writer;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
@@ -250,10 +250,9 @@ DOBA_TEST("HTTP/1.1 converts response failures and recovers on new clients") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/throw",
-                        [](const request&, response&) -> void {
-                          throw std::runtime_error("doba-private-sync-token");
-                        });
+  http_server.add_route("GET", "/throw", [](const request&, response&) -> void {
+    throw std::runtime_error("doba-private-sync-token");
+  });
   http_server.add_route("GET", "/unknown",
                         [](const request&, response&) -> void { throw 1; });
   http_server.add_route("GET", "/framing", [](const request&, response& res) {
@@ -320,8 +319,9 @@ DOBA_TEST("HTTP/1.1 suppresses synchronous HEAD error bodies") {
         {.ip = "127.0.0.1", .port = std::to_string(port)});
     http_server.add_route("HEAD", "/fail",
                           [scenario](const request&, response& res) -> void {
-                            if (scenario == "throw")
+                            if (scenario == "throw") {
                               throw std::runtime_error("HEAD handler error!");
+                            }
                             if (scenario == "unknown") throw 1;
                             res.ok_200();
                             res.set_header("Transfer-Encoding", "chunked");
@@ -435,9 +435,9 @@ DOBA_TEST("HTTP/1.1 response close drains each body representation") {
       }
       return;
     };
-    http_server<> http_server(
-        {.worker_count = kSocketWorkers, .ip = "127.0.0.1",
-         .port = std::to_string(port)});
+    http_server<> http_server({.worker_count = kSocketWorkers,
+                               .ip = "127.0.0.1",
+                               .port = std::to_string(port)});
     http_server.add_route("GET", "/before", [](const request&, response& res) {
       res.ok_200();
       res.set_body("before");

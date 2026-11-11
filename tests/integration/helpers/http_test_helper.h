@@ -91,7 +91,8 @@ inline bool valid_response_field_name(std::string_view value) {
   for (const unsigned char byte : value) {
     if ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
         (byte >= '0' && byte <= '9') ||
-        symbols.find(char(byte)) != std::string_view::npos) continue;
+        symbols.find(char(byte)) != std::string_view::npos)
+      continue;
     return false;
   }
   return true;
@@ -161,22 +162,25 @@ inline std::optional<http_test_response> receive_http_response(
   std::size_t position = wire.find("\r\n");
   result.status = wire.substr(0, position);
   if (!result.status.starts_with("HTTP/1.1 ") || result.status.size() < 13 ||
-      result.status[12] != ' ')
+      result.status[12] != ' ') {
     return std::nullopt;
+  }
   int status = 0;
   const auto parsed_status = std::from_chars(result.status.data() + 9,
                                              result.status.data() + 12, status);
   if (parsed_status.ec != std::errc{} ||
       parsed_status.ptr != result.status.data() + 12 || status < 100 ||
-      status > 599 || !valid_response_field_value(result.status.substr(13)))
+      status > 599 || !valid_response_field_value(result.status.substr(13))) {
     return std::nullopt;
+  }
   position += 2;
   while (position + 2 < wire.size()) {
     const auto end = wire.find("\r\n", position);
     const auto colon = wire.find(':', position);
     if (end == std::string::npos || colon == std::string::npos ||
-        colon == position || colon >= end)
+        colon == position || colon >= end) {
       return std::nullopt;
+    }
     std::size_t begin = colon + 1;
     while (begin < end && (wire[begin] == ' ' || wire[begin] == '\t')) begin++;
     const std::string name = wire.substr(position, colon - position);
@@ -192,8 +196,10 @@ inline std::optional<http_test_response> receive_http_response(
     auto value = std::string_view(wire).substr(begin, end - begin);
     while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
       value.remove_suffix(1);
-    if (!valid_response_field_name(name) || !valid_response_field_value(value))
+    if (!valid_response_field_name(name) ||
+        !valid_response_field_value(value)) {
       return std::nullopt;
+    }
     result.headers.emplace_back(name, value);
     position = end + 2;
   }
@@ -231,8 +237,9 @@ inline std::optional<http_test_response> receive_http_response(
       const auto line = receive_http_line(client, deadline, 4096);
       if (!line.has_value() || line->empty()) return std::nullopt;
       constexpr std::size_t max_wire = 8 * 1024 * 1024;
-      if (line->size() + 2 > max_wire - result.wire_body.size())
+      if (line->size() + 2 > max_wire - result.wire_body.size()) {
         return std::nullopt;
+      }
       result.wire_body += *line + "\r\n";
       const std::size_t extension = line->find(';');
       const std::string_view digits(*line);
@@ -250,8 +257,9 @@ inline std::optional<http_test_response> receive_http_response(
           const auto trailer = receive_http_line(client, deadline);
           if (!trailer.has_value()) return std::nullopt;
           if (trailer->size() + 2 > 16384 - trailer_bytes ||
-              trailer->size() + 2 > max_wire - result.wire_body.size())
+              trailer->size() + 2 > max_wire - result.wire_body.size()) {
             return std::nullopt;
+          }
           trailer_bytes += trailer->size() + 2;
           result.wire_body += *trailer + "\r\n";
           if (trailer->empty()) return result;
@@ -265,7 +273,8 @@ inline std::optional<http_test_response> receive_http_response(
           const auto name = std::string_view(*trailer).substr(0, colon);
           const auto value = std::string_view(*trailer).substr(begin);
           if (!valid_response_field_name(name) ||
-              !valid_response_field_value(value)) return std::nullopt;
+              !valid_response_field_value(value))
+            return std::nullopt;
           result.trailers.emplace_back(name, value);
         }
       }
@@ -278,8 +287,9 @@ inline std::optional<http_test_response> receive_http_response(
       if (!bytes.has_value() || !bytes->ends_with("\r\n")) {
         return std::nullopt;
       }
-      if (bytes->size() > max_wire - result.wire_body.size())
+      if (bytes->size() > max_wire - result.wire_body.size()) {
         return std::nullopt;
+      }
       result.wire_body += *bytes;
       result.body.append(bytes->data(), chunk);
     }

@@ -47,8 +47,9 @@ inline bool parse_test_timeout(std::string_view text,
   const auto parsed =
       std::from_chars(text.data(), text.data() + text.size(), value);
   if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() ||
-      value <= 0 || value > 3600000)
+      value <= 0 || value > 3600000) {
     return false;
+  }
   timeout = std::chrono::milliseconds(value);
   return true;
 }
@@ -114,8 +115,9 @@ class test_watchdog {
       const auto deadline = deadline_;
       if (changed_.wait_until(lock, deadline, [this, generation] {
             return stopping_ || !active_ || generation_ != generation;
-          }))
+          })) {
         continue;
+      }
       std::fprintf(stderr, "Test timeout after %lld ms: %.*s:%d - %.*s\n",
                    static_cast<long long>(timeout_.count()),
                    static_cast<int>(file_.size()), file_.data(), line_,

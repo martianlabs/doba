@@ -91,8 +91,9 @@ class byte_storage_file {
           size - written,
           static_cast<std::size_t>(std::numeric_limits<DWORD>::max())));
       DWORD result = 0;
-      if (!WriteFile(file_, data + written, count, &result, nullptr))
+      if (!WriteFile(file_, data + written, count, &result, nullptr)) {
         return false;
+      }
       if (result != count) return false;
       written += result;
     }

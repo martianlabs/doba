@@ -60,8 +60,8 @@ int main() {
     }
     res.add_header("Content-Type", "text/plain").set_body(body);
   };
-  for (const auto method : {"GET", "HEAD", "POST", "PUT", "PATCH",
-                            "DELETE", "OPTIONS", "TRACE"}) {
+  for (const auto method :
+       {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"}) {
     http_server.add_route(method, "/", echo_body);
   }
   http_server.start();

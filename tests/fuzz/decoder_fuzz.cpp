@@ -29,9 +29,9 @@
 #include <vector>
 
 #include "fuzz_helpers.h"
+#include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
-#include "protocol/http/v11/decoder.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////

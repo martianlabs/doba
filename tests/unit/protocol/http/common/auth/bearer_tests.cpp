@@ -33,14 +33,13 @@
 
 namespace {
 namespace auth = martianlabs::doba::protocol::http::auth;
-using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::target;
+using martianlabs::doba::protocol::http::v11::request;
 
-request credentials(std::vector<
-                    std::pair<std::string_view, std::string_view>> headers) {
-  return request::from("GET", "/", target::kOriginForm,
-                       std::move(headers), {}, {}, {}, {}, {}, {}, {},
-                       false, {});
+request credentials(
+    std::vector<std::pair<std::string_view, std::string_view>> headers) {
+  return request::from("GET", "/", target::kOriginForm, std::move(headers), {},
+                       {}, {}, {}, {}, {}, {}, false, {});
 }
 static_assert(auth::contracts::provider<auth::bearer, request>);
 }  // namespace
@@ -93,9 +92,12 @@ DOBA_TEST("Bearer reports invalid_token when validator rejects token") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer rejects malformed token without calling validator") {
   int calls = 0;
-  auth::bearer provider("demo", [&](auto) { calls++; return true; });
-  for (const auto input : {"Bearer", "Bearer ", "Bearer ==",
-                           "Bearer a=b", "Bearer a b", "Bearer a!"}) {
+  auth::bearer provider("demo", [&](auto) {
+    calls++;
+    return true;
+  });
+  for (const auto input : {"Bearer", "Bearer ", "Bearer ==", "Bearer a=b",
+                           "Bearer a b", "Bearer a!"}) {
     auto req = credentials({{"Authorization", input}});
     const auto result = provider.authenticate(req);
     DOBA_EXPECT(result.status == auth::authentication_status::kInvalidRequest);
@@ -110,8 +112,8 @@ DOBA_TEST("Bearer rejects malformed token without calling validator") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Bearer rejects duplicate Authorization fields") {
   auth::bearer provider("demo", [](auto) { return true; });
-  auto req = credentials({{"Authorization", "Bearer abc"},
-                           {"authorization", "Bearer def"}});
+  auto req = credentials(
+      {{"Authorization", "Bearer abc"}, {"authorization", "Bearer def"}});
   DOBA_EXPECT(provider.authenticate(req).status ==
               auth::authentication_status::kInvalidRequest);
 }

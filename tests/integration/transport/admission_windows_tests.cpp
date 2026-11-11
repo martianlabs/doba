@@ -28,11 +28,12 @@
 #include <memory>
 #include <string>
 #include <thread>
+
+#include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -96,7 +97,6 @@ struct observing_engine {
   // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
-
 };
 template <template <class, class> class Transport, class Peer, class Policies>
 void admission_fairness(Policies p) {
@@ -148,6 +148,5 @@ void admission_fairness(Policies p) {
 }  // namespace
 
 DOBA_TEST("TCP admitted traffic progresses while excess peers are rejected") {
-  admission_fairness<transport::tcp, plain_peer>(
-      transport::tcp_policies{});
+  admission_fairness<transport::tcp, plain_peer>(transport::tcp_policies{});
 }

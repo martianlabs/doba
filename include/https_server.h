@@ -47,13 +47,11 @@ template <typename RQty = protocol::http::v11::request,
               protocol::http::v11::engine<RQty, RSty, ROty>,
           typename... AUty>
 class https_server
-    : public http_server<RQty, RSty, ROty, ENty, transport::tls,
-                         AUty...> {
+    : public http_server<RQty, RSty, ROty, ENty, transport::tls, AUty...> {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using base = http_server<RQty, RSty, ROty, ENty, transport::tls,
-                           AUty...>;
+  using base = http_server<RQty, RSty, ROty, ENty, transport::tls, AUty...>;
 
  public:
   // +=========================================================================+

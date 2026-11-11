@@ -38,14 +38,15 @@ int main(int argc, char** argv) {
     require(argc == 5, "Expected HTTPS/echo executables, certificate and key");
     for (int index = 1; index <= 2; ++index) {
       auto port = peer::available_port();
-      process child({argv[index], argv[3], argv[4], std::to_string(port)},
-        {}, {}, true);
+      process child({argv[index], argv[3], argv[4], std::to_string(port)}, {},
+                    {}, true);
       auto deadline = clock::now() + 10s;
       std::unique_ptr<peer> connection;
       while (!connection) {
         require(!child.poll(), "TLS example exited: " + child.errors());
-        try { connection = std::make_unique<peer>(port); }
-        catch (const std::exception&) {
+        try {
+          connection = std::make_unique<peer>(port);
+        } catch (const std::exception&) {
           require(clock::now() < deadline, "TLS example startup timeout");
           std::this_thread::sleep_for(20ms);
         }
@@ -58,7 +59,8 @@ int main(int argc, char** argv) {
         connection->send(request("/wait/7"));
         expect_response(*connection, 200, "7");
       } else {
-        connection->send("hel"); connection->send("lo\n");
+        connection->send("hel");
+        connection->send("lo\n");
         connection->expect("echo: hello\n");
         connection->send(std::string(4097, 'x') + '\n');
         require(connection->receive(1).empty(), "Echo limit was ignored");

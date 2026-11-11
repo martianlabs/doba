@@ -23,8 +23,6 @@
 // permissions and limitations under the License.
 
 #include "test_helper.h"
-#include "../../helpers/test_watchdog.h"
-#include "../../helpers/tool_support.h"
 
 #include <atomic>
 #include <chrono>
@@ -35,6 +33,9 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "../../helpers/test_watchdog.h"
+#include "../../helpers/tool_support.h"
 
 namespace martianlabs::doba::tests::unit {
 namespace {
@@ -241,11 +242,11 @@ int test_helper::run(int argc, char** argv) {
   }
   std::chrono::milliseconds timeout{30000};
   const auto environment_timeout =
-      ::martianlabs::doba::tests::tools::environment_value("DOBA_TEST_TIMEOUT_MS")
+      ::martianlabs::doba::tests::tools::environment_value(
+          "DOBA_TEST_TIMEOUT_MS")
           .value_or("30000");
-  const auto configured_timeout = !timeout_given
-      ? std::string_view(environment_timeout)
-      : timeout_argument;
+  const auto configured_timeout =
+      !timeout_given ? std::string_view(environment_timeout) : timeout_argument;
   if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout,
                                                       timeout)) {
     std::fputs("Invalid test timeout: expected 1..3600000 milliseconds\n",
@@ -298,15 +299,13 @@ int test_helper::run(int argc, char** argv) {
     watchdog.disarm();
     if (failures() != failures_before) {
       failed_tests++;
-      std::printf("%.*s:%d - %.*s failed\n",
-                  static_cast<int>(test.file.size()), test.file.data(),
-                  test.line, static_cast<int>(test.name.size()),
-                  test.name.data());
+      std::printf("%.*s:%d - %.*s failed\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line,
+                  static_cast<int>(test.name.size()), test.name.data());
     } else {
-      std::printf("%.*s:%d - %.*s passed\n",
-                  static_cast<int>(test.file.size()), test.file.data(),
-                  test.line, static_cast<int>(test.name.size()),
-                  test.name.data());
+      std::printf("%.*s:%d - %.*s passed\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line,
+                  static_cast<int>(test.name.size()), test.name.data());
     }
   }
   if (skipped_tests != 0) {

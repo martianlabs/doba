@@ -26,10 +26,10 @@
 #include <memory>
 #include <string>
 
+#include "common/task_execution.h"
 #include "protocol/http/common/router_handler_parametrized_async.h"
 #include "router_empty_request.h"
 #include "router_value_response.h"
-#include "common/task_execution.h"
 #include "test_helper.h"
 
 // /////////////////////////////////////////////////////////////////////////////

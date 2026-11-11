@@ -47,23 +47,23 @@ int main() {
   int started = 0;
   routes.add("GET", "/wait/:id",
              [&](const request&, response& res, int id) -> common::task<> {
-    ++started;
-    co_await common::sleep_for(std::chrono::milliseconds(1));
-    res.ok_200().set_body(std::to_string(id));
-  });
+               ++started;
+               co_await common::sleep_for(std::chrono::milliseconds(1));
+               res.ok_200().set_body(std::to_string(id));
+             });
   engine<request, response> protocol({}, routes);
   std::string wire;
   bool closed = false;
   protocol.set_on_close([&] { closed = true; });
-  protocol.set_on_send([&](auto head, auto body,
-                           std::unique_ptr<common::reader> source) {
-    wire.append(head).append(body);
-    if (source) source->read_all(wire);
-  });
+  protocol.set_on_send(
+      [&](auto head, auto body, std::unique_ptr<common::reader> source) {
+        wire.append(head).append(body);
+        if (source) source->read_all(wire);
+      });
   std::string input;
   for (int i = 1; i <= 3; ++i) {
-    input += "GET /wait/" + std::to_string(i) +
-             " HTTP/1.1\r\nHost: local\r\n\r\n";
+    input +=
+        "GET /wait/" + std::to_string(i) + " HTTP/1.1\r\nHost: local\r\n\r\n";
   }
   auto needs = protocol.on_bytes_received(input);
   if (started != 3 || closed) return 1;
@@ -79,7 +79,9 @@ int main() {
   const auto two = wire.find("\r\n\r\n2");
   const auto three = wire.find("\r\n\r\n3");
   if (closed || one == std::string::npos || two == std::string::npos ||
-      three == std::string::npos || !(one < two && two < three)) return 1;
+      three == std::string::npos || !(one < two && two < three)) {
+    return 1;
+  }
   std::cout << "Concurrent handlers: " << started
             << "; ordered output: 1 2 3\n";
 }

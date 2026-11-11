@@ -39,9 +39,9 @@ namespace {
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 using martianlabs::doba::tests::integration::wait_for_http_count;
@@ -573,10 +573,9 @@ DOBA_TEST("HTTP/1.1 raw echo survives decoder buffer reuse") {
   const uint16_t port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   http_server<> http_server({.ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("POST", "/echo",
-                        [](const request& req, response& res) {
-                          res.ok_200().set_body(req.get_body_reader());
-                        });
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    res.ok_200().set_body(req.get_body_reader());
+  });
   http_server.start();
   DOBA_EXPECT(client.connect(port));
   for (char value : {'a', 'b'}) {

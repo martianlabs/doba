@@ -48,7 +48,7 @@ DOBA_TEST("tcp transport rejects invalid buffer policies") {
   auto rejects = [&](tr::tcp_policies configuration) {
     try {
       tr::tcp<policy_engine, decltype(factory)> transport(configuration,
-                                                         factory);
+                                                          factory);
     } catch (const std::runtime_error&) {
       return true;
     }
@@ -79,7 +79,9 @@ bool accepts_policies(tr::tcp_policies policies) {
   try {
     tr::tcp<policy_engine, decltype(factory)> transport(policies, factory);
     return true;
-  } catch (const std::runtime_error&) { return false; }
+  } catch (const std::runtime_error&) {
+    return false;
+  }
 }
 }  // namespace
 
@@ -106,12 +108,12 @@ DOBA_TEST("TCP validates capacity boundaries before allocating connections") {
   policies.receive_buffer_capacity = policies.max_buffered_send_bytes = 1;
   DOBA_EXPECT(accepts_policies(policies));
 #ifdef _WIN32
-  const auto rx_max = static_cast<std::size_t>(
-      std::numeric_limits<ULONG>::max());
+  const auto rx_max =
+      static_cast<std::size_t>(std::numeric_limits<ULONG>::max());
   const auto tx_max = std::numeric_limits<std::size_t>::max();
 #else
-  const auto rx_max = static_cast<std::size_t>(
-      std::numeric_limits<ssize_t>::max());
+  const auto rx_max =
+      static_cast<std::size_t>(std::numeric_limits<ssize_t>::max());
   const auto tx_max = rx_max;
 #endif
   policies.receive_buffer_capacity = rx_max;

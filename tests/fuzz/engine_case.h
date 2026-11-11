@@ -37,9 +37,9 @@
 #include <utility>
 
 #include "fuzz_helpers.h"
+#include "protocol/http/v11/engine.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
-#include "protocol/http/v11/engine.h"
 
 namespace doba_fuzz {
 // /////////////////////////////////////////////////////////////////////////////
@@ -83,15 +83,16 @@ class engine_case {
         body[n] = char((n * 37 + i * 17 + byte(n + i)) & 255);
       bodies_[i] = std::make_shared<const std::string>(std::move(body));
     }
-    routes_.add("GET", "/s/:id", [this](const request& req, response& res,
-                                       int id) {
-      mark(static_cast<std::size_t>(id));
-      fill(req, res, static_cast<std::size_t>(id));
-    });
-    routes_.add("GET", "/a/:id", [this](const request& req, response& res,
-                                       std::string_view text) -> task {
-      return asynchronous(req, res, text, frame_owner_);
-    });
+    routes_.add("GET", "/s/:id",
+                [this](const request& req, response& res, int id) {
+                  mark(static_cast<std::size_t>(id));
+                  fill(req, res, static_cast<std::size_t>(id));
+                });
+    routes_.add("GET", "/a/:id",
+                [this](const request& req, response& res,
+                       std::string_view text) -> task {
+                  return asynchronous(req, res, text, frame_owner_);
+                });
     typename engine::policies_type policy;
     policy.max_pending_requests = 1 + byte(0) % 4;
     policy.max_task_steps_per_turn = 1 + byte(1) % 4;
@@ -116,20 +117,21 @@ class engine_case {
     const auto initial = req.get_header("X-Seq");
     check(!initial.first.empty(), "initial request identity");
     unsigned initial_id = 0;
-    const auto first = std::from_chars(initial.second.data(),
-                         initial.second.data() + initial.second.size(),
-                         initial_id);
+    const auto first = std::from_chars(
+        initial.second.data(), initial.second.data() + initial.second.size(),
+        initial_id);
     check(first.ec == std::errc{} &&
-          first.ptr == initial.second.data() + initial.second.size(),
+              first.ptr == initial.second.data() + initial.second.size(),
           "initial identity");
     mark(initial_id);
     int id = -1;
     // Check that header and parameter views survive suspension.
     co_await martianlabs::doba::common::yield();
-    const auto parsed = std::from_chars(text.data(),
-                                        text.data() + text.size(), id);
-    check(parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size()
-          && id >= 0, "owned asynchronous parameter survives RX reuse");
+    const auto parsed =
+        std::from_chars(text.data(), text.data() + text.size(), id);
+    check(parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size() &&
+              id >= 0,
+          "owned asynchronous parameter survives RX reuse");
     check(static_cast<unsigned>(id) == initial_id,
           "typed parameter identity survives suspension");
     co_await martianlabs::doba::common::yield();
@@ -159,9 +161,9 @@ class engine_case {
           "owned request headers survive sibling and RX reuse");
     res.ok_200().add_header("X-Seq", header.second);
     if (byte(id + 3) & 2) {
-      res.set_body(reader::shared(bodies_[id],
-                   std::as_bytes(std::span(*bodies_[id]))),
-                   bodies_[id]->size());
+      res.set_body(
+          reader::shared(bodies_[id], std::as_bytes(std::span(*bodies_[id]))),
+          bodies_[id]->size());
     } else {
       res.set_body(*bodies_[id]);
     }
@@ -198,20 +200,21 @@ class engine_case {
         continue;
       }
       input += std::string(byte(id + 3) & 1 ? "GET /a/" : "GET /s/") +
-               std::to_string(id) + " HTTP/1.1\r\nHost: x\r\nX-Seq: " +
-               std::to_string(id) + "\r\n";
+               std::to_string(id) +
+               " HTTP/1.1\r\nHost: x\r\nX-Seq: " + std::to_string(id) + "\r\n";
       if (mode_ == 1 && id + 1 == valid_) input += "Connection: close\r\n";
       input += "\r\n";
     }
     for (std::size_t offset = 0; offset < input.size();) {
-      const auto size = std::min(input.size() - offset,
-                                 std::size_t{1} + byte(offset) % 31);
+      const auto size =
+          std::min(input.size() - offset, std::size_t{1} + byte(offset) % 31);
       std::string fragment = input.substr(offset, size);
       state_ = engine_->on_bytes_received(fragment);
       std::fill(fragment.begin(), fragment.end(), '\x5a');
       offset += size;
-      if (byte(offset + 5) & 1)
+      if (byte(offset + 5) & 1) {
         state_ = engine_->on_processing_turn(false);
+      }
       if (held_ && (byte(offset + 6) & 1)) {
         drain();
         state_ = engine_->on_processing_turn(true);
@@ -227,7 +230,8 @@ class engine_case {
       state_ = engine_->on_processing_turn(true);
     }
     check(!held_ && !state_.turn_requested && !state_.turn_at &&
-          !state_.turn_after_output_drained, "bounded work reaches quiescence");
+              !state_.turn_after_output_drained,
+          "bounded work reaches quiescence");
     verify();
     check((close_calls_ != 0) == (mode_ != 0), "terminal close is requested");
     if (mode_ != 0) {
@@ -265,7 +269,8 @@ class engine_case {
         const auto colon = field.find(':');
         check(colon != std::string_view::npos, "response field delimiter");
         auto name = std::string(field.substr(0, colon));
-        for (auto& c : name) if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+        for (auto& c : name)
+          if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
         auto value = field.substr(colon + 1);
         while (!value.empty() &&
                (value.front() == ' ' || value.front() == '\t'))
@@ -273,10 +278,11 @@ class engine_case {
         check(name != "transfer-encoding", "model expects unambiguous framing");
         if (name == "content-length") {
           ++lengths;
-          const auto parsed = std::from_chars(value.data(),
-                                      value.data() + value.size(), length);
+          const auto parsed = std::from_chars(
+              value.data(), value.data() + value.size(), length);
           check(parsed.ec == std::errc{} &&
-                parsed.ptr == value.data() + value.size(), "response length");
+                    parsed.ptr == value.data() + value.size(),
+                "response length");
         }
         if (name == "x-seq") {
           ++sequences;
@@ -306,7 +312,7 @@ class engine_case {
   std::array<std::shared_ptr<const std::string>, 12> bodies_;
   std::array<bool, 12> invoked_{};
   std::shared_ptr<int> frame_owner_{std::make_shared<int>(0)};
-  std::string wire_;  // Check the reply separately.
+  std::string wire_;              // Check the reply separately.
   std::unique_ptr<reader> held_;  // Delay reading this source.
   progress state_;
   router routes_;

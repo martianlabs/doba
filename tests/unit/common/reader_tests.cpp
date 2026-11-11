@@ -39,14 +39,12 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::tests::spill_directory;
-using martianlabs::doba::tests::only_spill_file;
-using martianlabs::doba::tests::file_directory;
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
-
-
+using martianlabs::doba::tests::file_directory;
+using martianlabs::doba::tests::only_spill_file;
+using martianlabs::doba::tests::spill_directory;
 
 }  // namespace
 

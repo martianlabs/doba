@@ -33,14 +33,13 @@
 
 namespace {
 namespace auth = martianlabs::doba::protocol::http::auth;
-using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::target;
+using martianlabs::doba::protocol::http::v11::request;
 
-request credentials(std::vector<
-                    std::pair<std::string_view, std::string_view>> headers) {
-  return request::from("GET", "/", target::kOriginForm,
-                       std::move(headers), {}, {}, {}, {}, {}, {}, {},
-                       false, {});
+request credentials(
+    std::vector<std::pair<std::string_view, std::string_view>> headers) {
+  return request::from("GET", "/", target::kOriginForm, std::move(headers), {},
+                       {}, {}, {}, {}, {}, {}, false, {});
 }
 static_assert(auth::contracts::provider<auth::basic, request>);
 }  // namespace
@@ -50,13 +49,13 @@ static_assert(auth::contracts::provider<auth::basic, request>);
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic decodes credentials and splits the first colon") {
   int calls = 0;
-  auth::basic provider("demo", [&](std::string_view user,
-                                   std::string_view password) {
-    calls++;
-    return user == "alice" && password == "secret:tail";
-  });
-  auto req = credentials({{"Authorization",
-                           "bAsIc  YWxpY2U6c2VjcmV0OnRhaWw="}});
+  auth::basic provider("demo",
+                       [&](std::string_view user, std::string_view password) {
+                         calls++;
+                         return user == "alice" && password == "secret:tail";
+                       });
+  auto req =
+      credentials({{"Authorization", "bAsIc  YWxpY2U6c2VjcmV0OnRhaWw="}});
   const auto result = provider.authenticate(req);
   DOBA_EXPECT(result.status == auth::authentication_status::kAccepted);
   DOBA_EXPECT(result.challenge.empty());
@@ -69,12 +68,13 @@ DOBA_TEST("Basic decodes credentials and splits the first colon") {
 DOBA_TEST("Basic challenges missing wrong and rejected credentials") {
   auth::basic provider("demo", [](auto, auto) { return false; });
   const std::string_view inputs[] = {"", "Bearer token",
-                                    "Basic YWxpY2U6c2VjcmV0"};
+                                     "Basic YWxpY2U6c2VjcmV0"};
   for (const auto input : inputs) {
-    auto req = credentials(input.empty()
-        ? std::vector<std::pair<std::string_view, std::string_view>>{}
-        : std::vector<std::pair<std::string_view, std::string_view>>{
-              {"Authorization", input}});
+    auto req = credentials(
+        input.empty()
+            ? std::vector<std::pair<std::string_view, std::string_view>>{}
+            : std::vector<std::pair<std::string_view, std::string_view>>{
+                  {"Authorization", input}});
     const auto result = provider.authenticate(req);
     DOBA_EXPECT(result.status == auth::authentication_status::kUnauthenticated);
     DOBA_EXPECT_EQUAL(result.challenge, "Basic realm=\"demo\"");
@@ -86,11 +86,14 @@ DOBA_TEST("Basic challenges missing wrong and rejected credentials") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic rejects malformed credentials before calling validator") {
   int calls = 0;
-  auth::basic provider("demo", [&](auto, auto) { calls++; return true; });
+  auth::basic provider("demo", [&](auto, auto) {
+    calls++;
+    return true;
+  });
   const std::string_view inputs[] = {
-      "Basic", "Basic ", "Basic !!!=", "Basic YQ==", "Basic YTo=",
-      "Basic YTo", "Basic YTp=", "Basic YToK", "Basic YTp/",
-      "Basic YTo===", "Basic Y=To", "Basic Og== trailing"};
+      "Basic",      "Basic ",       "Basic !!!=", "Basic YQ==",
+      "Basic YTo=", "Basic YTo",    "Basic YTp=", "Basic YToK",
+      "Basic YTp/", "Basic YTo===", "Basic Y=To", "Basic Og== trailing"};
   for (const auto input : inputs) {
     auto req = credentials({{"Authorization", input}});
     const auto result = provider.authenticate(req);
@@ -121,8 +124,8 @@ DOBA_TEST("Basic allows empty user and password") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Basic rejects duplicate Authorization fields") {
   auth::basic provider("demo", [](auto, auto) { return true; });
-  auto req = credentials({{"Authorization", "Basic Og=="},
-                           {"authorization", "Basic Og=="}});
+  auto req = credentials(
+      {{"Authorization", "Basic Og=="}, {"authorization", "Basic Og=="}});
   DOBA_EXPECT(provider.authenticate(req).status ==
               auth::authentication_status::kInvalidRequest);
 }
@@ -137,9 +140,8 @@ DOBA_TEST("Basic escapes realm and rejects control characters") {
                     "Basic realm=\"a\\\"b\\\\c\"");
   bool rejected = false;
   try {
-    auth::basic invalid("demo\r\nInjected: yes", [](auto, auto) {
-      return false;
-    });
+    auth::basic invalid("demo\r\nInjected: yes",
+                        [](auto, auto) { return false; });
   } catch (const std::invalid_argument&) {
     rejected = true;
   }

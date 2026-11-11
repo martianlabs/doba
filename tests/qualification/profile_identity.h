@@ -25,8 +25,8 @@
 #ifndef martianlabs_doba_tests_qualification_profile_identity_h
 #define martianlabs_doba_tests_qualification_profile_identity_h
 
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 extern "C" int __llvm_profile_write_file();
@@ -60,9 +60,9 @@ inline const bool profile_identity = [] {
   if (!separator) separator = std::strrchr(pattern, '\\');
   if (!separator) std::_Exit(3);
   static char filename[8192];
-  const auto size = std::snprintf(filename, sizeof(filename),
-      "%.*s%s-%%p-%%m.profraw", int(separator - pattern + 1), pattern,
-      DOBA_PROFILE_BINARY);
+  const auto size =
+      std::snprintf(filename, sizeof(filename), "%.*s%s-%%p-%%m.profraw",
+                    int(separator - pattern + 1), pattern, DOBA_PROFILE_BINARY);
   if (size < 0 || std::size_t(size) >= sizeof(filename)) std::_Exit(3);
 #if defined(_WIN32)
   std::free(pattern);

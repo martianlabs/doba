@@ -25,9 +25,9 @@
 #ifndef martianlabs_doba_protocol_http_helpers_h
 #define martianlabs_doba_protocol_http_helpers_h
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
-#include <algorithm>
 #include <limits>
 #include <span>
 #include <string_view>
@@ -70,8 +70,9 @@ static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept {
     if (u == '!' || u == '#' || u == '$' || u == '%' || u == '&' || u == '\'' ||
         u == '*' || u == '+' || u == '-' || u == '.' || u == '^' || u == '_' ||
         u == '`' || u == '|' || u == '~' || (u >= '0' && u <= '9') ||
-        (u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z'))
+        (u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z')) {
       t[c] |= kF_token;
+    }
     if (u >= 0x21 && u <= 0x7E) t[c] |= kF_vchar;
     if (u >= 0x80) t[c] |= kF_obs_text;
     if (u == 0x20 || u == 0x09) t[c] |= kF_ows;
@@ -79,33 +80,42 @@ static constexpr std::array<std::uint16_t, 256> build_char_flags() noexcept {
         (u >= '0' && u <= '9') || u == '-' || u == '.' || u == '_' ||
         u == '~' || u == '!' || u == '$' || u == '&' || u == '\'' || u == '(' ||
         u == ')' || u == '*' || u == '+' || u == ',' || u == ';' || u == '=' ||
-        u == ':' || u == '@')
+        u == ':' || u == '@') {
       t[c] |= kF_pchar;
+    }
     if (u == 0x09 || u == 0x20 || u == '!' || (u >= 0x23 && u <= 0x5B) ||
-        (u >= 0x5D && u <= 0x7E) || u >= 0x80)
+        (u >= 0x5D && u <= 0x7E) || u >= 0x80) {
       t[c] |= kF_qdtext;
+    }
     if (u == 0x09 || u == 0x20 || (u >= 0x21 && u <= 0x27) ||
-        (u >= 0x2A && u <= 0x5B) || (u >= 0x5D && u <= 0x7E) || u >= 0x80)
+        (u >= 0x2A && u <= 0x5B) || (u >= 0x5D && u <= 0x7E) || u >= 0x80) {
       t[c] |= kF_ctext;
+    }
     if (u == 0x21 || (u >= 0x23 && u <= 0x7E) || u >= 0x80) t[c] |= kF_etagc;
     if (u == 0x21 || (u >= 0x23 && u <= 0x2B) || (u >= 0x2D && u <= 0x3A) ||
-        (u >= 0x3C && u <= 0x5B) || (u >= 0x5D && u <= 0x7E))
+        (u >= 0x3C && u <= 0x5B) || (u >= 0x5D && u <= 0x7E)) {
       t[c] |= kF_cookie;
+    }
     if (u >= 0x20 && u <= 0x7E && u != 0x3B) t[c] |= kF_cookie_av;
     if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
         (u >= '0' && u <= '9') || u == '!' || u == '#' || u == '$' ||
         u == '%' || u == '&' || u == '\'' || u == '*' || u == '+' || u == '-' ||
         u == '/' || u == '=' || u == '?' || u == '^' || u == '_' || u == '`' ||
-        u == '{' || u == '|' || u == '}' || u == '~')
+        u == '{' || u == '|' || u == '}' || u == '~') {
       t[c] |= kF_atext;
-    if ((u >= 0x21 && u <= 0x5A) || (u >= 0x5E && u <= 0x7E) || u >= 0x80)
+    }
+    if ((u >= 0x21 && u <= 0x5A) || (u >= 0x5E && u <= 0x7E) || u >= 0x80) {
       t[c] |= kF_dtext;
+    }
     if ((u >= '0' && u <= '9') || (u >= 'A' && u <= 'F') ||
-        (u >= 'a' && u <= 'f'))
+        (u >= 'a' && u <= 'f')) {
       t[c] |= kF_hexdig;
+    }
     if ((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
-        (u >= '0' && u <= '9') || u == '-' || u == '.' || u == '_' || u == '~')
+        (u >= '0' && u <= '9') || u == '-' || u == '.' || u == '_' ||
+        u == '~') {
       t[c] |= kF_unreserv;
+    }
   }
   return t;
 }
@@ -506,10 +516,10 @@ struct helpers {
     if (sv_size == 1) return true;
     if (sv[0] == '0') return false;
     if (sv_size == 2) return true;
-    if (sv[0] == '1') return true;                     // 100-199
-    if (sv[0] == '2') {                                // 200-255
-      if (sv[1] < '5') return true;                    // 200-249
-      if (sv[1] == '5') return sv[2] <= '5';           // 250-255
+    if (sv[0] == '1') return true;            // 100-199
+    if (sv[0] == '2') {                       // 200-255
+      if (sv[1] < '5') return true;           // 200-249
+      if (sv[1] == '5') return sv[2] <= '5';  // 250-255
     }
     return false;
   }
@@ -1310,8 +1320,7 @@ struct helpers {
   // | The buffer must be writable. Check URI syntax and encoded NUL first.    |
   // | Decodes %2F too: identify path segments before decoding.                |
   // +-------------------------------------------------------------------------+
-  static constexpr void percent_decode_in_place(
-      std::string_view& sv) noexcept {
+  static constexpr void percent_decode_in_place(std::string_view& sv) noexcept {
     // No % means there is nothing to rewrite.
     const std::size_t pct_at = sv.find('%');
     if (pct_at == std::string_view::npos) return;
@@ -1620,15 +1629,15 @@ struct helpers {
     if (!is_alpha(sv[i])) return deserialization_status::kInvalidSource;
     i++;
     while (i < sv_size && sv[i] != ':') {
-      if (!is_alpha(sv[i]) && !is_digit(sv[i]) &&
-          sv[i] != '+' && sv[i] != '-' && sv[i] != '.') {
+      if (!is_alpha(sv[i]) && !is_digit(sv[i]) && sv[i] != '+' &&
+          sv[i] != '-' && sv[i] != '.') {
         return deserialization_status::kInvalidSource;
       }
       i++;
     }
     if (i >= sv_size) return deserialization_status::kMoreBytesNeeded;
     scheme = sv.substr(0, i);  // scheme text, excluding the ':' terminator.
-    i++;  // skip ':'
+    i++;                       // skip ':'
     std::size_t path_start = i;
     if (i + 1 < sv_size && sv[i] == '/' && sv[i + 1] == '/') {
       i += 2;
@@ -1644,8 +1653,8 @@ struct helpers {
           i += 3;
           continue;
         }
-        if (!is_unreserved(c) && !is_sub_delim(c) &&
-            c != ':' && c != '@' && c != '[' && c != ']') {
+        if (!is_unreserved(c) && !is_sub_delim(c) && c != ':' && c != '@' &&
+            c != '[' && c != ']') {
           break;  // Non-authority char (e.g., space) ends authority.
         }
         i++;
@@ -1841,6 +1850,6 @@ struct helpers {
     return count;
   }
 };
-} // namespace martianlabs::doba::protocol::http
+}  // namespace martianlabs::doba::protocol::http
 
 #endif

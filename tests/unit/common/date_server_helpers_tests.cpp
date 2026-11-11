@@ -22,11 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
-#include "common/date_server_helpers.h"
-
 #include <limits>
 
+#include "common/date_server_helpers.h"
 #include "test_helper.h"
 
 namespace {

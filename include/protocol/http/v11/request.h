@@ -37,20 +37,11 @@
 #include <utility>
 #include <vector>
 
-#include "platform.h"
 #include "common/byte_storage.h"
 #include "common/hash_map.h"
-#include "protocol/http/v11/context.h"
-#include "protocol/http/common/query_parameter.h"
-#include "protocol/http/common/method_names.h"
-#include "protocol/http/common/header_names.h"
+#include "platform.h"
 #include "protocol/http/common/header.h"
-#include "protocol/http/common/helpers.h"
-#include "protocol/http/v11/parsed_types.h"
-#include "protocol/http/v11/body/reader.h"
-#include "protocol/http/v11/policies.h"
-#include "protocol/http/v11/verdict.h"
-#include "protocol/http/common/target.h"
+#include "protocol/http/common/header_names.h"
 #include "protocol/http/common/headers/accept.h"
 #include "protocol/http/common/headers/accept_charset.h"
 #include "protocol/http/common/headers/accept_encoding.h"
@@ -69,21 +60,16 @@
 #include "protocol/http/common/headers/authentication_info.h"
 #include "protocol/http/common/headers/authorization.h"
 #include "protocol/http/common/headers/cache_control.h"
-#include "protocol/http/v11/headers/connection.h"
 #include "protocol/http/common/headers/content_encoding.h"
 #include "protocol/http/common/headers/content_language.h"
-#include "protocol/http/v11/headers/content_length.h"
 #include "protocol/http/common/headers/content_location.h"
 #include "protocol/http/common/headers/content_range.h"
 #include "protocol/http/common/headers/content_type.h"
 #include "protocol/http/common/headers/cookie.h"
 #include "protocol/http/common/headers/date.h"
 #include "protocol/http/common/headers/etag.h"
-#include "protocol/http/v11/headers/expect.h"
 #include "protocol/http/common/headers/expires.h"
-#include "protocol/http/v11/headers/forwarded.h"
 #include "protocol/http/common/headers/from.h"
-#include "protocol/http/v11/headers/host.h"
 #include "protocol/http/common/headers/if_match.h"
 #include "protocol/http/common/headers/if_modified_since.h"
 #include "protocol/http/common/headers/if_none_match.h"
@@ -92,7 +78,6 @@
 #include "protocol/http/common/headers/keep_alive.h"
 #include "protocol/http/common/headers/last_modified.h"
 #include "protocol/http/common/headers/location.h"
-#include "protocol/http/v11/headers/max_forwards.h"
 #include "protocol/http/common/headers/origin.h"
 #include "protocol/http/common/headers/pragma.h"
 #include "protocol/http/common/headers/proxy_connection.h"
@@ -106,21 +91,36 @@
 #include "protocol/http/common/headers/sec_websocket_version.h"
 #include "protocol/http/common/headers/server.h"
 #include "protocol/http/common/headers/set_cookie.h"
-#include "protocol/http/v11/headers/te.h"
-#include "protocol/http/v11/headers/trailer.h"
-#include "protocol/http/v11/headers/transfer_encoding.h"
-#include "protocol/http/v11/headers/upgrade.h"
 #include "protocol/http/common/headers/user_agent.h"
 #include "protocol/http/common/headers/vary.h"
-#include "protocol/http/v11/headers/via.h"
 #include "protocol/http/common/headers/www_authenticate.h"
-#include "protocol/http/v11/headers/x_forwarded_for.h"
-#include "protocol/http/v11/headers/x_forwarded_host.h"
-#include "protocol/http/v11/headers/x_forwarded_proto.h"
+#include "protocol/http/common/helpers.h"
+#include "protocol/http/common/method_names.h"
+#include "protocol/http/common/query_parameter.h"
+#include "protocol/http/common/target.h"
+#include "protocol/http/v11/body/reader.h"
+#include "protocol/http/v11/context.h"
+#include "protocol/http/v11/headers/connection.h"
+#include "protocol/http/v11/headers/content_length.h"
+#include "protocol/http/v11/headers/expect.h"
+#include "protocol/http/v11/headers/forwarded.h"
+#include "protocol/http/v11/headers/host.h"
+#include "protocol/http/v11/headers/max_forwards.h"
 #include "protocol/http/v11/headers/rules/directives.h"
 #include "protocol/http/v11/headers/rules/framing.h"
 #include "protocol/http/v11/headers/rules/policy.h"
 #include "protocol/http/v11/headers/rules/routing.h"
+#include "protocol/http/v11/headers/te.h"
+#include "protocol/http/v11/headers/trailer.h"
+#include "protocol/http/v11/headers/transfer_encoding.h"
+#include "protocol/http/v11/headers/upgrade.h"
+#include "protocol/http/v11/headers/via.h"
+#include "protocol/http/v11/headers/x_forwarded_for.h"
+#include "protocol/http/v11/headers/x_forwarded_host.h"
+#include "protocol/http/v11/headers/x_forwarded_proto.h"
+#include "protocol/http/v11/parsed_types.h"
+#include "protocol/http/v11/policies.h"
+#include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
@@ -448,18 +448,20 @@ class request {
   bool append_body(std::string_view bytes) {
     if (bytes.empty()) return true;
     if (!body_storage_ && bytes.size() <= body_threshold_ - body_wire_size_) {
-      if (body_bytes_.empty())
+      if (body_bytes_.empty()) {
         body_bytes_ = bytes;
-      else
+      } else {
         body_bytes_ = {body_bytes_.data(), body_bytes_.size() + bytes.size()};
+      }
       body_wire_size_ += bytes.size();
       return true;
     }
     if (!body_storage_) {
       body_storage_.emplace(common::byte_storage_options{body_threshold_, {}});
       if (!body_storage_->spill() ||
-          !body_storage_->write(body_bytes_.data(), body_bytes_.size()))
+          !body_storage_->write(body_bytes_.data(), body_bytes_.size())) {
         return false;
+      }
       body_bytes_ = {};
     }
     if (!body_storage_->write(bytes.data(), bytes.size())) return false;

@@ -23,10 +23,13 @@
 // permissions and limitations under the License.
 
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <atomic>
 #include <chrono>
-#include <filesystem>
 #include <cstddef>
+#include <filesystem>
 #include <functional>
 #include <future>
 #include <memory>
@@ -36,14 +39,12 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <sys/socket.h>
 #include <thread>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
-#include "protocol/processing_result.h"
 #include "common/reader.h"
+#include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "transport/tcp.h"
@@ -116,7 +117,8 @@ std::unique_ptr<common::reader> output_source(const std::string& bytes) {
 std::size_t descriptor_count() {
   std::size_t count = 0;
   for ([[maybe_unused]] const auto& entry :
-       std::filesystem::directory_iterator("/proc/self/fd")) ++count;
+       std::filesystem::directory_iterator("/proc/self/fd"))
+    ++count;
   return count;
 }
 }  // namespace
@@ -127,17 +129,23 @@ std::size_t descriptor_count() {
 DOBA_TEST("Linux preserves ordered output across RX blocks") {
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      for (const char byte : bytes) {
-        engine.send("R", std::string_view(&byte, 1), nullptr);
-      }
-    }, {}, {}};
+                                for (const char byte : bytes) {
+                                  engine.send("R", std::string_view(&byte, 1),
+                                              nullptr);
+                                }
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.receive_buffer_capacity = 3, .worker_count = 1,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.receive_buffer_capacity = 3,
+       .worker_count = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("0123456789"));
@@ -156,20 +164,26 @@ DOBA_TEST("Linux preserves ordered output across RX blocks") {
 DOBA_TEST("Linux drains prefix and source before engine close") {
   const std::string body(128 * 1024, 's');
   auto factory = [&]() {
-    return synchronous_engine{[&](auto& engine, std::string_view) {
-      auto reader = common::reader::borrowed(
-          std::as_bytes(std::span(body.data(), body.size())));
-      engine.send("prefix", {},
-                  std::make_unique<common::reader>(std::move(reader)));
-      engine.close();
-    }, {}, {}};
+    return synchronous_engine{
+        [&](auto& engine, std::string_view) {
+          auto reader = common::reader::borrowed(
+              std::as_bytes(std::span(body.data(), body.size())));
+          engine.send("prefix", {},
+                      std::make_unique<common::reader>(std::move(reader)));
+          engine.close();
+        },
+        {},
+        {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 1, .max_buffered_send_bytes = 256,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 1,
+       .max_buffered_send_bytes = 256,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));
@@ -185,9 +199,12 @@ DOBA_TEST("Linux drains prefix and source before engine close") {
 DOBA_TEST("Linux isolates engine failures and supports restart") {
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view input) {
-      if (input == "!") throw std::runtime_error("test failure");
-      engine.send(input, {}, nullptr);
-    }, {}, {}};
+                                if (input == "!")
+                                  throw std::runtime_error("test failure");
+                                engine.send(input, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -218,16 +235,22 @@ DOBA_TEST("Linux stop releases a reader with pending socket output") {
   auto ready = entered.get_future();
   int released = 0;
   auto factory = [&]() {
-    return synchronous_engine{[&](auto& engine, std::string_view) {
-      auto owner = std::shared_ptr<const std::string>(
-          new std::string(16 * 1024 * 1024, 's'),
-          [&](const std::string* bytes) { ++released; delete bytes; });
-      auto reader = common::reader::shared(owner,
-          std::as_bytes(std::span(owner->data(), owner->size())));
-      engine.send("prefix", {},
-                  std::make_unique<common::reader>(std::move(reader)));
-      entered.set_value();
-    }, {}, {}};
+    return synchronous_engine{
+        [&](auto& engine, std::string_view) {
+          auto owner = std::shared_ptr<const std::string>(
+              new std::string(16 * 1024 * 1024, 's'),
+              [&](const std::string* bytes) {
+                ++released;
+                delete bytes;
+              });
+          auto reader = common::reader::shared(
+              owner, std::as_bytes(std::span(owner->data(), owner->size())));
+          engine.send("prefix", {},
+                      std::make_unique<common::reader>(std::move(reader)));
+          entered.set_value();
+        },
+        {},
+        {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -251,15 +274,20 @@ DOBA_TEST("Linux drains a reader after client half close") {
   const std::string body(128 * 1024, 's');
   auto factory = [&]() {
     return synchronous_engine{[&](auto& engine, std::string_view) {
-      engine.send("prefix", {}, output_source(body));
-    }, {}, {}};
+                                engine.send("prefix", {}, output_source(body));
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 1, .max_buffered_send_bytes = 256,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 1,
+       .max_buffered_send_bytes = 256,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));
@@ -279,14 +307,17 @@ DOBA_TEST("Linux serves peers while another connection has pending output") {
   auto ready = entered.get_future();
   auto factory = [&]() {
     return synchronous_engine{[&](auto& engine, std::string_view bytes) {
-      if (bytes == "s") {
-        engine.send("prefix", {}, output_source(body));
-        entered.set_value();
-      } else {
-        engine.send("fast", {}, nullptr);
-        engine.close();
-      }
-    }, {}, {}};
+                                if (bytes == "s") {
+                                  engine.send("prefix", {},
+                                              output_source(body));
+                                  entered.set_value();
+                                } else {
+                                  engine.send("fast", {}, nullptr);
+                                  engine.close();
+                                }
+                              },
+                              {},
+                              {}};
   };
   tcpip_client slow;
   const auto port = slow.find_available_port();
@@ -316,8 +347,10 @@ DOBA_TEST("Linux recovers from engine factory failure") {
   auto factory = [&]() {
     if (++creations == 1) throw std::runtime_error("factory failure");
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client failed;
   const auto port = failed.find_available_port();
@@ -348,21 +381,25 @@ DOBA_TEST("Linux isolates failing connection notifications") {
   unsigned notifications = 0;
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client failed;
   const auto port = failed.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 1, .max_connections = 1,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 1,
+       .max_connections = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.set_on_connection([&]() {
     if (++notifications == 1) throw std::runtime_error("connect failure");
   });
-  transport.set_on_disconnection([]() {
-    throw std::runtime_error("disconnect failure");
-  });
+  transport.set_on_disconnection(
+      []() { throw std::runtime_error("disconnect failure"); });
   transport.start();
   if (failed.connect(port)) {
     DOBA_EXPECT(failed.wait_for_close(3s) || failed.connection_reset());
@@ -388,15 +425,20 @@ DOBA_TEST("Linux releases admission capacity after EOF") {
   bool notified = false;
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client first;
   const auto port = first.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 1, .max_connections = 1,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 1,
+       .max_connections = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.set_on_disconnection([&]() {
     if (!notified) {
       notified = true;
@@ -427,13 +469,18 @@ DOBA_TEST("Linux releases admission capacity after EOF") {
 DOBA_TEST("Linux unwinds failed startup without descriptor leaks") {
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
-  const auto release = [](int* socket) { ::close(*socket); delete socket; };
+  const auto release = [](int* socket) {
+    ::close(*socket);
+    delete socket;
+  };
   std::unique_ptr<int, decltype(release)> occupied(
       new int(::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)),
       release);
@@ -450,8 +497,11 @@ DOBA_TEST("Linux unwinds failed startup without descriptor leaks") {
       factory);
   const auto before = descriptor_count();
   bool rejected = false;
-  try { second.start(); }
-  catch (const std::runtime_error&) { rejected = true; }
+  try {
+    second.start();
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
   DOBA_EXPECT(rejected);
   DOBA_EXPECT_EQUAL(descriptor_count(), before);
   occupied.reset();
@@ -468,8 +518,10 @@ DOBA_TEST("Linux releases descriptors after reset and restart") {
   const std::string body(8 * 1024 * 1024, 's');
   auto factory = [&]() {
     return synchronous_engine{[&](auto& engine, std::string_view) {
-      engine.send("prefix", {}, output_source(body));
-    }, {}, {}};
+                                engine.send("prefix", {}, output_source(body));
+                              },
+                              {},
+                              {}};
   };
   tcpip_client probe;
   const auto port = probe.find_available_port();
@@ -503,21 +555,26 @@ DOBA_TEST("Linux workers own independent connections and sources") {
     const auto value = std::hash<std::thread::id>{}(owner);
     const std::string prefix(reinterpret_cast<const char*>(&value),
                              sizeof(value));
-    return synchronous_engine{[&, owner, prefix](auto& engine,
-                                               std::string_view) {
-      if (owner != std::this_thread::get_id()) {
-        throw std::runtime_error("Connection changed workers");
-      }
-      engine.send(prefix, {}, output_source(body));
-    }, {}, {}};
+    return synchronous_engine{
+        [&, owner, prefix](auto& engine, std::string_view) {
+          if (owner != std::this_thread::get_id()) {
+            throw std::runtime_error("Connection changed workers");
+          }
+          engine.send(prefix, {}, output_source(body));
+        },
+        {},
+        {}};
   };
   tcpip_client probe;
   const auto port = probe.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 4, .max_buffered_send_bytes = 128,
+      {.worker_count = 4,
+       .max_buffered_send_bytes = 128,
        .max_connections = 0,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.set_on_connection([&]() { ++connected; });
   transport.set_on_disconnection([&]() { ++disconnected; });
   transport.start();
@@ -539,8 +596,8 @@ DOBA_TEST("Linux workers own independent connections and sources") {
   DOBA_EXPECT_EQUAL(owners.size(), std::size_t{4});
   for (std::size_t index = 0; index < peers.size(); ++index) {
     DOBA_EXPECT(peers[index]->send_all("y"));
-    const auto received = peers[index]->receive(prefixes[index].size() +
-                                               body.size());
+    const auto received =
+        peers[index]->receive(prefixes[index].size() + body.size());
     DOBA_EXPECT(received == std::optional<std::string>(prefixes[index] + body));
   }
   transport.stop();
@@ -557,15 +614,20 @@ DOBA_TEST("Linux partitions finite admission without exceeding it") {
   auto factory = [&]() {
     ++created;
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client probe;
   const auto port = probe.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 4, .max_connections = 7,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 4,
+       .max_connections = 7,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   transport.start();
   std::vector<std::unique_ptr<tcpip_client>> peers;
   for (unsigned index = 0; index < 128 && peers.size() < 7; ++index) {
@@ -587,9 +649,14 @@ DOBA_TEST("Linux partitions finite admission without exceeding it") {
   bool rejected = false;
   try {
     tr::tcp<decltype(factory()), decltype(factory)> invalid(
-        {.worker_count = 4, .max_connections = 3,
-         .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
-  } catch (const std::runtime_error&) { rejected = true; }
+        {.worker_count = 4,
+         .max_connections = 3,
+         .ip = "127.0.0.1",
+         .port = std::to_string(port)},
+        factory);
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
   DOBA_EXPECT(rejected);
 }
 
@@ -599,15 +666,17 @@ DOBA_TEST("Linux partitions finite admission without exceeding it") {
 DOBA_TEST("Linux worker_count zero serves synchronous loopback") {
   auto factory = []() {
     return synchronous_engine{[](auto& engine, std::string_view bytes) {
-      engine.send(bytes, {}, nullptr);
-    }, {}, {}};
+                                engine.send(bytes, {}, nullptr);
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
   DOBA_EXPECT(port != 0);
   tr::tcp<decltype(factory()), decltype(factory)> transport(
-      {.worker_count = 0,
-       .ip = "127.0.0.1", .port = std::to_string(port)}, factory);
+      {.worker_count = 0, .ip = "127.0.0.1", .port = std::to_string(port)},
+      factory);
   transport.start();
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("echo"));
@@ -621,11 +690,14 @@ DOBA_TEST("Linux rejects active callback mutation and worker stop") {
   std::function<void()> stop;
   auto factory = [&]() {
     return synchronous_engine{[&](auto& engine, std::string_view) {
-      try { stop(); }
-      catch (const std::runtime_error&) {
-        engine.send("rejected", {}, nullptr);
-      }
-    }, {}, {}};
+                                try {
+                                  stop();
+                                } catch (const std::runtime_error&) {
+                                  engine.send("rejected", {}, nullptr);
+                                }
+                              },
+                              {},
+                              {}};
   };
   tcpip_client client;
   const auto port = client.find_available_port();
@@ -637,10 +709,16 @@ DOBA_TEST("Linux rejects active callback mutation and worker stop") {
   transport.start();
   bool connection_rejected = false;
   bool disconnection_rejected = false;
-  try { transport.set_on_connection([]() {}); }
-  catch (const std::runtime_error&) { connection_rejected = true; }
-  try { transport.set_on_disconnection([]() {}); }
-  catch (const std::runtime_error&) { disconnection_rejected = true; }
+  try {
+    transport.set_on_connection([]() {});
+  } catch (const std::runtime_error&) {
+    connection_rejected = true;
+  }
+  try {
+    transport.set_on_disconnection([]() {});
+  } catch (const std::runtime_error&) {
+    disconnection_rejected = true;
+  }
   DOBA_EXPECT(connection_rejected && disconnection_rejected);
   DOBA_EXPECT(client.connect(port));
   DOBA_EXPECT(client.send_all("x"));

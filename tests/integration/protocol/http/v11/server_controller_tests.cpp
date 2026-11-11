@@ -99,8 +99,9 @@ DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
       clients.emplace_back([&]() {
         tcpip_client connection;
         if (!connection.connect(port) ||
-            !connection.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n"))
+            !connection.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n")) {
           return;
+        }
         auto result = receive_http_response(connection);
         if (result) total += static_cast<unsigned int>(std::stoi(result->body));
       });

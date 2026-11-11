@@ -44,19 +44,21 @@ int main(int count, char** arguments) {
   policies.private_key_file = arguments[2];
   policies.alpn_protocol = "http/1.1";
   martianlabs::doba::https_server<> server(std::move(policies));
-  server.add_route("GET", "/hello",
+  server.add_route(
+      "GET", "/hello",
       [](const martianlabs::doba::protocol::http::v11::request&,
-             martianlabs::doba::protocol::http::v11::response& response) {
-    response.ok_200().set_body("hello over TLS");
-  });
-  server.add_route("GET", "/wait/:id",
+         martianlabs::doba::protocol::http::v11::response& response) {
+        response.ok_200().set_body("hello over TLS");
+      });
+  server.add_route(
+      "GET", "/wait/:id",
       [](const martianlabs::doba::protocol::http::v11::request&,
          martianlabs::doba::protocol::http::v11::response& response,
          int id) -> martianlabs::doba::common::task<> {
-    co_await martianlabs::doba::common::sleep_for(
-        std::chrono::milliseconds(10));
-    response.ok_200().set_body(std::to_string(id));
-  });
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(10));
+        response.ok_200().set_body(std::to_string(id));
+      });
   server.start();
   martianlabs::doba::common::signaler::wait();
   server.stop();

@@ -22,6 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <array>
 #include <cerrno>
 #include <cstddef>
@@ -31,12 +34,10 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "common/reader.h"
+#include "protocol/processing_result.h"
 #include "test_helper.h"
 #include "transport/tcp_linux_context.h"
 
@@ -161,9 +162,11 @@ DOBA_TEST("Linux batches inline output and preserves partial sends") {
   const std::string body(256 * 1024, 'b');
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("first", {}, nullptr);
-      engine.send("prefix", body, nullptr);
-    }, {}, {}};
+                         engine.send("first", {}, nullptr);
+                         engine.send("prefix", body, nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8,
@@ -187,9 +190,11 @@ DOBA_TEST("Linux streams a source through bounded TX") {
   const std::string body(128 * 1024, 's');
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("before", {}, nullptr);
-      engine.send("prefix", "body", source(body));
-    }, {}, {}};
+                         engine.send("before", {}, nullptr);
+                         engine.send("prefix", "body", source(body));
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 32, factory);
@@ -212,8 +217,10 @@ DOBA_TEST("Linux accepts an empty source without output") {
   const std::string empty;
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send({}, {}, source(empty));
-    }, {}, {}};
+                         engine.send({}, {}, source(empty));
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 1, factory);
@@ -230,9 +237,11 @@ DOBA_TEST("Linux rejects output following a source") {
   const std::string body("source");
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("prefix", {}, source(body));
-      engine.send("later", {}, nullptr);
-    }, {}, {}};
+                         engine.send("prefix", {}, source(body));
+                         engine.send("later", {}, nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 64, factory);
@@ -246,12 +255,15 @@ DOBA_TEST("Linux rejects output following a source") {
 // +---------------------------------------------------------------------------+
 DOBA_TEST("Linux reports reader failure after its prefix") {
   auto factory = []() {
-    return byte_engine{[](byte_engine& engine, std::string_view) {
-      auto reader = std::make_unique<common::reader>(common::filesystem{});
-      std::byte byte{};
-      reader->read(std::span<std::byte>(&byte, 1));
-      engine.send("prefix", {}, std::move(reader));
-    }, {}, {}};
+    return byte_engine{
+        [](byte_engine& engine, std::string_view) {
+          auto reader = std::make_unique<common::reader>(common::filesystem{});
+          std::byte byte{};
+          reader->read(std::span<std::byte>(&byte, 1));
+          engine.send("prefix", {}, std::move(reader));
+        },
+        {},
+        {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 64, factory);
@@ -267,9 +279,11 @@ DOBA_TEST("Linux reports reader failure after its prefix") {
 DOBA_TEST("Linux enforces the accumulated output limit") {
   auto factory = []() {
     return byte_engine{[](byte_engine& engine, std::string_view) {
-      engine.send("123", "45", nullptr);
-      engine.send("6", {}, nullptr);
-    }, {}, {}};
+                         engine.send("123", "45", nullptr);
+                         engine.send("6", {}, nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 5, factory);
@@ -285,21 +299,26 @@ DOBA_TEST("Linux releases sources on completion and cancellation") {
   for (const bool complete : {false, true}) {
     int released = 0;
     auto factory = [&]() {
-      return byte_engine{[&](byte_engine& engine, std::string_view) {
-        auto owner = std::shared_ptr<const std::string>(
-            new std::string("data"),
-            [&](const std::string* value) { ++released; delete value; });
-        const auto bytes =
-            std::as_bytes(std::span(owner->data(), owner->size()));
-        auto reader = std::make_unique<common::reader>(
-            common::reader::shared(owner, bytes));
-        engine.send("prefix", {}, std::move(reader));
-      }, {}, {}};
+      return byte_engine{
+          [&](byte_engine& engine, std::string_view) {
+            auto owner = std::shared_ptr<const std::string>(
+                new std::string("data"), [&](const std::string* value) {
+                  ++released;
+                  delete value;
+                });
+            const auto bytes =
+                std::as_bytes(std::span(owner->data(), owner->size()));
+            auto reader = std::make_unique<common::reader>(
+                common::reader::shared(owner, bytes));
+            engine.send("prefix", {}, std::move(reader));
+          },
+          {},
+          {}};
     };
     socket_pair peer;
     {
-      detail::linux_context<byte_engine> context(
-          peer.sockets[0], 8, 8, factory);
+      detail::linux_context<byte_engine> context(peer.sockets[0], 8, 8,
+                                                 factory);
       DOBA_EXPECT(context.receive());
       DOBA_EXPECT_EQUAL(released, 0);
       if (complete) {
@@ -321,12 +340,14 @@ DOBA_TEST("Linux preserves output across EAGAIN") {
   const std::string body(256 * 1024, 'q');
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("prefix", body, nullptr);
-    }, {}, {}};
+                         engine.send("prefix", body, nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
-  detail::linux_context<byte_engine> context(
-      peer.sockets[0], 8, body.size() + 6, factory);
+  detail::linux_context<byte_engine> context(peer.sockets[0], 8,
+                                             body.size() + 6, factory);
   DOBA_EXPECT(context.receive());
   bool blocked = false;
   for (int turn = 0; turn < 32 && !blocked; ++turn) {
@@ -351,8 +372,10 @@ DOBA_TEST("Linux preserves output across EAGAIN") {
 DOBA_TEST("Linux reuses the exact TX budget after drain") {
   auto factory = []() {
     return byte_engine{[](byte_engine& engine, std::string_view) {
-      engine.send("abc", "de", nullptr);
-    }, {}, {}};
+                         engine.send("abc", "de", nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 5, factory);
@@ -374,8 +397,10 @@ DOBA_TEST("Linux accepts a new source after the previous drains") {
   const std::string body("source");
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("prefix", {}, source(body));
-    }, {}, {}};
+                         engine.send("prefix", {}, source(body));
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 8, factory);
@@ -399,9 +424,11 @@ DOBA_TEST("Linux closes an empty terminal delivery") {
   const std::string empty;
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send({}, {}, source(empty));
-      engine.close();
-    }, {}, {}};
+                         engine.send({}, {}, source(empty));
+                         engine.close();
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 1, factory);
@@ -417,8 +444,10 @@ DOBA_TEST("Linux closes an empty terminal delivery") {
 DOBA_TEST("Linux handles a broken output socket without SIGPIPE") {
   auto factory = []() {
     return byte_engine{[](byte_engine& engine, std::string_view) {
-      engine.send("response", {}, nullptr);
-    }, {}, {}};
+                         engine.send("response", {}, nullptr);
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   DOBA_EXPECT(::close(peer.sockets[1]) == 0);
@@ -435,13 +464,15 @@ DOBA_TEST("Linux empty sends preserve prefix source and exact TX capacity") {
   for (const std::string& body : {std::string{}, std::string(257, 's')}) {
     auto factory = [&]() {
       return byte_engine{[&](byte_engine& engine, std::string_view) {
-        engine.send({}, {}, nullptr);
-        engine.send("pre", {}, nullptr);
-        engine.send({}, {}, nullptr);
-        engine.send("h", "b", source(body));
-        engine.send({}, {}, nullptr);
-        engine.send({}, {}, nullptr);
-      }, {}, {}};
+                           engine.send({}, {}, nullptr);
+                           engine.send("pre", {}, nullptr);
+                           engine.send({}, {}, nullptr);
+                           engine.send("h", "b", source(body));
+                           engine.send({}, {}, nullptr);
+                           engine.send({}, {}, nullptr);
+                         },
+                         {},
+                         {}};
     };
     socket_pair peer;
     detail::linux_context<byte_engine> context(peer.sockets[0], 8, 5, factory);
@@ -463,10 +494,12 @@ DOBA_TEST("Linux empty sends do not permit a second terminal reader") {
   const std::string body("source");
   auto factory = [&]() {
     return byte_engine{[&](byte_engine& engine, std::string_view) {
-      engine.send("pre", {}, source(body));
-      engine.send({}, {}, nullptr);
-      engine.send({}, {}, source(body));
-    }, {}, {}};
+                         engine.send("pre", {}, source(body));
+                         engine.send({}, {}, nullptr);
+                         engine.send({}, {}, source(body));
+                       },
+                       {},
+                       {}};
   };
   socket_pair peer;
   detail::linux_context<byte_engine> context(peer.sockets[0], 8, 5, factory);

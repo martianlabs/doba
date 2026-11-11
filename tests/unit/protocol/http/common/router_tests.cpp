@@ -30,10 +30,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "protocol/http/common/router_match_result.h"
-#include "protocol/http/common/router.h"
-#include "protocol/http/v11/contracts.h"
 #include "common/task_execution.h"
+#include "protocol/http/common/router.h"
+#include "protocol/http/common/router_match_result.h"
+#include "protocol/http/v11/contracts.h"
 #include "router_value_response.h"
 #include "test_helper.h"
 
@@ -51,10 +51,10 @@ struct request {
   int event{0};
 };
 
-using martianlabs::doba::protocol::http::router;
-using martianlabs::doba::protocol::http::router_match_result;
 using martianlabs::doba::common::task;
 using martianlabs::doba::common::task_execution;
+using martianlabs::doba::protocol::http::router;
+using martianlabs::doba::protocol::http::router_match_result;
 
 static_assert(
     std::same_as<decltype(router<request, router_value_response>{}.match("GET",
@@ -105,7 +105,6 @@ struct route_only_router {
 };
 static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
               route_only_router, request, router_value_response>);
-
 
 }  // namespace
 
@@ -158,7 +157,7 @@ DOBA_TEST("asynchronous route parameters survive suspension") {
   router<request, router_value_response> value;
   value.add("GET", "/items/:name",
             [](const request&, router_value_response& res,
-                    const std::string& name) -> task<void> {
+               const std::string& name) -> task<void> {
               co_await martianlabs::doba::common::yield();
               res.value = name;
             });
@@ -826,7 +825,6 @@ DOBA_TEST("controller registration rolls back every route category") {
     DOBA_EXPECT(value.match("GET", "/old/x").handler);
   }
 }
-
 
 DOBA_TEST("router associates authentication with selected route only") {
   namespace auth = martianlabs::doba::protocol::http::auth;

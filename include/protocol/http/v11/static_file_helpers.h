@@ -53,8 +53,9 @@ namespace martianlabs::doba::protocol::http::v11::detail {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline std::optional<std::int64_t> static_file_time(std::string_view input) {
-  if (!::martianlabs::doba::protocol::http::headers::date::check(input))
+  if (!::martianlabs::doba::protocol::http::headers::date::check(input)) {
     return {};
+  }
   const bool old = input.find('-') != input.npos;
   const char* format =
       old ? "%A, %d-%b-%y %H:%M:%S GMT"
@@ -76,8 +77,9 @@ inline std::optional<std::int64_t> static_file_time(std::string_view input) {
                             month(static_cast<unsigned>(value.tm_mon + 1)),
                             day(static_cast<unsigned>(value.tm_mday))};
   if (!date.ok() || value.tm_hour > 23 || value.tm_min > 59 ||
-      value.tm_sec > 59)
+      value.tm_sec > 59) {
     return {};
+  }
   return duration_cast<seconds>((sys_days(date) + hours(value.tm_hour) +
                                  minutes(value.tm_min) + seconds(value.tm_sec))
                                     .time_since_epoch())
@@ -115,13 +117,14 @@ inline std::string static_file_etag(std::string_view bytes) {
     for (std::size_t i = 0; i < 64; ++i) {
       const auto pos = block * 64 + i;
       unsigned char byte = 0;
-      if (pos < bytes.size())
+      if (pos < bytes.size()) {
         byte = static_cast<unsigned char>(bytes[pos]);
-      else if (pos == bytes.size())
+      } else if (pos == bytes.size()) {
         byte = 0x80;
-      else if (pos >= blocks * 64 - 8)
+      } else if (pos >= blocks * 64 - 8) {
         byte =
             static_cast<unsigned char>(bits >> ((blocks * 64 - 1 - pos) * 8));
+      }
       w[i / 4] |= std::uint32_t(byte) << (24 - (i % 4) * 8);
     }
     for (int i = 16; i < 64; ++i) {
@@ -190,8 +193,9 @@ inline bool static_file_tag_matches(std::string_view list, std::string_view tag,
     auto actual = tag;
     const bool actual_weak = actual.starts_with("W/");
     if (actual_weak) actual.remove_prefix(2);
-    if ((!strong || (!weak && !actual_weak)) && candidate == actual)
+    if ((!strong || (!weak && !actual_weak)) && candidate == actual) {
       return true;
+    }
     list.remove_prefix(end + 1);
     helpers::ows_ltrim(list);
     if (list.empty()) break;
@@ -213,8 +217,9 @@ inline std::optional<std::size_t> static_file_number(std::string_view text) {
   const auto parsed =
       std::from_chars(text.data(), text.data() + text.size(), value);
   if (text.empty() || parsed.ec != std::errc{} ||
-      parsed.ptr != text.data() + text.size())
+      parsed.ptr != text.data() + text.size()) {
     return {};
+  }
   return value;
 }
 
@@ -249,8 +254,9 @@ struct static_file_range {
 inline static_file_range static_file_parse_range(std::string_view text,
                                                  std::size_t size) {
   if (text.size() < 6 || !helpers::iequals(text.substr(0, 6), "bytes=") ||
-      text.find(',') != text.npos)
+      text.find(',') != text.npos) {
     return {};
+  }
   text.remove_prefix(6);
   helpers::ows_trim(text);
   const auto dash = text.find('-');
@@ -262,8 +268,9 @@ inline static_file_range static_file_parse_range(std::string_view text,
     const auto length = std::min(*last, size);
     return {true, length != 0, size - length, length};
   }
-  if (!first || (!right.empty() && !last) || (last && *last < *first))
+  if (!first || (!right.empty() && !last) || (last && *last < *first)) {
     return {};
+  }
   if (*first >= size) return {true, false, 0, 0};
   return {true, true, *first,
           (last ? std::min(*last, size - 1) : size - 1) - *first + 1};

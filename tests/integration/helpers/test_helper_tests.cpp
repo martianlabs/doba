@@ -26,8 +26,8 @@
 #include <initializer_list>
 #include <string>
 
-#include "test_helper_process.h"
 #include "test_helper.h"
+#include "test_helper_process.h"
 
 namespace {
 using martianlabs::doba::tests::test_helper_result;
@@ -52,7 +52,7 @@ test_helper_result run_probe(
 // | [>] listing does not execute tests                          ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("listing does not execute tests") {
-const auto result = run_probe({"--list"});
+  const auto result = run_probe({"--list"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe passes") != std::string::npos);
@@ -171,8 +171,8 @@ DOBA_TEST("blocked test is identified before timeout") {
 }
 
 DOBA_TEST("watchdog exits blocked cleanup with test identity") {
-  const auto result = run_probe(
-      {"--name", "probe blocks", "--timeout-ms", "50"});
+  const auto result =
+      run_probe({"--name", "probe blocks", "--timeout-ms", "50"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 124);
   DOBA_EXPECT(result.output.find("probe blocked cleanup") != std::string::npos);
@@ -183,8 +183,8 @@ DOBA_TEST("watchdog exits blocked cleanup with test identity") {
 
 DOBA_TEST("watchdog rejects invalid timeout arguments") {
   for (const char* timeout : {"0", "-1", "invalid", "3600001"}) {
-    const auto result = run_probe(
-        {"--name", "probe passes", "--timeout-ms", timeout});
+    const auto result =
+        run_probe({"--name", "probe passes", "--timeout-ms", timeout});
     DOBA_EXPECT(!result.timed_out);
     DOBA_EXPECT_EQUAL(result.exit_code, 2);
     DOBA_EXPECT(result.output.find("Invalid test timeout") !=
@@ -224,8 +224,7 @@ DOBA_TEST("runner reports every concurrent assertion failure") {
   std::size_t count = 0;
   std::size_t position = 0;
   while ((position = result.output.find("assertion failed: worker failure",
-                                        position)) !=
-         std::string::npos) {
+                                        position)) != std::string::npos) {
     ++count;
     ++position;
   }
@@ -236,9 +235,9 @@ DOBA_TEST("runner reports every concurrent assertion failure") {
 // | [>] repeated qualified integration exclusions               ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("integration runner applies every exclusion with normalized paths") {
-  const auto result = run_probe({"--list", "--exclude", "probe assertion fails",
-      "--exclude",
-      "tests\\integration\\helpers\\test_helper_probe.cpp::probe blocks"});
+  const auto result = run_probe(
+      {"--list", "--exclude", "probe assertion fails", "--exclude",
+       "tests\\integration\\helpers\\test_helper_probe.cpp::probe blocks"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe passes") != std::string::npos);

@@ -40,13 +40,13 @@
 
 #include "common/date_server.h"
 #include "platform.h"
+#include "protocol/http/common/header_names.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/common/status_codes.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/v11/policies.h"
-#include "protocol/http/common/header_names.h"
 #include "protocol/http/v11/results.h"
-#include "protocol/http/common/status_codes.h"
 #include "status_lines.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -760,8 +760,9 @@ class response {
   // | Uses supplied storage when borrowing; otherwise uses its own string.    |
   // +-------------------------------------------------------------------------+
   const std::string& head_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_))
+    if (const auto* borrowed = std::get_if<1>(&storage_)) {
       return *(*borrowed)[0];
+    }
     return std::get<0>(storage_)[0];
   }
   // +=========================================================================+
@@ -779,8 +780,9 @@ class response {
   // | Uses supplied storage when borrowing; otherwise uses its own string.    |
   // +-------------------------------------------------------------------------+
   const std::string& body_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_))
+    if (const auto* borrowed = std::get_if<1>(&storage_)) {
       return *(*borrowed)[1];
+    }
     return std::get<0>(storage_)[1];
   }
   // +=========================================================================+

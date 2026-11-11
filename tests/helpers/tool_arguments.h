@@ -25,9 +25,9 @@
 #ifndef martianlabs_doba_tests_helpers_tool_arguments_h
 #define martianlabs_doba_tests_helpers_tool_arguments_h
 
-#include "tool_support.h"
-
 #include <set>
+
+#include "tool_support.h"
 
 namespace martianlabs::doba::tests::tools {
 
@@ -50,8 +50,9 @@ class arguments {
       std::string name(values[index]);
       require(name.starts_with("--"), "Expected an option: " + name);
       require(!values_.contains(name) && !switches_.contains(name),
-        "Duplicate option: " + name);
-      if (switches.contains(name)) switches_.insert(name);
+              "Duplicate option: " + name);
+      if (switches.contains(name))
+        switches_.insert(name);
       else {
         require(index + 1 < count, "Missing option value: " + name);
         values_[name] = values[++index];
@@ -61,8 +62,7 @@ class arguments {
   // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  std::string get(const std::string& name,
-                  const std::string& fallback = "") {
+  std::string get(const std::string& name, const std::string& fallback = "") {
     auto found = values_.find(name);
     if (found == values_.end()) return fallback;
     auto result = found->second;
@@ -83,7 +83,7 @@ class arguments {
   int integer(const std::string& name, int fallback, int low, int high) {
     auto text = get(name, std::to_string(fallback));
     require(std::regex_match(text, std::regex("[0-9]+")),
-      "Invalid integer option: " + name);
+            "Invalid integer option: " + name);
     auto number = std::stoll(text);
     require(number >= low && number <= high, "Option out of range: " + name);
     return static_cast<int>(number);
@@ -91,9 +91,7 @@ class arguments {
   // +=========================================================================+
   // | [>] enabled                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  bool enabled(const std::string& name) {
-    return switches_.erase(name) != 0;
-  }
+  bool enabled(const std::string& name) { return switches_.erase(name) != 0; }
   // +=========================================================================+
   // | [>] finish                                                   ( public ) |
   // +-------------------------------------------------------------------------+
@@ -102,6 +100,6 @@ class arguments {
   }
 };
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

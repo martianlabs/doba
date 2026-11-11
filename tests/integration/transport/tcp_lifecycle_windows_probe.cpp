@@ -30,10 +30,10 @@
 #include <string_view>
 #include <utility>
 
+#include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -45,7 +45,15 @@ using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class fault {
-  kNone, kPort, kSocket, kBind, kListen, kAccept, kAssociate, kReceive, kSend
+  kNone,
+  kPort,
+  kSocket,
+  kBind,
+  kListen,
+  kAccept,
+  kAssociate,
+  kReceive,
+  kSend
 };
 // The matching API consumes each failure once.
 std::atomic<fault> armed{fault::kNone};
@@ -98,7 +106,8 @@ int WSAAPI tracked_close(SOCKET socket) {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 SOCKET WSAAPI tracked_socket(int family, int type, int protocol,
-                            LPWSAPROTOCOL_INFOW info, GROUP group, DWORD flags) {
+                             LPWSAPROTOCOL_INFOW info, GROUP group,
+                             DWORD flags) {
   if (consume_fault(fault::kSocket)) {
     WSASetLastError(WSAENOBUFS);
     return INVALID_SOCKET;
@@ -138,14 +147,14 @@ int WSAAPI tracked_listen(SOCKET socket, int backlog) {
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 BOOL PASCAL tracked_accept(SOCKET listener, SOCKET socket, PVOID buffer,
-                          DWORD bytes, DWORD local, DWORD remote,
-                          LPDWORD received, LPOVERLAPPED operation) {
+                           DWORD bytes, DWORD local, DWORD remote,
+                           LPDWORD received, LPOVERLAPPED operation) {
   if (++accepts == 2 && consume_fault(fault::kAccept)) {
     WSASetLastError(WSAENOBUFS);
     return FALSE;
   }
-  return native_accept(listener, socket, buffer, bytes, local, remote,
-                       received, operation);
+  return native_accept(listener, socket, buffer, bytes, local, remote, received,
+                       operation);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -172,9 +181,9 @@ int WSAAPI tracked_ioctl(SOCKET socket, DWORD code, LPVOID input,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
-                          LPDWORD bytes, LPDWORD flags,
-                          LPWSAOVERLAPPED operation,
-                          LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
+                           LPDWORD bytes, LPDWORD flags,
+                           LPWSAOVERLAPPED operation,
+                           LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
   if (consume_fault(fault::kReceive)) {
     WSASetLastError(WSAENOBUFS);
     return SOCKET_ERROR;
@@ -188,9 +197,8 @@ int WSAAPI tracked_receive(SOCKET socket, LPWSABUF buffers, DWORD count,
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int WSAAPI tracked_send(SOCKET socket, LPWSABUF buffers, DWORD count,
-                       LPDWORD bytes, DWORD flags,
-                       LPWSAOVERLAPPED operation,
-                       LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
+                        LPDWORD bytes, DWORD flags, LPWSAOVERLAPPED operation,
+                        LPWSAOVERLAPPED_COMPLETION_ROUTINE completion) {
   if (consume_fault(fault::kSend)) {
     WSASetLastError(WSAENOBUFS);
     return SOCKET_ERROR;
@@ -272,8 +280,11 @@ void check_fault(fault injected) {
   const auto port = client.find_available_port();
   auto factory = [] { return lifecycle_engine{}; };
   tr::tcp<lifecycle_engine, decltype(factory)> transport(
-      {.worker_count = 4, .max_connections = 1, .ip = "127.0.0.1",
-       .port = std::to_string(port)}, factory);
+      {.worker_count = 4,
+       .max_connections = 1,
+       .ip = "127.0.0.1",
+       .port = std::to_string(port)},
+      factory);
   std::atomic<unsigned> connected{0}, disconnected{0};
   transport.set_on_connection([&] { ++connected; });
   transport.set_on_disconnection([&] { ++disconnected; });
@@ -289,7 +300,11 @@ void check_fault(fault injected) {
       injected == fault::kBind || injected == fault::kListen ||
       injected == fault::kAccept) {
     bool failed = false;
-    try { transport.start(); } catch (...) { failed = true; }
+    try {
+      transport.start();
+    } catch (...) {
+      failed = true;
+    }
     DOBA_EXPECT(failed);
     DOBA_EXPECT(armed.load() == fault::kNone);
     if (injected == fault::kAccept) DOBA_EXPECT_EQUAL(accepts.load(), 2u);

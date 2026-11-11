@@ -62,8 +62,8 @@ void exercise() {
     const auto port = client.find_available_port();
     DOBA_EXPECT(port != 0);
     tr::tcp<processing_probe_engine, decltype(factory)> transport(
-        {.worker_count = 1, .ip = "127.0.0.1",
-         .port = std::to_string(port)}, factory);
+        {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)},
+        factory);
     transport.set_on_connection([] {});
     transport.set_on_disconnection([] {});
     transport.start();

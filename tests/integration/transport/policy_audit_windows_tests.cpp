@@ -29,11 +29,12 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "../../helpers/concurrency.h"
 #include "http_server.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"
-#include "../../helpers/concurrency.h"
 
 namespace {
 using namespace martianlabs::doba;
