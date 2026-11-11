@@ -63,7 +63,9 @@ struct echo_engine {
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
-    if (input.size() > 4096) throw std::runtime_error("RX bound exceeded");
+    if (input.size() > input_limit_) {
+      throw std::runtime_error("RX bound exceeded");
+    }
     pending.append(input);
     for (;;) {
       const auto end = pending.find('\n');
@@ -141,6 +143,7 @@ struct echo_engine {
   // +-------------------------------------------------------------------------+
   // Keep partial input until the next receive.
   std::string pending;
+  std::size_t input_limit_{4096};
   // Call these only while handling input.
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
@@ -183,6 +186,10 @@ int main(int count, char** args) {
     if (count > 7) {
       policies.max_buffered_ciphertext_bytes = std::stoull(args[7]);
     }
+    if (count > 8) {
+      policies.encrypted_receive_buffer_capacity = std::stoull(args[8]);
+    }
+    if (count > 9) policies.receive_buffer_capacity = std::stoull(args[9]);
     const std::string_view mode(args[4]);
     if (mode == "admission") {
       policies.worker_count = 1;
@@ -284,7 +291,11 @@ int main(int count, char** args) {
       }
     } else {
       policies.alpn_protocol = "doba-echo";
-      auto factory = [] { return echo_engine{}; };
+      auto factory = [limit = policies.receive_buffer_capacity] {
+        echo_engine engine;
+        engine.input_limit_ = limit;
+        return engine;
+      };
       tr::tls<echo_engine, decltype(factory)> server(policies, factory);
       if (mode == "admission") {
         server.set_on_connection([] {

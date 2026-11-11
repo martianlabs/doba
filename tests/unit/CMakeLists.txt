@@ -39,6 +39,9 @@ add_test(
   COMMAND doba_unit_tests
           --file protocol/http/v11/engine_concurrency_tests.cpp
 )
+add_test(NAME doba_http_policy_tests
+  COMMAND doba_unit_tests --file protocol/http/v11/policy_behavior_tests.cpp)
+set_tests_properties(doba_http_policy_tests PROPERTIES TIMEOUT 30)
 
 add_executable(
   doba_unit_test_helper_probe

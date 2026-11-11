@@ -3451,6 +3451,51 @@ DOBA_TEST("decoder spills a body at the configured memory threshold") {
   }
 }
 
+DOBA_TEST(
+    "custom body memory thresholds spill at exact raw and chunked sizes") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
+  for (const bool chunked : {false, true}) {
+    const std::size_t buffered = chunked ? 13 : 8;
+    for (const auto threshold :
+         {std::size_t{0}, buffered - 1, buffered, buffered + 1}) {
+      const auto before = body_temp_files();
+      policies configuration;
+      configuration.request_body_memory_threshold = threshold;
+      {
+        decoder_input value(configuration);
+        value.append(
+            chunked
+                ? "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: "
+                  "chunked\r\n\r\n"
+                : "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 8\r\n\r\n");
+        DOBA_EXPECT_EQUAL(value.decode().code,
+                          deserialization_status::kMoreBytesNeeded);
+        value.append(chunked ? "8\r\nabcdefgh\r\n" : "abcdefg");
+        DOBA_EXPECT_EQUAL(value.decode().code,
+                          deserialization_status::kMoreBytesNeeded);
+        const auto spill = new_body_temp_file(before);
+        DOBA_EXPECT_EQUAL(!spill.empty(), threshold < buffered);
+        value.append(chunked ? "0\r\n\r\n" : "h");
+        auto result = value.decode();
+        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+        std::array<std::byte, 8> body{};
+        DOBA_EXPECT(result.request.has_value());
+        const auto read = result.request->get_body_reader()->read(body);
+        DOBA_EXPECT(read.complete && !read.has_error);
+        DOBA_EXPECT_EQUAL(read.produced, body.size());
+        DOBA_EXPECT_EQUAL(
+            std::string_view(reinterpret_cast<const char*>(body.data()),
+                             body.size()),
+            "abcdefgh");
+      }
+      DOBA_EXPECT(new_body_temp_file(before).empty());
+    }
+  }
+}
+
 DOBA_TEST("decoder rejects zero head limits") {
   for (const bool request_head : {false, true}) {
     policies configuration;

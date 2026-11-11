@@ -303,6 +303,44 @@ void concurrent_http(tr::tls_policies settings, int version) {
     position = found + 4 + std::char_traits<char>::length(body);
   }
 }
+void ciphertext_boundaries(tr::tls_policies settings, int version) {
+  const std::string payload(4096, 'b');
+  auto factory = [&] {
+    turn_engine engine;
+    engine.input = [](auto&, auto) {
+      return processing_result{true, {}, false};
+    };
+    engine.turn = [&](auto& current, bool) {
+      current.send({}, payload, nullptr);
+      return processing_result{};
+    };
+    return engine;
+  };
+  processing_session<turn_engine> measured(settings, factory, version);
+  measured.write("x");
+  measured.turn(true);
+  const auto encrypted_size = measured.pending();
+  require(encrypted_size > payload.size(), "TLS overhead was not counted");
+  require(measured.read() == payload, "ciphertext control lost plaintext");
+  for (const auto maximum :
+       {encrypted_size - 1, encrypted_size, encrypted_size + 1}) {
+    settings.max_buffered_ciphertext_bytes = maximum;
+    processing_session<turn_engine> session(settings, factory, version);
+    session.write("x");
+    session.turn(true);
+    const bool accepted = maximum >= encrypted_size;
+    require(session.closed() != accepted, "ciphertext boundary not enforced");
+    require(session.pending() == (accepted ? encrypted_size : 0),
+            "failed ciphertext batch escaped or changed size");
+    require(session.read() == (accepted ? payload : std::string{}),
+            "ciphertext boundary changed plaintext");
+    if (!accepted) {
+      session.turn(true);
+      require(session.pending() == 0 && same(session.progress(), {}),
+              "ciphertext overflow revived output or processing");
+    }
+  }
+}
 }  // namespace
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -325,7 +363,8 @@ int main(int count, char** args) {
         errors(policies, version);
         concurrent_http(policies, version);
         peer_close(policies, version);
-        cases += 15;
+        ciphertext_boundaries(policies, version);
+        cases += 19;
       }
     }
     std::cout << "TLS processing cases: " << cases << " PASS\n";

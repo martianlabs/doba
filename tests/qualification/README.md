@@ -7,6 +7,9 @@ tools preserve both the measurements and their limitations.
 The [measured baseline](BASELINE.md) records the local reference and the gaps
 that produced additional fault tests. Remote CI results remain separate.
 
+The [policy inventory](POLICIES.md) maps every public TCP, TLS, HTTP and cache
+policy to behavioral checks, including overload and recovery.
+
 ## Source coverage
 
 `doba_coverage` configures an isolated Clang **Release** build with TLS and

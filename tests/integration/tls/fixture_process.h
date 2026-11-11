@@ -47,10 +47,12 @@ class fixture_process {
   fixture_process(const std::string& binary, const std::string& certificate,
                   const std::string& key, const std::string& mode = "echo",
                   size_t plain = 1048576, size_t bio = 17408,
-                  size_t cipher = 2097152)
+                  size_t cipher = 2097152, size_t encrypted_rx = 17408,
+                  size_t plaintext_rx = 4096)
       : child_({binary, certificate, key, std::to_string(port_), mode,
                 std::to_string(plain), std::to_string(bio),
-                std::to_string(cipher)}) {
+                std::to_string(cipher), std::to_string(encrypted_rx),
+                std::to_string(plaintext_rx)}) {
     child_.expect_output("READY\n");
   }
   fixture_process(const fixture_process&) = delete;

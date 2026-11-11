@@ -94,13 +94,14 @@ foreach(suite IN LISTS suites)
   if(suite STREQUAL "unit")
     set(processing_files task_execution_tests.cpp processing_result_tests.cpp
       engine_concurrency_tests.cpp processing_turn_tests.cpp
-      engine_security_state_tests.cpp)
+      engine_security_state_tests.cpp policy_behavior_tests.cpp)
     if(NOT WIN32)
       list(APPEND processing_files processing_queue_linux_tests.cpp)
     endif()
   else()
     set(processing_files tcp_factory_tests.cpp processing_result_tests.cpp
-      server_stream_integrity_tests.cpp http_test_helper_tests.cpp)
+      server_stream_integrity_tests.cpp http_test_helper_tests.cpp
+      tcp_policy_limits_tests.cpp)
     if(WIN32)
       list(APPEND processing_files tcp_processing_windows_tests.cpp)
     else()
@@ -133,7 +134,7 @@ if(NOT WIN32)
   )
   foreach(required IN ITEMS doba_unit_tests doba_integration_tests
       doba_test_diagnostics_tests doba_stream_integrity_tests
-      doba_qualification_tests
+      doba_qualification_tests doba_http_policy_tests doba_transport_policy_tests
       doba_security_model_tests
       doba_linux_transport_tests doba_linux_accept_error_tests
       doba_linux_processing_tests doba_httparena_tests)
@@ -160,7 +161,7 @@ if(WIN32)
   foreach(required IN ITEMS doba_windows_processing_tests doba_httparena_tests
       doba_network_fault_tests
       doba_test_diagnostics_tests doba_stream_integrity_tests
-      doba_qualification_tests
+      doba_qualification_tests doba_http_policy_tests doba_transport_policy_tests
       doba_security_model_tests)
     if(NOT registered MATCHES "Test +#[0-9]+: ${required}(\n|$)")
       message(FATAL_ERROR "Missing registered Windows test: ${required}")

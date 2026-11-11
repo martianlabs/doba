@@ -48,8 +48,10 @@
 #ifdef _WIN32
 #define _WIN32_DCOM
 #define NOMINMAX
-#include <mswsock.h>
+// clang-format off
 #include <winsock2.h>
+#include <mswsock.h>
+// clang-format on
 #include <ws2tcpip.h>
 #pragma warning(disable : 4996)
 #pragma comment(lib, "Ws2_32.lib")

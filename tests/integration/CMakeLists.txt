@@ -37,6 +37,9 @@ add_test(
   NAME doba_integration_tests
   COMMAND doba_integration_tests
 )
+add_test(NAME doba_transport_policy_tests
+  COMMAND doba_integration_tests --file transport/tcp_policy_limits_tests.cpp)
+set_tests_properties(doba_transport_policy_tests PROPERTIES TIMEOUT 90)
 
 if(WIN32)
   # Measure resources in a separate, warmed-up process.

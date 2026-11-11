@@ -26,6 +26,7 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
+#include <future>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -360,4 +361,71 @@ DOBA_TEST("TCP finite admission rejects before allocation and recovers") {
     }
   } while (!recovered && std::chrono::steady_clock::now() < deadline);
   DOBA_EXPECT(recovered);
+}
+
+DOBA_TEST(
+    "TCP saturated admission preserves live peers and recovers repeatedly") {
+  for (const std::size_t workers : {1U, 4U}) {
+    constexpr std::size_t capacity = 16;
+    auto state = std::make_shared<policy_state>();
+    state->receive_limit = 3;
+    auto factory = [state] {
+      ++state->created;
+      return policy_engine{state, {}, {}};
+    };
+    tcpip_client probe;
+    const auto port = probe.find_available_port();
+    DOBA_EXPECT(port != 0);
+    tr::tcp<policy_engine, decltype(factory)> transport(
+        {.receive_buffer_capacity = 3,
+         .worker_count = workers,
+         .max_buffered_send_bytes = 64,
+         .max_connections = capacity,
+         .ip = "127.0.0.1",
+         .port = std::to_string(port)},
+        factory);
+    std::vector<std::unique_ptr<tcpip_client>> live;
+    martianlabs::doba::tests::scope_exit cleanup([&] {
+      live.clear();
+      transport.stop();
+    });
+    transport.start();
+    for (unsigned cycle = 0; cycle < 8; ++cycle) {
+      const auto deadline = std::chrono::steady_clock::now() + 10s;
+      while (live.size() < capacity &&
+             std::chrono::steady_clock::now() < deadline) {
+        auto peer = std::make_unique<tcpip_client>();
+        if (!peer->connect(port, 500ms) || !peer->send_all("ok", 500ms)) {
+          continue;
+        }
+        const auto output = peer->receive(2, 500ms);
+        if (output && *output == "ok") live.push_back(std::move(peer));
+      }
+      DOBA_EXPECT_EQUAL(live.size(), capacity);
+      const auto created = state->created.load();
+      martianlabs::doba::tests::manual_event begin;
+      std::vector<std::future<bool>> excess;
+      martianlabs::doba::tests::scope_exit release_start([&] { begin.open(); });
+      for (unsigned i = 0; i < 32; ++i) {
+        excess.push_back(std::async(std::launch::async, [&] {
+          begin.wait();
+          tcpip_client peer;
+          return peer.connect(port) && peer.wait_for_close(5s);
+        }));
+      }
+      begin.open();
+      for (std::size_t i = 0; i < live.size(); ++i) {
+        std::string payload(33, static_cast<char>(i + cycle));
+        payload.front() = '\0';
+        DOBA_EXPECT(live[i]->send_all(payload));
+        const auto output = live[i]->receive(payload.size(), 5s);
+        DOBA_EXPECT(output && *output == payload);
+      }
+      for (auto& result : excess) DOBA_EXPECT(result.get());
+      DOBA_EXPECT_EQUAL(state->created.load(), created);
+      DOBA_EXPECT(state->bounded.load());
+      // Free half the slots; the next cycle must refill them without a restart.
+      live.resize(capacity / 2);
+    }
+  }
 }

@@ -39,9 +39,10 @@ namespace martianlabs::doba::tests::tools {
 
 inline std::vector<std::string> required_groups(bool windows, bool tls) {
   std::vector<std::string> groups{
-      "doba_security_model_tests", "doba_engine_concurrency_tests",
+      "doba_security_model_tests",   "doba_engine_concurrency_tests",
       "doba_stream_integrity_tests", "doba_test_diagnostics_tests",
-      "doba_qualification_tests"};
+      "doba_qualification_tests",    "doba_http_policy_tests",
+      "doba_transport_policy_tests"};
   std::vector<std::string> native =
       windows
           ? std::vector<std::string>{"iocp_completion", "windows_lifecycle",

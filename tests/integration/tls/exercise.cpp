@@ -160,6 +160,20 @@ int main(int argc, char** argv) {
     }
     std::cout << "TLS versions, pipeline, source, close, fragmentation, "
                  "verification and isolation: PASS\n";
+    for (const auto encrypted_rx : {1U, 17U}) {
+      fixture_process server(binary, certificate, key, "echo", 4096, 127, 65536,
+                             encrypted_rx, 3);
+      for (const auto version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+        auto connection = connect(server.port(), "doba-echo", version);
+        const std::string text(257, 'r');
+        connection->send(text + '\n');
+        connection->expect("echo:" + text + '\n');
+        connection->send("source-close\n");
+        connection->expect("pre:body:tail");
+        require(connection->receive(1).empty(), "Small RX lost TLS close");
+      }
+      server.stop();
+    }
     {
       fixture_process server(binary, certificate, key, "echo", 4096, 127);
       for (const auto& [command, expected] :
