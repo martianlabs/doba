@@ -1,0 +1,115 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <string>
+#include <string_view>
+
+#include "protocol/http/common/headers/last_modified.h"
+#include "test_helper.h"
+
+namespace {
+using martianlabs::doba::protocol::http::headers::last_modified;
+}  // namespace
+
+// +===========================================================================+
+// | [>] check accepts valid values                              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts valid values") {
+  constexpr std::string_view cases[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT",
+      "Monday, 06-Nov-94 08:49:37 GMT",
+      "Mon Nov  6 08:49:37 1994",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(last_modified::check(source));
+    const std::string padded = "x" + std::string(source) + "y";
+    DOBA_EXPECT(last_modified::check(
+        std::string_view(padded).substr(1, source.size())));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects invalid values                            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects invalid values") {
+  constexpr std::string_view cases[] = {
+      "",
+      "0",
+      "Sun, 06 Nov 1994 08:49:37 UTC",
+      "Sun, 6 Nov 1994 08:49:37 GMT",
+      "Sun, 06 Nov 1994 08:49:37 GMT ",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(!last_modified::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check handles string view boundaries                    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check handles string view boundaries") {
+  DOBA_EXPECT(!last_modified::check(std::string_view{"\0", 1}));
+  DOBA_EXPECT(!last_modified::check(std::string_view{"a\0", 2}));
+  DOBA_EXPECT(!last_modified::check(std::string_view{"a\r", 2}));
+  DOBA_EXPECT(!last_modified::check(std::string_view{"a\n", 2}));
+  DOBA_EXPECT(!last_modified::check(std::string_view{"\x80", 1}));
+  constexpr std::string_view seed = "Sun, 06 Nov 1994 08:49:37 GMT";
+  const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
+  for (std::size_t position : positions) {
+    for (char control : {'\0', '\r', '\n', '\x7f'}) {
+      std::string source(seed);
+      source[position] = control;
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position) +
+          ", byte " + std::to_string(static_cast<unsigned char>(control)));
+      DOBA_EXPECT(!last_modified::check(source));
+    }
+  }
+  std::string padded(seed);
+  padded.push_back('\0');
+  padded += "suffix";
+  DOBA_EXPECT(
+      last_modified::check(std::string_view(padded.data(), seed.size())));
+}
+
+// +===========================================================================+
+// | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects incomplete and corrupted date fields") {
+  constexpr std::string_view seeds[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT",
+      "Sunday, 06-Nov-94 08:49:37 GMT",
+      "Sun Nov  6 08:49:37 1994",
+  };
+  for (const auto seed : seeds) {
+    for (std::size_t position = 0; position < seed.size(); ++position) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position));
+      DOBA_EXPECT(!last_modified::check(seed.substr(0, position)));
+      std::string source(seed);
+      source[position] = '!';
+      DOBA_EXPECT(!last_modified::check(source));
+    }
+  }
+}

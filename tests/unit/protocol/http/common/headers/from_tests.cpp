@@ -1,0 +1,133 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <string>
+#include <string_view>
+
+#include "protocol/http/common/headers/from.h"
+#include "test_helper.h"
+
+namespace {
+using martianlabs::doba::protocol::http::headers::from;
+}  // namespace
+
+// +===========================================================================+
+// | [>] check accepts valid values                              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts valid values") {
+  constexpr std::string_view cases[] = {
+      "user@example.com",  "first.last@example.com", "user+tag@example.com",
+      "user@[192.0.2.1]",  "\"quoted\"@example.com", "user @example.com",
+      "user@example.com ", "<user@example.com>",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(from::check(source));
+    const std::string padded = "x" + std::string(source) + "y";
+    DOBA_EXPECT(from::check(std::string_view(padded).substr(1, source.size())));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects invalid values                            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects invalid values") {
+  constexpr std::string_view cases[] = {
+      "",
+      " ",
+      "user",
+      "@example.com",
+      "user@",
+      "user@example .com",
+      "user@@example.com",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(!from::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check handles string view boundaries                    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check handles string view boundaries") {
+  DOBA_EXPECT(!from::check(std::string_view{"\0", 1}));
+  DOBA_EXPECT(!from::check(std::string_view{"a\0", 2}));
+  DOBA_EXPECT(!from::check(std::string_view{"a\r", 2}));
+  DOBA_EXPECT(!from::check(std::string_view{"a\n", 2}));
+  DOBA_EXPECT(!from::check(std::string_view{"\x80", 1}));
+  constexpr std::string_view seed = "user@example.com";
+  const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
+  for (std::size_t position : positions) {
+    for (char control : {'\0', '\r', '\n', '\x7f'}) {
+      std::string source(seed);
+      source[position] = control;
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position) +
+          ", byte " + std::to_string(static_cast<unsigned char>(control)));
+      DOBA_EXPECT(!from::check(source));
+    }
+  }
+  std::string padded(seed);
+  padded.push_back('\0');
+  padded += "suffix";
+  DOBA_EXPECT(from::check(std::string_view(padded.data(), seed.size())));
+}
+
+// +===========================================================================+
+// | [>] check accepts mailbox alternatives                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts mailbox alternatives") {
+  constexpr std::string_view cases[] = {
+      "Display Name <first.last@example.com>",
+      "\"Display, Name\" <\"a b\"@[127.0.0.1]>",
+      "(before) user(comment)@(domain)example.com (after)",
+      "user@[IPv6:2001:db8::1]",
+      "\"a\\\"b\"@example.com",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(from::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects mailbox alternatives                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects mailbox alternatives") {
+  constexpr std::string_view cases[] = {
+      ".user@example.com",
+      "user.@example.com",
+      "a..b@example.com",
+      "user@example..com",
+      "<user@example.com",
+      "user@example.com>",
+      "user@[unterminated",
+      "user@example.com,other@example.com",
+      "Name <user@example.com> junk",
+      "(unterminated user@example.com",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!from::check(source));
+  }
+}

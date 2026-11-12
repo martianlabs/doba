@@ -1,0 +1,106 @@
+<a id="server"></a>
+<a href="../../resources/docs/reference/server/title.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/server/title.svg" alt="server">
+</a>
+<a href="../../resources/docs/reference/server/title-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/server/title-dark.svg" alt="server">
+</a>
+
+**Header:** [include/server.h](../../include/server.h)
+
+Server class that manages the lifecycle of a transport server and its associated protocol engine.
+
+The wrapper is noncopyable and nonmovable. Construction retains the policy
+and factory; it constructs the transport lazily on the first `start()`.
+It keeps that transport across stop/start cycles. Destruction calls `stop()`;
+shutdown must therefore be safe for the selected transport at destruction time.
+Lifecycle hooks run under the wrapper's mutex and must not reenter its lifecycle.
+
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
+
+[server](#type-server)
+
+### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> server
+
+[start](#method-start) ·
+[stop](#method-stop)
+
+<a id="api"></a>
+<a href="../../resources/docs/reference/api.svg#gh-light-mode-only">
+  <img src="../../resources/docs/reference/api.svg" alt="API">
+</a>
+<a href="../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
+  <img src="../../resources/docs/reference/api-dark.svg" alt="API">
+</a>
+
+<a id="type-server"></a>
+
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> server
+
+**TYPE** · *doba*
+
+**Declaration synopsis:**
+
+```cpp
+template <protocol::contracts::engine ENty, typename TRty>
+class server { ... };
+```
+
+Server class that manages the lifecycle of a transport server and its associated protocol engine.
+
+**Template parameters:**
+
+- **ENty:** `protocol::contracts::engine ENty`.
+- **TRty:** `typename TRty`.
+
+**Source:** [include/server.h](../../include/server.h)
+
+<a id="method-start"></a>
+
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
+
+**METHOD** · *server*
+
+```cpp
+void start();
+```
+
+Starts the transport and begins accepting connections. A second call while running has no effect.
+
+**Returns:** No value (`void`).
+
+**Errors:** Throws `std::runtime_error` if transport construction failed on an earlier attempt. Construction, callbacks, and transport startup can propagate errors.
+
+A transport-constructor exception consumes the stored factory arguments: that
+wrapper cannot retry construction. A failure from `transport.start()` leaves
+the constructed transport available for a later attempt, subject to its own
+recovery contract. A started-hook exception happens after the wrapper has
+entered its running state.
+
+**Source:** [include/server.h](../../include/server.h)
+
+<a id="method-stop"></a>
+
+## <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> stop
+
+**METHOD** · *server*
+
+```cpp
+void stop();
+```
+
+Calls the selected transport's stop operation. With bundled TCP, the caller is
+a sequential external owner outside worker callbacks. Linux cancels outstanding
+TX after the active call; Windows drains accepted output and real I/O before
+joining workers. Neither waits for application tasks or promises a stop timeout.
+A call while stopped has no effect. See the
+[TCP lifecycle contract](transport/tcp.md#runtime-contract).
+
+For a custom transport exposing `quiesce()`, the wrapper calls that before its
+stopping hook and calls `stop()` afterward. Bundled TCP uses the direct `stop()`
+path. An exception before the final stopped state leaves the wrapper marked
+running; destructors are not an exception-recovery interface.
+
+**Returns:** No value (`void`).
+
+**Source:** [include/server.h](../../include/server.h)

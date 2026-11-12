@@ -1,0 +1,392 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_protocol_http_router_h
+#define martianlabs_doba_protocol_http_router_h
+
+#include <functional>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "protocol/http/common/auth/authentication_result.h"
+#include "protocol/http/common/router_controller_routes.h"
+#include "protocol/http/common/router_handler_parametrized_async.h"
+#include "protocol/http/common/router_handler_signature.h"
+#include "protocol/http/common/router_handler_static.h"
+#include "protocol/http/common/router_handler_static_async.h"
+#include "protocol/http/common/router_match_result.h"
+
+namespace martianlabs::doba::protocol::http {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router                                                      ( class ) |
+// +---------------------------------------------------------------------------+
+// | This class holds for the http 1.1 router implementation.                  |
+// +---------------------------------------------------------------------------+
+// | Template parameters:                                                      |
+// | RQty - request being used                                                 |
+// | RSty - response being used                                                |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename RQty, typename RSty>
+class router {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  router() = default;
+  router(const router&) = delete;
+  router(router&&) noexcept = delete;
+  ~router() = default;
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  router& operator=(const router&) = delete;
+  router& operator=(router&&) noexcept = delete;
+  // +=========================================================================+
+  // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds a route to the router with the specified HTTP method, route path,  |
+  // | and handler.                                                            |
+  // +-------------------------------------------------------------------------+
+  template <typename Hty>
+    requires detail::router_handler_lambda<Hty>
+  void add(std::string_view method, std::string_view route, Hty handler) {
+    add(method, route, std::move(handler), {});
+  }
+  // +=========================================================================+
+  // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  template <typename Hty>
+    requires detail::router_handler_lambda<Hty>
+  void add(
+      std::string_view method, std::string_view route, Hty handler,
+      std::function<auth::authentication_result(const RQty&)> authenticate) {
+    using signature = detail::router_handler_signature<
+        decltype(&std::decay_t<Hty>::operator())>;
+    signature::template check<RQty, RSty>();
+    constexpr bool asynchronous =
+        std::same_as<typename signature::return_type, common::task<void>>;
+    constexpr std::size_t handler_parameter_count = signature::parameter_count;
+    const std::size_t wildcard_position = route.find('*');
+    const bool is_wildcard = wildcard_position != std::string_view::npos &&
+                             wildcard_position == route.size() - 1 &&
+                             wildcard_position > 0 &&
+                             route[wildcard_position - 1] == '/';
+    if (wildcard_position != std::string_view::npos && !is_wildcard) {
+      throw std::invalid_argument(
+          "The wildcard must be the final route segment");
+    }
+    const std::size_t parameter_count = count_parameters(route);
+    if (is_wildcard) {
+      if (parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route cannot contain route parameters");
+      }
+      if constexpr (handler_parameter_count != 0) {
+        throw std::invalid_argument(
+            "A wildcard route handler cannot have typed parameters");
+      } else {
+        route_data data{
+            std::string(route.substr(0, wildcard_position)),
+            handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
+                         std::move(handler)),
+            std::move(authenticate)};
+        for (auto& [wildcard_method, handlers] : wildcard_handlers_) {
+          if (wildcard_method == method) {
+            handlers.push_back(std::move(data));
+            return;
+          }
+        }
+        wildcard_handlers_.push_back({std::string(method), {std::move(data)}});
+      }
+      return;
+    }
+    if constexpr (handler_parameter_count == 0) {
+      if (parameter_count != 0) {
+        throw std::invalid_argument(
+            "The route parameters and handler arguments do not match");
+      }
+      route_data data{std::string(route),
+                      handler_type(std::in_place_index < asynchronous ? 1 : 0 >,
+                                   std::move(handler)),
+                      std::move(authenticate)};
+      for (auto& [static_method, handlers] : handlers_) {
+        if (static_method == method) {
+          handlers.push_back(std::move(data));
+          return;
+        }
+      }
+      handlers_.push_back({std::string(method), {std::move(data)}});
+    } else {
+      if (parameter_count != handler_parameter_count) {
+        throw std::invalid_argument(
+            "The route parameters and handler arguments do not match");
+      }
+      parametrized_handler_type data = [&]() -> parametrized_handler_type {
+        if constexpr (asynchronous) {
+          return signature::template make_parametrized_async<RQty, RSty>(
+              route, std::move(handler));
+        } else {
+          return signature::template make_parametrized<RQty, RSty>(
+              route, std::move(handler));
+        }
+      }();
+      for (auto& [parametrized_method, handlers] : parametrized_handlers_) {
+        if (parametrized_method == method) {
+          handlers.push_back({std::move(data), std::move(authenticate)});
+          return;
+        }
+      }
+      parametrized_handlers_.push_back(
+          {std::string(method), {{std::move(data), std::move(authenticate)}}});
+    }
+  }
+  // +=========================================================================+
+  // | [>] add_controller                                           ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds a controller to the router. The controller must implement          |
+  // | the 'register_routes' method to register its routes with the router.    |
+  // +-------------------------------------------------------------------------+
+  template <typename CTty, typename... Args>
+  void add_controller(Args&&... args) {
+    auto instance = std::make_shared<CTty>(std::forward<Args>(args)...);
+    std::vector<std::size_t> static_sizes;
+    std::vector<std::size_t> parametrized_sizes;
+    std::vector<std::size_t> wildcard_sizes;
+    for (const auto& entry : handlers_) {
+      static_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : parametrized_handlers_) {
+      parametrized_sizes.push_back(entry.second.size());
+    }
+    for (const auto& entry : wildcard_handlers_) {
+      wildcard_sizes.push_back(entry.second.size());
+    }
+    detail::router_controller_routes<RQty, RSty, CTty> routes(instance);
+    try {
+      instance->register_routes(routes);
+      if (routes.empty()) {
+        throw std::invalid_argument("The controller must register a route");
+      }
+      routes.apply(*this);
+    } catch (...) {
+      restore_routes(handlers_, static_sizes);
+      restore_routes(parametrized_handlers_, parametrized_sizes);
+      restore_routes(wildcard_handlers_, wildcard_sizes);
+      throw;
+    }
+  }
+  // +=========================================================================+
+  // | [>] match                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Matches the given HTTP method and path against the registered routes.   |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]]
+  router_match_result<RQty, RSty> match(std::string_view method,
+                                        std::string_view path) const {
+    for (const auto& [static_method, handlers] : handlers_) {
+      if (static_method != method) continue;
+      for (const auto& route : handlers) {
+        if (route.path != path) continue;
+        if (auto handler =
+                std::get_if<detail::router_handler_static<RQty, RSty>>(
+                    &route.handler)) {
+          return {handler, nullptr, nullptr, nullptr, &route.authenticate};
+        }
+        return {nullptr, nullptr,
+                std::get_if<detail::router_handler_static_async<RQty, RSty>>(
+                    &route.handler),
+                nullptr, &route.authenticate};
+      }
+    }
+    for (const auto& [parametrized_method, handlers] : parametrized_handlers_) {
+      if (parametrized_method != method) continue;
+      for (const auto& handler : handlers) {
+        const bool matches = std::visit(
+            [path](const auto& entry) { return entry.matches(path); },
+            handler.handler);
+        if (!matches) continue;
+        if (auto selected =
+                std::get_if<detail::router_handler_parametrized<RQty, RSty>>(
+                    &handler.handler)) {
+          return {nullptr, selected, nullptr, nullptr, &handler.authenticate};
+        }
+        return {
+            nullptr, nullptr, nullptr,
+            std::get_if<detail::router_handler_parametrized_async<RQty, RSty>>(
+                &handler.handler),
+            &handler.authenticate};
+      }
+    }
+    for (const auto& [wildcard_method, handlers] : wildcard_handlers_) {
+      if (wildcard_method != method) continue;
+      for (const auto& route : handlers) {
+        if (!path.starts_with(route.path)) continue;
+        if (auto handler =
+                std::get_if<detail::router_handler_static<RQty, RSty>>(
+                    &route.handler)) {
+          return {handler, nullptr, nullptr, nullptr, &route.authenticate};
+        }
+        return {nullptr, nullptr,
+                std::get_if<detail::router_handler_static_async<RQty, RSty>>(
+                    &route.handler),
+                nullptr, &route.authenticate};
+      }
+    }
+    return {};
+  }
+  // +=========================================================================+
+  // | [>] allowed_methods                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Returns a comma-separated string of allowed HTTP methods for the given  |
+  // | path.                                                                   |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]]
+  std::string allowed_methods(std::string_view path) const {
+    std::vector<std::string_view> allowed;
+    for (const auto& [method, handlers] : handlers_) {
+      for (const auto& route : handlers) {
+        if (route.path != path) continue;
+        allowed.push_back(method);
+        break;
+      }
+    }
+    for (const auto& [method, handlers] : parametrized_handlers_) {
+      bool found = false;
+      for (const auto allowed_method : allowed) {
+        if (allowed_method == method) {
+          found = true;
+          break;
+        }
+      }
+      if (found) continue;
+      for (const auto& handler : handlers) {
+        const bool matches = std::visit(
+            [path](const auto& entry) { return entry.matches(path); },
+            handler.handler);
+        if (!matches) continue;
+        allowed.push_back(method);
+        break;
+      }
+    }
+    for (const auto& [method, handlers] : wildcard_handlers_) {
+      bool found = false;
+      for (const auto allowed_method : allowed) {
+        if (allowed_method == method) {
+          found = true;
+          break;
+        }
+      }
+      if (found) continue;
+      for (const auto& route : handlers) {
+        if (!path.starts_with(route.path)) continue;
+        allowed.push_back(method);
+        break;
+      }
+    }
+    std::string methods;
+    for (const auto method : allowed) {
+      if (!methods.empty()) methods += ", ";
+      methods += method;
+    }
+    return methods;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  using handler_type =
+      std::variant<detail::router_handler_static<RQty, RSty>,
+                   detail::router_handler_static_async<RQty, RSty>>;
+  using parametrized_handler_type =
+      std::variant<detail::router_handler_parametrized<RQty, RSty>,
+                   detail::router_handler_parametrized_async<RQty, RSty>>;
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  struct route_data {
+    std::string path;
+    handler_type handler;
+    std::function<auth::authentication_result(const RQty&)> authenticate;
+  };
+  struct parametrized_route_data {
+    parametrized_handler_type handler;
+    std::function<auth::authentication_result(const RQty&)> authenticate;
+  };
+  // +=========================================================================+
+  // | [>] USINGs                                                  ( private ) |
+  // +-------------------------------------------------------------------------+
+  using handler_pair = std::pair<std::string, std::vector<route_data>>;
+  using parametrized_handler_pair =
+      std::pair<std::string, std::vector<parametrized_route_data>>;
+  // +=========================================================================+
+  // | [>] restore_routes                                          ( private ) |
+  // +-------------------------------------------------------------------------+
+  template <typename Tty>
+  static void restore_routes(std::vector<Tty>& entries,
+                             const std::vector<std::size_t>& sizes) {
+    while (entries.size() > sizes.size()) entries.pop_back();
+    for (std::size_t i = 0; i < sizes.size(); i++) {
+      while (entries[i].second.size() > sizes[i]) {
+        entries[i].second.pop_back();
+      }
+    }
+  }
+  // +=========================================================================+
+  // | [>] count_parameters                                        ( private ) |
+  // +-------------------------------------------------------------------------+
+  static std::size_t count_parameters(std::string_view route) {
+    std::size_t count = 0;
+    std::size_t pos = 0;
+    for (;;) {
+      const std::size_t end = route.find('/', pos);
+      const std::string_view segment = route.substr(
+          pos, end == std::string_view::npos ? route.size() - pos : end - pos);
+      if (!segment.empty() && segment.front() == ':') {
+        if (segment.size() == 1) {
+          throw std::invalid_argument("A route parameter must have a name");
+        }
+        count++;
+      }
+      if (end == std::string_view::npos) return count;
+      pos = end + 1;
+    }
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  std::vector<handler_pair> handlers_;
+  std::vector<parametrized_handler_pair> parametrized_handlers_;
+  std::vector<handler_pair> wildcard_handlers_;
+};
+}  // namespace martianlabs::doba::protocol::http
+
+#endif

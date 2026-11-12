@@ -1,0 +1,433 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <chrono>
+#include <functional>
+#include <future>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+
+#include "http_server.h"
+#include "test_helper.h"
+
+namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                     ( public ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
+using martianlabs::doba::protocol::http::router;
+namespace http = martianlabs::doba::protocol::http::v11;
+using martianlabs::doba::common::reader;
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] memory_transport                                           ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+template <typename ENty, typename FNty>
+struct memory_transport {
+  // +=========================================================================+
+  // | [>] USINGs                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  using policies_type = bool;
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  memory_transport(bool fail, FNty factory)
+      : fail(fail), factory(std::move(factory)) {
+    instance = this;
+  }
+  ~memory_transport() { instance = nullptr; }
+  // +=========================================================================+
+  // | [>] set_on_connection                                        ( public ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_connection(std::function<void()>) {}
+  // +=========================================================================+
+  // | [>] set_on_disconnection                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  void set_on_disconnection(std::function<void()>) {}
+  // +=========================================================================+
+  // | [>] start                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void start() {
+    if (on_start) on_start();
+    if (fail) throw std::runtime_error("start failed");
+    connection.reset(new ENty(factory()));
+    connection->set_on_send([this](std::string_view head, std::string_view body,
+                                   std::unique_ptr<reader> source) {
+      bytes.append(head);
+      bytes.append(body);
+      if (source) source->read_all(bytes);
+    });
+    connection->set_on_close([this]() { closed = true; });
+    closed = false;
+  }
+  // +=========================================================================+
+  // | [>] stop                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  void stop() { connection.reset(); }
+  // +=========================================================================+
+  // | [>] receive                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::string receive(std::string_view wire) {
+    bytes.clear();
+    connection->on_bytes_received(wire);
+    return bytes;
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool fail;
+  FNty factory;
+  std::unique_ptr<ENty> connection;
+  std::string bytes;
+  bool closed{false};
+  static inline std::function<void()> on_start;
+  static inline memory_transport* instance = nullptr;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] usings                                                     ( public ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] send_request                                             ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+std::string send_request(std::string_view method = "GET",
+                         std::string_view path = "/") {
+  return memory_transport<http::engine<http::request, http::response>,
+                          http::detail::engine_factory<
+                              http::engine<http::request, http::response>,
+                              router<http::request, http::response>>>::instance
+      ->receive(std::string(method) + " " + std::string(path) +
+                " HTTP/1.1\r\nHost: " +
+                std::string(method == "CONNECT" ? path : "example.com") +
+                "\r\n\r\n");
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] controller                                                 ( struct ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct controller {
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  explicit controller(int& calls) : calls(calls) {}
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  template <typename ROty>
+  void register_routes(ROty& routes) {
+    routes.add("GET", "/", &controller::get);
+  }
+  // +=========================================================================+
+  // | [>] get                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  void get(const http::request&, http::response& res) {
+    calls++;
+    res.ok_200();
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  int& calls;
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] server is neither copyable nor movable                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server is neither copyable nor movable") {
+  static_assert(
+      !std::is_copy_constructible_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_move_constructible_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_copy_assignable_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  static_assert(
+      !std::is_move_assignable_v<http_server<
+          http::request, http::response, router<http::request, http::response>,
+          http::engine<http::request, http::response>, memory_transport>>);
+  DOBA_EXPECT(true);
+}
+
+// +===========================================================================+
+// | [>] HTTP server builds transport after route registration   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP server builds transport after route registration") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  DOBA_EXPECT_EQUAL(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance),
+      nullptr);
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+  });
+  value.start();
+  DOBA_EXPECT(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance !=
+       nullptr));
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
+}
+
+// +===========================================================================+
+// | [>] lifecycle routing and callbacks cover server behavior   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("lifecycle routing and callbacks cover server behavior") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  DOBA_EXPECT_EQUAL(
+      &value.add_route("GET", "/",
+                       [](const http::request&, http::response& res) {
+                         res.ok_200();
+                         res.set_body("body");
+                         return;
+                       }),
+      &value);
+  value.start();
+  DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
+  DOBA_EXPECT(send_request("GET", "/absent").starts_with("HTTP/1.1 404 "));
+  const auto wrong_method = send_request("POST");
+  DOBA_EXPECT(wrong_method.starts_with("HTTP/1.1 405 "));
+  DOBA_EXPECT(wrong_method.find("Allow: GET\r\n") != std::string::npos);
+  DOBA_EXPECT(send_request("OPTIONS", "*").starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT(
+      send_request("CONNECT", "example.com:443").starts_with("HTTP/1.1 501 "));
+  value.stop();
+  value.start();
+  DOBA_EXPECT(send_request().ends_with("\r\n\r\nbody"));
+}
+
+// +===========================================================================+
+// | [>] server suppresses error bodies for known HEAD           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server suppresses error bodies only for known HEAD requests") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  value.start();
+  const auto bytes =
+      memory_transport<http::engine<http::request, http::response>,
+                       http::detail::engine_factory<
+                           http::engine<http::request, http::response>,
+                           router<http::request, http::response>>>::instance
+          ->receive(
+              "HEAD / HTTP/1.1\r\nHost: example.com\r\n"
+              "Content-Length: invalid\r\n\r\n");
+  DOBA_EXPECT(bytes.starts_with("HTTP/1.1 400 "));
+  DOBA_EXPECT(bytes.ends_with("\r\n\r\n"));
+  DOBA_EXPECT(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance
+           ->closed));
+}
+
+// +===========================================================================+
+// | [>] failed starts release the date server                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("failed starts release the date server") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value(true);
+  bool failed = false;
+  try {
+    value.start();
+  } catch (const std::runtime_error&) {
+    failed = true;
+  }
+  DOBA_EXPECT(failed);
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+  });
+  memory_transport<http::engine<http::request, http::response>,
+                   http::detail::engine_factory<
+                       http::engine<http::request, http::response>,
+                       router<http::request, http::response>>>::instance->fail =
+      false;
+  value.start();
+  const auto bytes = send_request();
+  DOBA_EXPECT(bytes.starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT(bytes.find("Date: ") != std::string::npos);
+}
+
+// +===========================================================================+
+// | [>] server accepts new connections after handler failure    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server accepts new connections after handler failure") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  value.add_route("GET", "/fail",
+                  [](const http::request&, http::response&) -> void {
+                    throw std::runtime_error("handler failed");
+                  });
+  value.add_route("GET", "/", [](const http::request&, http::response& res) {
+    res.ok_200();
+  });
+  value.start();
+  DOBA_EXPECT(send_request("GET", "/fail").starts_with("HTTP/1.1 500 "));
+  DOBA_EXPECT(
+      (memory_transport<http::engine<http::request, http::response>,
+                        http::detail::engine_factory<
+                            http::engine<http::request, http::response>,
+                            router<http::request, http::response>>>::instance
+           ->closed));
+  DOBA_EXPECT(send_request().empty());
+  memory_transport<http::engine<http::request, http::response>,
+                   http::detail::engine_factory<
+                       http::engine<http::request, http::response>,
+                       router<http::request, http::response>>>::instance
+      ->stop();
+  memory_transport<http::engine<http::request, http::response>,
+                   http::detail::engine_factory<
+                       http::engine<http::request, http::response>,
+                       router<http::request, http::response>>>::instance
+      ->start();
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
+}
+
+// +===========================================================================+
+// | [>] controller lifetime and live registration               ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server retains controllers and rejects live registration") {
+  int calls = 0;
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  value.add_controller<controller>(calls);
+  value.start();
+  DOBA_EXPECT(send_request().starts_with("HTTP/1.1 200 "));
+  DOBA_EXPECT_EQUAL(calls, 1);
+  bool rejected = false;
+  try {
+    value.add_controller<controller>(calls);
+  } catch (const std::runtime_error&) {
+    rejected = true;
+  }
+  DOBA_EXPECT(rejected);
+  value.stop();
+  value.start();
+  send_request();
+  DOBA_EXPECT_EQUAL(calls, 2);
+}
+
+// +===========================================================================+
+// | [>] server rejects route registration during startup        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server rejects route registration during startup") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  std::promise<void> entered;
+  std::promise<void> resume;
+  auto entered_signal = entered.get_future();
+  auto resume_signal = resume.get_future().share();
+  memory_transport<http::engine<http::request, http::response>,
+                   http::detail::engine_factory<
+                       http::engine<http::request, http::response>,
+                       router<http::request, http::response>>>::on_start =
+      [&]() {
+        entered.set_value();
+        resume_signal.wait();
+      };
+  auto starter = std::async(std::launch::async, [&]() { value.start(); });
+  entered_signal.wait();
+  auto registration = std::async(std::launch::async, [&]() {
+    try {
+      value.add_route(
+          "GET", "/late",
+          [](const http::request&, http::response& res) { res.ok_200(); });
+    } catch (const std::runtime_error& error) {
+      return std::string_view(error.what()) ==
+             "Cannot add route when the server is running";
+    }
+    return false;
+  });
+  const bool rejected_during_start =
+      registration.wait_for(std::chrono::seconds(3)) ==
+      std::future_status::ready;
+  resume.set_value();
+  starter.get();
+  const bool rejected = registration.get();
+  memory_transport<http::engine<http::request, http::response>,
+                   http::detail::engine_factory<
+                       http::engine<http::request, http::response>,
+                       router<http::request, http::response>>>::on_start = {};
+  value.stop();
+  DOBA_EXPECT(rejected_during_start);
+  DOBA_EXPECT(rejected);
+}
+
+// +===========================================================================+
+// | [>] server accepts route registration after stop            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("server accepts route registration after stop") {
+  http_server<http::request, http::response,
+              router<http::request, http::response>,
+              http::engine<http::request, http::response>, memory_transport>
+      value;
+  value.start();
+  value.stop();
+  value.add_route("GET", "/late",
+                  [](const http::request&, http::response& res) {
+                    res.ok_200().set_body("late");
+                  });
+  value.start();
+  DOBA_EXPECT(send_request("GET", "/late").ends_with("\r\n\r\nlate"));
+}

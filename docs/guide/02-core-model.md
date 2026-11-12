@@ -1,0 +1,248 @@
+<a name="core-model"></a>
+<h1>
+  <a href="../../resources/docs/guide/h1-core-model.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h1-core-model.svg" alt="Core model">
+  </a>
+  <a href="../../resources/docs/guide/h1-core-model-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-core-model-dark.svg" alt="Core model">
+  </a>
+</h1>
+
+doba has two pieces that work together without knowing each other's internals:
+a **protocol engine** and a **transport**. Swap one, keep the other. That is
+how the same TCP transport can carry a new protocol, or the same HTTP/1.1
+engine can run without a network socket.
+
+<a name="protocol-plus-transport"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-protocol-plus-transport.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-plus-transport.svg" alt="Protocol plus transport">
+  </a>
+  <a href="../../resources/docs/guide/h2-protocol-plus-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-plus-transport-dark.svg" alt="Protocol plus transport">
+  </a>
+</h2>
+
+The **transport** handles connections and moves bytes. It passes incoming
+bytes to an engine and sends the output that engine produces. The
+**protocol engine** decides what those bytes mean: it consumes input, submits
+output, and can ask to close the connection.
+
+For TCP, each connection gets its own engine from a factory. Input and
+processing calls are serialized per connection. Send and close callbacks run
+only inside those calls, on the calling thread. The transport owns submitted
+output while it sends it. The required
+methods on each side are checked by C++ concepts, so a missing piece shows up
+at compile time.
+
+<a name="the-default-pair"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-the-default-pair.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-the-default-pair.svg" alt="The default pair">
+  </a>
+  <a href="../../resources/docs/guide/h2-the-default-pair-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-the-default-pair-dark.svg" alt="The default pair">
+  </a>
+</h2>
+
+You already used this pairing in the
+[hello_world example](../../examples/http/v11/hello_world/README.md). Its
+[source](../../examples/http/v11/hello_world/main.cpp) uses this line:
+
+```cpp
+http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
+```
+
+The empty template argument list picks the HTTP/1.1 engine and TCP transport.
+**http_server** adds routes to the [core server](../reference/server.md), which
+joins an engine and a transport without requiring HTTP types. You register
+routes and start the listener. You write the handler; the engine speaks HTTP,
+and TCP moves the bytes.
+
+<a name="protocol-contract"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-protocol-contract.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-contract.svg" alt="Protocol contract">
+  </a>
+  <a href="../../resources/docs/guide/h2-protocol-contract-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-protocol-contract-dark.svg" alt="Protocol contract">
+  </a>
+</h2>
+
+A protocol engine understands the bytes for one connection. The
+[engine contract](../../include/protocol/contracts.h) is a C++ concept that
+checks five pieces:
+
+- **Policies.** *policies_type* names the engine's policy type. It can be
+  empty when the engine needs no options.
+- **Output.** *set_on_send* receives a callback from the transport. The engine
+  calls it when it has bytes to send.
+- **Closure.** *set_on_close* receives a callback the engine can use to ask
+  the transport to close the connection.
+- **Input.** *on_bytes_received* gets a *std::string_view* of the newly
+  received bytes, immutable throughout the call. It returns processing_result.
+  The engine
+  must process or copy those bytes before returning; the transport reuses
+  the buffer on the next read.
+
+- **Processing.** *on_processing_turn(output_idle)* runs eligible work on a
+  serialized transport turn and returns the next processing_result snapshot.
+
+The concept checks these four operations:
+
+```cpp
+{ engine.set_on_send(std::move(output)) } -> std::same_as<void>;
+{ engine.set_on_close(std::move(close)) } -> std::same_as<void>;
+{ engine.on_bytes_received(input) } ->
+    std::same_as<protocol::processing_result>;
+{ engine.on_processing_turn(output_idle) } ->
+    std::same_as<protocol::processing_result>;
+```
+
+The [send delegate](../../include/protocol/contracts.h) is that output
+callback. The engine gives it three things:
+
+- **Head and body:** two *std::string_view* chunks to send in that order.
+- **Source:** an optional *[reader](../../include/common/reader.h)* for more
+  body bytes. The transport takes ownership of the reader.
+
+Its type is:
+
+```cpp
+using send_delegate = std::function<void(std::string_view, std::string_view,
+                                         std::unique_ptr<common::reader>)>;
+```
+
+Bundled TCP copies accepted head/body bytes before send returns and owns the
+transferred reader. The two views can then be reused; borrowed reader backing
+must remain valid until its reader is released. One terminal reader is allowed;
+a second reader or later nonempty output while it is pending closes the
+connection. Empty submissions without a reader are no-ops.
+
+The transport needs a fresh engine for each connection. An **engine factory**
+is the callable you give it to create that engine. TCP calls the factory when
+a connection opens, so you choose how to build the engine without putting
+that setup in TCP. The [factory contract](../../include/protocol/contracts.h)
+requires a move-constructible callable that takes no arguments even when const
+and returns the engine type.
+
+Input and processing turns are serialized per connection and stop when closing
+begins. The engine stores its registered callbacks but invokes send/close only
+inside the current input or processing turn, on that calling thread. They must not escape for delayed or
+cross-thread use. Windows may use another IOCP worker for the next serialized
+input call; serialization does not imply fixed thread affinity.
+
+See the [TCP runtime contract](../reference/transport/tcp.md#runtime-contract)
+for ownership, close and deliberate Linux/Windows differences.
+
+<a name="transport-contract"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-transport-contract.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-transport-contract.svg" alt="Transport contract">
+  </a>
+  <a href="../../resources/docs/guide/h2-transport-contract-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-transport-contract-dark.svg" alt="Transport contract">
+  </a>
+</h2>
+
+The [transport contract](../../include/transport/contracts.h) checks
+how a transport is created and controlled:
+
+- **Policies.** *policies_type* names the transport's policy type. A value of
+  that type is the first constructor argument.
+- **Engine factory.** The factory is the second constructor argument and lets
+  the transport create an engine for each connection.
+- **Connection events.** *set_on_connection* and *set_on_disconnection* take
+  callbacks to announce when a connection opens or closes.
+- **Lifecycle.** *start* begins transport work; *stop* ends it.
+
+These are the callback and lifecycle calls the concept checks:
+
+```cpp
+{ tr.set_on_connection(std::move(callback)) } -> std::same_as<void>;
+{ tr.set_on_disconnection(std::move(callback)) } -> std::same_as<void>;
+{ tr.start() } -> std::same_as<void>;
+{ tr.stop() } -> std::same_as<void>;
+```
+
+The engine owns managed task frames and HTTP response order. It returns
+processing needs directly instead of installing execution, completion or flow
+hooks. Native workers deliver those turns; they never receive application jobs.
+Configuration and start/stop belong to a sequential external owner, outside
+worker callbacks.
+
+A working transport creates an engine for each connection, wires up its send
+and close callbacks, feeds it input, and handles its output. The concept
+checks the required C++ shape; it cannot check that bytes stay alive long
+enough or that those runtime steps happen in the right order.
+
+<a name="bring-a-protocol"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-bring-a-protocol.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-protocol.svg" alt="Bring a protocol">
+  </a>
+  <a href="../../resources/docs/guide/h2-bring-a-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-protocol-dark.svg" alt="Bring a protocol">
+  </a>
+</h2>
+
+The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
+keeps TCP and replaces HTTP with a tiny line-based echo engine. Its
+[source](../../examples/protocol/custom_protocol/main.cpp) creates one engine
+for each connection:
+
+```cpp
+auto create_engine = []() { return custom_protocol{}; };
+using transport_type = transport::tcp<custom_protocol,
+                                      decltype(create_engine)>;
+martianlabs::doba::server<custom_protocol, transport_type> server(
+    {.ip = "0.0.0.0", .port = "8080"}, create_engine);
+```
+
+The engine reads complete lines and submits an **echo:** response. TCP still
+accepts clients, supplies fresh RX blocks, and sends the output. The engine
+retains incomplete lines between input calls and
+only implements the protocol contract; it does not need socket code.
+
+<a name="bring-a-transport"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-bring-a-transport.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-transport.svg" alt="Bring a transport">
+  </a>
+  <a href="../../resources/docs/guide/h2-bring-a-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-bring-a-transport-dark.svg" alt="Bring a transport">
+  </a>
+</h2>
+
+The [custom_transport example][custom-transport] keeps doba's HTTP/1.1 engine
+but trades TCP for an in-memory transport. Its
+[source](../../examples/transport/custom_transport/main.cpp) supplies
+that transport to the HTTP server:
+
+[custom-transport]: ../../examples/transport/custom_transport/README.md
+
+```cpp
+using routes_type =
+    martianlabs::doba::protocol::http::router<http::request, http::response>;
+using engine_type = http::engine<http::request, http::response>;
+
+std::string output;
+martianlabs::doba::http_server<http::request, http::response, routes_type,
+                               engine_type, custom_transport>
+    server(&output);
+```
+
+This transport creates one engine, feeds it a fixed HTTP request, and copies
+the response into a string. No network listener opens. It is a focused demo
+of the boundary, not a general HTTP middleware API.
+
+That is the core idea: **protocols decide what bytes mean; transports move
+them.** The two examples show you can change either side without rebuilding
+the other.
+
+Head back to the [guide index](README.md) when you're ready for more.
+
+The result describes future processing needs, never RX consumption or read
+policy. See [processing turns](../reference/protocol/processing_result.md) for
+the full contract. Linux and Windows TCP deliver immediate, deadline and
+output-drain turns; TLS forwards the same requests to those backends.

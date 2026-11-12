@@ -1,0 +1,394 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <atomic>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "../../../../helpers/concurrency.h"
+#include "common/filesystem.h"
+#include "common/reader.h"
+#include "file_directory.h"
+#include "http_server.h"
+#include "http_test_helper.h"
+#include "protocol/http/v11/static_file_server.h"
+#include "tcpip_client.h"
+#include "test_helper.h"
+
+namespace {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] socket workers                                           ( constant ) |
+// +---------------------------------------------------------------------------+
+// | Keep connection state separate on both platforms.                         |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+constexpr std::size_t kSocketWorkers = 2;
+using martianlabs::doba::tests::file_directory;
+namespace fs = std::filesystem;
+using martianlabs::doba::common::filesystem;
+}  // namespace
+
+namespace {
+using martianlabs::doba::http_server;
+using namespace martianlabs::doba::protocol::http::v11;
+using martianlabs::doba::tests::integration::receive_http_response;
+using martianlabs::doba::tests::integration::tcpip_client;
+}  // namespace
+
+// +===========================================================================+
+// | [>] HTTP static file framing                                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP static files preserve binary framing and HEAD") {
+  file_directory first;
+  file_directory second;
+  std::string body(131073, '\0');
+  for (std::size_t i = 0; i < body.size(); i++) body[i] = char(i % 256);
+  first.write("file.bin", body);
+  second.write("hello.txt", "other");
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  value.add_controller<static_file_server>("/assets", first.path());
+  value.add_controller<static_file_server>("/other", second.path());
+  value.add_route("GET", "/assets/override", [](const request&, response& res) {
+    res.ok_200();
+    res.set_body("application");
+    return;
+  });
+  value.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(
+      client.send_all("HEAD /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto head = receive_http_response(client, true);
+  DOBA_EXPECT(head.has_value());
+  DOBA_EXPECT_EQUAL(head->header("Content-Length").value(),
+                    std::to_string(body.size()));
+  DOBA_EXPECT(head->body.empty());
+  DOBA_EXPECT(
+      client.send_all("GET /assets/file.bin HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto data = receive_http_response(client);
+  DOBA_EXPECT(data.has_value());
+  DOBA_EXPECT_EQUAL(data->body, body);
+  DOBA_EXPECT(
+      client.send_all("GET /other/hello.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto other = receive_http_response(client);
+  DOBA_EXPECT(other.has_value());
+  DOBA_EXPECT_EQUAL(other->body, "other");
+  DOBA_EXPECT(
+      client.send_all("GET /assets/override HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto application = receive_http_response(client);
+  DOBA_EXPECT(application.has_value());
+  DOBA_EXPECT_EQUAL(application->body, "application");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(50)));
+  value.stop();
+}
+
+// +===========================================================================+
+// | [>] HTTP static file paths and changes                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP static files reject escapes and expose current file contents") {
+  file_directory directory;
+  directory.write("file.txt", "old");
+  directory.write("%2e%2e", "literal");
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  value.add_controller<static_file_server>("/", directory.path());
+  value.start();
+  DOBA_EXPECT(client.connect(port));
+  struct test_case {
+    std::string_view method;
+    std::string_view path;
+    std::string_view status;
+  };
+  const test_case cases[] = {
+      {"GET", "/missing", "HTTP/1.1 404 Not Found"},
+      {"GET", "/%2e%2e/secret", "HTTP/1.1 403 Forbidden"},
+      {"GET", "/x%5cy", "HTTP/1.1 403 Forbidden"},
+      {"POST", "/file.txt", "HTTP/1.1 405 Method Not Allowed"},
+      {"GET", "/%252e%252e", "HTTP/1.1 200 OK"},
+  };
+  for (const auto& test : cases) {
+    DOBA_EXPECT(client.send_all(std::string(test.method) + " " +
+                                std::string(test.path) +
+                                " HTTP/1.1\r\nHost: a\r\n\r\n"));
+    const auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->status, test.status);
+    if (test.method == "POST") {
+      DOBA_EXPECT_EQUAL(result->header("Allow").value(), "GET, HEAD");
+    }
+    if (test.path == "/%252e%252e") DOBA_EXPECT_EQUAL(result->body, "literal");
+  }
+  for (std::string_view text : {"first", "second"}) {
+    directory.write("file.txt", text);
+    DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+    const auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->body, text);
+  }
+  value.stop();
+}
+
+// +===========================================================================+
+// | [>] HTTP static file concurrent downloads                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP static files handle concurrent and abandoned downloads") {
+  file_directory directory;
+  const std::string body(262145, 'x');
+  directory.write("large", body);
+  tcpip_client port_probe;
+  const auto port = port_probe.find_available_port();
+  DOBA_EXPECT(port != 0);
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  value.add_controller<static_file_server>("/", directory.path());
+  value.start();
+  {
+    tcpip_client abandoned;
+    DOBA_EXPECT(abandoned.connect(port));
+    DOBA_EXPECT(abandoned.send_all("GET /large HTTP/1.1\r\nHost: a\r\n\r\n"));
+    abandoned.close();
+  }
+  std::atomic<unsigned int> completed{0};
+  {
+    std::vector<std::jthread> clients;
+    for (unsigned int i = 0; i < 4; i++) {
+      clients.emplace_back([&]() {
+        tcpip_client client;
+        if (!client.connect(port) ||
+            !client.send_all("GET /large HTTP/1.1\r\nHost: a\r\n\r\n")) {
+          return;
+        }
+        auto result = receive_http_response(client);
+        if (result && result->body == body) completed++;
+      });
+    }
+  }
+  value.stop();
+  DOBA_EXPECT_EQUAL(completed.load(), 4);
+  fs::remove(directory.path() / "large");
+  DOBA_EXPECT(!fs::exists(directory.path() / "large"));
+}
+
+DOBA_TEST("HTTP cached files preserve pipelines conditions and byte ranges") {
+  file_directory directory;
+  directory.write("file.txt", "0123456789");
+  directory.write("file.txt.gz", "compressed");
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(),
+      static_file_policies{.cache = cache, .precompressed = true});
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto first = receive_http_response(client);
+  DOBA_EXPECT(first.has_value());
+  const auto tag = std::string(first->header("ETag").value());
+  DOBA_EXPECT(!tag.starts_with("W/"));
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " + tag +
+      "\r\n\r\n"));
+  auto unchanged = receive_http_response(client);
+  DOBA_EXPECT(unchanged.has_value());
+  DOBA_EXPECT_EQUAL(unchanged->status, "HTTP/1.1 304 Not Modified");
+  DOBA_EXPECT(unchanged->body.empty());
+  DOBA_EXPECT_EQUAL(unchanged->header("ETag").value(), tag);
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nRange: bytes=3-6\r\nIf-Range: " +
+      tag + "\r\n\r\n"));
+  auto part = receive_http_response(client);
+  DOBA_EXPECT(part.has_value());
+  DOBA_EXPECT_EQUAL(part->body, "3456");
+  DOBA_EXPECT_EQUAL(part->header("Content-Range").value(), "bytes 3-6/10");
+  DOBA_EXPECT(client.send_all(
+      "HEAD /file.txt HTTP/1.1\r\nHost: a\r\nAccept-Encoding: gzip\r\n\r\n"));
+  auto head = receive_http_response(client, true);
+  DOBA_EXPECT(head.has_value());
+  DOBA_EXPECT_EQUAL(head->header("Content-Encoding").value(), "gzip");
+  DOBA_EXPECT_EQUAL(head->header("Content-Length").value(), "10");
+  DOBA_EXPECT(head->body.empty());
+  const auto timestamp = fs::last_write_time(directory.path() / "file.txt");
+  directory.write("file.txt", "abcdefghij");
+  fs::last_write_time(directory.path() / "file.txt",
+                      timestamp + std::chrono::seconds(2));
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto changed = receive_http_response(client);
+  DOBA_EXPECT(changed.has_value());
+  DOBA_EXPECT_EQUAL(changed->body, "abcdefghij");
+  DOBA_EXPECT(changed->header("ETag").value() != tag);
+  fs::rename(directory.path() / "file.txt", directory.path() / "previous");
+  directory.write("file.txt", "klmnopqrst");
+  DOBA_EXPECT(client.send_all(
+      "GET /file.txt HTTP/1.1\r\nHost: a\r\nIf-None-Match: " +
+      std::string(changed->header("ETag").value()) + "\r\n\r\n"));
+  auto replaced = receive_http_response(client);
+  DOBA_EXPECT(replaced.has_value());
+  DOBA_EXPECT_EQUAL(replaced->status, "HTTP/1.1 200 OK");
+  DOBA_EXPECT_EQUAL(replaced->body, "klmnopqrst");
+  fs::remove(directory.path() / "file.txt");
+  DOBA_EXPECT(client.send_all("GET /file.txt HTTP/1.1\r\nHost: a\r\n\r\n"));
+  auto removed = receive_http_response(client);
+  DOBA_EXPECT(removed.has_value());
+  DOBA_EXPECT_EQUAL(removed->status, "HTTP/1.1 404 Not Found");
+  DOBA_EXPECT(!client.has_data(std::chrono::milliseconds(20)));
+  server.stop();
+}
+
+DOBA_TEST(
+    "HTTP cached downloads survive invalidation disconnect and shutdown") {
+  file_directory directory;
+  const std::string body(128 * 1024, 'q');
+  directory.write("file", body);
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  http_server<> server({.ip = "127.0.0.1", .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  server.start();
+  std::atomic<unsigned> complete{0};
+  {
+    std::vector<std::jthread> clients;
+    for (unsigned i = 0; i < 8; ++i)
+      clients.emplace_back([&, i] {
+        tcpip_client client;
+        if (!client.connect(port) ||
+            !client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n")) {
+          return;
+        }
+        if (i == 0) {
+          client.close();
+          return;
+        }
+        auto result = receive_http_response(client);
+        if (result && result->body == body) ++complete;
+      });
+    for (int i = 0; i < 30; ++i) {
+      cache->clear();
+      std::this_thread::yield();
+    }
+  }
+  server.stop();
+  cache->clear();
+  DOBA_EXPECT_EQUAL(complete.load(), 7);
+}
+
+// +===========================================================================+
+// | [>] HTTP cached load bypass                                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP cached files bypass a blocked loader on a single worker") {
+  using martianlabs::doba::tests::manual_event;
+  using martianlabs::doba::tests::scope_exit;
+  file_directory directory;
+  directory.write("file", "first");
+  auto cache = std::make_shared<static_file_cache>();
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  http_server<> server(
+      {.worker_count = 1, .ip = "127.0.0.1", .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  const auto root = fs::canonical(directory.path()).generic_u8string();
+  std::string key(root.begin(), root.end());
+  key += '\0';
+  key += "file";
+  manual_event entered, release;
+  std::jthread loader([&] {
+    cache->try_get_or_load(key, 128, [&] {
+      entered.open();
+      release.wait();
+      return std::shared_ptr<const static_file_representation>{};
+    });
+  });
+  scope_exit cleanup([&] { release.open(); });
+  DOBA_EXPECT(entered.wait_for());
+  server.start();
+  DOBA_EXPECT(client.connect(port));
+  for (std::string_view body : {"first", "other"}) {
+    directory.write("file", body);
+    DOBA_EXPECT(client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n"));
+    auto result = receive_http_response(client);
+    DOBA_EXPECT(result.has_value());
+    DOBA_EXPECT_EQUAL(result->body, body);
+  }
+  server.stop();
+  release.open();
+  loader.join();
+  DOBA_EXPECT(!cache->find(key));
+}
+
+// +===========================================================================+
+// | [>] HTTP cached reload contention                           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST(
+    "HTTP cached files complete repeated concurrent invalidation cycles") {
+  file_directory directory;
+  const std::string body(32768, 'c');
+  directory.write("file", body);
+  auto cache = std::make_shared<static_file_cache>(
+      martianlabs::doba::common::cache_policies{.max_loads = 1});
+  tcpip_client probe;
+  const auto port = probe.find_available_port();
+  http_server<> server({.worker_count = kSocketWorkers,
+                        .ip = "127.0.0.1",
+                        .port = std::to_string(port)});
+  server.add_controller<static_file_server>(
+      "/", directory.path(), static_file_policies{.cache = cache});
+  server.start();
+  for (unsigned repeat = 0; repeat < 3; ++repeat) {
+    cache->clear();
+    std::atomic<unsigned> completed{0};
+    {
+      std::vector<std::jthread> clients;
+      for (unsigned i = 0; i < 8; ++i)
+        clients.emplace_back([&] {
+          tcpip_client client;
+          if (!client.connect(port)) return;
+          for (unsigned request_index = 0; request_index < 20;
+               ++request_index) {
+            if (!client.send_all("GET /file HTTP/1.1\r\nHost: a\r\n\r\n"))
+              return;
+            auto result = receive_http_response(client);
+            if (!result || result->body != body) return;
+            ++completed;
+            std::this_thread::yield();
+          }
+        });
+    }
+    DOBA_EXPECT_EQUAL(completed.load(), 160);
+  }
+  server.stop();
+  cache->clear();
+}

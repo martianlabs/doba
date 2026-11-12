@@ -1,0 +1,327 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_tests_integration_http_test_helper_h
+#define martianlabs_doba_tests_integration_http_test_helper_h
+
+#include <atomic>
+#include <charconv>
+#include <chrono>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "http_date.h"
+#include "tcpip_client.h"
+
+namespace martianlabs::doba::tests::integration {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] http_test_response                                         ( struct ) |
+// +---------------------------------------------------------------------------+
+// | Keeps the parsed reply and the bytes received from the server.            |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+struct http_test_response {
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::string status;
+  std::vector<std::pair<std::string, std::string>> headers;
+  std::vector<std::pair<std::string, std::string>> trailers;
+  std::string body;
+  std::string wire_body;
+  // +=========================================================================+
+  // | [>] header                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::optional<std::string_view> header(std::string_view name) const {
+    for (const auto& field : headers) {
+      if (field.first.size() != name.size()) continue;
+      bool equal = true;
+      for (std::size_t i = 0; i < name.size(); i++) {
+        char left = field.first[i];
+        char right = name[i];
+        if (left >= 'A' && left <= 'Z') left += 'a' - 'A';
+        if (right >= 'A' && right <= 'Z') right += 'a' - 'A';
+        if (left != right) {
+          equal = false;
+          break;
+        }
+      }
+      if (equal) return field.second;
+    }
+    return std::nullopt;
+  }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] valid_response_field_name                                ( function ) |
+// +---------------------------------------------------------------------------+
+// | Parse headers independently of the library.                               |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline bool valid_response_field_name(std::string_view value) {
+  if (value.empty()) return false;
+  constexpr std::string_view symbols = "!#$%&'*+-.^_`|~";
+  for (const unsigned char byte : value) {
+    if ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+        (byte >= '0' && byte <= '9') ||
+        symbols.find(char(byte)) != std::string_view::npos)
+      continue;
+    return false;
+  }
+  return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] valid_response_field_value                               ( function ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline bool valid_response_field_value(std::string_view value) {
+  for (const unsigned char byte : value) {
+    if ((byte < 32 && byte != 9) || byte == 127) return false;
+  }
+  return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] receive_http_line                                        ( function ) |
+// +---------------------------------------------------------------------------+
+// | Read up to CRLF. Return no value if the line is too long or times out.    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline std::optional<std::string> receive_http_line(
+    tcpip_client& client, std::chrono::steady_clock::time_point deadline,
+    std::size_t maximum = 16384) {
+  std::string line;
+  while (!line.ends_with("\r\n")) {
+    if (line.size() >= maximum) return std::nullopt;
+    const auto remaining =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now());
+    if (remaining.count() <= 0) return std::nullopt;
+    const auto byte = client.receive(1, remaining);
+    if (!byte.has_value()) return std::nullopt;
+    line += *byte;
+  }
+  line.resize(line.size() - 2);
+  return line;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] receive_http_response                                    ( function ) |
+// +---------------------------------------------------------------------------+
+// | Read one reply, including chunked bodies and trailers. Return no value on |
+// | an error or timeout.                                                      |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline std::optional<http_test_response> receive_http_response(
+    tcpip_client& client, bool head = false) {
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  std::string wire;
+  while (!wire.ends_with("\r\n\r\n")) {
+    if (wire.size() >= 16384) return std::nullopt;
+    const auto remaining =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now());
+    if (remaining.count() <= 0) return std::nullopt;
+    const auto byte = client.receive(1, remaining);
+    if (!byte.has_value()) return std::nullopt;
+    wire += *byte;
+  }
+  http_test_response result;
+  std::size_t position = wire.find("\r\n");
+  result.status = wire.substr(0, position);
+  if (!result.status.starts_with("HTTP/1.1 ") || result.status.size() < 13 ||
+      result.status[12] != ' ') {
+    return std::nullopt;
+  }
+  int status = 0;
+  const auto parsed_status = std::from_chars(result.status.data() + 9,
+                                             result.status.data() + 12, status);
+  if (parsed_status.ec != std::errc{} ||
+      parsed_status.ptr != result.status.data() + 12 || status < 100 ||
+      status > 599 || !valid_response_field_value(result.status.substr(13))) {
+    return std::nullopt;
+  }
+  position += 2;
+  while (position + 2 < wire.size()) {
+    const auto end = wire.find("\r\n", position);
+    const auto colon = wire.find(':', position);
+    if (end == std::string::npos || colon == std::string::npos ||
+        colon == position || colon >= end) {
+      return std::nullopt;
+    }
+    std::size_t begin = colon + 1;
+    while (begin < end && (wire[begin] == ' ' || wire[begin] == '\t')) begin++;
+    const std::string name = wire.substr(position, colon - position);
+    std::string normalized = name;
+    for (char& value : normalized) {
+      if (value >= 'A' && value <= 'Z') value += 'a' - 'A';
+    }
+    if ((normalized == "content-length" || normalized == "transfer-encoding" ||
+         normalized == "date") &&
+        result.header(name).has_value()) {
+      return std::nullopt;
+    }
+    auto value = std::string_view(wire).substr(begin, end - begin);
+    while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+      value.remove_suffix(1);
+    if (!valid_response_field_name(name) ||
+        !valid_response_field_value(value)) {
+      return std::nullopt;
+    }
+    result.headers.emplace_back(name, value);
+    position = end + 2;
+  }
+  if (status >= 200) {
+    const auto date = result.header("Date");
+    if (!date.has_value() || !valid_http_date(*date)) return std::nullopt;
+  }
+  const auto length = result.header("Content-Length");
+  const auto transfer_encoding = result.header("Transfer-Encoding");
+  if (length.has_value() && transfer_encoding.has_value()) return std::nullopt;
+  std::size_t size = 0;
+  if (length.has_value()) {
+    const auto parsed =
+        std::from_chars(length->data(), length->data() + length->size(), size);
+    if (parsed.ec != std::errc{} ||
+        parsed.ptr != length->data() + length->size()) {
+      return std::nullopt;
+    }
+  }
+  if ((status >= 100 && status < 200) || status == 204) {
+    if (length.has_value() || transfer_encoding.has_value()) {
+      return std::nullopt;
+    }
+    size = 0;
+  } else if (head || status == 304) {
+    size = 0;
+  } else if (status == 205) {
+    if (transfer_encoding.has_value() || size != 0) return std::nullopt;
+  } else if (!length.has_value() && !transfer_encoding.has_value()) {
+    return std::nullopt;
+  }
+  if (transfer_encoding.has_value() && !head && status != 304) {
+    if (*transfer_encoding != "chunked") return std::nullopt;
+    for (;;) {
+      const auto line = receive_http_line(client, deadline, 4096);
+      if (!line.has_value() || line->empty()) return std::nullopt;
+      constexpr std::size_t max_wire = 8 * 1024 * 1024;
+      if (line->size() + 2 > max_wire - result.wire_body.size()) {
+        return std::nullopt;
+      }
+      result.wire_body += *line + "\r\n";
+      const std::size_t extension = line->find(';');
+      const std::string_view digits(*line);
+      const std::string_view chunk_size = digits.substr(0, extension);
+      std::size_t chunk = 0;
+      const auto parsed = std::from_chars(
+          chunk_size.data(), chunk_size.data() + chunk_size.size(), chunk, 16);
+      if (chunk_size.empty() || parsed.ec != std::errc{} ||
+          parsed.ptr != chunk_size.data() + chunk_size.size()) {
+        return std::nullopt;
+      }
+      if (chunk == 0) {
+        std::size_t trailer_bytes = 0;
+        for (;;) {
+          const auto trailer = receive_http_line(client, deadline);
+          if (!trailer.has_value()) return std::nullopt;
+          if (trailer->size() + 2 > 16384 - trailer_bytes ||
+              trailer->size() + 2 > max_wire - result.wire_body.size()) {
+            return std::nullopt;
+          }
+          trailer_bytes += trailer->size() + 2;
+          result.wire_body += *trailer + "\r\n";
+          if (trailer->empty()) return result;
+          const std::size_t colon = trailer->find(':');
+          if (colon == std::string::npos || colon == 0) return std::nullopt;
+          std::size_t begin = colon + 1;
+          while (begin < trailer->size() &&
+                 ((*trailer)[begin] == ' ' || (*trailer)[begin] == '\t')) {
+            begin++;
+          }
+          const auto name = std::string_view(*trailer).substr(0, colon);
+          const auto value = std::string_view(*trailer).substr(begin);
+          if (!valid_response_field_name(name) ||
+              !valid_response_field_value(value))
+            return std::nullopt;
+          result.trailers.emplace_back(name, value);
+        }
+      }
+      if (chunk > 1024 * 1024 - result.body.size()) return std::nullopt;
+      const auto remaining =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              deadline - std::chrono::steady_clock::now());
+      if (remaining.count() <= 0) return std::nullopt;
+      const auto bytes = client.receive(chunk + 2, remaining);
+      if (!bytes.has_value() || !bytes->ends_with("\r\n")) {
+        return std::nullopt;
+      }
+      if (bytes->size() > max_wire - result.wire_body.size()) {
+        return std::nullopt;
+      }
+      result.wire_body += *bytes;
+      result.body.append(bytes->data(), chunk);
+    }
+  }
+  if (size > 1024 * 1024) return std::nullopt;
+  const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+      deadline - std::chrono::steady_clock::now());
+  if (remaining.count() <= 0) return std::nullopt;
+  const auto body = client.receive(size, remaining);
+  if (!body.has_value()) return std::nullopt;
+  result.body = *body;
+  result.wire_body = *body;
+  return result;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] wait_for_http_count                                      ( function ) |
+// +---------------------------------------------------------------------------+
+// | Wait for the expected count, up to the deadline.                          |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+inline bool wait_for_http_count(const std::atomic<std::size_t>& value,
+                                std::size_t expected) {
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(3);
+  while (value.load() < expected &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+  }
+  return value.load() == expected;
+}
+}  // namespace martianlabs::doba::tests::integration
+
+#endif

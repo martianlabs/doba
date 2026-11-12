@@ -1,0 +1,132 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <string>
+#include <string_view>
+
+#include "protocol/http/common/headers/sec_websocket_extensions.h"
+#include "test_helper.h"
+
+namespace {
+using martianlabs::doba::protocol::http::headers::sec_websocket_extensions;
+}  // namespace
+
+// +===========================================================================+
+// | [>] check accepts valid values                              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts valid values") {
+  constexpr std::string_view cases[] = {
+      "permessage-deflate",
+      "permessage-deflate; client_max_window_bits",
+      "permessage-deflate; server_max_window_bits=10",
+      "x-test; a=\"b,c\"",
+      "permessage-deflate, x-test; p=v",
+      ", permessage-deflate, , x-test,",
+      "extension;",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(sec_websocket_extensions::check(source));
+    const std::string padded = "x" + std::string(source) + "y";
+    DOBA_EXPECT(sec_websocket_extensions::check(
+        std::string_view(padded).substr(1, source.size())));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects invalid values                            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects invalid values") {
+  constexpr std::string_view cases[] = {
+      "",
+      " ",
+      ",",
+      ", ,",
+      "\"extension\"",
+      "extension=",
+      "extension; =value",
+      "extension;name=",
+      "extension;name =value",
+      "extension;name=\"unterminated",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(!sec_websocket_extensions::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check handles string view boundaries                    ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check handles string view boundaries") {
+  DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"\0", 1}));
+  DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"a\0", 2}));
+  DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"a\r", 2}));
+  DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"a\n", 2}));
+  DOBA_EXPECT(!sec_websocket_extensions::check(std::string_view{"\x80", 1}));
+  constexpr std::string_view seed = "permessage-deflate";
+  const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
+  for (std::size_t position : positions) {
+    for (char control : {'\0', '\r', '\n', '\x7f'}) {
+      std::string source(seed);
+      source[position] = control;
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position) +
+          ", byte " + std::to_string(static_cast<unsigned char>(control)));
+      DOBA_EXPECT(!sec_websocket_extensions::check(source));
+    }
+  }
+  std::string padded(seed);
+  padded.push_back('\0');
+  padded += "suffix";
+  DOBA_EXPECT(sec_websocket_extensions::check(
+      std::string_view(padded.data(), seed.size())));
+}
+
+// +===========================================================================+
+// | [>] check accepts extension parameter boundaries            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts extension parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "x;p=\"\"",
+      "x;p=\"a,b;c\", y;flag",
+      "x;p=\"a\\\"b\\\\c\"",
+      "x;;flag;;p=v",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(sec_websocket_extensions::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects extension parameter boundaries            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects extension parameter boundaries") {
+  constexpr std::string_view cases[] = {
+      "x;p= v", "x;p=\"v\"junk", "x;p=\"v\\", "x;p=v y", "x;p=v, y;=z",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!sec_websocket_extensions::check(source));
+  }
+}

@@ -1,0 +1,171 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <string>
+#include <string_view>
+
+#include "protocol/http/common/headers/date.h"
+#include "test_helper.h"
+
+namespace {
+using martianlabs::doba::protocol::http::headers::date;
+}  // namespace
+
+// +===========================================================================+
+// | [>] check accepts valid values                              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check accepts valid values") {
+  constexpr std::string_view cases[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT", "Monday, 06-Nov-94 08:49:37 GMT",
+      "Mon Nov  6 08:49:37 1994",      "Mon Nov 16 08:49:37 1994",
+      "Fri, 31 Dec 9999 23:59:59 GMT",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(date::check(source));
+    const std::string padded = "x" + std::string(source) + "y";
+    DOBA_EXPECT(date::check(std::string_view(padded).substr(1, source.size())));
+  }
+}
+
+// +===========================================================================+
+// | [>] check rejects invalid values                            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects invalid values") {
+  constexpr std::string_view cases[] = {
+      "",
+      " ",
+      "Sun, 6 Nov 1994 08:49:37 GMT",
+      "Sun, 06 November 1994 08:49:37 GMT",
+      "Sun, 06 Nov 94 08:49:37 GMT",
+      "Sun, 06 Nov 1994 8:49:37 GMT",
+      "Sun, 06 Nov 1994 08:49:37 UTC",
+      "sun, 06 Nov 1994 08:49:37 GMT",
+      "Sunday 06-Nov-94 08:49:37 GMT",
+      "Mon Nov 6 08:49:37 1994",
+      "Mon Nov  6 08:49:37 94",
+      "Sun, 06 Nov 1994 08:49:37 GMT ",
+  };
+  for (const auto source : cases) {
+    DOBA_EXPECT(!date::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check handles string view boundaries                    ( test-case ) |
+// +===========================================================================+
+DOBA_TEST("check handles string view boundaries") {
+  DOBA_EXPECT(!date::check(std::string_view{"\0", 1}));
+  DOBA_EXPECT(!date::check(std::string_view{"a\0", 2}));
+  DOBA_EXPECT(!date::check(std::string_view{"a\r", 2}));
+  DOBA_EXPECT(!date::check(std::string_view{"a\n", 2}));
+  DOBA_EXPECT(!date::check(std::string_view{"\x80", 1}));
+  constexpr std::string_view seed = "Sun, 06 Nov 1994 08:49:37 GMT";
+  const std::size_t positions[] = {0, seed.size() / 2, seed.size() - 1};
+  for (std::size_t position : positions) {
+    for (char control : {'\0', '\r', '\n', '\x7f'}) {
+      std::string source(seed);
+      source[position] = control;
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position) +
+          ", byte " + std::to_string(static_cast<unsigned char>(control)));
+      DOBA_EXPECT(!date::check(source));
+    }
+  }
+  std::string padded(seed);
+  padded.push_back('\0');
+  padded += "suffix";
+  DOBA_EXPECT(date::check(std::string_view(padded.data(), seed.size())));
+}
+
+// +===========================================================================+
+// | [>] check rejects incomplete and corrupted date fields      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check rejects incomplete and corrupted date fields") {
+  constexpr std::string_view seeds[] = {
+      "Sun, 06 Nov 1994 08:49:37 GMT",
+      "Sunday, 06-Nov-94 08:49:37 GMT",
+      "Sun Nov  6 08:49:37 1994",
+  };
+  for (const auto seed : seeds) {
+    for (std::size_t position = 0; position < seed.size(); ++position) {
+      martianlabs::doba::tests::unit::test_helper::set_context(
+          std::string(seed) + ", position " + std::to_string(position));
+      DOBA_EXPECT(!date::check(seed.substr(0, position)));
+      std::string source(seed);
+      source[position] = '!';
+      DOBA_EXPECT(!date::check(source));
+    }
+  }
+}
+
+// +===========================================================================+
+// | [>] check is syntactic for out of range date fields         ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check is syntactic for out of range date fields") {
+  // RFC 9110 S5.6.7: check date syntax here, not calendar validity.
+  constexpr std::string_view cases[] = {
+      "Sun, 00 Nov 1994 08:49:37 GMT",  "Sun, 32 Nov 1994 08:49:37 GMT",
+      "Sun, 06 Nov 1994 24:00:00 GMT",  "Sun, 06 Nov 1994 08:60:37 GMT",
+      "Sun, 06 Nov 1994 08:49:61 GMT",  "Sun, 99 Nov 1994 99:99:99 GMT",
+      "Sunday, 00-Nov-94 08:49:37 GMT", "Sunday, 06-Nov-94 25:49:37 GMT",
+      "Sun Nov 32 08:49:37 1994",       "Sun Nov  6 08:49:99 1994",
+  };
+  for (const auto source : cases) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(date::check(source));
+  }
+  for (const std::string_view source :
+       {"Sun, 0A Nov 1994 08:49:37 GMT", "Sun, 06 Nov 1994 0x:49:37 GMT",
+        "Sun, 06 Nov 199x 08:49:37 GMT", "Sun Nov  x 08:49:37 1994"}) {
+    martianlabs::doba::tests::unit::test_helper::set_context(source);
+    DOBA_EXPECT(!date::check(source));
+  }
+}
+
+// +===========================================================================+
+// | [>] check recognizes all weekday and month names            ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("check recognizes all weekday and month names") {
+  constexpr std::string_view short_days[] = {"Mon", "Tue", "Wed", "Thu",
+                                             "Fri", "Sat", "Sun"};
+  constexpr std::string_view long_days[] = {"Monday",   "Tuesday", "Wednesday",
+                                            "Thursday", "Friday",  "Saturday",
+                                            "Sunday"};
+  constexpr std::string_view months[] = {"Jan", "Feb", "Mar", "Apr",
+                                         "May", "Jun", "Jul", "Aug",
+                                         "Sep", "Oct", "Nov", "Dec"};
+  for (std::size_t day = 0; day < 7; ++day) {
+    for (const auto month : months) {
+      const std::string imf = std::string(short_days[day]) + ", 01 " +
+                              std::string(month) + " 2000 00:00:00 GMT";
+      const std::string rfc850 = std::string(long_days[day]) + ", 01-" +
+                                 std::string(month) + "-00 00:00:00 GMT";
+      const std::string asctime = std::string(short_days[day]) + " " +
+                                  std::string(month) + "  1 00:00:00 2000";
+      DOBA_EXPECT(date::check(imf));
+      DOBA_EXPECT(date::check(rfc850));
+      DOBA_EXPECT(date::check(asctime));
+    }
+  }
+}

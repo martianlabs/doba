@@ -1,0 +1,123 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#include <atomic>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "http_server.h"
+#include "http_test_helper.h"
+#include "tcpip_client.h"
+#include "test_helper.h"
+
+namespace {
+using martianlabs::doba::http_server;
+using namespace martianlabs::doba::protocol::http::v11;
+using martianlabs::doba::tests::integration::receive_http_response;
+using martianlabs::doba::tests::integration::tcpip_client;
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] socket_controller                                           ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class socket_controller {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  explicit socket_controller(std::string prefix) : prefix_(std::move(prefix)) {}
+  // +=========================================================================+
+  // | [>] register_routes                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  template <typename Rty>
+  void register_routes(Rty& routes) {
+    routes.add("GET", prefix_ + "/count", &socket_controller::count);
+    routes.add("GET", prefix_ + "/fail", &socket_controller::fail);
+  }
+  // +=========================================================================+
+  // | [>] count                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void count(const request&, response& res) {
+    res.ok_200();
+    res.set_body(++count_);
+    return;
+  }
+  // +=========================================================================+
+  // | [>] fail                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  void fail(const request&, response&) {
+    throw std::runtime_error("controller");
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  std::string prefix_;
+  std::atomic<unsigned int> count_{0};
+};
+}  // namespace
+
+// +===========================================================================+
+// | [>] HTTP controller concurrency and errors                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("HTTP controller state supports concurrent requests and failures") {
+  tcpip_client client;
+  const auto port = client.find_available_port();
+  DOBA_EXPECT(port != 0);
+  http_server<> value({.ip = "127.0.0.1", .port = std::to_string(port)});
+  value.add_controller<socket_controller>("/a");
+  value.start();
+  std::atomic<unsigned int> total{0};
+  {
+    std::vector<std::jthread> clients;
+    for (unsigned int i = 0; i < 4; i++) {
+      clients.emplace_back([&]() {
+        tcpip_client connection;
+        if (!connection.connect(port) ||
+            !connection.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n")) {
+          return;
+        }
+        auto result = receive_http_response(connection);
+        if (result) total += static_cast<unsigned int>(std::stoi(result->body));
+      });
+    }
+  }
+  DOBA_EXPECT_EQUAL(total.load(), 10);
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /a/fail HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto error = receive_http_response(client);
+  DOBA_EXPECT(error.has_value());
+  DOBA_EXPECT_EQUAL(error->status, "HTTP/1.1 500 Internal Server Error");
+  client.close();
+  DOBA_EXPECT(client.connect(port));
+  DOBA_EXPECT(client.send_all("GET /a/count HTTP/1.1\r\nHost: a\r\n\r\n"));
+  const auto next = receive_http_response(client);
+  DOBA_EXPECT(next.has_value());
+  DOBA_EXPECT_EQUAL(next->body, "5");
+  value.stop();
+}

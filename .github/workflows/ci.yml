@@ -1,0 +1,1067 @@
+name: Build & Test
+
+on:
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: Create the GitHub Release after all jobs pass
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Ubuntu (${{ matrix.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC Debug
+            compiler: g++
+            build_type: Debug
+            build_dir: out/build/gcc-debug
+            tls: "OFF"
+          - name: GCC Release
+            compiler: g++
+            build_type: Release
+            build_dir: out/build/gcc-release
+            tls: "OFF"
+          - name: Clang Debug
+            compiler: clang++
+            build_type: Debug
+            build_dir: out/build/clang-debug
+            tls: "OFF"
+          - name: Clang Release
+            compiler: clang++
+            build_type: Release
+            build_dir: out/build/clang-release
+            tls: "OFF"
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install OpenSSL
+        if: matrix.tls == 'ON'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+
+      - name: Configure
+        run: >-
+          cmake -S . -B ${{ matrix.build_dir }} -G Ninja
+          "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=${{ matrix.tls }}"
+
+      - name: Build
+        shell: bash
+        run: >-
+          cmake --build ${{ matrix.build_dir }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
+
+      - name: Verify test inventory
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}"
+          -P cmake/ci_test_inventory.cmake
+
+      - name: Run Release tests
+        if: matrix.build_type == 'Release'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
+
+      - name: Install
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake --install ${{ matrix.build_dir }}
+          --prefix out/install/gcc-release
+
+      - name: Configure package consumer (Debug)
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-debug -G Ninja
+          "-DCMAKE_BUILD_TYPE=Debug"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release"
+          "-DDOBA_PACKAGE_USE_TLS=OFF"
+
+      - name: Build package consumer (Debug)
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/package-consumer-debug
+
+      - name: Configure package consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-release -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/gcc-release"
+          "-DDOBA_PACKAGE_USE_TLS=OFF"
+
+      - name: Build package consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/package-consumer-release
+
+      - name: Run package TCP consumer (Release)
+        if: matrix.name == 'GCC Release'
+        run: out/build/package-consumer-release/doba_package_consumer
+
+      - name: Configure add_subdirectory consumer
+        if: matrix.name == 'GCC Release'
+        run: >-
+          cmake -S tests/package -B out/build/add-subdirectory-consumer -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=g++"
+          "-DDOBA_PACKAGE_USE_SOURCE=ON"
+          "-DDOBA_SOURCE_DIR=${{ github.workspace }}"
+          "-DDOBA_ENABLE_TLS=OFF"
+          "-DDOBA_PACKAGE_USE_TLS=OFF"
+
+      - name: Build add_subdirectory consumer
+        if: matrix.name == 'GCC Release'
+        run: cmake --build out/build/add-subdirectory-consumer
+
+      - name: Run add_subdirectory TCP consumer
+        if: matrix.name == 'GCC Release'
+        run: >-
+          out/build/add-subdirectory-consumer/doba_package_consumer
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: |
+            ${{ matrix.build_dir }}/build.log
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+          retention-days: 14
+
+  windows:
+    name: Windows (MSVC ${{ matrix.build_type }})
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_type: Debug
+            configure_preset: msvc-debug
+            build_preset: build-debug
+            build_dir: out/build/msvc-debug
+            tls: "OFF"
+          - build_type: Release
+            configure_preset: msvc-release
+            build_preset: build-release
+            build_dir: out/build/msvc-release
+            tls: "OFF"
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+
+      - name: Configure
+        if: matrix.tls == 'OFF'
+        run: >-
+          cmake --preset ${{ matrix.configure_preset }}
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+
+      - name: Build
+        shell: bash
+        run: >-
+          cmake --build --preset ${{ matrix.build_preset }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
+
+      - name: Verify test inventory
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=${{ matrix.tls }}"
+          -P cmake/ci_test_inventory.cmake
+
+      - name: Run Release tests
+        if: matrix.build_type == 'Release'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
+
+      - name: Install TCP package
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake --install ${{ matrix.build_dir }}
+          --prefix out/install/msvc-release
+
+      - name: Configure package TCP consumer
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake -S tests/package -B out/build/package-consumer-tcp -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/msvc-release"
+          "-DDOBA_PACKAGE_USE_TLS=OFF"
+
+      - name: Build package TCP consumer
+        if: matrix.build_type == 'Release'
+        run: cmake --build out/build/package-consumer-tcp
+
+      - name: Run package TCP consumer
+        if: matrix.build_type == 'Release'
+        run: out/build/package-consumer-tcp/doba_package_consumer.exe
+
+      - name: Configure add_subdirectory TCP consumer
+        if: matrix.build_type == 'Release'
+        run: >-
+          cmake -S tests/package -B out/build/add-subdirectory-tcp -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DDOBA_PACKAGE_USE_SOURCE=ON"
+          "-DDOBA_SOURCE_DIR=${{ github.workspace }}"
+          "-DDOBA_ENABLE_TLS=OFF"
+          "-DDOBA_PACKAGE_USE_TLS=OFF"
+
+      - name: Build add_subdirectory TCP consumer
+        if: matrix.build_type == 'Release'
+        run: cmake --build out/build/add-subdirectory-tcp
+
+      - name: Run add_subdirectory TCP consumer
+        if: matrix.build_type == 'Release'
+        run: out/build/add-subdirectory-tcp/doba_package_consumer.exe
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.build_type }}
+          path: |
+            ${{ matrix.build_dir }}/build.log
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+          retention-days: 14
+
+  sanitizer:
+    # Keep required-check names stable; Linux currently validates TCP only.
+    name: Ubuntu (${{ matrix.name }} Release TLS)
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ASan
+            sanitizer: address
+            build_dir: out/build/asan
+          - name: UBSan
+            sanitizer: undefined
+            build_dir: out/build/ubsan
+          - name: TSan
+            sanitizer: thread
+            build_dir: out/build/tsan
+
+    env:
+      ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      TSAN_OPTIONS: halt_on_error=1
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install symbolizer
+        run: sudo apt-get update && sudo apt-get install -y llvm
+
+      - name: Configure
+        run: >-
+          cmake -S . -B ${{ matrix.build_dir }} -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=clang++"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=OFF"
+          "-DCMAKE_CXX_FLAGS=-g -fsanitize=${{ matrix.sanitizer }}
+          -fno-omit-frame-pointer"
+
+      - name: Build
+        shell: bash
+        run: >-
+          cmake --build ${{ matrix.build_dir }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
+
+      - name: Verify test inventory
+        run: >-
+          cmake "-DDOBA_CI_BUILD_DIR=${{ matrix.build_dir }}"
+          "-DDOBA_CI_REQUIRE_TLS=OFF" -P cmake/ci_test_inventory.cmake
+
+      - name: Test
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          --output-on-failure --no-tests=error
+
+      - name: Repeat critical interleavings under TSan
+        if: matrix.sanitizer == 'thread'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          -R '^doba_(engine_concurrency|security_model)_tests$'
+          --repeat until-fail:200 --output-on-failure --no-tests=error
+
+      - name: Repeat Linux socket lifecycle under TSan
+        if: matrix.sanitizer == 'thread'
+        run: >-
+          ctest --test-dir ${{ matrix.build_dir }}
+          -R '^doba_(linux_(transport|processing)|stream_integrity)_tests$'
+          --repeat until-fail:20 --output-on-failure --no-tests=error
+
+      - name: Run reproducible fault and ownership campaign
+        run: >-
+          ${{ matrix.build_dir }}/tests/qualification/doba_campaign
+          --build ${{ matrix.build_dir }} --output out/campaign
+          --rounds ${{ github.event_name == 'schedule' && 12 || 2 }}
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.name }}-Release-TLS
+          path: |
+            ${{ matrix.build_dir }}/build.log
+            ${{ matrix.build_dir }}/CMakeCache.txt
+            ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
+            ${{ matrix.build_dir }}/compile_commands.json
+            ${{ matrix.build_dir }}/ci-evidence/
+            ${{ matrix.build_dir }}/Testing/Temporary/
+            out/campaign/
+          retention-days: 14
+
+  windows-asan:
+    # Keep required-check names stable; the current scope validates TCP.
+    name: Windows (${{ matrix.name }} Release TLS)
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: MSVC ASan
+            compiler: cl
+            runtime: MultiThreadedDLL
+            flags: /O2 /Ob2 /DNDEBUG /fsanitize=address /Zi
+            linker_flags: /INCREMENTAL:NO /DEBUG
+          - name: Clang UBSan
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+            runtime: MultiThreaded
+            flags: >-
+              -O3 -DNDEBUG -fsanitize=undefined -fno-sanitize-recover=undefined
+              -fno-omit-frame-pointer -g
+            linker_flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined
+              -Xlinker /INCREMENTAL:NO
+
+    env:
+      ASAN_OPTIONS: halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+
+      - name: Configure TCP with cooperative engine turns (TLS disabled)
+        run: >-
+          cmake -S . -B out/build/msvc-asan -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+          "-DDOBA_ENABLE_TLS=OFF"
+          "-DCMAKE_CXX_FLAGS_RELEASE=${{ matrix.flags }}"
+          "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker_flags }}"
+
+      - name: Build
+        shell: bash
+        run: >-
+          cmake --build out/build/msvc-asan 2>&1 |
+          tee out/build/msvc-asan/build.log
+
+      - name: Verify test inventory
+        env:
+          ASAN_OPTIONS: "halt_on_error=1:verbosity=1:log_path=out/build/\
+            msvc-asan/ci-evidence/asan"
+        run: >-
+          cmake "-DDOBA_CI_BUILD_DIR=out/build/msvc-asan"
+          "-DDOBA_CI_INVENTORY_TIMEOUT=120"
+          "-DDOBA_CI_REQUIRE_TLS=OFF" -P cmake/ci_test_inventory.cmake
+
+      - name: Test
+        run: >-
+          ctest --test-dir out/build/msvc-asan
+          --output-on-failure --no-tests=error
+
+      - name: Repeat critical concurrency cases
+        run: >-
+          ctest --test-dir out/build/msvc-asan
+          -R '^doba_(engine_concurrency|security_model)_tests$'
+          --repeat until-fail:200 --output-on-failure --no-tests=error
+
+      - name: Repeat native IOCP lifecycle cases
+        run: "ctest --test-dir out/build/msvc-asan \
+          -R '^doba_(iocp_completion|windows_lifecycle|windows_processing|\
+          stream_integrity)_tests$' \
+          --repeat until-fail:20 --output-on-failure --no-tests=error"
+
+      - name: Run reproducible fault and ownership campaign
+        run: >-
+          out/build/msvc-asan/tests/qualification/doba_campaign.exe
+          --build out/build/msvc-asan --output out/campaign
+          --rounds ${{ github.event_name == 'schedule' && 12 || 2 }}
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.name }}-Release-TCP
+          path: |
+            out/build/msvc-asan/build.log
+            out/build/msvc-asan/CMakeCache.txt
+            out/build/msvc-asan/CMakeFiles/CMakeConfigureLog.yaml
+            out/build/msvc-asan/CMakeFiles/*/CMakeCXXCompiler.cmake
+            out/build/msvc-asan/compile_commands.json
+            out/build/msvc-asan/ci-evidence/
+            out/build/msvc-asan/Testing/Temporary/
+            out/build/msvc-asan/**/*.pdb
+            out/campaign/
+          retention-days: 14
+
+  cmake-minimum:
+    name: ${{ matrix.os }} (CMake 3.20.6)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+          - os: windows-latest
+            compiler: cl
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.20.6"
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
+      - name: Configure
+        run: >-
+          cmake -S . -B out/build/cmake-3.20 -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+
+      - name: Build
+        shell: bash
+        run: >-
+          cmake --build out/build/cmake-3.20 2>&1 |
+          tee out/build/cmake-3.20/build.log
+
+      - name: Verify test inventory
+        run: >-
+          cmake "-DDOBA_CI_BUILD_DIR=out/build/cmake-3.20"
+          "-DDOBA_CI_REQUIRE_TLS=OFF" -P cmake/ci_test_inventory.cmake
+
+      - name: Test
+        run: >-
+          ctest --test-dir out/build/cmake-3.20
+          --output-on-failure --no-tests=error
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-cmake-minimum-Release
+          path: |
+            out/build/cmake-3.20/build.log
+            out/build/cmake-3.20/CMakeCache.txt
+            out/build/cmake-3.20/CMakeFiles/CMakeOutput.log
+            out/build/cmake-3.20/CMakeFiles/CMakeError.log
+            out/build/cmake-3.20/CMakeFiles/*/CMakeCXXCompiler.cmake
+            out/build/cmake-3.20/compile_commands.json
+            out/build/cmake-3.20/ci-evidence/
+            out/build/cmake-3.20/Testing/Temporary/
+          retention-days: 14
+
+  fuzz:
+    name: ${{ matrix.os }} (fuzz ${{ matrix.harness }} Release ASan UBSan)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ github.event_name == 'schedule' && 45 || 15 }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: [decoder, chunked]
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            compiler: /usr/bin/clang++
+            suffix: ''
+            detect_leaks: 1
+          - os: windows-latest
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+            suffix: .exe
+            detect_leaks: 0
+    env:
+      ASAN_OPTIONS: detect_leaks=${{ matrix.detect_leaks }}:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Restore evolving corpus
+        uses: actions/cache@v4
+        with:
+          path: out/fuzz-corpus/${{ matrix.harness }}
+          key: "fuzz-${{ runner.os }}-${{ matrix.harness }}-\
+            ${{ github.run_id }}-${{ github.run_attempt }}"
+          restore-keys: fuzz-${{ runner.os }}-${{ matrix.harness }}-
+
+      - name: Restore evolving engine corpus
+        if: matrix.harness == 'decoder'
+        uses: actions/cache@v4
+        with:
+          path: out/fuzz-corpus/engine
+          key: "fuzz-${{ runner.os }}-engine-${{ github.run_id }}-\
+            ${{ github.run_attempt }}"
+          restore-keys: fuzz-${{ runner.os }}-engine-
+
+      - name: Install Clang fuzzing runtime
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          clang libclang-rt-dev ninja-build
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
+      - name: Configure Release fuzzers
+        run: >-
+          cmake -S . -B out/build/fuzz -G Ninja
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}"
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+          "-DDOBA_BUILD_FUZZERS=ON" "-DDOBA_BUILD_TESTS=OFF"
+          "-DDOBA_BUILD_EXAMPLES=OFF" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+
+      - name: Build harness
+        shell: bash
+        run: >-
+          cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }}
+          doba_fuzz_seed_corpus 2>&1 | tee out/build/fuzz/build.log
+
+      - name: Generate canonical seeds
+        run: >-
+          out/build/fuzz/tests/fuzz/doba_fuzz_seed_corpus${{ matrix.suffix }}
+          out/fuzz-corpus
+
+      - name: Record reproduction environment
+        shell: bash
+        run: |
+          mkdir -p out/fuzz-artifacts/${{ matrix.harness }}
+          git rev-parse HEAD > out/fuzz-artifacts/revision.txt
+          "${{ matrix.compiler }}" --version > out/fuzz-artifacts/compiler.txt
+          uname -a > out/fuzz-artifacts/platform.txt
+
+      - name: Replay corpus
+        shell: bash
+        run: |
+          out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}} \
+            -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
+            -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 |
+            tee out/fuzz-artifacts/replay.log
+
+      - name: Run bounded fuzz campaign
+        shell: bash
+        run: |
+          out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}} \
+            -max_total_time=${{github.event_name == 'schedule' && 600 || 60}} \
+            -timeout=5 -rss_limit_mb=2048 -max_len=16384 \
+            -dict=tests/fuzz/http.dict -print_final_stats=1 \
+            -artifact_prefix=out/fuzz-artifacts/${{ matrix.harness }}/ \
+            out/fuzz-corpus/${{ matrix.harness }} 2>&1 |
+            tee out/fuzz-artifacts/campaign.log
+
+      # Keep the established required-check names. Decoder jobs also gate the
+      # stateful mixed-handler engine model on both operating systems.
+      - name: Build and replay engine state model
+        if: matrix.harness == 'decoder'
+        shell: bash
+        run: |
+          cmake --build out/build/fuzz --target fuzz_engine 2>&1 |
+            tee -a out/build/fuzz/build.log
+          mkdir -p out/fuzz-artifacts/engine
+          out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }} \
+            -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=512 \
+            -artifact_prefix=out/fuzz-artifacts/engine/ \
+            out/fuzz-corpus/engine 2>&1 |
+            tee out/fuzz-artifacts/engine-replay.log
+
+      - name: Run bounded engine fuzz campaign
+        if: matrix.harness == 'decoder'
+        shell: bash
+        run: |
+          out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }} \
+            -max_total_time=${{github.event_name == 'schedule' && 600 || 60}} \
+            -timeout=5 -rss_limit_mb=2048 -max_len=512 \
+            -print_final_stats=1 -artifact_prefix=out/fuzz-artifacts/engine/ \
+            out/fuzz-corpus/engine 2>&1 |
+            tee out/fuzz-artifacts/engine-campaign.log
+
+      - name: Upload fuzz evidence and reproducers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-${{ runner.os }}-${{ matrix.harness }}-Release
+          retention-days: 14
+          path: |
+            out/fuzz-corpus/${{ matrix.harness }}/
+            out/fuzz-corpus/engine/
+            out/fuzz-artifacts/
+            out/build/fuzz/tests/fuzz/fuzz_${{matrix.harness}}${{matrix.suffix}}
+            out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }}
+            out/build/fuzz/tests/fuzz/*.pdb
+            out/build/fuzz/tests/fuzz/*.dll
+            out/build/fuzz/build.log
+            out/build/fuzz/CMakeCache.txt
+            out/build/fuzz/compile_commands.json
+            out/build/fuzz/CMakeFiles/*/CMakeCXXCompiler.cmake
+
+  mutation:
+    name: ${{ matrix.os }} (mutation detection Release ASan UBSan)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: /usr/bin/clang++
+          - os: windows-latest
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install Clang runtime
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          clang libclang-rt-dev ninja-build
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Verify original tests and detect eight mutants
+        run: >-
+          cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
+          "-DDOBA_MUTATION_OUTPUT=out/mutations"
+          -P tests/mutation/run_detection.cmake
+      - name: Upload mutation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-detection-${{ runner.os }}-Release
+          retention-days: 14
+          path: |
+            out/mutations/**/results.txt
+            out/mutations/**/revision.txt
+            out/mutations/**/compiler.txt
+            out/mutations/**/source-sha256.txt
+            out/mutations/**/mutation.txt
+            out/mutations/**/compile_commands.json
+            out/mutations/**/CMakeCache.txt
+            out/mutations/**/*.log
+
+  tls:
+    name: ${{ matrix.os }} (TLS ${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: GCC Debug
+            compiler: g++
+            type: Debug
+          - os: ubuntu-latest
+            name: GCC Release
+            compiler: g++
+            type: Release
+          - os: ubuntu-latest
+            name: Clang Debug
+            compiler: clang++
+            type: Debug
+          - os: ubuntu-latest
+            name: Clang Release
+            compiler: clang++
+            type: Release
+          - os: ubuntu-latest
+            name: ASan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=address -fno-omit-frame-pointer -g
+          - os: ubuntu-latest
+            name: UBSan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined -g
+          - os: ubuntu-latest
+            name: TSan
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=thread -g
+          - os: windows-latest
+            name: MSVC Debug
+            runtime: MultiThreadedDebugDLL
+            compiler: cl
+            type: Debug
+          - os: windows-latest
+            name: MSVC Release
+            runtime: MultiThreadedDLL
+            compiler: cl
+            type: Release
+          - os: windows-latest
+            name: ASan
+            runtime: MultiThreadedDLL
+            compiler: cl
+            type: Release
+            flags: >-
+              /fsanitize=address /Zi
+            linker: >-
+              /INCREMENTAL:NO /DEBUG
+          - os: windows-latest
+            name: UBSan
+            runtime: MultiThreaded
+            compiler: clang++
+            type: Release
+            flags: >-
+              -fsanitize=undefined -fno-sanitize-recover=undefined -g
+            linker: >-
+              -fsanitize=undefined -Xlinker /INCREMENTAL:NO
+    env:
+      ASAN_OPTIONS: halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      TSAN_OPTIONS: halt_on_error=1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Install OpenSSL (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install openssl:x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ssl = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          "OPENSSL_ROOT_DIR=$ssl" >> $env:GITHUB_ENV
+          $dll = if ('${{ matrix.type }}' -eq 'Debug') {
+            "$ssl/debug/bin"
+          } else { "$ssl/bin" }
+          $dll >> $env:GITHUB_PATH
+      - name: Configure TLS
+        shell: pwsh
+        run: |
+          $flags = '${{ matrix.flags }}'
+          if ('${{ matrix.compiler }}' -eq 'cl') { $flags = '/EHsc ' + $flags }
+          cmake -S . -B out/build/tls -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}" `
+            "-DCMAKE_CXX_FLAGS=$flags" `
+            "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker }}" `
+            "-DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}" `
+            "-DDOBA_ENABLE_TLS=ON" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
+      - name: Build TLS tests and examples
+        shell: bash
+        run: >-
+          cmake --build out/build/tls --target
+          doba_tls_fixture doba_tls_core doba_tls_configuration
+          doba_tls_processing doba_tls_exercise doba_tls_processing_wire
+          doba_tls_examples_wire https_hello_world tls_echo 2>&1 |
+          tee out/build/tls/build.log
+      - name: Run native TLS tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS core tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_core_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS processing and ordered async wire tests
+        run: >-
+          ctest --test-dir out/build/tls
+          -R '^doba_tls_processing(_wire)?_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS configuration tests
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_configuration_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Run TLS executable examples
+        run: >-
+          ctest --test-dir out/build/tls -R '^doba_tls_examples_tests$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
+      - name: Install and configure TLS package consumer
+        shell: pwsh
+        run: |
+          cmake --install out/build/tls --prefix out/install/tls
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake -S tests/package -B out/build/tls-consumer -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DDOBA_PACKAGE_USE_TLS=ON" `
+            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/tls"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/tls-consumer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $binary = 'out/build/tls-consumer/doba_tls_consumer'
+          if ($IsWindows) { $binary += '.exe' }
+          & $binary
+      - name: Build plain consumer from TLS installation without OpenSSL
+        shell: pwsh
+        run: |
+          cmake -S tests/package -B out/build/tls-plain-consumer -G Ninja `
+            "-DCMAKE_BUILD_TYPE=${{ matrix.type }}" `
+            "-DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE" `
+            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/out/install/tls"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/tls-plain-consumer
+      - name: Upload TLS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tls-${{ matrix.os }}-${{ matrix.name }}
+          path: |
+            out/build/tls/build.log
+            out/build/tls/CMakeCache.txt
+            out/build/tls/Testing/Temporary/
+          retention-days: 14
+
+  coverage:
+    name: ${{ matrix.os }} (Release source coverage)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: /usr/bin/clang++-18
+            cov: /usr/bin/llvm-cov-18
+            profdata: /usr/bin/llvm-profdata-18
+            baseline: linux
+          - os: windows-latest
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
+            cov: C:/Program Files/LLVM/bin/llvm-cov.exe
+            profdata: C:/Program Files/LLVM/bin/llvm-profdata.exe
+            baseline: windows
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Install instrumented build tools
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          clang-18 llvm-18 ninja-build libssl-dev
+      - name: Install OpenSSL
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install openssl:x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ssl = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          "OPENSSL_ROOT_DIR=$ssl" >> $env:GITHUB_ENV
+          "$ssl/bin" >> $env:GITHUB_PATH
+      - name: Install qualified LLVM on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = 'C:/Program Files/LLVM/bin/clang++.exe'
+          if ((Test-Path $compiler) -and
+              ((& $compiler --version | Out-String) -match
+                'clang version 22\.1\.8\b')) {
+            exit 0
+          }
+          New-Item -ItemType Directory -Force out/tools | Out-Null
+          $installer = Join-Path $PWD 'out/tools/LLVM-22.1.8-win64.exe'
+          Invoke-WebRequest -OutFile $installer -Uri (
+            'https://github.com/llvm/llvm-project/releases/download/' +
+            'llvmorg-22.1.8/LLVM-22.1.8-win64.exe'
+          )
+          $expected = (
+            '16e5709785fef73c854646241c4a92c5cd574318d1b33c63330dd7721903e55c'
+          )
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) {
+            throw 'LLVM installer checksum mismatch'
+          }
+          $process = Start-Process -FilePath $installer -Wait -PassThru `
+            -WindowStyle Hidden -ArgumentList '/S', '/D=C:\Program Files\LLVM'
+          if ($process.ExitCode -ne 0) { throw 'LLVM installation failed' }
+      - name: Build native qualification tools
+        shell: pwsh
+        run: |
+          cmake -S tests/qualification -B out/build/qualification -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            '-DCMAKE_CXX_COMPILER=${{ matrix.compiler }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build out/build/qualification --parallel 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Measure and gate production coverage
+        shell: pwsh
+        run: |
+          $options = @()
+          if ($IsWindows) {
+            $options += @('--openssl-root', $env:OPENSSL_ROOT_DIR)
+          }
+          $tool = './out/build/qualification/doba_coverage'
+          if ($IsWindows) { $tool += '.exe' }
+          & $tool `
+            --build out/build/coverage --output out/coverage `
+            --compiler '${{ matrix.compiler }}' --llvm-cov '${{ matrix.cov }}' `
+            --llvm-profdata '${{ matrix.profdata }}' `
+            --baseline `
+              'tests/qualification/baselines/${{ matrix.baseline }}.json' `
+            @options
+      - name: Upload coverage and reproduction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.baseline }}-Release
+          retention-days: 30
+          path: |
+            out/coverage/
+            out/build/coverage/CMakeCache.txt
+            out/build/coverage/compile_commands.json
+            out/build/coverage/Testing/Temporary/
+
+  release:
+    name: Create GitHub Release
+    if: github.event_name == 'workflow_dispatch' && inputs.create_release
+    needs:
+      - linux
+      - windows
+      - sanitizer
+      - windows-asan
+      - tls
+      - cmake-minimum
+      - fuzz
+      - mutation
+      - coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate branch
+        run: test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          major="$(awk '$2 == "DOBA_VERSION_MAJOR" { print $3 }' \
+            include/version.h)"
+          minor="$(awk '$2 == "DOBA_VERSION_MINOR" { print $3 }' \
+            include/version.h)"
+          patch="$(awk '$2 == "DOBA_VERSION_PATCH" { print $3 }' \
+            include/version.h)"
+          version="${major}.${minor}.${patch}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version in include/version.h: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate existing tag
+        shell: bash
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+            target="$(git rev-list -n 1 "$tag")"
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              echo "$tag points to $target instead of $GITHUB_SHA" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${{ steps.version.outputs.tag }}"
+          --target "$GITHUB_SHA"
+          --title "doba ${{ steps.version.outputs.version }}"
+          --generate-notes

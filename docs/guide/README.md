@@ -1,0 +1,23 @@
+<a name="guide"></a>
+<h1>
+  <a href="../../resources/docs/guide/h1-guide.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h1-guide.svg" alt="Guide">
+  </a>
+  <a href="../../resources/docs/guide/h1-guide-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-guide-dark.svg" alt="Guide">
+  </a>
+</h1>
+
+Want to see doba do something? Start at chapter 1, or jump straight to the bit
+you came for.
+
+1. [Getting started](01-getting-started.md) - get an HTTP/1.1 server talking.
+2. [Core model](02-core-model.md) - see how protocols and transports fit
+   together.
+3. [HTTP/1.1](03-http-1-1.md) - work with routes, requests, and responses.
+4. [Transports and TLS](04-transports-and-tls.md) - use TCP or
+   the optional TLS class, with explicit source and lifecycle limits.
+5. [Extending doba](05-extending-doba.md) - bring your own protocol or
+   transport.
+6. [Limits and operation](06-limits-and-operation.md) - set boundaries and
+   keep the server in shape.

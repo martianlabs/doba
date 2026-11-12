@@ -1,0 +1,373 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_common_filesystem_linux_h
+#define martianlabs_doba_common_filesystem_linux_h
+
+#include <fcntl.h>
+#include <linux/openat2.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <system_error>
+#include <utility>
+
+#include "common/filesystem_metadata.h"
+
+namespace martianlabs::doba::common {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] filesystem [linux]                                          ( class ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class filesystem {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  filesystem() = default;
+  filesystem(const filesystem&) = delete;
+  filesystem(filesystem&& in) noexcept
+      : file_(std::exchange(in.file_, -1)),
+        size_(std::exchange(in.size_, 0)),
+        position_(std::exchange(in.position_, 0)),
+        failed_(std::exchange(in.failed_, false)) {}
+  ~filesystem() { close(); }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  filesystem& operator=(const filesystem&) = delete;
+  filesystem& operator=(filesystem&& in) noexcept {
+    if (this == &in) {
+      return *this;
+    }
+    close();
+    file_ = std::exchange(in.file_, -1);
+    size_ = std::exchange(in.size_, 0);
+    position_ = std::exchange(in.position_, 0);
+    failed_ = std::exchange(in.failed_, false);
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] root                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] static std::filesystem::path root(
+      const std::filesystem::path& path, std::error_code& error) {
+    error.clear();
+    auto root = std::filesystem::canonical(path, error);
+    if (error) {
+      return {};
+    }
+    if (!std::filesystem::is_directory(root, error)) {
+      if (!error) {
+        error = std::make_error_code(std::errc::not_a_directory);
+      }
+      return {};
+    }
+    return root;
+  }
+  // +=========================================================================+
+  // | [>] valid_relative_path                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] static bool valid_relative_path(std::string_view path,
+                                                std::error_code& error) {
+    if (path.empty()) {
+      error = std::make_error_code(std::errc::is_a_directory);
+      return false;
+    }
+    for (const unsigned char c : path) {
+      if (c < 0x20 || c == 0x7f || c == '\\' || c == ':') {
+        error = std::make_error_code(std::errc::permission_denied);
+        return false;
+      }
+    }
+    std::size_t position = 0;
+    for (;;) {
+      const auto end = path.find('/', position);
+      const auto part = path.substr(
+          position, end == path.npos ? path.size() - position : end - position);
+      if (part.empty() || part == "." || part == "..") {
+        error = std::make_error_code(std::errc::permission_denied);
+        return false;
+      }
+      if (end == path.npos) {
+        break;
+      }
+      position = end + 1;
+    }
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] open                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool open(const std::filesystem::path& root, std::string_view path,
+            std::error_code& error) {
+    close();
+    error.clear();
+    if (!valid_relative_path(path, error)) {
+      return false;
+    }
+    if (!root.is_absolute()) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return false;
+    }
+    const auto directory = root.lexically_normal();
+    const auto target = directory / std::filesystem::path(path);
+    return open_target(target, error);
+  }
+  // +=========================================================================+
+  // | [>] inspect                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] static std::optional<filesystem_metadata> inspect(
+      const std::filesystem::path& root, std::string_view path,
+      std::error_code& error) {
+    error.clear();
+    if (!valid_relative_path(path, error)) {
+      return {};
+    }
+    if (!root.is_absolute()) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return {};
+    }
+    const auto target = root.lexically_normal() / std::filesystem::path(path);
+    struct open_how how{};
+    how.flags = O_PATH | O_CLOEXEC;
+    how.resolve = RESOLVE_NO_SYMLINKS;
+    const auto descriptor =
+        ::syscall(SYS_openat2, AT_FDCWD, target.c_str(), &how, sizeof(how));
+    if (descriptor >= 0) {
+      filesystem file;
+      file.file_ = static_cast<int>(descriptor);
+      struct stat info{};
+      if (::fstat(file.file_, &info) != 0) {
+        error = std::error_code(errno, std::generic_category());
+        return {};
+      }
+      if (!S_ISREG(info.st_mode)) {
+        error = std::make_error_code(S_ISDIR(info.st_mode)
+                                         ? std::errc::is_a_directory
+                                         : std::errc::permission_denied);
+        return {};
+      }
+      if (info.st_size < 0 || static_cast<std::uintmax_t>(info.st_size) >
+                                  std::numeric_limits<std::size_t>::max()) {
+        error = std::make_error_code(std::errc::value_too_large);
+        return {};
+      }
+      return describe(info);
+    }
+    const auto code = errno;
+    // Try the path walk if the kernel cannot use openat2.
+    if (code != ENOSYS && code != EINVAL && code != E2BIG && code != EPERM) {
+      error = code == ELOOP ? std::make_error_code(std::errc::permission_denied)
+                            : std::error_code(code, std::generic_category());
+      return {};
+    }
+    filesystem file;
+    if (!file.open(root, path, error)) {
+      return {};
+    }
+    return file.metadata(error);
+  }
+  // +=========================================================================+
+  // | [>] read                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::size_t read(std::span<std::byte> output) {
+    if (output.empty() || failed_) {
+      return 0;
+    }
+    if (file_ == -1) {
+      failed_ = true;
+      return 0;
+    }
+    const auto count = std::min(
+        {output.size(), size_ - position_,
+         static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
+    if (!count) {
+      return 0;
+    }
+    ssize_t result;
+    do {
+      result = ::read(file_, output.data(), count);
+    } while (result < 0 && errno == EINTR);
+    if (result <= 0) {
+      failed_ = true;
+      return 0;
+    }
+    position_ += static_cast<std::size_t>(result);
+    return static_cast<std::size_t>(result);
+  }
+  // +=========================================================================+
+  // | [>] size                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] std::size_t size() const noexcept { return size_; }
+  // +-------------------------------------------------------------------------+
+  // | [>] metadata                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] std::optional<filesystem_metadata> metadata(
+      std::error_code& error) const {
+    error.clear();
+    struct stat info{};
+    if (::fstat(file_, &info) != 0) {
+      error = std::error_code(errno, std::generic_category());
+      return {};
+    }
+    return describe(info);
+  }
+  // +-------------------------------------------------------------------------+
+  // | [>] select                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool select(std::size_t offset, std::size_t length, std::error_code& error) {
+    error.clear();
+    if (offset > size_ || length > size_ - offset) {
+      error = std::make_error_code(std::errc::invalid_argument);
+      return false;
+    }
+    if (::lseek(file_, static_cast<off_t>(offset), SEEK_SET) == -1) {
+      error = std::error_code(errno, std::generic_category());
+      return false;
+    }
+    size_ = length;
+    position_ = 0;
+    failed_ = false;
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] is_open                                                  ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool is_open() const noexcept { return file_ != -1; }
+  // +=========================================================================+
+  // | [>] eof                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool eof() const noexcept { return position_ == size_; }
+  // +=========================================================================+
+  // | [>] failed                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool failed() const noexcept { return failed_; }
+  // +=========================================================================+
+  // | [>] close                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  void close() noexcept {
+    if (file_ != -1) {
+      ::close(file_);
+    }
+    file_ = -1;
+    size_ = 0;
+    position_ = 0;
+    failed_ = false;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] describe                                                ( private ) |
+  // +-------------------------------------------------------------------------+
+  static filesystem_metadata describe(const struct stat& info) noexcept {
+    return filesystem_metadata{static_cast<std::uintmax_t>(info.st_size),
+                               info.st_mtim.tv_sec,
+                               static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
+                               static_cast<std::uint64_t>(info.st_dev),
+                               static_cast<std::uint64_t>(info.st_ino),
+                               info.st_ctim.tv_sec,
+                               static_cast<std::uint32_t>(info.st_ctim.tv_nsec),
+                               static_cast<std::uint32_t>(info.st_mode),
+                               static_cast<std::uint64_t>(info.st_nlink)};
+  }
+  // +=========================================================================+
+  // | [>] open_target                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  bool open_target(const std::filesystem::path& target,
+                   std::error_code& error) {
+    filesystem current;
+    current.file_ = ::open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
+    if (current.file_ == -1) {
+      error = std::error_code(errno, std::generic_category());
+      return false;
+    }
+    const auto relative = target.relative_path();
+    for (auto part = relative.begin(); part != relative.end(); ++part) {
+      const bool last = std::next(part) == relative.end();
+      filesystem next;
+      // Keep each directory open so a link cannot redirect the next step.
+      next.file_ =
+          ::openat(current.file_, part->c_str(),
+                   O_CLOEXEC | O_NOFOLLOW |
+                       (last ? O_RDONLY | O_NONBLOCK : O_PATH | O_DIRECTORY));
+      if (next.file_ == -1) {
+        const int code = errno;
+        struct stat link{};
+        if (code == ELOOP || (::fstatat(current.file_, part->c_str(), &link,
+                                        AT_SYMLINK_NOFOLLOW) == 0 &&
+                              S_ISLNK(link.st_mode))) {
+          error = std::make_error_code(std::errc::permission_denied);
+        } else {
+          error = std::error_code(code, std::generic_category());
+        }
+        return false;
+      }
+      if (last) {
+        struct stat info{};
+        if (::fstat(next.file_, &info) != 0) {
+          error = std::error_code(errno, std::generic_category());
+          return false;
+        }
+        if (!S_ISREG(info.st_mode)) {
+          error = std::make_error_code(S_ISDIR(info.st_mode)
+                                           ? std::errc::is_a_directory
+                                           : std::errc::permission_denied);
+          return false;
+        }
+        if (info.st_size < 0 || static_cast<std::uintmax_t>(info.st_size) >
+                                    std::numeric_limits<std::size_t>::max()) {
+          error = std::make_error_code(std::errc::value_too_large);
+          return false;
+        }
+        next.size_ = static_cast<std::size_t>(info.st_size);
+      }
+      current = std::move(next);
+    }
+    *this = std::move(current);
+    return true;
+  }
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  int file_{-1};
+  std::size_t size_{0};
+  std::size_t position_{0};
+  bool failed_{false};
+};
+}  // namespace martianlabs::doba::common
+
+#endif

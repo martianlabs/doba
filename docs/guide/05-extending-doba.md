@@ -1,0 +1,291 @@
+<a name="extending-doba"></a>
+<h1>
+  <a href="../../resources/docs/guide/h1-extending-doba.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h1-extending-doba.svg" alt="Extending doba">
+  </a>
+  <a href="../../resources/docs/guide/h1-extending-doba-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h1-extending-doba-dark.svg" alt="Extending doba">
+  </a>
+</h1>
+
+Want a protocol that isn't HTTP? Or a transport that doesn't use sockets?
+Pick the side you want to replace and keep the other one. The
+[core model](02-core-model.md) covers the contracts; here we'll follow two
+small examples that put them to work.
+
+<a name="build-the-examples"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-build-the-examples.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-build-the-examples.svg" alt="Build the examples">
+  </a>
+  <a href="../../resources/docs/guide/h2-build-the-examples-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-build-the-examples-dark.svg" alt="Build the examples">
+  </a>
+</h2>
+
+From the repository root, build both demos. They use synchronous TCP or memory:
+
+```sh
+cmake -S . -B out/build/guide
+cmake --build out/build/guide --config Release --target custom_protocol
+cmake --build out/build/guide --config Release --target custom_transport
+```
+
+As in the earlier chapters, *--config Release* selects the configuration
+for generators such as Visual Studio.
+
+<a name="your-own-protocol"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-your-own-protocol.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-protocol.svg" alt="Your own protocol">
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-protocol-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-protocol-dark.svg" alt="Your own protocol">
+  </a>
+</h2>
+
+The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
+speaks a tiny line-based language. Send a line, get that line back with
+**echo:** in front. Its
+[source](../../examples/protocol/custom_protocol/main.cpp) defines one
+engine per connection. It stores both callbacks and requests a close if a
+line exceeds its 4096-byte limit, including the newline:
+
+```cpp
+struct policies_type {};
+
+void set_on_send(protocol::send_delegate output) {
+  on_send_ = std::move(output);
+}
+void set_on_close(std::function<void()> close) {
+  on_close_ = std::move(close);
+}
+```
+
+The input method keeps unfinished lines in engine-owned storage and checks
+the limit before appending each piece:
+
+```cpp
+protocol::processing_result on_bytes_received(std::string_view input) {
+  while (!input.empty()) {
+    const auto end = input.find('\n');
+    const auto size = end == std::string_view::npos ? input.size() : end + 1;
+    if (size > kMaximumLineSize - input_.size()) {
+      on_close_();
+      return {};
+    }
+    input_.append(input.substr(0, size));
+    input.remove_prefix(size);
+    if (end != std::string_view::npos) {
+      on_send_("echo: ", input_, nullptr);
+      input_.clear();
+    }
+  }
+  return {};
+}
+
+protocol::processing_result on_processing_turn(bool) {
+  return {};
+}
+```
+
+Here `kMaximumLineSize` is 4096 and `input_` is a std::string member.
+Incomplete lines remain in that
+string. The transport delivers only fresh bytes, and may overwrite its
+receive buffer as soon as the callback returns. The line limit is independent
+of the transport receive buffer size.
+
+<a name="run-it-over-tcp"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-run-it-over-tcp.svg" alt="Run it over TCP">
+  </a>
+  <a href="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-it-over-tcp-dark.svg" alt="Run it over TCP">
+  </a>
+</h2>
+
+TCP needs a fresh engine for each connection, so the example gives the
+[core server](../reference/server.md) a factory and a concrete TCP transport.
+No HTTP server is involved:
+
+```cpp
+auto create_engine = []() { return custom_protocol{}; };
+using transport_type = transport::tcp<custom_protocol,
+                                      decltype(create_engine)>;
+martianlabs::doba::server<custom_protocol, transport_type> server(
+    {.ip = "0.0.0.0", .port = "8080"}, create_engine);
+```
+
+The example starts the server, waits for a stop signal, and then stops it.
+On Linux with a single-configuration generator, run:
+
+```sh
+./out/build/guide/examples/protocol/custom_protocol/custom_protocol
+```
+
+With Visual Studio on Windows, run:
+
+```powershell
+$build = '.\out\build\guide\examples\protocol\custom_protocol'
+& "$build\Release\custom_protocol.exe"
+```
+
+Send **hello** followed by a newline from a TCP client to **localhost:8080**.
+You should receive **echo: hello** followed by a newline. Stop the server
+with Ctrl+C when you're done.
+
+<a name="your-own-transport"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-your-own-transport.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-transport.svg" alt="Your own transport">
+  </a>
+  <a href="../../resources/docs/guide/h2-your-own-transport-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-your-own-transport-dark.svg" alt="Your own transport">
+  </a>
+</h2>
+
+The [custom_transport example][custom-transport] flips the experiment: it
+keeps doba's HTTP/1.1 engine and supplies a tiny in-memory transport. Its
+[source](../../examples/transport/custom_transport/main.cpp) takes
+the engine factory in its constructor. In *start*, it creates the engine and
+wires up its output and close callbacks:
+
+[custom-transport]: ../../examples/transport/custom_transport/README.md
+
+```cpp
+connection_.reset(new ENty(create_engine_()));
+connection_->set_on_send(
+    [this](std::string_view head, std::string_view body,
+           std::unique_ptr<common::reader> source) {
+      output_->append(head);
+      output_->append(body);
+      if (source) source->read_all(*output_);
+    });
+connection_->set_on_close([this]() { close_requested_ = true; });
+on_connection_();
+```
+
+The output callback appends the response head and body to the supplied
+string, then drains any body reader. *start* feeds one fixed
+**GET /hello** request; *stop* destroys the engine and announces the
+disconnection. The caller owns the output string and keeps it alive until
+the transport stops.
+
+<a name="run-http-in-memory"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-run-http-in-memory.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-run-http-in-memory.svg" alt="Run HTTP in memory">
+  </a>
+  <a href="../../resources/docs/guide/h2-run-http-in-memory-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-run-http-in-memory-dark.svg" alt="Run HTTP in memory">
+  </a>
+</h2>
+
+The HTTP server accepts the transport as its final template argument. The
+example creates the output string first, then passes its address as the
+transport policy:
+
+```cpp
+std::string output;
+martianlabs::doba::http_server<http::request, http::response, routes_type,
+                               engine_type, custom_transport>
+    server(&output);
+```
+
+Run the already-built example. On Linux:
+
+```sh
+./out/build/guide/examples/transport/custom_transport/custom_transport
+```
+
+With Visual Studio on Windows:
+
+```powershell
+$build = '.\out\build\guide\examples\transport\custom_transport'
+& "$build\Release\custom_transport.exe"
+```
+
+It prints an HTTP response that starts with **HTTP/1.1 200** and ends with
+**hello from memory**. There is no listener or network client to start.
+
+<a name="keep-the-boundary-safe"></a>
+<h2>
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe.svg#gh-light-mode-only">
+    <img src="../../resources/docs/guide/h2-keep-the-boundary-safe.svg" alt="Keep the boundary safe">
+  </a>
+  <a href="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/guide/h2-keep-the-boundary-safe-dark.svg" alt="Keep the boundary safe">
+  </a>
+</h2>
+
+The examples are small on purpose. When you move beyond them, keep three
+runtime rules from the [contracts](02-core-model.md#protocol-contract) in
+view:
+
+- **Input.** Deliver fresh immutable RX bytes for one connection at a time.
+  The engine retains incomplete messages; the transport reuses its RX buffer.
+- **Output.** Copy accepted head/body bytes before send returns and take ownership
+  of the optional reader. Its backing storage must remain valid until release.
+  One reader is terminal; later nonempty output or another reader is rejected.
+  Empty sends without a reader are no-ops and consume no TX budget.
+- **Threads and close.** The engine invokes send/close only inside its current
+  input call, on that calling thread. Registered callbacks must not escape for
+  delayed or cross-thread invocation. Close ends new input and drains accepted
+  output; errors and output-limit violations may abort it. Administration belongs
+  to a sequential external owner outside worker callbacks.
+
+The [TCP runtime contract](../reference/transport/tcp.md#runtime-contract)
+specifies buffers, reader lifetime, platform limits and stop behavior. A C++
+concept checks signatures; implementing it alone does not prove these guarantees.
+
+HTTP now reports immediate/deadline/output-drain needs through the returned
+processing_result. The engine retains bounded unadmitted input itself and
+supports several cooperative async handlers per connection, while preserving
+response order. It has no input pause/resume hook, external execution service
+or completion observer. All engine calls and destruction remain serialized.
+See [the current engine contract](../reference/protocol/http/v11/engine.md).
+Linux and Windows TCP supply serialized processing turns with monotonic
+deadlines. TLS forwards the same results through its serialized adapter.
+An in-memory adapter can also supply turns as shown by
+[processing_turns](../../examples/http/v11/processing_turns/README.md).
+
+Custom HTTP requests accept a final `borrow_bytes` argument in `from(...)`.
+The decoder supplies true so fields can reference its immutable input;
+standalone factory calls default to owned field storage. Requests expose
+`borrows_bytes()` and `make_owned()` for copying before async invocation.
+`rebase_bytes(previous_address, current_buffer) noexcept` supports residual
+relocation before dispatch; `body_is_stored()` and `body_wire_size()` determine
+whether fragmented body bytes need residual storage. Borrowed input must
+remain immutable; the standard request copies percent-encoded paths before
+decoding them.
+Their `begin_body(memory_threshold, declared_size)`,
+`append_body(wire_bytes)` and
+`finish_body(chunked, content_length, extension_limit, trailer_limit)`
+operations support construction across receives; a false result reports a
+storage failure. The decoder calls the factory once the head is complete,
+but dispatches the request only after its body is complete. Deriving from the
+built-in request supplies these operations.
+
+Custom HTTP responses provide an owning factory
+`from(max_head_size, body_memory_threshold)` and a synchronous factory
+`from(max_head_size, body_memory_threshold, head_storage, body_storage)`.
+The last two arguments are references to separate engine-owned `std::string`
+objects. The synchronous response starts with fresh message state and writes
+directly into them, reusing their capacity. These borrowed strings must outlive
+serialization and the transport's output capture. The limits remain
+operational bounds; no default capacity is reserved. Deriving from the
+standard response supplies both storage modes. The custom response example
+forwards both factories.
+
+The in-memory demo handles one fixed request synchronously. It shows where
+the pieces meet; a real network transport also needs connection management,
+buffering, and safe output delivery. Head back to the [guide index](README.md)
+when you're ready for the final chapter.
+
+
+Both engine entry points return processing_result directly. An empty result
+requests no additional turns. It never acknowledges a subset of received
+bytes: the full input block can be reused once the call returns. See the
+[processing contract](../reference/protocol/processing_result.md), including
+native immediate/deadline/output-drain semantics on both TCP backends and TLS.

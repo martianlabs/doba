@@ -1,0 +1,227 @@
+//                              _       _
+//                           __| | ___ | |__   __ _
+//                          / _` |/ _ \| '_ \ / _` |
+//                         | (_| | (_) | |_) | (_| |
+//                          \__,_|\___/|_.__/ \__,_|
+//
+//                              Apache License
+//                        Version 2.0, January 2004
+//                     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Copyright 2025 martianLabs
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+#ifndef martianlabs_doba_common_reader_h
+#define martianlabs_doba_common_reader_h
+
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
+#include <memory>
+#include <optional>
+#include <span>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include "common/byte_storage.h"
+#include "common/filesystem.h"
+
+namespace martianlabs::doba::common {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] reader                                                      ( class ) |
+// +---------------------------------------------------------------------------+
+// | Reads bytes from storage, a file or a block of memory.                    |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+class reader {
+ public:
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  reader() = default;
+  explicit reader(byte_storage storage) : storage_(std::move(storage)) {}
+  explicit reader(filesystem file) : file_(std::move(file)) {}
+  reader(const reader&) = delete;
+  reader(reader&& in) noexcept
+      : storage_(std::move(in.storage_)),
+        file_(std::move(in.file_)),
+        owner_(std::move(in.owner_)),
+        borrowed_(in.borrowed_),
+        borrowed_pos_(in.borrowed_pos_),
+        failed_(in.failed_),
+        is_borrowed_(in.is_borrowed_) {
+    in.file_.reset();
+    in.borrowed_ = {};
+    in.borrowed_pos_ = 0;
+    in.failed_ = false;
+    in.is_borrowed_ = false;
+  }
+  // +=========================================================================+
+  // | [>] OPERATORs                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  reader& operator=(const reader&) = delete;
+  reader& operator=(reader&& in) noexcept {
+    if (this == &in) return *this;
+    storage_ = std::move(in.storage_);
+    file_ = std::move(in.file_);
+    owner_ = std::move(in.owner_);
+    borrowed_ = in.borrowed_;
+    borrowed_pos_ = in.borrowed_pos_;
+    failed_ = in.failed_;
+    is_borrowed_ = in.is_borrowed_;
+    in.file_.reset();
+    in.borrowed_ = {};
+    in.borrowed_pos_ = 0;
+    in.failed_ = false;
+    in.is_borrowed_ = false;
+    return *this;
+  }
+  // +=========================================================================+
+  // | [>] borrowed                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Reads the caller's bytes without owning them.                           |
+  // | Keep them alive while any reader still uses them.                       |
+  // +-------------------------------------------------------------------------+
+  static reader borrowed(std::span<const std::byte> source) noexcept {
+    return reader(source, borrowed_tag{});
+  }
+  // +=========================================================================+
+  // | [>] shared                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | The bytes must belong to the owner and stay unchanged.                  |
+  // | Keeps the owner alive; each reader has its own cursor.                  |
+  // +-------------------------------------------------------------------------+
+  static reader shared(std::shared_ptr<const void> owner,
+                       std::span<const std::byte> source) {
+    if (!owner) throw std::invalid_argument("Shared reader needs an owner");
+    auto result = reader(source, borrowed_tag{});
+    result.owner_ = std::move(owner);
+    return result;
+  }
+  // +=========================================================================+
+  // | [>] rebind_borrowed                                          ( public ) |
+  // +-------------------------------------------------------------------------+
+  void rebind_borrowed(std::span<const std::byte> source) noexcept {
+    if (is_borrowed_ && !owner_) borrowed_ = source;
+  }
+
+  // +=========================================================================+
+  // | [>] read                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::size_t read(std::span<std::byte> output) {
+    if (output.empty()) return 0;
+    if (file_) {
+      const auto bytes = file_->read(output);
+      failed_ = file_->failed();
+      return bytes;
+    }
+    if (is_borrowed_) {
+      if (borrowed_pos_ == borrowed_.size()) return 0;
+      std::size_t bytes =
+          std::min(output.size(), borrowed_.size() - borrowed_pos_);
+      std::memmove(output.data(), borrowed_.data() + borrowed_pos_, bytes);
+      borrowed_pos_ += bytes;
+      return bytes;
+    }
+    std::size_t bytes =
+        storage_.read(reinterpret_cast<char*>(output.data()), output.size());
+    if (!storage_.ok()) failed_ = true;
+    return bytes;
+  }
+  // +=========================================================================+
+  // | [>] fetch                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  bool fetch(std::byte& byte) {
+    if (file_) return read(std::span<std::byte>(&byte, 1)) == 1;
+    if (is_borrowed_) {
+      if (borrowed_pos_ == borrowed_.size()) return false;
+      byte = borrowed_[borrowed_pos_++];
+      return true;
+    }
+    if (storage_.fetch(byte)) return true;
+    if (!storage_.ok()) failed_ = true;
+    return false;
+  }
+  // +=========================================================================+
+  // | [>] eof                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool eof() const noexcept {
+    if (file_) return file_->eof();
+    return is_borrowed_ ? borrowed_pos_ == borrowed_.size()
+                        : storage_.exhausted();
+  }
+  // +=========================================================================+
+  // | [>] exhausted                                                ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool exhausted() const noexcept { return eof(); }
+  // +=========================================================================+
+  // | [>] failed                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool failed() const noexcept { return failed_; }
+  // +=========================================================================+
+  // | [>] ok                                                       ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] bool ok() const noexcept {
+    if (file_) return !file_->failed();
+    return is_borrowed_ || storage_.ok();
+  }
+  // +=========================================================================+
+  // | [>] size                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] std::optional<std::size_t> size() const noexcept {
+    if (file_) return file_->size();
+    return is_borrowed_ ? std::optional<std::size_t>(borrowed_.size())
+                        : storage_.total_size();
+  }
+  // +=========================================================================+
+  // | [>] read_all                                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  std::size_t read_all(std::string& out) {
+    std::byte buffer[8192];
+    std::size_t total = 0;
+    while (!eof() && !failed()) {
+      std::size_t bytes = read(std::span<std::byte>(buffer, sizeof(buffer)));
+      if (bytes == 0) break;
+      out.append(reinterpret_cast<const char*>(buffer), bytes);
+      total += bytes;
+    }
+    return total;
+  }
+
+ private:
+  // +=========================================================================+
+  // | [>] TYPEs                                                   ( private ) |
+  // +-------------------------------------------------------------------------+
+  struct borrowed_tag {};
+  // +=========================================================================+
+  // | [>] CONSTRUCTORs                                           ( private )  |
+  // +-------------------------------------------------------------------------+
+  reader(std::span<const std::byte> source, borrowed_tag) noexcept
+      : borrowed_(source), is_borrowed_(true) {}
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  byte_storage storage_;
+  std::optional<filesystem> file_;
+  std::shared_ptr<const void> owner_;
+  std::span<const std::byte> borrowed_;
+  std::size_t borrowed_pos_{0};
+  bool failed_{false};
+  bool is_borrowed_{false};
+};
+}  // namespace martianlabs::doba::common
+
+#endif
