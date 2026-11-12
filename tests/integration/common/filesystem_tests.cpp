@@ -38,7 +38,7 @@
 namespace {
 using martianlabs::doba::tests::file_directory;
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 // +===========================================================================+
@@ -50,8 +50,8 @@ DOBA_TEST("filesystem readers retain separate cursors across ownership moves") {
   const std::string input(131071, 'x');
   directory.write("sub/data", input);
   std::error_code error;
-  filesystem_file first;
-  filesystem_file second;
+  filesystem first;
+  filesystem second;
   DOBA_EXPECT(first.open(directory.path(), "sub/data", error));
   DOBA_EXPECT(second.open(directory.path(), "sub/data", error));
   martianlabs::doba::common::reader reader(std::move(first));
@@ -73,7 +73,7 @@ DOBA_TEST("filesystem readers observe changes before the first read") {
   file_directory directory;
   directory.write("file", "old");
   std::error_code error;
-  filesystem_file file;
+  filesystem file;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   martianlabs::doba::common::reader reader(std::move(file));
   directory.write("file", "new");

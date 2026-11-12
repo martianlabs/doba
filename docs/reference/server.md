@@ -10,6 +10,12 @@
 
 Server class that manages the lifecycle of a transport server and its associated protocol engine.
 
+The wrapper is noncopyable and nonmovable. Construction retains the policy
+and factory; it constructs the transport lazily on the first `start()`.
+It keeps that transport across stop/start cycles. Destruction calls `stop()`;
+shutdown must therefore be safe for the selected transport at destruction time.
+Lifecycle hooks run under the wrapper's mutex and must not reenter its lifecycle.
+
 ### <a href="../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> doba
 
 [server](#type-server)
@@ -47,7 +53,7 @@ Server class that manages the lifecycle of a transport server and its associated
 - **ENty:** `protocol::contracts::engine ENty`.
 - **TRty:** `typename TRty`.
 
-**Source:** [include/server.h:53](../../include/server.h#L53)
+**Source:** [include/server.h](../../include/server.h)
 
 <a id="method-start"></a>
 
@@ -65,7 +71,13 @@ Starts the transport and begins accepting connections. A second call while runni
 
 **Errors:** Throws `std::runtime_error` if transport construction failed on an earlier attempt. Construction, callbacks, and transport startup can propagate errors.
 
-**Source:** [include/server.h:81](../../include/server.h#L81)
+A transport-constructor exception consumes the stored factory arguments: that
+wrapper cannot retry construction. A failure from `transport.start()` leaves
+the constructed transport available for a later attempt, subject to its own
+recovery contract. A started-hook exception happens after the wrapper has
+entered its running state.
+
+**Source:** [include/server.h](../../include/server.h)
 
 <a id="method-stop"></a>
 
@@ -82,8 +94,13 @@ a sequential external owner outside worker callbacks. Linux cancels outstanding
 TX after the active call; Windows drains accepted output and real I/O before
 joining workers. Neither waits for application tasks or promises a stop timeout.
 A call while stopped has no effect. See the
-[TCP lifecycle contract](transport/server/tcp.md#runtime-contract).
+[TCP lifecycle contract](transport/tcp.md#runtime-contract).
+
+For a custom transport exposing `quiesce()`, the wrapper calls that before its
+stopping hook and calls `stop()` afterward. Bundled TCP uses the direct `stop()`
+path. An exception before the final stopped state leaves the wrapper marked
+running; destructors are not an exception-recovery interface.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/server.h:109](../../include/server.h#L109)
+**Source:** [include/server.h](../../include/server.h)

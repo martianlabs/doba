@@ -26,10 +26,9 @@
 #include <utility>
 
 #include "common/byte_storage.h"
-#include "common/console_logger.h"
 #include "common/signaler.h"
-#include "protocol/http/v11/body/writer.h"
 #include "http_server.h"
+#include "protocol/http/v11/body/writer.h"
 
 using namespace martianlabs::doba::common;
 using martianlabs::doba::http_server;
@@ -39,22 +38,16 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/large" that responds to GET requests.     |
-// | The response body is generated using a body writer that can spill to a    |
-// | temporary file if the in-memory threshold is exceeded. The response is    |
-// | sent with a "Content-Type" of "application/octet-stream". The server      |
-// | runs until a termination signal is received.                              |
+// | Build a large response that can spill to disk.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route("GET", "/large", [](const request&, response& res) {
     res.ok_200();
-    // Storage spills to a temporary file after this in-memory threshold.
-    byte_storage_options options{
-        .spill_to_disk_threshold = 1024, .spill_dir = {}};
+    // Spill to a temporary file past this memory limit.
+    byte_storage_options options{.spill_to_disk_threshold = 1024,
+                                 .spill_dir = {}};
     auto writer = body::body_writer::raw(options);
     const std::string block(1024, 'x');
     for (int i = 0; i < 8; i++) {
@@ -64,7 +57,7 @@ int main() {
       }
     }
     res.add_header("Content-Type", "application/octet-stream")
-        // The response adopts the writer and its storage.
+        // The response takes ownership of the writer and its storage.
         .set_body(std::move(writer));
     return;
   });

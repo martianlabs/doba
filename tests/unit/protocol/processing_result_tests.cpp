@@ -36,9 +36,11 @@ using martianlabs::doba::protocol::processing_result;
 using martianlabs::doba::tests::unit::processing_engine;
 namespace contracts = martianlabs::doba::protocol::contracts;
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] Contract signatures                                        ( static ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static_assert(contracts::engine<processing_engine<>>);
 static_assert(!contracts::engine<processing_engine<void>>);
 static_assert(!contracts::engine<processing_engine<int>>);
@@ -48,12 +50,13 @@ static_assert(!contracts::engine<processing_engine<processing_result, int>>);
 static_assert(!contracts::engine<
               processing_engine<processing_result, processing_result&>>);
 static_assert(!contracts::engine<processing_engine<
-              processing_result, processing_result, std::string_view>>);
-static_assert(!contracts::engine<processing_engine<
-              processing_result, processing_result, bool, false>>);
-static_assert(contracts::engine_factory<
-              decltype([] { return processing_engine<>{}; }),
-              processing_engine<>>);
+                  processing_result, processing_result, std::string_view>>);
+static_assert(
+    !contracts::engine<
+        processing_engine<processing_result, processing_result, bool, false>>);
+static_assert(
+    contracts::engine_factory<decltype([] { return processing_engine<>{}; }),
+                              processing_engine<>>);
 static_assert(std::is_aggregate_v<processing_result>);
 static_assert(std::is_trivially_copyable_v<processing_result>);
 static_assert(processing_result::clock::is_steady);
@@ -73,8 +76,8 @@ DOBA_TEST("processing result defaults to no additional turns") {
 // | [>] Independent processing conditions                       ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("processing result retains a deadline with other turn conditions") {
-  const auto due = processing_result::clock::time_point{} +
-                   std::chrono::seconds(7);
+  const auto due =
+      processing_result::clock::time_point{} + std::chrono::seconds(7);
   const processing_result result{true, due, true};
   DOBA_EXPECT(result.turn_requested);
   DOBA_EXPECT(result.turn_at && *result.turn_at == due);

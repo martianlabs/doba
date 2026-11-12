@@ -39,10 +39,12 @@ int main(int argc, char** argv) {
     for (int index = 1; index <= 2; ++index) {
       auto child = run({argv[index]}, 10s);
       clean_diagnostics(child.errors);
-      require(child.code == 0 && trim(child.output) == (index == 1 ?
-        "Completed steps: 3" :
-        "Concurrent handlers: 3; ordered output: 1 2 3"),
-        "Processing example output/exit mismatch");
+      require(child.code == 0 &&
+                  trim(child.output) ==
+                      (index == 1
+                           ? "Completed steps: 3"
+                           : "Concurrent handlers: 3; ordered output: 1 2 3"),
+              "Processing example output/exit mismatch");
     }
     auto port = peer::available_port();
     process child({argv[3], std::to_string(port)});
@@ -50,18 +52,19 @@ int main(int argc, char** argv) {
     auto deadline = clock::now() + 10s;
     while (!connection) {
       require(!child.poll(), "Network example exited: " + child.errors());
-      try { connection = std::make_unique<peer>(port); }
-      catch (const std::exception&) {
+      try {
+        connection = std::make_unique<peer>(port);
+      } catch (const std::exception&) {
         require(clock::now() < deadline, "Network example startup timeout");
         std::this_thread::sleep_for(20ms);
       }
     }
     connection->send(request("/wait/1") + request("/sync") +
-      request("/wait/2"));
+                     request("/wait/2"));
     for (auto expected : {"1", "sync", "2"}) {
       auto value = response(*connection, true);
       require(value.status == 200 && value.body == expected,
-        "Network example response mismatch");
+              "Network example response mismatch");
     }
     connection.reset();
     child.send("\n");

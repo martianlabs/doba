@@ -26,8 +26,8 @@
 #define martianlabs_doba_tests_unit_temporary_directory_linux_h
 
 #include <cstdlib>
-#include <string>
 #include <optional>
+#include <string>
 
 namespace martianlabs::doba::tests::unit {
 // /////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,9 @@ class temporary_directory {
   }
   temporary_directory(const temporary_directory&) = delete;
   temporary_directory& operator=(const temporary_directory&) = delete;
-  ~temporary_directory() { if (changed_ == 0) (void)restore(); }
+  ~temporary_directory() {
+    if (changed_ == 0) (void)restore();
+  }
   // +=========================================================================+
   // | [>] current                                                  ( public ) |
   // +-------------------------------------------------------------------------+
@@ -76,7 +78,6 @@ class temporary_directory {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Whether the original environment has already been restored.
   bool restored_ = false;
   std::string previous_;
   bool had_previous_ = false;

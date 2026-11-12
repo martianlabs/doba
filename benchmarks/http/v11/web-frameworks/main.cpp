@@ -34,27 +34,20 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the Web Frameworks benchmark routes on port 3000.                    |
+// | Serve the Web Frameworks routes on port 3000.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "3000"});
-  http_server.add_route(
-      "GET", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-      });
-  http_server.add_route(
-      "GET", "/user/:id",
-      [](const request&, response& res, std::string_view id) {
-        res.ok_200();
-        res.set_body(id);
-      });
-  http_server.add_route(
-      "POST", "/user",
-      [](const request&, response& res) {
-        res.ok_200();
-      });
+  http_server.add_route("GET", "/",
+                        [](const request&, response& res) { res.ok_200(); });
+  http_server.add_route("GET", "/user/:id",
+                        [](const request&, response& res, std::string_view id) {
+                          res.ok_200();
+                          res.set_body(id);
+                        });
+  http_server.add_route("POST", "/user",
+                        [](const request&, response& res) { res.ok_200(); });
   http_server.start();
   std::promise<void> shutdown;
   shutdown.get_future().wait();

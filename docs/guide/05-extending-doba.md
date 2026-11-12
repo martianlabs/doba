@@ -48,8 +48,8 @@ The [custom_protocol example](../../examples/protocol/custom_protocol/README.md)
 speaks a tiny line-based language. Send a line, get that line back with
 **echo:** in front. Its
 [source](../../examples/protocol/custom_protocol/main.cpp) defines one
-engine per connection. The engine stores the output callback and ignores
-the close callback because this demo never requests a close:
+engine per connection. It stores both callbacks and requests a close if a
+line exceeds its 4096-byte limit, including the newline:
 
 ```cpp
 struct policies_type {};
@@ -57,26 +57,30 @@ struct policies_type {};
 void set_on_send(protocol::send_delegate output) {
   on_send_ = std::move(output);
 }
-void set_on_close(std::function<void()>) {}
+void set_on_close(std::function<void()> close) {
+  on_close_ = std::move(close);
+}
 ```
 
-The input method appends each new block to engine-owned storage and sends
-complete lines:
+The input method keeps unfinished lines in engine-owned storage and checks
+the limit before appending each piece:
 
 ```cpp
 protocol::processing_result on_bytes_received(std::string_view input) {
-  input_.append(input);
-  std::size_t consumed = 0;
-  for (;;) {
-    const std::string_view remaining(input_.data() + consumed,
-                                      input_.size() - consumed);
-    const auto end = remaining.find('\n');
-    if (end == std::string_view::npos) break;
-    const auto line = remaining.substr(0, end + 1);
-    on_send_("echo: ", line, nullptr);
-    consumed += line.size();
+  while (!input.empty()) {
+    const auto end = input.find('\n');
+    const auto size = end == std::string_view::npos ? input.size() : end + 1;
+    if (size > kMaximumLineSize - input_.size()) {
+      on_close_();
+      return {};
+    }
+    input_.append(input.substr(0, size));
+    input.remove_prefix(size);
+    if (end != std::string_view::npos) {
+      on_send_("echo: ", input_, nullptr);
+      input_.clear();
+    }
   }
-  input_.erase(0, consumed);
   return {};
 }
 
@@ -85,10 +89,11 @@ protocol::processing_result on_processing_turn(bool) {
 }
 ```
 
-Here input_ is a std::string member. Incomplete lines remain in that
+Here `kMaximumLineSize` is 4096 and `input_` is a std::string member.
+Incomplete lines remain in that
 string. The transport delivers only fresh bytes, and may overwrite its
-receive buffer as soon as the callback returns. A production line protocol
-must enforce its own maximum line length.
+receive buffer as soon as the callback returns. The line limit is independent
+of the transport receive buffer size.
 
 <a name="run-it-over-tcp"></a>
 <h2>
@@ -142,11 +147,11 @@ with Ctrl+C when you're done.
 
 The [custom_transport example][custom-transport] flips the experiment: it
 keeps doba's HTTP/1.1 engine and supplies a tiny in-memory transport. Its
-[source](../../examples/transport/server/custom_transport/main.cpp) takes
+[source](../../examples/transport/custom_transport/main.cpp) takes
 the engine factory in its constructor. In *start*, it creates the engine and
 wires up its output and close callbacks:
 
-[custom-transport]: ../../examples/transport/server/custom_transport/README.md
+[custom-transport]: ../../examples/transport/custom_transport/README.md
 
 ```cpp
 connection_.reset(new ENty(create_engine_()));
@@ -191,13 +196,13 @@ martianlabs::doba::http_server<http::request, http::response, routes_type,
 Run the already-built example. On Linux:
 
 ```sh
-./out/build/guide/examples/transport/server/custom_transport/custom_transport
+./out/build/guide/examples/transport/custom_transport/custom_transport
 ```
 
 With Visual Studio on Windows:
 
 ```powershell
-$build = '.\out\build\guide\examples\transport\server\custom_transport'
+$build = '.\out\build\guide\examples\transport\custom_transport'
 & "$build\Release\custom_transport.exe"
 ```
 
@@ -230,7 +235,7 @@ view:
   output; errors and output-limit violations may abort it. Administration belongs
   to a sequential external owner outside worker callbacks.
 
-The [TCP runtime contract](../reference/transport/server/tcp.md#runtime-contract)
+The [TCP runtime contract](../reference/transport/tcp.md#runtime-contract)
 specifies buffers, reader lifetime, platform limits and stop behavior. A C++
 concept checks signatures; implementing it alone does not prove these guarantees.
 

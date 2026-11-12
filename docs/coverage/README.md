@@ -10,55 +10,67 @@
 
 [Back to doba](../../README.md#fast-is-nice-correct-is-non-negotiable)
 
-**doba 0.1.0, measured rather than guessed.** The latest local coverage
-measurements are from **2026-11-05 for Linux** and **2026-11-04 for Windows**,
+**doba 0.1.0, measured rather than guessed.** Linux and Windows were measured locally on **2026-11-10**,
 with optimizations, TLS and examples enabled. The version is declared in
 [version.h](../../include/version.h). These measurements qualify the tested
 source snapshot; they do not assert that a matching release tag was published.
-The Linux refresh passes all existing coverage gates. The reported remote
-Linux coverage failure preceded this correction; a successful remote run
-of the corrected snapshot has not been verified.
+These are historical results, not totals for the current checkout. Run the
+[qualification tool](../../tests/qualification/README.md) for current coverage;
+the reviewed module floors and header inventories live in
+[tests/qualification/baselines](../../tests/qualification/baselines).
 
 [Results](#results) / [By module](#by-module) / [Test families](#test-families) /
 [Method](#method) / [CI safeguards](#ci-safeguards) /
 [Limits](#limits) / [Release history](#release-history)
 
 <a name="results"></a>
-## The measured result
+<a name="the-measured-result"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-the-measured-result.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-the-measured-result.svg" alt="The measured result">
+  </a>
+  <a href="../../resources/docs/coverage/h2-the-measured-result-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-the-measured-result-dark.svg" alt="The measured result">
+  </a>
+</h2>
 
 | Platform | Measured on | Executable lines | Condition outcomes | Mapped headers | Unmapped headers |
 | --- | --- | --- | --- | --- | --- |
-| Linux | 2026-11-05 | **8,271 / 8,691 (95.17%)** | **4,751 / 5,346 (88.87%)** | 129 | 60 |
-| Windows | 2026-11-04 | **8,436 / 8,914 (94.64%)** | **4,788 / 5,410 (88.50%)** | 136 | 53 |
+| Linux | 2026-11-10 | **8,118 / 8,436 (96.23%)** | **4,668 / 5,222 (89.39%)** | 131 | 61 |
+| Windows | 2026-11-10 | **8,406 / 8,788 (95.65%)** | **4,721 / 5,284 (89.35%)** | 138 | 54 |
 
 Only production headers under `include/` contribute. Tests, examples, STL and
 OpenSSL implementation code are excluded from these percentages. Each platform
 has its own denominator. Unmapped headers remain explicit; they are not counted
 as covered, nor assigned guessed executable lines.
 
-The [updated 0.1.0 data snapshot](releases/0.1.0-2026-11-05.json) contains
-independent measurement dates and source hashes for each platform. It retains
-the historical Windows measurement rather than attributing it to the refreshed
-Linux source. The [initial snapshot](releases/0.1.0.json) remains unchanged.
-Both snapshots contain exact module counts,
-per-header line and condition counts, the full unmapped inventory, uncovered
-condition locations, toolchain details and production-header SHA-256 hashes.
+The [November 10 snapshot](releases/0.1.0-2026-11-10.json) records exact module and
+per-header counts, uncovered conditions, headers without mappings, toolchains
+and production-header hashes for both measurements. Earlier snapshots are
+listed in the [release history](#release-history).
 
 <a name="by-module"></a>
-## By module
+<h2>
+  <a href="../../resources/docs/coverage/h2-by-module.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-by-module.svg" alt="By module">
+  </a>
+  <a href="../../resources/docs/coverage/h2-by-module-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-by-module-dark.svg" alt="By module">
+  </a>
+</h2>
 
 | Module | Linux lines | Linux outcomes | Windows lines | Windows outcomes |
 | --- | --- | --- | --- | --- |
-| common | 89.88% | 81.96% | 88.67% | 78.95% |
-| http-common | 97.06% | 93.83% | 97.06% | 93.88% |
+| common | 93.39% | 85.68% | 91.91% | 81.88% |
+| http-common | 97.75% | 93.98% | 97.75% | 94.03% |
 | http-engine | 97.61% | 93.08% | 97.61% | 93.08% |
-| http-messages | 91.83% | 83.33% | 91.87% | 83.33% |
-| http-parser | 95.91% | 91.31% | 95.90% | 91.41% |
+| http-messages | 95.15% | 83.33% | 95.15% | 83.33% |
+| http-parser | 95.92% | 91.35% | 95.92% | 91.44% |
 | network | no emitted mapping | no emitted mapping | 100.00% | 100.00% |
 | public-contracts | 100.00% | 100.00% | 100.00% | 100.00% |
-| static-files | 96.69% | 83.62% | 95.54% | 79.53% |
-| tcp | 94.19% | 79.52% | 91.78% | 83.88% |
-| tls | 99.21% | 79.78% | 99.21% | 79.78% |
+| static-files | 95.30% | 83.76% | 94.23% | 83.12% |
+| tcp | 94.12% | 79.52% | 91.57% | 83.64% |
+| tls | 99.29% | 79.78% | 99.29% | 79.78% |
 
 `common` covers storage, readers, cache and task utilities. `http-parser`
 includes decoding, body framing and HTTP/1.1 header rules. `http-engine`
@@ -68,17 +80,20 @@ includes the common engine and synchronous/asynchronous request processors.
 groups public wrappers and protocol/transport contracts with emitted mapping.
 Linux's network environment has no emitted runtime mapping in this snapshot.
 
-The Linux refresh covers explicit cache invalidation of all representations,
-retained response snapshots, invalid static-file policies and escaped directory
-redirects. The formatting pass changed executable-line counts; the regression
-floors remain unchanged.
-
 <a name="test-families"></a>
-## What the tests exercise
+<a name="what-the-tests-exercise"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-the-tests-exercise.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-the-tests-exercise.svg" alt="What the tests exercise">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-the-tests-exercise-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-the-tests-exercise-dark.svg" alt="What the tests exercise">
+  </a>
+</h2>
 
 | Family | Covered behavior |
 | --- | --- |
-| Common ownership | Binary readers/writers, storage spill and cleanup, cache limits, shared loads, invalidation races, exceptions and coroutine frame ownership. |
+| Common ownership | Binary readers/writers, storage spill and cleanup, cache limits, bounded loaders, invalidation races, exceptions and coroutine frame ownership. |
 | HTTP parsing | Fragmentation, conflicting framing, malformed fields and targets, exact limits, caller-buffer reuse and request ownership. |
 | Routing and authentication | Route precedence, typed parameters, suspended parameter views, Basic/Bearer credential parsing, challenges and header-injection rejection. |
 | HTTP output | Serialization, status/field/trailer validation, exact binary framing and independent wire-oracle negative controls. |
@@ -91,16 +106,12 @@ floors remain unchanged.
 | Test infrastructure | Negative oracle controls, assertion/exception propagation, watchdogs, sanitizer diagnostics from exit-zero children, inventory and coverage regression gates. |
 | Package and examples | Source/installed consumers, TLS dependency boundaries and executable examples; configured in the broader CI matrix. |
 
-The instrumented suite results below follow each platform's measurement date.
-The sanitizer campaigns and repeated fault groups are historical results from
-2026-11-04; they were not repeated for the Linux coverage refresh. The updated
-Windows MSVC Release suite also passes 23/23 groups, without a new Windows
-instrumented measurement. Configured CI jobs and source-level test declarations
-are separate quantities.
+The instrumented CTest results are from November 10. The sanitizer campaigns
+and repeated fault groups in the other rows were measured on November 4.
 
 | Local validation | Linux | Windows |
 | --- | --- | --- |
-| Complete instrumented Release CTest suite | **21/21 groups passed** | **23/23 groups passed** |
+| Complete instrumented Release CTest suite | **20/20 groups passed** | **22/22 groups passed** |
 | Twelve-round campaign, including TLS | **888 actions passed under TSan** | **696 actions passed under ASan** |
 | Corrected IOCP processing group | Not applicable | **200 repetitions under ASan and 200 under UBSan passed** |
 | Winsock fault group | Not applicable | **12 repetitions under UBSan passed**, also included in the ASan campaign |
@@ -112,7 +123,15 @@ passed after that correction; the failure was retained, not hidden by an
 automatic retry. Production transport code was unchanged.
 
 <a name="method"></a>
-## How the measurement works
+<a name="how-the-measurement-works"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-how-the-measurement-works.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-how-the-measurement-works.svg" alt="How the measurement works">
+  </a>
+  <a href="../../resources/docs/coverage/h2-how-the-measurement-works-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-how-the-measurement-works-dark.svg" alt="How the measurement works">
+  </a>
+</h2>
 
 The isolated Clang Release builds use LLVM source instrumentation with atomic
 counter updates. Profiles are namespaced by executable target and exported
@@ -135,14 +154,22 @@ uninstantiated code. The data snapshot preserves them for review.
 | Toolchain | Clang/LLVM **18.1.3** | Clang/LLVM **22.1.8** |
 | Host | WSL Ubuntu, Linux **6.6.87.2** | Windows 11 **10.0.26300** |
 | Configuration | Release, TLS and examples enabled | Release, TLS and examples enabled |
-| Profile association | 106 observed profiles / 62 executable targets | 79 observed profiles / 57 executable targets |
+| Profile association | 106 observed profiles / 61 executable targets | 106 observed profiles / 65 executable targets |
 
 Instrumented builds are for qualification. Performance measurements use their
 own builds. Reproduction commands, report layout and technical details live in
 [Release qualification](../../tests/qualification/README.md).
 
 <a name="ci-safeguards"></a>
-## What CI requires
+<a name="what-ci-requires"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-ci-requires.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-ci-requires.svg" alt="What CI requires">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-ci-requires-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-ci-requires-dark.svg" alt="What CI requires">
+  </a>
+</h2>
 
 | Gate | Normal runs | Nightly runs |
 | --- | --- | --- |
@@ -172,7 +199,15 @@ new checks separately after their first remote run. These are configured
 safeguards, not a claim that a new remote workflow has already passed.
 
 <a name="limits"></a>
-## What these figures cannot establish
+<a name="what-these-figures-cannot-establish"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-what-these-figures-cannot-establish.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-these-figures-cannot-establish.svg" alt="What these figures cannot establish">
+  </a>
+  <a href="../../resources/docs/coverage/h2-what-these-figures-cannot-establish-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-what-these-figures-cannot-establish-dark.svg" alt="What these figures cannot establish">
+  </a>
+</h2>
 
 Coverage shows execution, not that every assertion is sufficient or every
 schedule is safe. Uncovered outcomes remain in common ownership/error handling,
@@ -185,10 +220,19 @@ corruption or vulnerabilities. This reference records the evidence and its
 scope; it is not a security certification.
 
 <a name="release-history"></a>
-## Keep the reference current
+<a name="keep-the-reference-current"></a>
+<h2>
+  <a href="../../resources/docs/coverage/h2-keep-the-reference-current.svg#gh-light-mode-only">
+    <img src="../../resources/docs/coverage/h2-keep-the-reference-current.svg" alt="Keep the reference current">
+  </a>
+  <a href="../../resources/docs/coverage/h2-keep-the-reference-current-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/docs/coverage/h2-keep-the-reference-current-dark.svg" alt="Keep the reference current">
+  </a>
+</h2>
 
 | Source version | Measurement date | Evidence status | Archived data |
 | --- | --- | --- | --- |
+| **0.1.0 refresh** | **2026-11-10** | Local Release coverage gates passed on both platforms | [November 10 snapshot](releases/0.1.0-2026-11-10.json) |
 | **0.1.0 refresh** | **Linux: 2026-11-05; Windows: 2026-11-04** | Local coverage gates passed on Linux; historical Windows coverage retained | [Updated snapshot](releases/0.1.0-2026-11-05.json) |
 | **0.1.0 initial** | **2026-11-04** | Initial local Release qualification | [Initial snapshot](releases/0.1.0.json) |
 

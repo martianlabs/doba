@@ -1,11 +1,27 @@
-# File download
+<a name="file-download"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/file_download/h1-file-download.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/file_download/h1-file-download.svg" alt="File download">
+  </a>
+  <a href="../../../../resources/examples/http/v11/file_download/h1-file-download-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/file_download/h1-file-download-dark.svg" alt="File download">
+  </a>
+</h1>
 
 This example opens one configured file for each `GET /download` request.
 It moves the file handle into `common::reader` and passes its exact size to
 `response::set_body(reader&&, length)`. Doba sends the file without loading
 it into a response writer.
 
-## Try it
+<a name="try-it"></a>
+<h2>
+  <a href="../../../../resources/examples/http/v11/file_download/h2-try-it.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/file_download/h2-try-it.svg" alt="Try it">
+  </a>
+  <a href="../../../../resources/examples/http/v11/file_download/h2-try-it-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/file_download/h2-try-it-dark.svg" alt="Try it">
+  </a>
+</h2>
 
 Run `file_download` with a root directory and a relative file path:
 

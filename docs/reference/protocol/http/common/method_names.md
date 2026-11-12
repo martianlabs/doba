@@ -47,7 +47,7 @@ struct method_names { ... };
 
 Provides the http 1.1 method names specification.
 
-**Source:** [include/protocol/http/common/method_names.h:36](../../../../../include/protocol/http/common/method_names.h#L36)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-kget"></a>
 
@@ -59,11 +59,11 @@ Provides the http 1.1 method names specification.
 static constexpr char kGet[] = "GET";
 ```
 
-Method  | Description GET     | Transfer a current representation of the target resource. HEAD    | Same as GET, but do not transfer the response content. POST    | Perform resource-specific processing on the request content. PUT     | Replace all current representations of the target resource | with the request content. DELETE  | Remove all
+The HTTP GET method token.
 
 **Value:** `"GET"`
 
-**Source:** [include/protocol/http/common/method_names.h:55](../../../../../include/protocol/http/common/method_names.h#L55)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-khead"></a>
 
@@ -79,7 +79,7 @@ Defines the head constant.
 
 **Value:** `"HEAD"`
 
-**Source:** [include/protocol/http/common/method_names.h:56](../../../../../include/protocol/http/common/method_names.h#L56)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-kpost"></a>
 
@@ -95,7 +95,7 @@ Defines the post constant.
 
 **Value:** `"POST"`
 
-**Source:** [include/protocol/http/common/method_names.h:57](../../../../../include/protocol/http/common/method_names.h#L57)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-kput"></a>
 
@@ -111,7 +111,7 @@ Defines the put constant.
 
 **Value:** `"PUT"`
 
-**Source:** [include/protocol/http/common/method_names.h:58](../../../../../include/protocol/http/common/method_names.h#L58)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-kdelete"></a>
 
@@ -127,7 +127,7 @@ Defines the delete constant.
 
 **Value:** `"DELETE"`
 
-**Source:** [include/protocol/http/common/method_names.h:59](../../../../../include/protocol/http/common/method_names.h#L59)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-kconnect"></a>
 
@@ -143,7 +143,7 @@ Defines the connect constant.
 
 **Value:** `"CONNECT"`
 
-**Source:** [include/protocol/http/common/method_names.h:60](../../../../../include/protocol/http/common/method_names.h#L60)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-koptions"></a>
 
@@ -159,7 +159,7 @@ Defines the options constant.
 
 **Value:** `"OPTIONS"`
 
-**Source:** [include/protocol/http/common/method_names.h:61](../../../../../include/protocol/http/common/method_names.h#L61)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)
 
 <a id="constant-ktrace"></a>
 
@@ -175,4 +175,4 @@ Defines the trace constant.
 
 **Value:** `"TRACE"`
 
-**Source:** [include/protocol/http/common/method_names.h:62](../../../../../include/protocol/http/common/method_names.h#L62)
+**Source:** [include/protocol/http/common/method_names.h](../../../../../include/protocol/http/common/method_names.h)

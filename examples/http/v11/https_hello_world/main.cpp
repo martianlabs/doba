@@ -32,31 +32,33 @@
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Supply a PEM certificate chain and an unencrypted PEM private key.        |
+// | Pass a PEM certificate chain and an unencrypted PEM private key.          |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int count, char** arguments) {
   if (count < 3 || count > 4) return 1;
-  martianlabs::doba::transport::server::tls_policies policies;
+  martianlabs::doba::transport::tls_policies policies;
   policies.ip = "0.0.0.0";
   policies.port = count == 4 ? arguments[3] : "8443";
   policies.certificate_file = arguments[1];
   policies.private_key_file = arguments[2];
   policies.alpn_protocol = "http/1.1";
   martianlabs::doba::https_server<> server(std::move(policies));
-  server.add_route("GET", "/hello",
+  server.add_route(
+      "GET", "/hello",
       [](const martianlabs::doba::protocol::http::v11::request&,
-             martianlabs::doba::protocol::http::v11::response& response) {
-    response.ok_200().set_body("hello over TLS");
-  });
-  server.add_route("GET", "/wait/:id",
+         martianlabs::doba::protocol::http::v11::response& response) {
+        response.ok_200().set_body("hello over TLS");
+      });
+  server.add_route(
+      "GET", "/wait/:id",
       [](const martianlabs::doba::protocol::http::v11::request&,
          martianlabs::doba::protocol::http::v11::response& response,
          int id) -> martianlabs::doba::common::task<> {
-    co_await martianlabs::doba::common::sleep_for(
-        std::chrono::milliseconds(10));
-    response.ok_200().set_body(std::to_string(id));
-  });
+        co_await martianlabs::doba::common::sleep_for(
+            std::chrono::milliseconds(10));
+        response.ok_200().set_body(std::to_string(id));
+      });
   server.start();
   martianlabs::doba::common::signaler::wait();
   server.stop();

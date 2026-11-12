@@ -62,8 +62,8 @@ class custom_response : public response {
                   std::string& head, std::string& body)
       : response(head_limit, body_threshold, head, body) {}
   static custom_response from(std::size_t head_limit,
-                              std::size_t body_threshold,
-                              std::string& head, std::string& body) {
+                              std::size_t body_threshold, std::string& head,
+                              std::string& body) {
     return custom_response(head_limit, body_threshold, head, body);
   }
   // +=========================================================================+
@@ -357,10 +357,9 @@ static_assert(contracts::response<custom_response>);
 int main() {
   martianlabs::doba::http_server<request, custom_response> server(
       {.ip = "0.0.0.0", .port = "8080"});
-  server.add_route("GET", "/hello",
-                   [](const request&, custom_response& res) {
-                     res.json_200(R"({"message":"hello"})");
-                   });
+  server.add_route("GET", "/hello", [](const request&, custom_response& res) {
+    res.json_200(R"({"message":"hello"})");
+  });
   server.start();
   martianlabs::doba::common::signaler::wait();
   server.stop();

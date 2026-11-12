@@ -1,4 +1,4 @@
-# Asynchronous request processor
+# <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Asynchronous request processor
 
 Header: [request_processor_async.h](../../../../../include/protocol/http/v11/request_processor_async.h).
 

@@ -35,26 +35,27 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Demonstrates generic loading, invalidation and retained cache values.     |
+// | Load a value, drop it from the cache and keep reading it.                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
-  cache<std::string, std::string> names({.max_entries = 2, .max_cost = 64});
+  cache<std::string> names({.max_entries = 2, .max_cost = 64});
   unsigned loads = 0;
   auto load = [&] {
     ++loads;
     return std::make_shared<const std::string>("Mars");
   };
-  auto first = names.get_or_load("planet", 4, load);
-  auto second = names.get_or_load("planet", 4, load);
+  auto first = names.try_get_or_load("planet", 4, load);
+  auto second = names.try_get_or_load("planet", 4, load);
   if (!first || !second) return 1;
   std::cout << *second << ": " << loads << " load\n";
   names.erase("planet");
-  std::cout << "After invalidation: " << *first << ", retained cost "
-            << names.statistics().live_cost << '\n';
-  first.reset();
-  second.reset();
-  std::cout << "After releasing consumers: " << names.statistics().live_cost
+  if (names.find("planet")) return 1;
+  std::cout << "After invalidation, consumer still reads: " << *first << '\n';
+  // We can load a new value while readers keep the old one.
+  auto replacement = names.try_get_or_load("planet", 4, load);
+  if (!replacement) return 1;
+  std::cout << "After reloading: " << loads << " loads, value " << *replacement
             << '\n';
   return 0;
 }

@@ -82,7 +82,7 @@ Code | Reason Phrase 100  | Continue 101  | Switching Protocols 200  | OK 201  |
 
 **Value:** `Continue`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:83](../../../../../include/protocol/http/v11/reason_phrases.h#L83)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-101-switching-protocols"></a>
 
@@ -98,7 +98,7 @@ Expands to the HTTP 101 switching protocols reason-phrase tokens.
 
 **Value:** `Switching Protocols`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:84](../../../../../include/protocol/http/v11/reason_phrases.h#L84)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-200-ok"></a>
 
@@ -114,7 +114,7 @@ Expands to the HTTP 200 ok reason-phrase tokens.
 
 **Value:** `OK`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:85](../../../../../include/protocol/http/v11/reason_phrases.h#L85)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-201-created"></a>
 
@@ -130,7 +130,7 @@ Expands to the HTTP 201 created reason-phrase tokens.
 
 **Value:** `Created`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:86](../../../../../include/protocol/http/v11/reason_phrases.h#L86)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-202-accepted"></a>
 
@@ -146,7 +146,7 @@ Expands to the HTTP 202 accepted reason-phrase tokens.
 
 **Value:** `Accepted`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:87](../../../../../include/protocol/http/v11/reason_phrases.h#L87)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-203-non-authoritative-information"></a>
 
@@ -162,7 +162,7 @@ Expands to the HTTP 203 non authoritative information reason-phrase tokens.
 
 **Value:** `Non-Authoritative Information`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:88](../../../../../include/protocol/http/v11/reason_phrases.h#L88)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-204-no-content"></a>
 
@@ -178,7 +178,7 @@ Expands to the HTTP 204 no content reason-phrase tokens.
 
 **Value:** `No Content`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:89](../../../../../include/protocol/http/v11/reason_phrases.h#L89)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-205-reset-content"></a>
 
@@ -194,7 +194,7 @@ Expands to the HTTP 205 reset content reason-phrase tokens.
 
 **Value:** `Reset Content`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:90](../../../../../include/protocol/http/v11/reason_phrases.h#L90)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-206-partial-content"></a>
 
@@ -210,7 +210,7 @@ Expands to the HTTP 206 partial content reason-phrase tokens.
 
 **Value:** `Partial Content`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:91](../../../../../include/protocol/http/v11/reason_phrases.h#L91)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-300-multiple-choices"></a>
 
@@ -226,7 +226,7 @@ Expands to the HTTP 300 multiple choices reason-phrase tokens.
 
 **Value:** `Multiple Choices`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:92](../../../../../include/protocol/http/v11/reason_phrases.h#L92)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-301-moved-permanently"></a>
 
@@ -242,7 +242,7 @@ Expands to the HTTP 301 moved permanently reason-phrase tokens.
 
 **Value:** `Moved Permanently`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:93](../../../../../include/protocol/http/v11/reason_phrases.h#L93)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-302-found"></a>
 
@@ -258,7 +258,7 @@ Expands to the HTTP 302 found reason-phrase tokens.
 
 **Value:** `Found`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:94](../../../../../include/protocol/http/v11/reason_phrases.h#L94)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-303-see-other"></a>
 
@@ -274,7 +274,7 @@ Expands to the HTTP 303 see other reason-phrase tokens.
 
 **Value:** `See Other`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:95](../../../../../include/protocol/http/v11/reason_phrases.h#L95)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-304-not-modified"></a>
 
@@ -290,7 +290,7 @@ Expands to the HTTP 304 not modified reason-phrase tokens.
 
 **Value:** `Not Modified`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:96](../../../../../include/protocol/http/v11/reason_phrases.h#L96)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-305-use-proxy"></a>
 
@@ -306,7 +306,7 @@ Expands to the HTTP 305 use proxy reason-phrase tokens.
 
 **Value:** `Use Proxy`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:97](../../../../../include/protocol/http/v11/reason_phrases.h#L97)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-306-unused"></a>
 
@@ -322,7 +322,7 @@ Expands to the HTTP 306 unused reason-phrase tokens.
 
 **Value:** `Unused`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:98](../../../../../include/protocol/http/v11/reason_phrases.h#L98)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-307-temporary-redirect"></a>
 
@@ -338,7 +338,7 @@ Expands to the HTTP 307 temporary redirect reason-phrase tokens.
 
 **Value:** `Temporary Redirect`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:99](../../../../../include/protocol/http/v11/reason_phrases.h#L99)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-308-permanent-redirect"></a>
 
@@ -354,7 +354,7 @@ Expands to the HTTP 308 permanent redirect reason-phrase tokens.
 
 **Value:** `Permanent Redirect`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:100](../../../../../include/protocol/http/v11/reason_phrases.h#L100)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-400-bad-request"></a>
 
@@ -370,7 +370,7 @@ Expands to the HTTP 400 bad request reason-phrase tokens.
 
 **Value:** `Bad Request`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:101](../../../../../include/protocol/http/v11/reason_phrases.h#L101)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-401-unauthorized"></a>
 
@@ -386,7 +386,7 @@ Expands to the HTTP 401 unauthorized reason-phrase tokens.
 
 **Value:** `Unauthorized`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:102](../../../../../include/protocol/http/v11/reason_phrases.h#L102)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-402-payment-required"></a>
 
@@ -402,7 +402,7 @@ Expands to the HTTP 402 payment required reason-phrase tokens.
 
 **Value:** `Payment Required`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:103](../../../../../include/protocol/http/v11/reason_phrases.h#L103)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-403-forbidden"></a>
 
@@ -418,7 +418,7 @@ Expands to the HTTP 403 forbidden reason-phrase tokens.
 
 **Value:** `Forbidden`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:104](../../../../../include/protocol/http/v11/reason_phrases.h#L104)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-404-not-found"></a>
 
@@ -434,7 +434,7 @@ Expands to the HTTP 404 not found reason-phrase tokens.
 
 **Value:** `Not Found`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:105](../../../../../include/protocol/http/v11/reason_phrases.h#L105)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-405-method-not-allowed"></a>
 
@@ -450,7 +450,7 @@ Expands to the HTTP 405 method not allowed reason-phrase tokens.
 
 **Value:** `Method Not Allowed`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:106](../../../../../include/protocol/http/v11/reason_phrases.h#L106)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-406-not-acceptable"></a>
 
@@ -466,7 +466,7 @@ Expands to the HTTP 406 not acceptable reason-phrase tokens.
 
 **Value:** `Not Acceptable`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:107](../../../../../include/protocol/http/v11/reason_phrases.h#L107)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-407-proxy-authentication-required"></a>
 
@@ -482,7 +482,7 @@ Expands to the HTTP 407 proxy authentication required reason-phrase tokens.
 
 **Value:** `Proxy Authentication Required`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:108](../../../../../include/protocol/http/v11/reason_phrases.h#L108)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-408-request-timeout"></a>
 
@@ -498,7 +498,7 @@ Expands to the HTTP 408 request timeout reason-phrase tokens.
 
 **Value:** `Request Timeout`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:109](../../../../../include/protocol/http/v11/reason_phrases.h#L109)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-409-conflict"></a>
 
@@ -514,7 +514,7 @@ Expands to the HTTP 409 conflict reason-phrase tokens.
 
 **Value:** `Conflict`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:110](../../../../../include/protocol/http/v11/reason_phrases.h#L110)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-410-gone"></a>
 
@@ -530,7 +530,7 @@ Expands to the HTTP 410 gone reason-phrase tokens.
 
 **Value:** `Gone`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:111](../../../../../include/protocol/http/v11/reason_phrases.h#L111)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-411-length-required"></a>
 
@@ -546,7 +546,7 @@ Expands to the HTTP 411 length required reason-phrase tokens.
 
 **Value:** `Length Required`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:112](../../../../../include/protocol/http/v11/reason_phrases.h#L112)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-412-precondition-failed"></a>
 
@@ -562,7 +562,7 @@ Expands to the HTTP 412 precondition failed reason-phrase tokens.
 
 **Value:** `Precondition Failed`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:113](../../../../../include/protocol/http/v11/reason_phrases.h#L113)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-413-content-too-large"></a>
 
@@ -578,7 +578,7 @@ Expands to the HTTP 413 content too large reason-phrase tokens.
 
 **Value:** `Content Too Large`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:114](../../../../../include/protocol/http/v11/reason_phrases.h#L114)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-414-uri-too-long"></a>
 
@@ -594,7 +594,7 @@ Expands to the HTTP 414 uri too long reason-phrase tokens.
 
 **Value:** `URI Too Long`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:115](../../../../../include/protocol/http/v11/reason_phrases.h#L115)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-415-unsupported-media-type"></a>
 
@@ -610,7 +610,7 @@ Expands to the HTTP 415 unsupported media type reason-phrase tokens.
 
 **Value:** `Unsupported Media Type`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:116](../../../../../include/protocol/http/v11/reason_phrases.h#L116)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-416-range-not-satisfiable"></a>
 
@@ -626,7 +626,7 @@ Expands to the HTTP 416 range not satisfiable reason-phrase tokens.
 
 **Value:** `Range Not Satisfiable`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:117](../../../../../include/protocol/http/v11/reason_phrases.h#L117)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-417-expectation-failed"></a>
 
@@ -642,7 +642,7 @@ Expands to the HTTP 417 expectation failed reason-phrase tokens.
 
 **Value:** `Expectation Failed`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:118](../../../../../include/protocol/http/v11/reason_phrases.h#L118)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-418-im-a-teapot"></a>
 
@@ -658,7 +658,7 @@ Expands to the HTTP 418 im a teapot reason-phrase tokens.
 
 **Value:** `Im a teapot`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:119](../../../../../include/protocol/http/v11/reason_phrases.h#L119)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-421-misdirected-request"></a>
 
@@ -674,7 +674,7 @@ Expands to the HTTP 421 misdirected request reason-phrase tokens.
 
 **Value:** `Misdirected Request`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:120](../../../../../include/protocol/http/v11/reason_phrases.h#L120)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-422-unprocessable-content"></a>
 
@@ -690,7 +690,7 @@ Expands to the HTTP 422 unprocessable content reason-phrase tokens.
 
 **Value:** `Unprocessable Content`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:121](../../../../../include/protocol/http/v11/reason_phrases.h#L121)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-426-upgrade-required"></a>
 
@@ -706,7 +706,7 @@ Expands to the HTTP 426 upgrade required reason-phrase tokens.
 
 **Value:** `Upgrade Required`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:122](../../../../../include/protocol/http/v11/reason_phrases.h#L122)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-431-request-header-fields-too-large"></a>
 
@@ -722,7 +722,7 @@ Expands to the HTTP 431 request header fields too large reason-phrase tokens.
 
 **Value:** `Request Header Fields Too Large`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:123](../../../../../include/protocol/http/v11/reason_phrases.h#L123)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-500-internal-server-error"></a>
 
@@ -738,7 +738,7 @@ Expands to the HTTP 500 internal server error reason-phrase tokens.
 
 **Value:** `Internal Server Error`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:124](../../../../../include/protocol/http/v11/reason_phrases.h#L124)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-501-not-implemented"></a>
 
@@ -754,7 +754,7 @@ Expands to the HTTP 501 not implemented reason-phrase tokens.
 
 **Value:** `Not Implemented`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:125](../../../../../include/protocol/http/v11/reason_phrases.h#L125)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-502-bad-gateway"></a>
 
@@ -770,7 +770,7 @@ Expands to the HTTP 502 bad gateway reason-phrase tokens.
 
 **Value:** `Bad Gateway`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:126](../../../../../include/protocol/http/v11/reason_phrases.h#L126)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-503-service-unavailable"></a>
 
@@ -786,7 +786,7 @@ Expands to the HTTP 503 service unavailable reason-phrase tokens.
 
 **Value:** `Service Unavailable`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:127](../../../../../include/protocol/http/v11/reason_phrases.h#L127)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-504-gateway-timeout"></a>
 
@@ -802,7 +802,7 @@ Expands to the HTTP 504 gateway timeout reason-phrase tokens.
 
 **Value:** `Gateway Timeout`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:128](../../../../../include/protocol/http/v11/reason_phrases.h#L128)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)
 
 <a id="macro-rp-505-http-version-not-supported"></a>
 
@@ -818,4 +818,4 @@ Expands to the HTTP 505 http version not supported reason-phrase tokens.
 
 **Value:** `HTTP Version Not Supported`
 
-**Source:** [include/protocol/http/v11/reason_phrases.h:129](../../../../../include/protocol/http/v11/reason_phrases.h#L129)
+**Source:** [include/protocol/http/v11/reason_phrases.h](../../../../../include/protocol/http/v11/reason_phrases.h)

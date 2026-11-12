@@ -44,4 +44,4 @@ This enum class holds the result code on protocol deserialization.
 - **kInvalidSource:** Invalid source. Declaration: `kInvalidSource`.
 - **kMoreBytesNeeded:** More bytes needed. Declaration: `kMoreBytesNeeded`.
 
-**Source:** [include/protocol/deserialization.h:36](../../../include/protocol/deserialization.h#L36)
+**Source:** [include/protocol/deserialization.h](../../../include/protocol/deserialization.h)

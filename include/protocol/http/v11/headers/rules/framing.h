@@ -22,12 +22,11 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
 #ifndef martianlabs_doba_protocol_http_v11_headers_rules_framing_h
 #define martianlabs_doba_protocol_http_v11_headers_rules_framing_h
 
-#include "protocol/http/v11/context.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/context.h"
 #include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11::headers::rules {
@@ -70,8 +69,7 @@ class framing {
       // "chunked" is only valid as the final transfer-coding; when a chunked
       // coding appears elsewhere in the list the length is undefined.
       const auto& codings = ctx.connection.transfer_codings;
-      if (codings.empty() ||
-          !helpers::iequals(codings.back(), "chunked")) {
+      if (codings.empty() || !helpers::iequals(codings.back(), "chunked")) {
         return verdict::kReject;
       }
       for (std::size_t i = 0; i < codings.size(); i++) {

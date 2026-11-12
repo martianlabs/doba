@@ -1182,7 +1182,7 @@
             "covered": 62
           }
         },
-        "include/transport/server/connection_budget.h": {
+        "include/transport/connection_budget.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -1192,7 +1192,7 @@
             "covered": 1
           }
         },
-        "include/transport/server/connection_reservation.h": {
+        "include/transport/connection_reservation.h": {
           "conditions": {
             "count": 12,
             "covered": 10
@@ -1202,7 +1202,7 @@
             "covered": 23
           }
         },
-        "include/transport/server/send_state.h": {
+        "include/transport/send_state.h": {
           "conditions": {
             "count": 40,
             "covered": 31
@@ -1212,7 +1212,7 @@
             "covered": 50
           }
         },
-        "include/transport/server/tcp_connection.h": {
+        "include/transport/tcp_connection.h": {
           "conditions": {
             "count": 2,
             "covered": 2
@@ -1222,7 +1222,7 @@
             "covered": 12
           }
         },
-        "include/transport/server/tcp_linux_context.h": {
+        "include/transport/tcp_linux_context.h": {
           "conditions": {
             "count": 86,
             "covered": 64
@@ -1232,7 +1232,7 @@
             "covered": 92
           }
         },
-        "include/transport/server/tcp_linux_processing_queue.h": {
+        "include/transport/tcp_linux_processing_queue.h": {
           "conditions": {
             "count": 60,
             "covered": 54
@@ -1242,7 +1242,7 @@
             "covered": 64
           }
         },
-        "include/transport/server/tcp_linux_transport.h": {
+        "include/transport/tcp_linux_transport.h": {
           "conditions": {
             "count": 42,
             "covered": 42
@@ -1252,7 +1252,7 @@
             "covered": 67
           }
         },
-        "include/transport/server/tcp_linux_worker.h": {
+        "include/transport/tcp_linux_worker.h": {
           "conditions": {
             "count": 178,
             "covered": 131
@@ -1262,7 +1262,7 @@
             "covered": 242
           }
         },
-        "include/transport/server/tls.h": {
+        "include/transport/tls.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -1272,7 +1272,7 @@
             "covered": 10
           }
         },
-        "include/transport/server/tls_configuration.h": {
+        "include/transport/tls_configuration.h": {
           "conditions": {
             "count": 50,
             "covered": 43
@@ -1282,7 +1282,7 @@
             "covered": 60
           }
         },
-        "include/transport/server/tls_engine.h": {
+        "include/transport/tls_engine.h": {
           "conditions": {
             "count": 128,
             "covered": 99
@@ -1528,14 +1528,14 @@
             "percent": 79.523809523809518
           },
           "files": [
-            "include/transport/server/connection_budget.h",
-            "include/transport/server/connection_reservation.h",
-            "include/transport/server/send_state.h",
-            "include/transport/server/tcp_connection.h",
-            "include/transport/server/tcp_linux_context.h",
-            "include/transport/server/tcp_linux_processing_queue.h",
-            "include/transport/server/tcp_linux_transport.h",
-            "include/transport/server/tcp_linux_worker.h"
+            "include/transport/connection_budget.h",
+            "include/transport/connection_reservation.h",
+            "include/transport/send_state.h",
+            "include/transport/tcp_connection.h",
+            "include/transport/tcp_linux_context.h",
+            "include/transport/tcp_linux_processing_queue.h",
+            "include/transport/tcp_linux_transport.h",
+            "include/transport/tcp_linux_worker.h"
           ],
           "lines": {
             "count": 585,
@@ -1550,9 +1550,9 @@
             "percent": 79.775280898876403
           },
           "files": [
-            "include/transport/server/tls.h",
-            "include/transport/server/tls_configuration.h",
-            "include/transport/server/tls_engine.h"
+            "include/transport/tls.h",
+            "include/transport/tls_configuration.h",
+            "include/transport/tls_engine.h"
           ],
           "lines": {
             "count": 253,
@@ -1890,53 +1890,53 @@
             "57585d80485dc26871f26b21c387cc10b8119f82b6cce40296e5f7945c9b91fe",
         "include/server.h":
             "70674ac0c6fbec0ee47286734d9b75d64c92547b99a81b83c19b6d66599157a6",
-        "include/transport/server/connection_budget.h":
+        "include/transport/connection_budget.h":
             "2b1c5d86d08453d0dcec90fc651687c338a4ede2620e0a3153c807eb197b8d2c",
-        "include/transport/server/connection_reservation.h":
+        "include/transport/connection_reservation.h":
             "d254d3ded90ec5e74a8bcfc558f787638ddfca8ed45260508a61652bf9d0f9f5",
-        "include/transport/server/contracts.h":
+        "include/transport/contracts.h":
             "26177eec626d8e785dfa9760b84cb024e22ff4756d6dbafce8a322f7ae77549f",
-        "include/transport/server/send_state.h":
+        "include/transport/send_state.h":
             "0efcae85a2609a29492a8671e24187f4f3d0301b0d37b1b19c8feb03fedddbbc",
-        "include/transport/server/tcp.h":
+        "include/transport/tcp.h":
             "95d1084dbd537e2fe8c42c2eb423c7c501871376bf1a2fd8fd154ad145242810",
-        "include/transport/server/tcp_connection.h":
+        "include/transport/tcp_connection.h":
             "1b752aa96ba19f3782f01afd2e22eb92e5a6c323c4bdbc20c95b988959b83da9",
-        "include/transport/server/tcp_linux_context.h":
+        "include/transport/tcp_linux_context.h":
             "8744f1cc87903e1b7b26cd7f2f6479933fec73dc038fda3af405d9587e2ada22",
-        "include/transport/server/tcp_linux_processing_queue.h":
+        "include/transport/tcp_linux_processing_queue.h":
             "53bff6fcee8d6ba8ae8fd0935c6c72d08117c16cb78cb9d3fb53b35bf495527d",
-        "include/transport/server/tcp_linux_transport.h":
+        "include/transport/tcp_linux_transport.h":
             "990fe919483e4930f49db106317ff3a6c167301fe5f34974c7ea353df29547fd",
-        "include/transport/server/tcp_linux_worker.h":
+        "include/transport/tcp_linux_worker.h":
             "4eb0b3965dce5e4a255d2d5f8f1456d56f5b6c56d67b2cff6561cf9ddfb724f2",
-        "include/transport/server/tcp_policies.h":
+        "include/transport/tcp_policies.h":
             "0f2ee839cd0f1b405c8967a1d5242799e828b6a17e19e07f5ab2e869e412061a",
-        "include/transport/server/tcp_windows_context.h":
+        "include/transport/tcp_windows_context.h":
             "1fcb30874c7da7c1c3df89ac20d9f5ef4407aab556dd831e087044aa597c4fd2",
-        "include/transport/server/tcp_windows_overlapped_accept.h":
+        "include/transport/tcp_windows_overlapped_accept.h":
             "ae9a2a7de989f5135523a3b870d125d945a7f184f1ef80bb61b08036c849d151",
-        "include/transport/server/tcp_windows_overlapped_base.h":
+        "include/transport/tcp_windows_overlapped_base.h":
             "f7fa8b1817757a0ecf229726af81a18ce3ca993844fa8356dce8050d180b15db",
-        "include/transport/server/tcp_windows_overlapped_processing.h":
+        "include/transport/tcp_windows_overlapped_processing.h":
             "a551c2033f2301a052f929d61a7768d8af797d5be82f37f312b5e1beb8844ad5",
-        "include/transport/server/tcp_windows_overlapped_receive.h":
+        "include/transport/tcp_windows_overlapped_receive.h":
             "62eef05d1366088c87b27ff9092f6f0c836934cd58297a689440b825d127e1ea",
-        "include/transport/server/tcp_windows_overlapped_send.h":
+        "include/transport/tcp_windows_overlapped_send.h":
             "d6aa8f350714d05c779f83f3363a56eac75473680568191e9224d5a3e2b7613a",
-        "include/transport/server/tcp_windows_processing_timer.h":
+        "include/transport/tcp_windows_processing_timer.h":
             "a4085d07e5b11bca9ffe99ed626e6d096cb4786830b5728fbd9afc5a9ea1b7d3",
-        "include/transport/server/tcp_windows_transport.h":
+        "include/transport/tcp_windows_transport.h":
             "d5e1745cff7ec8e3f637f43ec474106825d7784d2e67143c4e4d538580c01c28",
-        "include/transport/server/tcp_windows_worker.h":
+        "include/transport/tcp_windows_worker.h":
             "b84fad91f239d39b881ed443c5e7bcb010286247e2747072d14077082fe625b9",
-        "include/transport/server/tls.h":
+        "include/transport/tls.h":
             "8b33144c5716ad0a0b6da1beda7c47e6ea07497890ee2f18081044dad1de4c81",
-        "include/transport/server/tls_configuration.h":
+        "include/transport/tls_configuration.h":
             "0cde541f4d9a5bbc6e42965b81b777cab7be798c1fddcdb5ec58978bfe65bd1c",
-        "include/transport/server/tls_engine.h":
+        "include/transport/tls_engine.h":
             "064937bdd0bc8e5ab9ce316830114f79e773a696816c38faa374533b286f7e25",
-        "include/transport/server/tls_policies.h":
+        "include/transport/tls_policies.h":
             "a0a65a8cc4834a100adabd5ddc523150562f82853d782ead951d0be2622053f5",
         "include/version.h":
             "c34b857045743c36f3431217c0cf55b000fa22cb4a34dd1c3840da8a597c889c"
@@ -5066,777 +5066,777 @@
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/connection_reservation.h",
+          "file": "include/transport/connection_reservation.h",
           "line": 58,
           "true": true
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/connection_reservation.h",
+          "file": "include/transport/connection_reservation.h",
           "line": 72,
           "true": false
         },
         {
           "column": 25,
           "false": false,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 59,
           "true": true
         },
         {
           "column": 36,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 62,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 91,
           "true": false
         },
         {
           "column": 34,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 91,
           "true": false
         },
         {
           "column": 10,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 92,
           "true": false
         },
         {
           "column": 20,
           "false": false,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 92,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 94,
           "true": false
         },
         {
           "column": 41,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 114,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 70,
           "true": false
         },
         {
           "column": 14,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 87,
           "true": false
         },
         {
           "column": 26,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 87,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 88,
           "true": false
         },
         {
           "column": 26,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 88,
           "true": false
         },
         {
           "column": 45,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 88,
           "true": false
         },
         {
           "column": 21,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 105,
           "true": false
         },
         {
           "column": 35,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 140,
           "true": false
         },
         {
           "column": 44,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 140,
           "true": false
         },
         {
           "column": 28,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 150,
           "true": false
         },
         {
           "column": 47,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 151,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 152,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 174,
           "true": true
         },
         {
           "column": 24,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 174,
           "true": true
         },
         {
           "column": 27,
           "false": false,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 175,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 176,
           "true": false
         },
         {
           "column": 25,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 176,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_context.h",
+          "file": "include/transport/tcp_linux_context.h",
           "line": 178,
           "true": false
         },
         {
           "column": 40,
           "false": true,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 58,
           "true": false
         },
         {
           "column": 49,
           "false": true,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 59,
           "true": false
         },
         {
           "column": 28,
           "false": true,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 66,
           "true": false
         },
         {
           "column": 35,
           "false": true,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 66,
           "true": false
         },
         {
           "column": 27,
           "false": false,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 71,
           "true": true
         },
         {
           "column": 11,
           "false": false,
-          "file": "include/transport/server/tcp_linux_processing_queue.h",
+          "file": "include/transport/tcp_linux_processing_queue.h",
           "line": 89,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 89,
           "true": false
         },
         {
           "column": 36,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 89,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 93,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 95,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 106,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 107,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 108,
           "true": false
         },
         {
           "column": 16,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 123,
           "true": false
         },
         {
           "column": 28,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 123,
           "true": false
         },
         {
           "column": 33,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 160,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 164,
           "true": false
         },
         {
           "column": 32,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 167,
           "true": true
         },
         {
           "column": 13,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 168,
           "true": true
         },
         {
           "column": 38,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 168,
           "true": true
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 178,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 186,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 193,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 209,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 244,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 256,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 278,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 282,
           "true": false
         },
         {
           "column": 14,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 299,
           "true": false
         },
         {
           "column": 26,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 299,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 300,
           "true": true
         },
         {
           "column": 12,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 304,
           "true": false
         },
         {
           "column": 24,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 304,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 313,
           "true": false
         },
         {
           "column": 17,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 313,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 317,
           "true": false
         },
         {
           "column": 25,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 317,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 325,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 333,
           "true": true
         },
         {
           "column": 24,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 333,
           "true": false
         },
         {
           "column": 51,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 348,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 354,
           "true": false
         },
         {
           "column": 13,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 355,
           "true": false
         },
         {
           "column": 17,
           "false": false,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 368,
           "true": true
         },
         {
           "column": 17,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 371,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 376,
           "true": false
         },
         {
           "column": 17,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 385,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_linux_worker.h",
+          "file": "include/transport/tcp_linux_worker.h",
           "line": 389,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 70,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 74,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 75,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 76,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 81,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 108,
           "true": false
         },
         {
           "column": 21,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 108,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 74,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 75,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 86,
           "true": false
         },
         {
           "column": 20,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 109,
           "true": false
         },
         {
           "column": 32,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 112,
           "true": true
         },
         {
           "column": 45,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 112,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 116,
           "true": false
         },
         {
           "column": 28,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 116,
           "true": false
         },
         {
           "column": 20,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 127,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 130,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 191,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 192,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 214,
           "true": false
         },
         {
           "column": 44,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 224,
           "true": true
         },
         {
           "column": 26,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 258,
           "true": true
         },
         {
           "column": 44,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 264,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 272,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 273,
           "true": true
         },
         {
           "column": 24,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 273,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 275,
           "true": false
         },
         {
           "column": 25,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 275,
           "true": false
         },
         {
           "column": 32,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 283,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 285,
           "true": false
         },
         {
           "column": 22,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 285,
           "true": false
         },
         {
           "column": 31,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 288,
           "true": false
         },
         {
           "column": 26,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 302,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 303,
           "true": false
         },
         {
           "column": 44,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 303,
           "true": false
         }
@@ -5889,19 +5889,19 @@
         "include/protocol/http/v11/status_lines.h",
         "include/protocol/http/v11/verdict.h",
         "include/protocol/processing_result.h",
-        "include/transport/server/contracts.h",
-        "include/transport/server/tcp.h",
-        "include/transport/server/tcp_policies.h",
-        "include/transport/server/tcp_windows_context.h",
-        "include/transport/server/tcp_windows_overlapped_accept.h",
-        "include/transport/server/tcp_windows_overlapped_base.h",
-        "include/transport/server/tcp_windows_overlapped_processing.h",
-        "include/transport/server/tcp_windows_overlapped_receive.h",
-        "include/transport/server/tcp_windows_overlapped_send.h",
-        "include/transport/server/tcp_windows_processing_timer.h",
-        "include/transport/server/tcp_windows_transport.h",
-        "include/transport/server/tcp_windows_worker.h",
-        "include/transport/server/tls_policies.h"
+        "include/transport/contracts.h",
+        "include/transport/tcp.h",
+        "include/transport/tcp_policies.h",
+        "include/transport/tcp_windows_context.h",
+        "include/transport/tcp_windows_overlapped_accept.h",
+        "include/transport/tcp_windows_overlapped_base.h",
+        "include/transport/tcp_windows_overlapped_processing.h",
+        "include/transport/tcp_windows_overlapped_receive.h",
+        "include/transport/tcp_windows_overlapped_send.h",
+        "include/transport/tcp_windows_processing_timer.h",
+        "include/transport/tcp_windows_transport.h",
+        "include/transport/tcp_windows_worker.h",
+        "include/transport/tls_policies.h"
       ],
       "validation":
           "Local instrumented Release: 21/21 CTest groups and all existing per-module coverage gates passed"
@@ -7095,7 +7095,7 @@
             "covered": 62
           }
         },
-        "include/transport/server/connection_budget.h": {
+        "include/transport/connection_budget.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7105,7 +7105,7 @@
             "covered": 1
           }
         },
-        "include/transport/server/connection_reservation.h": {
+        "include/transport/connection_reservation.h": {
           "conditions": {
             "count": 12,
             "covered": 10
@@ -7115,7 +7115,7 @@
             "covered": 23
           }
         },
-        "include/transport/server/send_state.h": {
+        "include/transport/send_state.h": {
           "conditions": {
             "count": 40,
             "covered": 36
@@ -7125,7 +7125,7 @@
             "covered": 50
           }
         },
-        "include/transport/server/tcp.h": {
+        "include/transport/tcp.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7135,7 +7135,7 @@
             "covered": 2
           }
         },
-        "include/transport/server/tcp_connection.h": {
+        "include/transport/tcp_connection.h": {
           "conditions": {
             "count": 2,
             "covered": 2
@@ -7145,7 +7145,7 @@
             "covered": 12
           }
         },
-        "include/transport/server/tcp_windows_context.h": {
+        "include/transport/tcp_windows_context.h": {
           "conditions": {
             "count": 148,
             "covered": 129
@@ -7155,7 +7155,7 @@
             "covered": 231
           }
         },
-        "include/transport/server/tcp_windows_overlapped_accept.h": {
+        "include/transport/tcp_windows_overlapped_accept.h": {
           "conditions": {
             "count": 2,
             "covered": 2
@@ -7165,7 +7165,7 @@
             "covered": 4
           }
         },
-        "include/transport/server/tcp_windows_overlapped_base.h": {
+        "include/transport/tcp_windows_overlapped_base.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7175,7 +7175,7 @@
             "covered": 2
           }
         },
-        "include/transport/server/tcp_windows_overlapped_processing.h": {
+        "include/transport/tcp_windows_overlapped_processing.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7185,7 +7185,7 @@
             "covered": 1
           }
         },
-        "include/transport/server/tcp_windows_overlapped_receive.h": {
+        "include/transport/tcp_windows_overlapped_receive.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7195,7 +7195,7 @@
             "covered": 1
           }
         },
-        "include/transport/server/tcp_windows_overlapped_send.h": {
+        "include/transport/tcp_windows_overlapped_send.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7205,7 +7205,7 @@
             "covered": 1
           }
         },
-        "include/transport/server/tcp_windows_processing_timer.h": {
+        "include/transport/tcp_windows_processing_timer.h": {
           "conditions": {
             "count": 56,
             "covered": 45
@@ -7215,7 +7215,7 @@
             "covered": 106
           }
         },
-        "include/transport/server/tcp_windows_transport.h": {
+        "include/transport/tcp_windows_transport.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7225,7 +7225,7 @@
             "covered": 10
           }
         },
-        "include/transport/server/tcp_windows_worker.h": {
+        "include/transport/tcp_windows_worker.h": {
           "conditions": {
             "count": 168,
             "covered": 135
@@ -7235,7 +7235,7 @@
             "covered": 338
           }
         },
-        "include/transport/server/tls.h": {
+        "include/transport/tls.h": {
           "conditions": {
             "count": 0,
             "covered": 0
@@ -7245,7 +7245,7 @@
             "covered": 10
           }
         },
-        "include/transport/server/tls_configuration.h": {
+        "include/transport/tls_configuration.h": {
           "conditions": {
             "count": 50,
             "covered": 43
@@ -7255,7 +7255,7 @@
             "covered": 60
           }
         },
-        "include/transport/server/tls_engine.h": {
+        "include/transport/tls_engine.h": {
           "conditions": {
             "count": 128,
             "covered": 99
@@ -7516,20 +7516,20 @@
             "percent": 83.878504672897193
           },
           "files": [
-            "include/transport/server/connection_budget.h",
-            "include/transport/server/connection_reservation.h",
-            "include/transport/server/send_state.h",
-            "include/transport/server/tcp.h",
-            "include/transport/server/tcp_connection.h",
-            "include/transport/server/tcp_windows_context.h",
-            "include/transport/server/tcp_windows_overlapped_accept.h",
-            "include/transport/server/tcp_windows_overlapped_base.h",
-            "include/transport/server/tcp_windows_overlapped_processing.h",
-            "include/transport/server/tcp_windows_overlapped_receive.h",
-            "include/transport/server/tcp_windows_overlapped_send.h",
-            "include/transport/server/tcp_windows_processing_timer.h",
-            "include/transport/server/tcp_windows_transport.h",
-            "include/transport/server/tcp_windows_worker.h"
+            "include/transport/connection_budget.h",
+            "include/transport/connection_reservation.h",
+            "include/transport/send_state.h",
+            "include/transport/tcp.h",
+            "include/transport/tcp_connection.h",
+            "include/transport/tcp_windows_context.h",
+            "include/transport/tcp_windows_overlapped_accept.h",
+            "include/transport/tcp_windows_overlapped_base.h",
+            "include/transport/tcp_windows_overlapped_processing.h",
+            "include/transport/tcp_windows_overlapped_receive.h",
+            "include/transport/tcp_windows_overlapped_send.h",
+            "include/transport/tcp_windows_processing_timer.h",
+            "include/transport/tcp_windows_transport.h",
+            "include/transport/tcp_windows_worker.h"
           ],
           "lines": {
             "count": 852,
@@ -7544,9 +7544,9 @@
             "percent": 79.775280898876403
           },
           "files": [
-            "include/transport/server/tls.h",
-            "include/transport/server/tls_configuration.h",
-            "include/transport/server/tls_engine.h"
+            "include/transport/tls.h",
+            "include/transport/tls_configuration.h",
+            "include/transport/tls_engine.h"
           ],
           "lines": {
             "count": 253,
@@ -7884,53 +7884,53 @@
             "b42b0f5961576a59c56e66e6f2c600e4c8146427141ba7d22820a41098d23f20",
         "include/server.h":
             "70674ac0c6fbec0ee47286734d9b75d64c92547b99a81b83c19b6d66599157a6",
-        "include/transport/server/connection_budget.h":
+        "include/transport/connection_budget.h":
             "14c9db63dc0671d63d4284185e310b6ef6de7c53cc2bbfd2c7e5758c08a1a75a",
-        "include/transport/server/connection_reservation.h":
+        "include/transport/connection_reservation.h":
             "43c335dcf0d4407899b9a2910193442d9fe8ae22a3f3399936ac671b86f7a352",
-        "include/transport/server/contracts.h":
+        "include/transport/contracts.h":
             "f02a86194c071f77593a78ab3b1a71044cdccf16848cb5b94ca2a63063866351",
-        "include/transport/server/send_state.h":
+        "include/transport/send_state.h":
             "2bd42d9ecd15290a860cd7b2545032f07723f3d9e1e3b7d4f8a698a9cf45f84a",
-        "include/transport/server/tcp.h":
+        "include/transport/tcp.h":
             "c4957256e9f31fc65cb37e780bfba1818f8d46f796eff40c5ee8490bb4e05537",
-        "include/transport/server/tcp_connection.h":
+        "include/transport/tcp_connection.h":
             "b667b5fea3f2986e8696aa0d2826a201cb022fb4212a360c62291509f5a98544",
-        "include/transport/server/tcp_linux_context.h":
+        "include/transport/tcp_linux_context.h":
             "e70b1a534703a48a81c3cafdb8cff7531c4870cfe52a9ea03eaaebe4605e0a05",
-        "include/transport/server/tcp_linux_processing_queue.h":
+        "include/transport/tcp_linux_processing_queue.h":
             "dbf54961e7e5bf6fc6b0996f77677b6f5c7a39bfe5dab7521f76cf28c151f8c8",
-        "include/transport/server/tcp_linux_transport.h":
+        "include/transport/tcp_linux_transport.h":
             "e55f56c50e058f4a96371ebd51a5487b51a793b94994fa707d028f48e5120adf",
-        "include/transport/server/tcp_linux_worker.h":
+        "include/transport/tcp_linux_worker.h":
             "73ecd00d88b3b1e75ffde61b0afba3f520c4d7f4d407150dc0adc02cd9addff4",
-        "include/transport/server/tcp_policies.h":
+        "include/transport/tcp_policies.h":
             "2e2a2bb00c98a7d0c1997138d8a82b89dae3df9495ccf7936b759e98eee9690a",
-        "include/transport/server/tcp_windows_context.h":
+        "include/transport/tcp_windows_context.h":
             "02f4768b5e8d73dfe3f59c8601cc520b07fd6aa64e50188dbea4cac2bcf1b0ea",
-        "include/transport/server/tcp_windows_overlapped_accept.h":
+        "include/transport/tcp_windows_overlapped_accept.h":
             "f101ee46077659a186737c318fd610afc1a35134f01852da29b932477c46640c",
-        "include/transport/server/tcp_windows_overlapped_base.h":
+        "include/transport/tcp_windows_overlapped_base.h":
             "aeedf3d2b4a2e44215ddf428c556ab648e2ed867a2dbf4a1277510a75af62389",
-        "include/transport/server/tcp_windows_overlapped_processing.h":
+        "include/transport/tcp_windows_overlapped_processing.h":
             "9c826e49498d66bd69885adf1a10052157c7107aa5ddb8e21738176b964abbcd",
-        "include/transport/server/tcp_windows_overlapped_receive.h":
+        "include/transport/tcp_windows_overlapped_receive.h":
             "6f03dd4702a35273257464347d708eb49f72fe111b3cae7126b0d38484d20b41",
-        "include/transport/server/tcp_windows_overlapped_send.h":
+        "include/transport/tcp_windows_overlapped_send.h":
             "c94b38f862c662d823584941ca745b0a3d16a48a28d313ce7c6752875089b261",
-        "include/transport/server/tcp_windows_processing_timer.h":
+        "include/transport/tcp_windows_processing_timer.h":
             "c8c84c963733dcc8e288c39dbacaa78c509037e035eb072232e4458acef626a9",
-        "include/transport/server/tcp_windows_transport.h":
+        "include/transport/tcp_windows_transport.h":
             "2db2a4d5ee4b357b0055fcc853fc104e6a3e355ea0e155a8309e35e0da9d9635",
-        "include/transport/server/tcp_windows_worker.h":
+        "include/transport/tcp_windows_worker.h":
             "eee34183693883909ecf18b0a857585d6737f1ab0bc018b2c985367e5ee5607e",
-        "include/transport/server/tls.h":
+        "include/transport/tls.h":
             "1114de94485e14db40e78d192dd3bf338055fba187dc0f59635fa36813c1d0f8",
-        "include/transport/server/tls_configuration.h":
+        "include/transport/tls_configuration.h":
             "0cde541f4d9a5bbc6e42965b81b777cab7be798c1fddcdb5ec58978bfe65bd1c",
-        "include/transport/server/tls_engine.h":
+        "include/transport/tls_engine.h":
             "6bd0c6672fc03df0060278c816e7dc224730f41b5742a8289e5af2ab5c3cecac",
-        "include/transport/server/tls_policies.h":
+        "include/transport/tls_policies.h":
             "cc74554ec85096e08620c76ace0c8729d3b8c4994a684474526747b3dec2c73b",
         "include/version.h":
             "3ec5d8967a9058b4da7a44ca1e5781869dd9386739afc30e7e28b53aec8d3dee"
@@ -11270,728 +11270,728 @@
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/connection_reservation.h",
+          "file": "include/transport/connection_reservation.h",
           "line": 72,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/connection_reservation.h",
+          "file": "include/transport/connection_reservation.h",
           "line": 58,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 91,
           "true": false
         },
         {
           "column": 20,
           "false": false,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 92,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 94,
           "true": false
         },
         {
           "column": 41,
           "false": true,
-          "file": "include/transport/server/send_state.h",
+          "file": "include/transport/send_state.h",
           "line": 114,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 290,
           "true": false
         },
         {
           "column": 21,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 296,
           "true": false
         },
         {
           "column": 41,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 296,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 298,
           "true": false
         },
         {
           "column": 16,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 306,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 353,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 405,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 410,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 421,
           "true": false
         },
         {
           "column": 25,
           "false": false,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 375,
           "true": true
         },
         {
           "column": 46,
           "false": false,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 375,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 323,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 327,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 236,
           "true": false
         },
         {
           "column": 14,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 160,
           "true": false
         },
         {
           "column": 35,
           "false": false,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 163,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 110,
           "true": false
         },
         {
           "column": 18,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 110,
           "true": false
         },
         {
           "column": 43,
           "false": true,
-          "file": "include/transport/server/tcp_windows_context.h",
+          "file": "include/transport/tcp_windows_context.h",
           "line": 110,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 182,
           "true": false
         },
         {
           "column": 20,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 182,
           "true": false
         },
         {
           "column": 19,
           "false": false,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 189,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 196,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 85,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 91,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 167,
           "true": false
         },
         {
           "column": 26,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 167,
           "true": false
         },
         {
           "column": 42,
           "false": true,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 167,
           "true": false
         },
         {
           "column": 12,
           "false": false,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 122,
           "true": true
         },
         {
           "column": 12,
           "false": false,
-          "file": "include/transport/server/tcp_windows_processing_timer.h",
+          "file": "include/transport/tcp_windows_processing_timer.h",
           "line": 123,
           "true": true
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 176,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 186,
           "true": true
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 204,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 212,
           "true": true
         },
         {
           "column": 16,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 200,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 249,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 110,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 115,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 277,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 286,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 292,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 303,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 306,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 312,
           "true": false
         },
         {
           "column": 19,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 367,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 477,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 480,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 484,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 486,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 503,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 510,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 415,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 582,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 585,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 591,
           "true": false
         },
         {
           "column": 22,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 591,
           "true": false
         },
         {
           "column": 25,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 595,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 604,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 445,
           "true": false
         },
         {
           "column": 11,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 429,
           "true": true
         },
         {
           "column": 33,
           "false": false,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 430,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 561,
           "true": false
         },
         {
           "column": 26,
           "false": true,
-          "file": "include/transport/server/tcp_windows_worker.h",
+          "file": "include/transport/tcp_windows_worker.h",
           "line": 561,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 70,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 74,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 75,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 76,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 81,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 108,
           "true": false
         },
         {
           "column": 21,
           "false": true,
-          "file": "include/transport/server/tls_configuration.h",
+          "file": "include/transport/tls_configuration.h",
           "line": 108,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 74,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 75,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 272,
           "true": false
         },
         {
           "column": 9,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 273,
           "true": true
         },
         {
           "column": 24,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 273,
           "true": true
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 275,
           "true": false
         },
         {
           "column": 25,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 275,
           "true": false
         },
         {
           "column": 32,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 283,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 285,
           "true": false
         },
         {
           "column": 22,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 285,
           "true": false
         },
         {
           "column": 31,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 288,
           "true": false
         },
         {
           "column": 26,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 258,
           "true": true
         },
         {
           "column": 44,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 264,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 191,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 192,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 86,
           "true": false
         },
         {
           "column": 20,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 109,
           "true": false
         },
         {
           "column": 32,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 112,
           "true": true
         },
         {
           "column": 45,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 112,
           "true": true
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 116,
           "true": false
         },
         {
           "column": 28,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 116,
           "true": false
         },
         {
           "column": 13,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 214,
           "true": false
         },
         {
           "column": 44,
           "false": false,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 224,
           "true": true
         },
         {
           "column": 26,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 302,
           "true": false
         },
         {
           "column": 11,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 303,
           "true": false
         },
         {
           "column": 44,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 303,
           "true": false
         },
         {
           "column": 20,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 127,
           "true": false
         },
         {
           "column": 9,
           "false": true,
-          "file": "include/transport/server/tls_engine.h",
+          "file": "include/transport/tls_engine.h",
           "line": 130,
           "true": false
         }
@@ -12043,13 +12043,13 @@
         "include/protocol/http/v11/status_lines.h",
         "include/protocol/http/v11/verdict.h",
         "include/protocol/processing_result.h",
-        "include/transport/server/contracts.h",
-        "include/transport/server/tcp_linux_context.h",
-        "include/transport/server/tcp_linux_processing_queue.h",
-        "include/transport/server/tcp_linux_transport.h",
-        "include/transport/server/tcp_linux_worker.h",
-        "include/transport/server/tcp_policies.h",
-        "include/transport/server/tls_policies.h"
+        "include/transport/contracts.h",
+        "include/transport/tcp_linux_context.h",
+        "include/transport/tcp_linux_processing_queue.h",
+        "include/transport/tcp_linux_transport.h",
+        "include/transport/tcp_linux_worker.h",
+        "include/transport/tcp_policies.h",
+        "include/transport/tls_policies.h"
       ],
       "validation":
           "Historical instrumented measurement retained; Windows source coverage was not rerun on 2026-11-05"

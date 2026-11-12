@@ -41,7 +41,7 @@ Defines the doba version major preprocessor value.
 
 **Value:** `0`
 
-**Source:** [include/version.h:28](../../include/version.h#L28)
+**Source:** [include/version.h](../../include/version.h)
 
 <a id="macro-doba-version-minor"></a>
 
@@ -57,7 +57,7 @@ Defines the doba version minor preprocessor value.
 
 **Value:** `1`
 
-**Source:** [include/version.h:29](../../include/version.h#L29)
+**Source:** [include/version.h](../../include/version.h)
 
 <a id="macro-doba-version-patch"></a>
 
@@ -73,7 +73,7 @@ Defines the doba version patch preprocessor value.
 
 **Value:** `0`
 
-**Source:** [include/version.h:30](../../include/version.h#L30)
+**Source:** [include/version.h](../../include/version.h)
 
 <a id="macro-doba-version-stringify-impl"></a>
 
@@ -89,7 +89,7 @@ Defines the doba version stringify impl preprocessor value.
 
 **Value:** `#value`
 
-**Source:** [include/version.h:31](../../include/version.h#L31)
+**Source:** [include/version.h](../../include/version.h)
 
 <a id="macro-doba-version-stringify"></a>
 
@@ -105,7 +105,7 @@ Defines the doba version stringify preprocessor value.
 
 **Value:** `DOBA_VERSION_STRINGIFY_IMPL(value)`
 
-**Source:** [include/version.h:32](../../include/version.h#L32)
+**Source:** [include/version.h](../../include/version.h)
 
 <a id="macro-doba-version"></a>
 
@@ -122,9 +122,7 @@ Defines the doba version stringify preprocessor value.
 
 Defines the doba version preprocessor value.
 
-**Value:** `\
-  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MAJOR) "." \
-  DOBA_VERSION_STRINGIFY(DOBA_VERSION_MINOR) "." \
-  DOBA_VERSION_STRINGIFY(DOBA_VERSION_PATCH)`
+**Value:** `"0.1.0"`, formed by expanding and stringifying the three numeric
+version macros. This is the header version, not evidence of a published tag.
 
-**Source:** [include/version.h:33](../../include/version.h#L33)
+**Source:** [include/version.h](../../include/version.h)

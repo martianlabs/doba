@@ -1,4 +1,12 @@
-# Basic authentication
+<a name="basic-authentication"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h1-basic-authentication.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h1-basic-authentication.svg" alt="Basic authentication">
+  </a>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h1-basic-authentication-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h1-basic-authentication-dark.svg" alt="Basic authentication">
+  </a>
+</h1>
 
 Register a Basic provider with an application validator, then select
 it for **GET /private**. **GET /health** stays public. See the
@@ -11,7 +19,15 @@ in deployments using `https_server<>` with the optional TLS target, or an
 external TLS terminator. See the [HTTPS example](../https_hello_world/README.md).
 This TCP example binds to loopback for local testing.
 
-## Run it
+<a name="run-it"></a>
+<h2>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h2-run-it.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h2-run-it.svg" alt="Run it">
+  </a>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h2-run-it-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h2-run-it-dark.svg" alt="Run it">
+  </a>
+</h2>
 
 From the repository root:
 
@@ -24,7 +40,15 @@ cmake --build --preset build-debug --target basic_auth
 The server listens on port 8080 until interrupted. Run one authentication
 example at a time.
 
-## Try it
+<a name="try-it"></a>
+<h2>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h2-try-it.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h2-try-it.svg" alt="Try it">
+  </a>
+  <a href="../../../../resources/examples/http/v11/basic_auth/h2-try-it-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/basic_auth/h2-try-it-dark.svg" alt="Try it">
+  </a>
+</h2>
 
 ```text
 curl -i http://localhost:8080/health

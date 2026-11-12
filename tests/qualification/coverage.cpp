@@ -22,28 +22,30 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "coverage_union.h"
-#include "command_progress.h"
 #include "../helpers/tool_arguments.h"
 #include "../helpers/tool_process.h"
 #include "../helpers/tool_sha256.h"
+#include "command_progress.h"
+#include "coverage_union.h"
 
 using namespace martianlabs::doba::tests::tools;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] logged_run                                               ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 static int logged_run(const std::vector<std::string>& command,
-  const fs::path& output, const std::string& name,
-  const process::environment& environment = {}, bool check = true,
-  clock::duration timeout = 1800s) {
+                      const fs::path& output, const std::string& name,
+                      const process::environment& environment = {},
+                      bool check = true, clock::duration timeout = 1800s) {
   json arguments(json::array{});
   for (const auto& item : command) arguments.items().push_back(item);
   write_json(output / (name + "-command.json"), arguments);
   process child(command, environment,
-    environment.contains("DOBA_COVERAGE_IDENTIFY") ?
-      std::vector<std::string>{} :
-      std::vector<std::string>{"DOBA_COVERAGE_IDENTIFY"});
+                environment.contains("DOBA_COVERAGE_IDENTIFY")
+                    ? std::vector<std::string>{}
+                    : std::vector<std::string>{"DOBA_COVERAGE_IDENTIFY"});
   command_progress progress(child, name, output / (name + ".log"));
   int code = progress.wait(timeout);
   require(!check || code == 0, name + " failed: see " + output.string());
@@ -51,8 +53,9 @@ static int logged_run(const std::vector<std::string>& command,
 }
 
 static void llvm(const std::string& tool,
-  const std::vector<std::string>& arguments, const fs::path& output,
-  const std::string& name, const fs::path& destination = {}) {
+                 const std::vector<std::string>& arguments,
+                 const fs::path& output, const std::string& name,
+                 const fs::path& destination = {}) {
   std::string response;
   for (size_t index = 1; index < arguments.size(); ++index) {
     auto item = arguments[index];
@@ -61,8 +64,8 @@ static void llvm(const std::string& tool,
   }
   auto path = output / (name + ".rsp");
   write(path, response);
-  std::vector<std::string> command{
-    tool, arguments.front(), '@' + path.string()};
+  std::vector<std::string> command{tool, arguments.front(),
+                                   '@' + path.string()};
   if (destination.empty()) {
     logged_run(command, output, name);
   } else {
@@ -113,43 +116,59 @@ int main(int argc, char** argv) {
 #else
     const std::string platform = "linux";
 #endif
-    json status = json::object{{"status", "failed"}, {"platform", platform},
-      {"release_only", true}, {"root", root.string()},
-      {"build", build.string()}};
+    json status = json::object{{"status", "failed"},
+                               {"platform", platform},
+                               {"release_only", true},
+                               {"root", root.string()},
+                               {"build", build.string()}};
     try {
       auto started = clock::now();
       std::cout << "[coverage] build parallelism: " << parallel << std::endl;
       write(build / ".cmake/api/v1/query/codemodel-v2", "");
-      auto flags = "-fprofile-instr-generate -fcoverage-mapping "
-        "-fprofile-update=atomic -include \"" +
-        (root / "tests/qualification/profile_identity.h").generic_string() +
-        "\"";
-      std::vector<std::string> command{"cmake", "-S", root.string(), "-B",
-        build.string(), "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_CXX_COMPILER=" + compiler, "-DCMAKE_CXX_FLAGS=" + flags,
-        "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate",
-        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", "-DCMAKE_PROJECT_INCLUDE=" +
-        (root / "tests/qualification/instrument.cmake").string(),
-        "-DDOBA_ENABLE_STRICT_WARNINGS=ON", "-DDOBA_ENABLE_TLS=ON",
-        "-DDOBA_BUILD_TESTS=ON", "-DDOBA_BUILD_EXAMPLES=ON"};
+      auto flags =
+          "-fprofile-instr-generate -fcoverage-mapping "
+          "-fprofile-update=atomic -include \"" +
+          (root / "tests/qualification/profile_identity.h").generic_string() +
+          "\"";
+      std::vector<std::string> command{
+          "cmake",
+          "-S",
+          root.string(),
+          "-B",
+          build.string(),
+          "-G",
+          "Ninja",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DCMAKE_CXX_COMPILER=" + compiler,
+          "-DCMAKE_CXX_FLAGS=" + flags,
+          "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate",
+          "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+          "-DCMAKE_PROJECT_INCLUDE=" +
+              (root / "tests/qualification/instrument.cmake").string(),
+          "-DDOBA_ENABLE_STRICT_WARNINGS=ON",
+          "-DDOBA_ENABLE_TLS=ON",
+          "-DDOBA_BUILD_TESTS=ON",
+          "-DDOBA_BUILD_EXAMPLES=ON"};
       if (!openssl.empty()) command.push_back("-DOPENSSL_ROOT_DIR=" + openssl);
       logged_run(command, output, "configure");
       logged_run({"cmake", "--build", build.string(), "--parallel",
-        std::to_string(parallel)}, output, "build");
+                  std::to_string(parallel)},
+                 output, "build");
       for (const auto& [tool, name] :
-        std::vector<std::pair<std::string, std::string>>{
-          {compiler, "compiler"}, {cov, "llvm-cov"},
-          {profdata, "llvm-profdata"}}) {
+           std::vector<std::pair<std::string, std::string>>{
+               {compiler, "compiler"},
+               {cov, "llvm-cov"},
+               {profdata, "llvm-profdata"}}) {
         logged_run({tool, "--version"}, output, name);
       }
       write_json(output / "source-sha256.json",
-        source_hashes(root, {"include", "tests", "cmake"}));
+                 source_hashes(root, {"include", "tests", "cmake"}));
       fs::create_directories(output / "profiles");
-      process::environment environment{{"LLVM_PROFILE_FILE",
-        (output / "profiles/%p-%m.profraw").string()}};
+      process::environment environment{
+          {"LLVM_PROFILE_FILE", (output / "profiles/%p-%m.profraw").string()}};
       int ctest = logged_run({"ctest", "--test-dir", build.string(),
-        "--output-on-failure", "--no-tests=error"}, output, "ctest",
-        environment, false);
+                              "--output-on-failure", "--no-tests=error"},
+                             output, "ctest", environment, false);
       status["ctest_exit"] = ctest;
       auto profiles = profiles_in(output / "profiles");
       require(!profiles.empty(), "No raw profiles produced");
@@ -158,23 +177,24 @@ int main(int argc, char** argv) {
       std::vector<fs::path> indices;
       for (const auto& entry : fs::directory_iterator(reply)) {
         if (entry.path().filename().string().starts_with("index-") &&
-          entry.path().extension() == ".json") indices.push_back(entry.path());
+            entry.path().extension() == ".json")
+          indices.push_back(entry.path());
       }
       std::sort(indices.begin(), indices.end());
       require(!indices.empty(), "No CMake codemodel index");
       auto index = json::load(indices.back());
-      auto model = json::load(reply /
-        index["reply"]["codemodel-v2"]["jsonFile"].string());
+      auto model = json::load(
+          reply / index["reply"]["codemodel-v2"]["jsonFile"].string());
       json objects(json::array{});
       for (const auto& target :
-        model["configurations"][size_t{0}]["targets"].items()) {
+           model["configurations"][size_t{0}]["targets"].items()) {
         auto data = json::load(reply / target["jsonFile"].string());
         if (data["type"].string() != "EXECUTABLE") continue;
         for (const auto& artifact : data["artifacts"].items()) {
           auto path = build / artifact["path"].string();
           if (platform == "windows" && path.extension() != ".exe") continue;
           objects.items().push_back(json::object{{"binary", path.string()},
-            {"target", target["name"]}});
+                                                 {"target", target["name"]}});
         }
       }
       require(!objects.items().empty(), "No instrumented executable inventory");
@@ -188,25 +208,26 @@ int main(int argc, char** argv) {
         auto binary = object["binary"].string();
         auto target = object["target"].string();
         auto directory = output / ("object-" + std::to_string(number++));
-        std::cout << "[coverage] executable " << number << '/' <<
-          objects.items().size() << ": " << target << std::endl;
+        std::cout << "[coverage] executable " << number << '/'
+                  << objects.items().size() << ": " << target << std::endl;
         fs::create_directories(directory / "identity");
-        process::environment probe{{"DOBA_COVERAGE_IDENTIFY", "1"},
-          {"LLVM_PROFILE_FILE",
-            (directory / "identity/%p-%m.profraw").string()}};
+        process::environment probe{
+            {"DOBA_COVERAGE_IDENTIFY", "1"},
+            {"LLVM_PROFILE_FILE",
+             (directory / "identity/%p-%m.profraw").string()}};
         logged_run({binary}, directory, "identify", probe, true, 10s);
         auto identity = profiles_in(directory / "identity");
         require(identity.size() == 1,
-          "Expected one executable profile identity");
+                "Expected one executable profile identity");
         std::string prefix = target + '-';
         auto filename = identity.front().filename().string();
         require(filename.starts_with(prefix),
-          "Executable identity is not namespaced by target");
+                "Executable identity is not namespaced by target");
         auto separator = filename.find('-', prefix.size());
         require(separator != std::string::npos, "Malformed profile identity");
         auto signature = filename.substr(separator + 1);
         require(namespaces.insert(target).second,
-          "Executable profile namespace collision");
+                "Executable profile namespace collision");
         std::vector<fs::path> own;
         for (const auto& profile : profiles) {
           auto name = profile.filename().string();
@@ -218,29 +239,32 @@ int main(int argc, char** argv) {
             matched.insert(profile);
           }
         }
-        identities.items().push_back(json::object{{"binary", binary},
-          {"signature", signature}, {"target", target},
-          {"observed_profiles", own.size()}});
+        identities.items().push_back(
+            json::object{{"binary", binary},
+                         {"signature", signature},
+                         {"target", target},
+                         {"observed_profiles", own.size()}});
         auto merged = directory / "coverage.profdata";
         std::vector<std::string> arguments{"merge", "-sparse"};
         for (const auto& path : own.empty() ? identity : own) {
           arguments.push_back(path.string());
         }
-        arguments.push_back("-o"); arguments.push_back(merged.string());
+        arguments.push_back("-o");
+        arguments.push_back(merged.string());
         llvm(profdata, arguments, directory, "merge");
         std::string profile = "-instr-profile=" + merged.string();
         llvm(cov, {"export", binary, profile, "-skip-functions"}, directory,
-          "export", directory / "coverage.json");
+             "export", directory / "coverage.json");
         llvm(cov, {"export", binary, profile, "-format=lcov"}, directory,
-          "lcov", directory / "coverage.lcov");
+             "lcov", directory / "coverage.lcov");
         require(trim(read(directory / "export.log")).empty() &&
-          trim(read(directory / "lcov.log")).empty(),
-          "Unqualified LLVM coverage diagnostic: " + binary);
+                    trim(read(directory / "lcov.log")).empty(),
+                "Unqualified LLVM coverage diagnostic: " + binary);
         merge(files, json::load(directory / "coverage.json"),
-          read(directory / "coverage.lcov"), root);
+              read(directory / "coverage.lcov"), root);
       }
       require(matched.size() == profiles.size(),
-        "Raw profiles have no matching executable identity");
+              "Raw profiles have no matching executable identity");
       write_json(output / "profile-identities.json", identities);
       auto summary = summarize(files, root);
       std::cout << "[coverage] generating reports" << std::endl;
@@ -263,28 +287,31 @@ int main(int argc, char** argv) {
           for (auto value : position) {
             coordinates.items().push_back(static_cast<double>(value));
           }
-          branches.items().push_back(json::object{{"position", coordinates},
-            {"outcomes", json::array{outcomes[0], outcomes[1]}}});
+          branches.items().push_back(json::object{
+              {"position", coordinates},
+              {"outcomes", json::array{outcomes[0], outcomes[1]}}});
         }
-        coverage[name] = json::object{{"lines", line_counts},
-          {"branches", branches}};
+        coverage[name] =
+            json::object{{"lines", line_counts}, {"branches", branches}};
       }
       write_json(output / "coverage.json", coverage);
       html_report(files, summary, root, output / "html");
       if (!baseline.empty()) {
         auto floor = json::load(baseline);
         require(floor["platform"].string() == platform,
-          "Coverage baseline platform does not match");
+                "Coverage baseline platform does not match");
         enforce(summary, floor);
       }
       require(ctest == 0, "CTest failed; coverage is diagnostic only");
       status["status"] = "passed";
-      status["elapsed_seconds"] = std::chrono::duration<double>(
-        clock::now() - started).count();
-      std::cout << "[coverage] complete: " <<
-        status["elapsed_seconds"].number() << " seconds" << std::endl;
+      status["elapsed_seconds"] =
+          std::chrono::duration<double>(clock::now() - started).count();
+      std::cout << "[coverage] complete: " << status["elapsed_seconds"].number()
+                << " seconds" << std::endl;
       std::cout << json(json::object{{"status", "passed"},
-        {"modules", summary["modules"]}}).dump() << '\n';
+                                     {"modules", summary["modules"]}})
+                       .dump()
+                << '\n';
     } catch (...) {
       write_json(output / "status.json", status);
       throw;

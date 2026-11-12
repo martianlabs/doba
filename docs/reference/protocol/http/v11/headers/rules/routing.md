@@ -40,7 +40,7 @@ class routing { ... };
 
 Transversal routing rules that reconcile the request-target with the Host header, which the intra-header Host interpreter cannot decide alone because it never sees the request line. Applied by deserialize() after the single header pass has populated the context.
 
-**Source:** [include/protocol/http/v11/headers/rules/routing.h:55](../../../../../../../include/protocol/http/v11/headers/rules/routing.h#L55)
+**Source:** [include/protocol/http/v11/headers/rules/routing.h](../../../../../../../include/protocol/http/v11/headers/rules/routing.h)
 
 <a id="method-apply"></a>
 
@@ -60,4 +60,4 @@ Applies these rules to the supplied state.
 
 **Returns:** A `verdict` describing the result of applying this header or rule.
 
-**Source:** [include/protocol/http/v11/headers/rules/routing.h:60](../../../../../../../include/protocol/http/v11/headers/rules/routing.h#L60)
+**Source:** [include/protocol/http/v11/headers/rules/routing.h](../../../../../../../include/protocol/http/v11/headers/rules/routing.h)

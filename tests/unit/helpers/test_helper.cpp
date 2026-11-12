@@ -23,25 +23,25 @@
 // permissions and limitations under the License.
 
 #include "test_helper.h"
-#include "../../helpers/test_watchdog.h"
 
 #include <atomic>
-#include <mutex>
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
 #include <exception>
+#include <mutex>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include "common/console_logger.h"
+#include "../../helpers/test_watchdog.h"
+#include "../../helpers/tool_support.h"
 
 namespace martianlabs::doba::tests::unit {
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] test_case                                                  ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Test case data.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct test_case {
@@ -55,8 +55,7 @@ struct test_case {
 // +---------------------------------------------------------------------------+
 // | [>] relative_test_path                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a relative path for the given file, stripping the   |
-// | leading directories. It is used to make test output more readable.        |
+// | Keep test paths short in diagnostics.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string_view relative_test_path(std::string_view file) {
@@ -72,8 +71,6 @@ std::string_view relative_test_path(std::string_view file) {
 // +---------------------------------------------------------------------------+
 // | [>] tests                                                    ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a reference to the static vector of test cases.     |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::vector<test_case>& tests() {
   static std::vector<test_case> value;
@@ -83,10 +80,6 @@ std::vector<test_case>& tests() {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] failures                                                 ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns a reference to the static count of failed           |
-// | assertions. It is used to track the number of failed assertions across    |
-// | all test cases.                                                           |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::atomic<std::size_t>& failures() {
@@ -98,7 +91,7 @@ std::atomic<std::size_t>& failures() {
 // +---------------------------------------------------------------------------+
 // | [>] diagnostics_mutex                                        ( function ) |
 // +---------------------------------------------------------------------------+
-// | Serialize failure diagnostics and context changes made by test workers.   |
+// | Keep worker diagnostics and context updates from overlapping.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::mutex& diagnostics_mutex() {
@@ -109,12 +102,6 @@ std::mutex& diagnostics_mutex() {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] context                                                  ( function ) |
-// +---------------------------------------------------------------------------+
-// | This function returns a reference to the static string that holds the     |
-// | current test context. It is used to provide additional information about  |
-// | the test case being executed, especially when an assertion fails.         |
-// | The context can be set and retrieved using the set_context method of the  |
-// | test_helper class.                                                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string& context() {
@@ -127,12 +114,6 @@ std::string& context() {
 // +---------------------------------------------------------------------------+
 // | [>] add                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function adds a new test case to the static vector of test cases.    |
-// | It takes the file name, line number, test name, and a function pointer    |
-// | to the test function. The file name is converted to a relative path       |
-// | for better readability in test output. The function returns true to       |
-// | indicate that the test case was successfully added.                       |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::add(std::string_view file, int line, std::string_view name,
                       test_t test) {
@@ -144,13 +125,7 @@ bool test_helper::add(std::string_view file, int line, std::string_view name,
 // +---------------------------------------------------------------------------+
 // | [>] expect                                                   ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function checks a condition and reports a failed assertion if the    |
-// | condition is false. It takes the condition to check, the expression as a  |
-// | string, the file name, and the line number. If the condition is false, it |
-// | increments the failure count, prints an error message to stderr with      |
-// | the file name, line number, and expression, and includes the current      |
-// | test context if available. The function returns true if the condition is  |
-// | true and false if it is false.                                            |
+// | Print failed assertions with the current test context.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 bool test_helper::expect(bool condition, std::string_view expression,
@@ -173,13 +148,6 @@ bool test_helper::expect(bool condition, std::string_view expression,
 // +---------------------------------------------------------------------------+
 // | [>] set_context                                              ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function sets the current test context to the provided value.        |
-// | The context is a string that can be used to provide additional            |
-// | information about the test case being executed, especially when an        |
-// | assertion fails. The context can be retrieved using the context function. |
-// | This function is typically called before running a test case to set the   |
-// | context for that specific test.                                           |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void test_helper::set_context(std::string_view value) {
   std::lock_guard lock(diagnostics_mutex());
@@ -190,12 +158,7 @@ void test_helper::set_context(std::string_view value) {
 // +---------------------------------------------------------------------------+
 // | [>] run                                                      ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the unit tests based on the provided command-line      |
-// | arguments. It processes the arguments to determine which tests to run,    |
-// | whether to list them, and any exclusions. It then executes the selected   |
-// | tests, tracks failures, and outputs the results to the console.           |
-// | The function returns an integer status code indicating success or         |
-// | failure of the test run.                                                  |
+// | Run matching tests, or list them without running.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int test_helper::run(int argc, char** argv) {
@@ -278,10 +241,12 @@ int test_helper::run(int argc, char** argv) {
     return 0;
   }
   std::chrono::milliseconds timeout{30000};
-  const char* environment_timeout = std::getenv("DOBA_TEST_TIMEOUT_MS");
-  const auto configured_timeout = !timeout_given
-      ? std::string_view(environment_timeout ? environment_timeout : "30000")
-      : timeout_argument;
+  const auto environment_timeout =
+      ::martianlabs::doba::tests::tools::environment_value(
+          "DOBA_TEST_TIMEOUT_MS")
+          .value_or("30000");
+  const auto configured_timeout =
+      !timeout_given ? std::string_view(environment_timeout) : timeout_argument;
   if (!::martianlabs::doba::tests::parse_test_timeout(configured_timeout,
                                                       timeout)) {
     std::fputs("Invalid test timeout: expected 1..3600000 milliseconds\n",
@@ -289,9 +254,6 @@ int test_helper::run(int argc, char** argv) {
     return 2;
   }
   ::martianlabs::doba::tests::test_watchdog watchdog(timeout);
-  common::console_logger logger{
-      "unit_tests", common::console_logger_options{.show_function = false,
-                                                   .show_line = false}};
   static constexpr std::string_view kText =
       "     _       _\n"
       "  __| | ___ | |__   __ _\n"
@@ -301,7 +263,7 @@ int test_helper::run(int argc, char** argv) {
   std::fwrite(kText.data(), 1, kText.size(), stdout);
   std::fputc('\n', stdout);
   std::fflush(stdout);
-  logger.info() << "running " << selected << " unit tests";
+  std::printf("running %zu unit tests\n", selected);
   std::size_t failed_tests = 0;
   std::size_t skipped_tests = 0;
   for (const auto& test : tests()) {
@@ -337,18 +299,20 @@ int test_helper::run(int argc, char** argv) {
     watchdog.disarm();
     if (failures() != failures_before) {
       failed_tests++;
-      logger.error() << test.file << ':' << test.line << " - " << test.name
-                     << common::console_log_color::kRed << " failed";
+      std::printf("%.*s:%d - %.*s failed\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line,
+                  static_cast<int>(test.name.size()), test.name.data());
     } else {
-      logger.info() << test.file << ':' << test.line << " - " << test.name
-                    << common::console_log_color::kGreen << " passed";
+      std::printf("%.*s:%d - %.*s passed\n", static_cast<int>(test.file.size()),
+                  test.file.data(), test.line,
+                  static_cast<int>(test.name.size()), test.name.data());
     }
   }
   if (skipped_tests != 0) {
-    logger.info() << skipped_tests << " test(s) skipped by explicit exclusions";
+    std::printf("%zu test(s) skipped by explicit exclusions\n", skipped_tests);
   }
   if (failed_tests != 0) {
-    logger.error() << failed_tests << " test(s) failed";
+    std::printf("%zu test(s) failed\n", failed_tests);
     return 1;
   }
   return 0;
@@ -357,9 +321,7 @@ int test_helper::run(int argc, char** argv) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] main                                                   ( entry-pint ) |
-// +---------------------------------------------------------------------------+
-// | This is the entry point of the unit test framework.                       |
+// | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv) {

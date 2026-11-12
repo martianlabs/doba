@@ -35,26 +35,29 @@
 #include "test_helper.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] text_response                                            ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void text_response(response& res, std::string_view text) {
   res.ok_200().set_body(text);
 }
 }  // namespace
 
 // +===========================================================================+
-// | [>] HTTP/1.1 runs synchronous pipelines with IOCP           ( test-case ) |
-// |     workers                                                               |
+// | [>] HTTP pipelines across IOCP workers                      ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("HTTP/1.1 runs synchronous pipelines with multiple IOCP workers") {
   tcpip_client probe;
@@ -62,10 +65,9 @@ DOBA_TEST("HTTP/1.1 runs synchronous pipelines with multiple IOCP workers") {
   DOBA_EXPECT(port != 0);
   http_server<> http_server(
       {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)});
-  http_server.add_route("GET", "/wait",
-                        [](const request&, response& res) {
-                          text_response(res, "ready");
-                        });
+  http_server.add_route("GET", "/wait", [](const request&, response& res) {
+    text_response(res, "ready");
+  });
   http_server.start();
   std::atomic<int> connected{0};
   std::atomic<int> sent{0};

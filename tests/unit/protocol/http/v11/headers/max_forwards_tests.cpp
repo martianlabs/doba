@@ -90,7 +90,7 @@ DOBA_TEST("interpret preserves remaining forwarding budget") {
 }
 
 // +===========================================================================+
-// | [>] check preserves output at the decimal overflow boundary ( test-case ) |
+// | [>] unchanged output on decimal overflow                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves output at the decimal overflow boundary") {
   const std::string maximum =

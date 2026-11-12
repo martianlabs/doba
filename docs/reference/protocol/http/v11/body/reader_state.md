@@ -43,7 +43,7 @@ struct reader_state { ... };
 
 Result of a body reader read() call. produced  - bytes of decoded payload written into the caller-supplied output span during this call. Wire framing bytes consumed from the source reader are internal and not reported. complete  - body fully decoded; no further read() calls needed. has_error - a protocol or size-limit error was detected. error
 
-**Source:** [include/protocol/http/v11/body/reader_state.h:46](../../../../../../include/protocol/http/v11/body/reader_state.h#L46)
+**Source:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
 
 <a id="field-produced"></a>
 
@@ -59,7 +59,7 @@ Bytes of decoded payload written into the output span during this call.
 
 **Value:** `0`
 
-**Source:** [include/protocol/http/v11/body/reader_state.h:48](../../../../../../include/protocol/http/v11/body/reader_state.h#L48)
+**Source:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
 
 <a id="field-complete"></a>
 
@@ -75,7 +75,7 @@ Body fully decoded; no further read() calls needed.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/body/reader_state.h:50](../../../../../../include/protocol/http/v11/body/reader_state.h#L50)
+**Source:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
 
 <a id="field-has-error"></a>
 
@@ -91,7 +91,7 @@ A protocol or size-limit error was detected.
 
 **Value:** `false`
 
-**Source:** [include/protocol/http/v11/body/reader_state.h:52](../../../../../../include/protocol/http/v11/body/reader_state.h#L52)
+**Source:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)
 
 <a id="field-error"></a>
 
@@ -107,4 +107,4 @@ Error code, if has_error is true.
 
 **Value:** `reader_error::none`
 
-**Source:** [include/protocol/http/v11/body/reader_state.h:54](../../../../../../include/protocol/http/v11/body/reader_state.h#L54)
+**Source:** [include/protocol/http/v11/body/reader_state.h](../../../../../../include/protocol/http/v11/body/reader_state.h)

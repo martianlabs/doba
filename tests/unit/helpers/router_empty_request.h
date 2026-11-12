@@ -25,7 +25,6 @@
 #ifndef martianlabs_doba_tests_unit_router_empty_request_h
 #define martianlabs_doba_tests_unit_router_empty_request_h
 
-
 namespace martianlabs::doba::tests::unit {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

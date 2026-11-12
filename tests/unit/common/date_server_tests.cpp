@@ -26,6 +26,7 @@
 #include <atomic>
 #include <barrier>
 #include <chrono>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -38,8 +39,8 @@
 
 namespace {
 using martianlabs::doba::common::date_server;
-using martianlabs::doba::tests::valid_http_date;
 using martianlabs::doba::protocol::http::v11::response;
+using martianlabs::doba::tests::valid_http_date;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] date_owner                                                  ( class ) |
@@ -74,6 +75,27 @@ class date_owner {
 };
 
 }  // namespace
+
+// +===========================================================================+
+// | [>] date formatting works without starting the server       ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("date formatting works without starting the server") {
+  DOBA_EXPECT_EQUAL(date_server::format(0), "Thu, 01 Jan 1970 00:00:00 GMT");
+  DOBA_EXPECT_EQUAL(date_server::format(784111777),
+                    "Sun, 06 Nov 1994 08:49:37 GMT");
+  DOBA_EXPECT_EQUAL(date_server::format(951782400),
+                    "Tue, 29 Feb 2000 00:00:00 GMT");
+}
+
+// +===========================================================================+
+// | [>] date formatting rejects unsupported timestamps          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("date formatting rejects unsupported timestamps") {
+  DOBA_EXPECT(
+      date_server::format(std::numeric_limits<std::time_t>::max()).empty());
+  DOBA_EXPECT(
+      date_server::format(static_cast<std::time_t>(253402300800LL)).empty());
+}
 
 // +===========================================================================+
 // | [>] concurrent serialization preserves HTTP dates           ( test-case ) |

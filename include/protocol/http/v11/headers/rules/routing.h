@@ -22,12 +22,11 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-
 #ifndef martianlabs_doba_protocol_http_v11_headers_rules_routing_h
 #define martianlabs_doba_protocol_http_v11_headers_rules_routing_h
 
-#include "protocol/http/v11/context.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/context.h"
 #include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11::headers::rules {

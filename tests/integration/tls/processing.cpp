@@ -43,7 +43,7 @@ using protocol::processing_result;
 using clock_type = processing_result::clock;
 using tests::tls::processing_session;
 using namespace std::chrono_literals;
-namespace tr = transport::server;
+namespace tr = transport;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -61,56 +61,62 @@ void require(bool condition, const char* message) {
 // /////////////////////////////////////////////////////////////////////////////
 struct turn_engine {
   // +=========================================================================+
-  // | [>] USINGs                                                  ( public  ) |
+  // | [>] USINGs                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   using policies_type = int;
   // +=========================================================================+
-  // | [>] ATTRIBUTEs                                              ( public  ) |
+  // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
   protocol::send_delegate send;
   std::function<void()> close;
   std::function<processing_result(turn_engine&, std::string_view)> input;
   std::function<processing_result(turn_engine&, bool)> turn;
   // +=========================================================================+
-  // | [>] set_on_send                                             ( public  ) |
+  // | [>] set_on_send                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_send(protocol::send_delegate value) { send = std::move(value); }
   // +=========================================================================+
-  // | [>] set_on_close                                            ( public  ) |
+  // | [>] set_on_close                                             ( public ) |
   // +-------------------------------------------------------------------------+
   void set_on_close(std::function<void()> value) { close = std::move(value); }
   // +=========================================================================+
-  // | [>] on_bytes_received                                       ( public  ) |
+  // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view bytes) {
     return input(*this, bytes);
   }
   // +=========================================================================+
-  // | [>] on_processing_turn                                      ( public  ) |
+  // | [>] on_processing_turn                                       ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool idle) { return turn(*this, idle); }
 };
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] source                                                   ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<common::reader> source(std::string text) {
   auto owner = std::make_shared<const std::string>(std::move(text));
-  return std::make_unique<common::reader>(common::reader::shared(
-      owner, std::as_bytes(std::span(*owner))));
+  return std::make_unique<common::reader>(
+      common::reader::shared(owner, std::as_bytes(std::span(*owner))));
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] same                                                     ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 bool same(const processing_result& a, const processing_result& b) {
   return a.turn_requested == b.turn_requested && a.turn_at == b.turn_at &&
-      a.turn_after_output_drained == b.turn_after_output_drained;
+         a.turn_after_output_drained == b.turn_after_output_drained;
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] snapshots                                                ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void snapshots(tr::tls_policies settings, int version) {
   for (unsigned interests : {1U, 2U, 4U, 7U}) {
     processing_result initial{(interests & 1) != 0, {}, (interests & 4) != 0};
@@ -129,8 +135,9 @@ void snapshots(tr::tls_policies settings, int version) {
         ++calls;
         if (calls == 1) {
           auto owner = std::make_shared<const std::string>("tail");
-          current.send("pre:", "body:", std::make_unique<common::reader>(
-              common::reader::shared(owner, std::as_bytes(std::span(*owner)))));
+          current.send("pre:", "body:",
+                       std::make_unique<common::reader>(common::reader::shared(
+                           owner, std::as_bytes(std::span(*owner)))));
           require(owner.use_count() == 1, "TLS retained an exhausted reader");
           current.send({}, {}, nullptr);
           return next;
@@ -160,9 +167,11 @@ void snapshots(tr::tls_policies settings, int version) {
   }
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] errors                                                   ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void errors(tr::tls_policies settings, int version) {
   for (unsigned failure = 0; failure < 9; ++failure) {
     auto limits = settings;
@@ -178,7 +187,8 @@ void errors(tr::tls_policies settings, int version) {
         return processing_result{true, {}, false};
       };
       engine.turn = [failure](auto& current, bool) {
-        if (failure < 2) current.send({}, std::string(4096 + failure, 'a'), {});
+        if (failure < 2)
+          current.send({}, std::string(4096 + failure, 'a'), {});
         else if (failure < 4) {
           current.send({}, {}, source(std::string(4094 + failure, 'b')));
         } else if (failure == 4) {
@@ -190,7 +200,7 @@ void errors(tr::tls_policies settings, int version) {
         } else if (failure == 6) {
           current.send({}, {}, source(std::string(9000, 'c')));
         } else if (failure == 7) {
-          common::filesystem_file file;
+          common::filesystem file;
           std::byte byte{};
           file.read(std::span<std::byte>(&byte, 1));
           current.send("discard", {},
@@ -210,14 +220,17 @@ void errors(tr::tls_policies settings, int version) {
     require(session.closed() != accepted, "turn limit/failure not enforced");
     const auto result = session.read();
     require(accepted ? result == std::string(4096, failure == 0 ? 'a' : 'b')
-                     : result.empty(), "partial failed turn escaped");
+                     : result.empty(),
+            "partial failed turn escaped");
     require(same(session.progress(), {}), "failed turn left scheduling");
   }
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] peer_close                                               ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void peer_close(tr::tls_policies settings, int version) {
   auto factory = [] {
     turn_engine engine;
@@ -238,22 +251,24 @@ void peer_close(tr::tls_policies settings, int version) {
           "peer close_notify did not withdraw scheduling");
 }
 
-// +===========================================================================+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
 // | [>] concurrent_http                                          ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void concurrent_http(tr::tls_policies settings, int version) {
   using namespace protocol::http::v11;
   protocol::http::router<request, response> routes;
   unsigned started = 0, completed = 0;
   bool progressed_busy = false;
-  routes.add("GET", "/wait/:id", [&](const request&, response& result,
-                                      int id) -> common::task<> {
-    ++started;
-    co_await common::yield();
-    ++completed;
-    if (id == 2) progressed_busy = true;
-    result.ok_200().set_body(std::to_string(id));
-  });
+  routes.add("GET", "/wait/:id",
+             [&](const request&, response& result, int id) -> common::task<> {
+               ++started;
+               co_await common::yield();
+               ++completed;
+               if (id == 2) progressed_busy = true;
+               result.ok_200().set_body(std::to_string(id));
+             });
   routes.add("GET", "/source", [](const request&, response& result) {
     result.ok_200().set_body(std::move(*source("source")), 6);
   });
@@ -262,7 +277,7 @@ void concurrent_http(tr::tls_policies settings, int version) {
   });
   auto factory = [&] { return engine<request, response>({}, routes); };
   processing_session<engine<request, response>> session(settings, factory,
-                                                       version);
+                                                        version);
   const std::string batch =
       "GET /source HTTP/1.1\r\nHost: local\r\n\r\n"
       "GET /wait/1 HTTP/1.1\r\nHost: local\r\n\r\n"
@@ -275,7 +290,8 @@ void concurrent_http(tr::tls_policies settings, int version) {
   require(completed == 2 && progressed_busy, "busy TLS output stalled tasks");
   std::string wire = session.read();
   for (unsigned i = 0; i < 8 && (session.progress().turn_requested ||
-       session.progress().turn_after_output_drained); ++i) {
+                                 session.progress().turn_after_output_drained);
+       ++i) {
     session.turn(true);
     wire += session.read();
   }
@@ -285,6 +301,44 @@ void concurrent_http(tr::tls_policies settings, int version) {
     const auto found = wire.find(std::string("\r\n\r\n") + body, position);
     require(found != std::string::npos, "mixed TLS response order changed");
     position = found + 4 + std::char_traits<char>::length(body);
+  }
+}
+void ciphertext_boundaries(tr::tls_policies settings, int version) {
+  const std::string payload(4096, 'b');
+  auto factory = [&] {
+    turn_engine engine;
+    engine.input = [](auto&, auto) {
+      return processing_result{true, {}, false};
+    };
+    engine.turn = [&](auto& current, bool) {
+      current.send({}, payload, nullptr);
+      return processing_result{};
+    };
+    return engine;
+  };
+  processing_session<turn_engine> measured(settings, factory, version);
+  measured.write("x");
+  measured.turn(true);
+  const auto encrypted_size = measured.pending();
+  require(encrypted_size > payload.size(), "TLS overhead was not counted");
+  require(measured.read() == payload, "ciphertext control lost plaintext");
+  for (const auto maximum :
+       {encrypted_size - 1, encrypted_size, encrypted_size + 1}) {
+    settings.max_buffered_ciphertext_bytes = maximum;
+    processing_session<turn_engine> session(settings, factory, version);
+    session.write("x");
+    session.turn(true);
+    const bool accepted = maximum >= encrypted_size;
+    require(session.closed() != accepted, "ciphertext boundary not enforced");
+    require(session.pending() == (accepted ? encrypted_size : 0),
+            "failed ciphertext batch escaped or changed size");
+    require(session.read() == (accepted ? payload : std::string{}),
+            "ciphertext boundary changed plaintext");
+    if (!accepted) {
+      session.turn(true);
+      require(session.pending() == 0 && same(session.progress(), {}),
+              "ciphertext overflow revived output or processing");
+    }
   }
 }
 }  // namespace
@@ -309,7 +363,8 @@ int main(int count, char** args) {
         errors(policies, version);
         concurrent_http(policies, version);
         peer_close(policies, version);
-        cases += 15;
+        ciphertext_boundaries(policies, version);
+        cases += 19;
       }
     }
     std::cout << "TLS processing cases: " << cases << " PASS\n";
@@ -318,5 +373,3 @@ int main(int count, char** args) {
     return 1;
   }
 }
-
-

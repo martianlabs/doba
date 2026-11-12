@@ -40,15 +40,8 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] framer_chunked                                              ( class ) |
 // +---------------------------------------------------------------------------+
-// | Validates a chunked Transfer-Encoding body.                               |
-// |                                                                           |
-// | The caller pushes incoming transport spans via consume(). Each call       |
-// | validates the framing and counts all wire bytes, including chunk lines,   |
-// | extensions, trailers and the terminating CRLF.                            |
-// |                                                                           |
-// | framer_state::consumed reports the exact number of bytes belonging to     |
-// | this body that were taken from the input span. Any remaining bytes in the |
-// | span belong to the next request.                                          |
+// | Checks chunked body framing across successive input spans.                |
+// | Counts payload and framing bytes, including extensions and trailers.      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class framer_chunked {
@@ -90,6 +83,9 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] CONSTRUCTORs                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Limits apply to payload bytes, extensions per chunk and all trailers.   |
+  // | A limit of 0 means unlimited.                                           |
+  // +-------------------------------------------------------------------------+
   framer_chunked() = default;
   explicit framer_chunked(
       std::size_t payload_limit,
@@ -101,8 +97,9 @@ class framer_chunked {
   // +=========================================================================+
   // | [>] consume                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Validates the chunked framing in input. Returns bytes consumed and      |
-  // | whether the body is complete (last-chunk + terminating CRLF seen).      |
+  // | Reports bytes consumed, completion and any framing error.               |
+  // | Stops at the final CRLF; remaining input belongs to the next request.   |
+  // | After completion or failure, later calls consume no bytes.              |
   // +-------------------------------------------------------------------------+
   framer_state consume(std::span<const std::byte> input) {
     framer_state result;
@@ -129,9 +126,6 @@ class framer_chunked {
         return fail(result, framer_error::trailer_size_limit_exceeded);
       }
       switch (state_) {
-        // +-------------------------------------------------------------------+
-        // | chunk_size: accumulate hex digits, handle extension and CR        |
-        // +-------------------------------------------------------------------+
         case state::chunk_size: {
           if (c == ';') {
             if (!chunk_size_started_) {
@@ -153,12 +147,10 @@ class framer_chunked {
           }
           int digit = hex_digit(c);
           if (digit < 0) {
-            // Invalid hex digit in chunk-size line!
             return fail(result, framer_error::invalid_chunk_size);
           }
           if (chunk_remaining_ >
               (std::numeric_limits<std::size_t>::max() >> 4)) {
-            // Overflow in chunk size accumulation!
             return fail(result, framer_error::chunk_size_overflow);
           }
           chunk_remaining_ =
@@ -166,9 +158,6 @@ class framer_chunked {
           chunk_size_started_ = true;
           break;
         }
-        // +-------------------------------------------------------------------+
-        // | extension_before_semicolon                                        |
-        // +-------------------------------------------------------------------+
         case state::extension_before_semicolon: {
           if (c == ' ' || c == '\t') break;
           if (c == ';') {
@@ -177,9 +166,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_before_name                                             |
-        // +-------------------------------------------------------------------+
         case state::extension_before_name: {
           if (c == ' ' || c == '\t') break;
           if (helpers::is_token(c)) {
@@ -188,9 +174,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_name                                                    |
-        // +-------------------------------------------------------------------+
         case state::extension_name: {
           if (helpers::is_token(c)) break;
           if (c == ' ' || c == '\t') {
@@ -211,9 +194,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_after_name                                              |
-        // +-------------------------------------------------------------------+
         case state::extension_after_name: {
           if (c == ' ' || c == '\t') break;
           if (c == '=') {
@@ -230,9 +210,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_before_value                                            |
-        // +-------------------------------------------------------------------+
         case state::extension_before_value: {
           if (c == ' ' || c == '\t') break;
           if (helpers::is_token(c)) {
@@ -245,9 +222,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_token_value                                             |
-        // +-------------------------------------------------------------------+
         case state::extension_token_value: {
           if (helpers::is_token(c)) break;
           if (c == ' ' || c == '\t') {
@@ -264,9 +238,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_quoted_value                                            |
-        // +-------------------------------------------------------------------+
         case state::extension_quoted_value: {
           if (helpers::is_qdtext(c)) break;
           if (c == '\\') {
@@ -279,9 +250,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_quoted_pair                                             |
-        // +-------------------------------------------------------------------+
         case state::extension_quoted_pair: {
           if (c == '\t' || c == ' ' || helpers::is_vchar(c) ||
               helpers::is_obs_text(c)) {
@@ -290,9 +258,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | extension_after_value                                             |
-        // +-------------------------------------------------------------------+
         case state::extension_after_value: {
           if (c == ' ' || c == '\t') break;
           if (c == ';') {
@@ -305,12 +270,8 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_chunk_size);
         }
-        // +-------------------------------------------------------------------+
-        // | size_lf: LF after chunk-size CR: decide data vs last-chunk        |
-        // +-------------------------------------------------------------------+
         case state::size_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk-size CR!
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           extension_size_ = 0;
@@ -322,9 +283,6 @@ class framer_chunked {
           }
           break;
         }
-        // +-------------------------------------------------------------------+
-        // | data: consume min(remaining, available) bytes                     |
-        // +-------------------------------------------------------------------+
         case state::data: {
           std::size_t to_take = std::min(chunk_remaining_, input.size() - i);
           if (payload_limit_ != 0 &&
@@ -337,28 +295,19 @@ class framer_chunked {
           i += to_take;
           chunk_remaining_ -= to_take;
           if (chunk_remaining_ == 0) {
-            // All chunk data consumed; expect post-data CRLF next.
             state_ = state::data_cr;
           }
-          continue;  // i already advanced - skip the single-byte path below
+          continue;  // Already advanced i past the payload.
         }
-        // +-------------------------------------------------------------------+
-        // | data_cr: Post-data CRLF                                           |
-        // +-------------------------------------------------------------------+
         case state::data_cr: {
           if (c != '\r') {
-            // Invalid CR after chunk data!
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           state_ = state::data_lf;
           break;
         }
-        // +-------------------------------------------------------------------+
-        // | data_lf                                                           |
-        // +-------------------------------------------------------------------+
         case state::data_lf: {
           if (c != '\n') {
-            // Invalid LF after chunk data CR!
             return fail(result, framer_error::invalid_chunk_crlf);
           }
           chunk_remaining_ = 0;
@@ -366,9 +315,6 @@ class framer_chunked {
           state_ = state::chunk_size;
           break;
         }
-        // +-------------------------------------------------------------------+
-        // | trailer_line_start                                                |
-        // +-------------------------------------------------------------------+
         case state::trailer_line_start: {
           if (helpers::is_token(c)) {
             state_ = state::trailer_name;
@@ -380,9 +326,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_trailer);
         }
-        // +-------------------------------------------------------------------+
-        // | trailer_name                                                      |
-        // +-------------------------------------------------------------------+
         case state::trailer_name: {
           if (helpers::is_token(c)) break;
           if (c == ':') {
@@ -391,9 +334,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_trailer);
         }
-        // +-------------------------------------------------------------------+
-        // | trailer_value                                                     |
-        // +-------------------------------------------------------------------+
         case state::trailer_value: {
           if (c == '\r') {
             state_ = state::trailer_line_lf;
@@ -405,9 +345,6 @@ class framer_chunked {
           }
           return fail(result, framer_error::invalid_trailer);
         }
-        // +-------------------------------------------------------------------+
-        // | trailer_line_lf                                                   |
-        // +-------------------------------------------------------------------+
         case state::trailer_line_lf: {
           if (c != '\n') {
             return fail(result, framer_error::invalid_trailer);
@@ -415,9 +352,6 @@ class framer_chunked {
           state_ = state::trailer_line_start;
           break;
         }
-        // +-------------------------------------------------------------------+
-        // | trailer_end_lf                                                    |
-        // +-------------------------------------------------------------------+
         case state::trailer_end_lf: {
           if (c != '\n') {
             return fail(result, framer_error::invalid_trailer);
@@ -430,7 +364,7 @@ class framer_chunked {
         default:
           break;
       }
-      // Count every framing byte in the wire body.
+      // Framing bytes count too.
       result.consumed += 1;
       i++;
     }

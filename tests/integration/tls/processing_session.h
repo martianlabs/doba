@@ -33,15 +33,15 @@
 #include <string_view>
 #include <utility>
 
-#include "transport/server/tls_engine.h"
+#include "transport/tls_engine.h"
 
 namespace martianlabs::doba::tests::tls {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] processing_session                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Verified memory-BIO client and real TLS adapter; no native scheduling.    |
-// | Tests supply turns and can hold ciphertext to model occupied TCP output.  |
+// | Pair a memory-BIO client with the real TLS adapter. Hold encrypted output |
+// | to simulate busy TCP output.                                              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty>
@@ -51,8 +51,8 @@ class processing_session {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <typename Factory>
-  processing_session(transport::server::tls_policies policies,
-                     Factory factory, int version)
+  processing_session(transport::tls_policies policies, Factory factory,
+                     int version)
       : context_(client_context(policies.certificate_file, version)),
         client_(SSL_new(context_.get()), SSL_free),
         server_(std::make_shared<const configuration>(std::move(policies)),
@@ -76,8 +76,8 @@ class processing_session {
     for (unsigned round = 0; round < 1000; ++round) {
       ERR_clear_error();
       const int result = SSL_do_handshake(client_.get());
-      const int error = result == 1 ? SSL_ERROR_NONE :
-          SSL_get_error(client_.get(), result);
+      const int error =
+          result == 1 ? SSL_ERROR_NONE : SSL_get_error(client_.get(), result);
       check(result == 1 || error == SSL_ERROR_WANT_READ);
       transfer();
       deliver();
@@ -92,12 +92,13 @@ class processing_session {
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
   // +-------------------------------------------------------------------------+
-  // Decrypted input is borrowed; overwrite every delivered encrypted fragment.
+  // Overwrite encrypted fragments to catch retained input views.
   void write(std::string_view plaintext, std::size_t fragment = 8192) {
     std::size_t size = 0;
     ERR_clear_error();
-    check(SSL_write_ex(client_.get(), plaintext.data(), plaintext.size(), &size)
-          == 1 && size == plaintext.size());
+    check(SSL_write_ex(client_.get(), plaintext.data(), plaintext.size(),
+                       &size) == 1 &&
+          size == plaintext.size());
     transfer(fragment);
   }
   // +=========================================================================+
@@ -111,7 +112,7 @@ class processing_session {
     if (ciphertext_.empty()) return;
     std::size_t size = 0;
     check(BIO_write_ex(SSL_get_rbio(client_.get()), ciphertext_.data(),
-                        ciphertext_.size(), &size) == 1);
+                       ciphertext_.size(), &size) == 1);
     check(size == ciphertext_.size());
     ciphertext_.clear();
   }
@@ -125,11 +126,14 @@ class processing_session {
     for (;;) {
       std::size_t size = 0;
       ERR_clear_error();
-      const int status = SSL_read_ex(client_.get(), block.data(),
-                                      block.size(), &size);
-      const int error = status == 1 ? SSL_ERROR_NONE :
-          SSL_get_error(client_.get(), status);
-      if (status == 1) { result.append(block.data(), size); continue; }
+      const int status =
+          SSL_read_ex(client_.get(), block.data(), block.size(), &size);
+      const int error =
+          status == 1 ? SSL_ERROR_NONE : SSL_get_error(client_.get(), status);
+      if (status == 1) {
+        result.append(block.data(), size);
+        continue;
+      }
       check(error == SSL_ERROR_WANT_READ || error == SSL_ERROR_ZERO_RETURN);
       return result;
     }
@@ -153,16 +157,15 @@ class processing_session {
   }
   // +=========================================================================+
   // | [>] OBSERVERs                                                ( public ) |
-  // +-------------------------------------------------------------------------+
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] progress                                                 ( public ) |
   // +-------------------------------------------------------------------------+
   const protocol::processing_result& progress() const { return progress_; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] closed                                                   ( public ) |
   // +-------------------------------------------------------------------------+
   bool closed() const { return closed_; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] pending                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t pending() const { return ciphertext_.size(); }
@@ -171,7 +174,7 @@ class processing_session {
   // +=========================================================================+
   // | [>] USINGs                                                  ( private ) |
   // +-------------------------------------------------------------------------+
-  using configuration = transport::server::detail::tls_configuration;
+  using configuration = transport::detail::tls_configuration;
   using context_owner = std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)>;
   // +=========================================================================+
   // | [>] check                                                   ( private ) |
@@ -185,8 +188,8 @@ class processing_session {
   static context_owner client_context(const std::string& cert, int version) {
     context_owner result(SSL_CTX_new(TLS_client_method()), SSL_CTX_free);
     check(result != nullptr);
-    check(SSL_CTX_load_verify_locations(result.get(), cert.c_str(), nullptr)
-          == 1);
+    check(SSL_CTX_load_verify_locations(result.get(), cert.c_str(), nullptr) ==
+          1);
     SSL_CTX_set_verify(result.get(), SSL_VERIFY_PEER, nullptr);
     check(SSL_CTX_set_min_proto_version(result.get(), version) == 1);
     check(SSL_CTX_set_max_proto_version(result.get(), version) == 1);
@@ -202,7 +205,7 @@ class processing_session {
     while (BIO_ctrl_pending(outgoing)) {
       std::size_t size = 0;
       check(BIO_read_ex(outgoing, bytes.data(),
-                         std::min(fragment, bytes.size()), &size) == 1);
+                        std::min(fragment, bytes.size()), &size) == 1);
       check(size > 0);
       progress_ = server_.on_bytes_received({bytes.data(), size});
       std::fill(bytes.begin(), bytes.end(), 'x');
@@ -211,16 +214,16 @@ class processing_session {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Verified client context and session own both memory BIOs.
+  // The client session owns both memory BIOs.
   context_owner context_;
   std::unique_ptr<SSL, decltype(&SSL_free)> client_;
-  // Same TLS adapter used by both real native transports.
-  transport::server::detail::tls_engine<ENty> server_;
-  // Encoded output waiting for simulated TCP completion/client delivery.
+  // Use the same TLS adapter as the native transports.
+  transport::detail::tls_engine<ENty> server_;
+  // Encrypted output waiting to be delivered.
   std::string ciphertext_;
-  // Complete last return, observed even for partial/control-only input.
+  // Keep the last result, including partial and control-only input.
   protocol::processing_result progress_{};
-  // Captures the adapter's existing synchronous close callback.
+  // Record the adapter closing during its current call.
   bool closed_{false};
 };
 }  // namespace martianlabs::doba::tests::tls

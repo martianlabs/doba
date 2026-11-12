@@ -33,7 +33,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Configures the maximum accepted request body size.                        |
+// | Limit the accepted request body size.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
@@ -43,18 +43,17 @@ int main() {
   limits.max_pending_response_bytes = 1024 * 1024;
   limits.max_deferred_input_size = 1024 * 1024;
   limits.max_task_steps_per_turn = 64;
-  martianlabs::doba::transport::server::tcp_policies io;
+  martianlabs::doba::transport::tcp_policies io;
   io.ip = "0.0.0.0";
   io.port = "8080";
   io.max_connections = 65535;
 #ifdef _WIN32
 #endif
   http_server<> http_server(io, limits);
-  http_server.add_route("POST", "/upload",
-                        [](const request&, response& res) {
-                          res.ok_200().set_body("accepted");
-                          return;
-                        });
+  http_server.add_route("POST", "/upload", [](const request&, response& res) {
+    res.ok_200().set_body("accepted");
+    return;
+  });
   http_server.start();
   signaler::wait();
   return 0;

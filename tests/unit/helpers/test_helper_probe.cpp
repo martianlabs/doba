@@ -24,10 +24,10 @@
 
 #include <array>
 #include <atomic>
-#include <string>
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 #include "test_helper.h"
@@ -43,9 +43,7 @@ DOBA_TEST("probe passes") {
 // +===========================================================================+
 // | [>] probe assertion fails                                   ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("probe assertion fails") {
-  DOBA_EXPECT(2 + 2 == 5);
-}
+DOBA_TEST("probe assertion fails") { DOBA_EXPECT(2 + 2 == 5); }
 
 // +===========================================================================+
 // | [>] probe standard exception                                ( test-case ) |
@@ -57,9 +55,7 @@ DOBA_TEST("probe standard exception") {
 // +===========================================================================+
 // | [>] probe unknown exception                                 ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("probe unknown exception") {
-  throw 7;
-}
+DOBA_TEST("probe unknown exception") { throw 7; }
 
 // +===========================================================================+
 // | [>] probe continues after failures                          ( test-case ) |

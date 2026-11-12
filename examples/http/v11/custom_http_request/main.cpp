@@ -103,11 +103,10 @@ static_assert(contracts::request<custom_request>);
 int main() {
   martianlabs::doba::http_server<custom_request> server(
       {.ip = "0.0.0.0", .port = "8080"});
-  server.add_route("GET", "/hello",
-                   [](const custom_request& req, response& res) {
-                     res.ok_200().set_body(req.has_client_tag() ? "tagged"
-                                                               : "untagged");
-                   });
+  server.add_route(
+      "GET", "/hello", [](const custom_request& req, response& res) {
+        res.ok_200().set_body(req.has_client_tag() ? "tagged" : "untagged");
+      });
   server.start();
   martianlabs::doba::common::signaler::wait();
   server.stop();

@@ -19,7 +19,8 @@ This specification holds for a [cross-platform] date server.
 [get](#method-get) ·
 [start](#method-start) ·
 [stop](#method-stop) ·
-[current](#method-current)
+[current](#method-current) ·
+[format](#method-format)
 
 <a id="api"></a>
 <a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
@@ -43,7 +44,7 @@ class date_server { ... };
 
 This specification holds for a [cross-platform] date server.
 
-**Source:** [include/common/date_server.h:47](../../../include/common/date_server.h#L47)
+**Source:** [include/common/date_server.h](../../../include/common/date_server.h)
 
 <a id="method-get"></a>
 
@@ -55,11 +56,12 @@ This specification holds for a [cross-platform] date server.
 static date_server& get();
 ```
 
-Returns the requested value.
+Return the process-wide singleton. Its first construction captures a time
+sample, but does not start the updater thread.
 
-**Returns:** A reference to this object, for chaining calls.
+**Returns:** A reference to the shared date server.
 
-**Source:** [include/common/date_server.h:74](../../../include/common/date_server.h#L74)
+**Source:** [include/common/date_server.h](../../../include/common/date_server.h)
 
 <a id="method-start"></a>
 
@@ -71,11 +73,15 @@ Returns the requested value.
 void start();
 ```
 
-Starts the date_server lifecycle.
+Adds one owner of the shared date updater. The first owner refreshes the date
+and starts its thread; additional owners share that updater.
+Balance each successful `start()` with one `stop()`. Lifecycle calls are
+serialized internally. Updates run approximately once a second, not on a
+real-time deadline.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/common/date_server.h:81](../../../include/common/date_server.h#L81)
+**Source:** [include/common/date_server.h](../../../include/common/date_server.h)
 
 <a id="method-stop"></a>
 
@@ -87,11 +93,12 @@ Starts the date_server lifecycle.
 void stop();
 ```
 
-Stops the date_server lifecycle.
+Releases one owner. The last owner stops and joins the updater thread.
+Calling it with no owners has no effect.
 
 **Returns:** No value (`void`).
 
-**Source:** [include/common/date_server.h:102](../../../include/common/date_server.h#L102)
+**Source:** [include/common/date_server.h](../../../include/common/date_server.h)
 
 <a id="method-current"></a>
 
@@ -103,10 +110,29 @@ Stops the date_server lifecycle.
 std::string_view current() const noexcept;
 ```
 
-Returns the current value.
+Returns the cached HTTP date in GMT. The view uses thread-local storage and
+may be replaced by the next `current()` call on that thread. Copy it if it
+must survive later calls. An unrepresentable date returns an empty view.
+With no running updater, this remains the last cached sample until the next
+`start()`; it does not read the system clock on every call.
 
 **Returns:** A value of type `std::string_view`.
 
 **Errors:** Declared `noexcept`.
 
-**Source:** [include/common/date_server.h:112](../../../include/common/date_server.h#L112)
+**Source:** [include/common/date_server.h](../../../include/common/date_server.h)
+
+<a id="method-format"></a>
+
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> format
+
+**METHOD** · *common::date_server*
+
+```cpp
+static std::string format(std::time_t timestamp);
+```
+
+Formats a timestamp as an HTTP date in GMT. Returns an empty string if the
+timestamp cannot be converted or its year does not fit four digits.
+The date server does not need to be running.
+The returned string owns its bytes; allocation failure may throw.

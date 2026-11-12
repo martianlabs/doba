@@ -45,12 +45,12 @@ using request = probe::request;
 using response = probe::response;
 using router = probe::router;
 using policies = probe::policies;
-using protocol::http::v11::decoder;
 using protocol::deserialization_status;
+using protocol::http::v11::decoder;
 using clock_type = probe::clock;
+using common::sleep_for;
 using common::task;
 using common::yield;
-using common::sleep_for;
 using namespace std::chrono_literals;
 }  // namespace
 
@@ -87,7 +87,7 @@ DOBA_TEST(
 }
 
 DOBA_TEST("pending HTTP bytes enforce exact boundaries before copying") {
-  // Establish the exact serialized size with the same deterministic headers.
+  // Measure the reply size with fixed headers first.
   router routes;
   routes.add("GET", "/wait", [](const request&, response&) -> task<> {
     co_await sleep_for(1h);

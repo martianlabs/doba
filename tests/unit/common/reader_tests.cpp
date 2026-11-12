@@ -39,14 +39,12 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::tests::spill_directory;
-using martianlabs::doba::tests::only_spill_file;
-using martianlabs::doba::tests::file_directory;
 using martianlabs::doba::common::byte_storage;
 using martianlabs::doba::common::byte_storage_options;
 using martianlabs::doba::common::reader;
-
-
+using martianlabs::doba::tests::file_directory;
+using martianlabs::doba::tests::only_spill_file;
+using martianlabs::doba::tests::spill_directory;
 
 }  // namespace
 
@@ -164,7 +162,7 @@ DOBA_TEST("borrowed reads allow overlapping storage") {
 }
 
 // +===========================================================================+
-// | [>] truncated spill files fail the reader                  ( test-case )  |
+// | [>] truncated spill files fail the reader                   ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("truncated spill files fail the reader") {
   spill_directory directory{"doba_reader_"};
@@ -242,7 +240,7 @@ DOBA_TEST("moving a borrowed reader preserves the view and cursor") {
 
 namespace {
 namespace fs = std::filesystem;
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 }  // namespace
 
 // +===========================================================================+
@@ -251,7 +249,7 @@ using martianlabs::doba::common::filesystem_file;
 DOBA_TEST("reader adopts and moves an open file with a shared read cursor") {
   file_directory directory;
   directory.write("file", "abcdef");
-  filesystem_file file;
+  filesystem file;
   std::error_code error;
   DOBA_EXPECT(file.open(directory.path(), "file", error));
   reader source(std::move(file));

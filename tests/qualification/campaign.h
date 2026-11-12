@@ -25,10 +25,10 @@
 #ifndef martianlabs_doba_tests_qualification_campaign_h
 #define martianlabs_doba_tests_qualification_campaign_h
 
+#include <set>
+
 #include "../helpers/tool_json.h"
 #include "../helpers/tool_process.h"
-
-#include <set>
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -38,14 +38,17 @@
 namespace martianlabs::doba::tests::tools {
 
 inline std::vector<std::string> required_groups(bool windows, bool tls) {
-  std::vector<std::string> groups{"doba_security_model_tests",
-    "doba_engine_concurrency_tests", "doba_stream_integrity_tests",
-    "doba_test_diagnostics_tests", "doba_qualification_tests"};
-  std::vector<std::string> native = windows ?
-    std::vector<std::string>{"iocp_completion", "windows_lifecycle",
-      "windows_processing", "network_fault"} :
-    std::vector<std::string>{"linux_transport", "linux_accept_error",
-      "linux_processing"};
+  std::vector<std::string> groups{
+      "doba_security_model_tests",   "doba_engine_concurrency_tests",
+      "doba_stream_integrity_tests", "doba_test_diagnostics_tests",
+      "doba_qualification_tests",    "doba_http_policy_tests",
+      "doba_transport_policy_tests"};
+  std::vector<std::string> native =
+      windows
+          ? std::vector<std::string>{"iocp_completion", "windows_lifecycle",
+                                     "windows_processing", "network_fault"}
+          : std::vector<std::string>{"linux_transport", "linux_accept_error",
+                                     "linux_processing"};
   for (const auto& name : native) groups.push_back("doba_" + name + "_tests");
   if (tls) {
     for (auto name : {"core", "processing", "processing_wire"}) {
@@ -61,12 +64,12 @@ inline void validate_inventory(const json& inventory,
   std::map<std::string, json> tests;
   for (const auto& item : inventory["tests"].items()) {
     require(tests.emplace(item["name"].string(), item).second,
-      "Duplicate registered test name");
+            "Duplicate registered test name");
   }
   for (const auto& name : required) {
     require(tests.contains(name) && tests.at(name).contains("command") &&
-      !tests.at(name)["command"].items().empty(),
-      "Missing executable campaign group: " + name);
+                !tests.at(name)["command"].items().empty(),
+            "Missing executable campaign group: " + name);
   }
 }
 
@@ -81,28 +84,29 @@ inline std::vector<std::string> case_names(const std::string& listing) {
 }
 
 inline std::string execute(const std::vector<std::string>& command,
-  const fs::path& log, clock::duration timeout,
-  const std::string& selection = "") {
+                           const fs::path& log, clock::duration timeout,
+                           const std::string& selection = "") {
   process child(command);
   int code;
-  try { code = child.wait(timeout); }
-  catch (...) {
+  try {
+    code = child.wait(timeout);
+  } catch (...) {
     child.kill();
     child.wait(5s);
     write(log, child.output() + child.errors() +
-      "\nCampaign subprocess deadline exceeded\n");
+                   "\nCampaign subprocess deadline exceeded\n");
     throw;
   }
   auto text = child.output() + child.errors();
   write(log, text);
   clean_diagnostics(text);
   require(code == 0 && text.find("assertion failed:") == std::string::npos,
-    "Campaign failure: " + log.string());
+          "Campaign failure: " + log.string());
   require(selection.empty() || std::regex_search(text, std::regex(selection)),
-    "Campaign selection not proven: " + log.string());
+          "Campaign selection not proven: " + log.string());
   return text;
 }
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_tests_integration_test_helper_process_windows_h
 #define martianlabs_doba_tests_integration_test_helper_process_windows_h
 
+#include <windows.h>
+
 #include <chrono>
 #include <filesystem>
 #include <initializer_list>
@@ -33,23 +35,18 @@
 #include <thread>
 #include <vector>
 
-#include <windows.h>
-
 namespace martianlabs::doba::tests {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] run_test_helper                                           ( function) |
+// | [>] run_test_helper                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test helper process with the specified             |
-// | command-line arguments and waits for its completion or a timeout.         |
-// | It captures the exit code, whether the process timed out, and the output  |
-// | written to stdout and stderr.                                             |
+// | Run the probe and collect its output, exit code and timeout result.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline test_helper_result run_test_helper(
     std::initializer_list<const char*> arguments,
     std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
-  // Reap the probe and close its pipes even when output allocation fails.
+  // Clean up the child and pipes even if storing output throws.
   struct process {
     HANDLE read{nullptr};
     HANDLE write{nullptr};

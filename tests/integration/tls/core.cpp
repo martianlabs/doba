@@ -32,12 +32,12 @@
 #include <type_traits>
 
 #include "protocol/processing_result.h"
-#include "transport/server/tls_engine.h"
+#include "transport/tls_engine.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-namespace detail = martianlabs::doba::transport::server::detail;
-// The SSL_CTX callback retains its configuration's address for its lifetime.
+namespace detail = martianlabs::doba::transport::detail;
+// Keep the configuration alive while SSL_CTX uses its callback.
 static_assert(!std::is_copy_constructible_v<detail::tls_configuration>);
 static_assert(!std::is_move_constructible_v<detail::tls_configuration>);
 // /////////////////////////////////////////////////////////////////////////////
@@ -46,10 +46,12 @@ static_assert(!std::is_move_constructible_v<detail::tls_configuration>);
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void require(bool condition,
-              std::source_location location = std::source_location::current()) {
-  if (!condition) throw std::runtime_error(
-      "TLS core assertion failed at " + std::string(location.file_name()) +
-      ":" + std::to_string(location.line()));
+             std::source_location location = std::source_location::current()) {
+  if (!condition) {
+    throw std::runtime_error("TLS core assertion failed at " +
+                             std::string(location.file_name()) + ":" +
+                             std::to_string(location.line()));
+  }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -86,11 +88,11 @@ struct echo {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Echoes plaintext exclusively during its input call.
+  // Echo only during the input call.
   martianlabs::doba::protocol::send_delegate output;
-  // Reports the same complete processing snapshot on each plaintext delivery.
+  // Return the same processing request for each plaintext block.
   processing_result progress{};
-  // Counts every delivered plaintext byte, including partial input.
+  // Count plaintext bytes across partial input too.
   std::shared_ptr<std::size_t> received;
 };
 
@@ -98,7 +100,7 @@ struct echo {
 // +---------------------------------------------------------------------------+
 // | [>] exercise                                                 ( function ) |
 // +---------------------------------------------------------------------------+
-// | Uses the same adapter as both native backends, without a network socket.  |
+// | Use the real TLS adapter without a network socket.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void exercise(const char* certificate, const char* key, int version,
@@ -107,7 +109,7 @@ void exercise(const char* certificate, const char* key, int version,
             << "; ready=" << progress.turn_requested
             << "; timed=" << progress.turn_at.has_value()
             << "; drain=" << progress.turn_after_output_drained << '\n';
-  martianlabs::doba::transport::server::tls_policies policies;
+  martianlabs::doba::transport::tls_policies policies;
   policies.certificate_file = certificate;
   policies.private_key_file = key;
   policies.network_bio_buffer_capacity = capacity;
@@ -124,13 +126,13 @@ void exercise(const char* certificate, const char* key, int version,
   std::unique_ptr<SSL_CTX, decltype(&SSL_CTX_free)> context(
       SSL_CTX_new(TLS_client_method()), SSL_CTX_free);
   require(context != nullptr);
-  require(SSL_CTX_load_verify_locations(context.get(), certificate, nullptr)
-          == 1);
+  require(SSL_CTX_load_verify_locations(context.get(), certificate, nullptr) ==
+          1);
   SSL_CTX_set_verify(context.get(), SSL_VERIFY_PEER, nullptr);
   require(SSL_CTX_set_min_proto_version(context.get(), version) == 1);
   require(SSL_CTX_set_max_proto_version(context.get(), version) == 1);
   std::unique_ptr<SSL, decltype(&SSL_free)> client(SSL_new(context.get()),
-                                                  SSL_free);
+                                                   SSL_free);
   require(client != nullptr);
   BIO* input = BIO_new(BIO_s_mem());
   BIO* output = BIO_new(BIO_s_mem());
@@ -146,12 +148,15 @@ void exercise(const char* certificate, const char* key, int version,
     require(BIO_write(input, bytes.data(), static_cast<int>(bytes.size())) ==
             static_cast<int>(bytes.size()));
   });
-  server.set_on_close([&] { closed = true; ++close_calls; });
+  server.set_on_close([&] {
+    closed = true;
+    ++close_calls;
+  });
   auto transfer = [&] {
     std::array<char, 8192> block;
     while (BIO_ctrl_pending(output)) {
-      const int count = BIO_read(
-          output, block.data(), static_cast<int>(block.size()));
+      const int count =
+          BIO_read(output, block.data(), static_cast<int>(block.size()));
       require(count > 0);
       last_result = server.on_bytes_received(
           {block.data(), static_cast<std::size_t>(count)});
@@ -162,8 +167,8 @@ void exercise(const char* certificate, const char* key, int version,
   for (int turn = 0; turn < 100 && !established; ++turn) {
     ERR_clear_error();
     const int result = SSL_do_handshake(client.get());
-    const int error = result == 1 ? SSL_ERROR_NONE :
-        SSL_get_error(client.get(), result);
+    const int error =
+        result == 1 ? SSL_ERROR_NONE : SSL_get_error(client.get(), result);
     require(result == 1 || error == SSL_ERROR_WANT_READ);
     transfer();
     established = result == 1;
@@ -173,8 +178,9 @@ void exercise(const char* certificate, const char* key, int version,
     constexpr std::string_view message = "verified plaintext";
     std::size_t size = 0;
     ERR_clear_error();
-    require(SSL_write_ex(client.get(), message.data(), message.size(), &size)
-            == 1 && size == message.size());
+    require(SSL_write_ex(client.get(), message.data(), message.size(), &size) ==
+                1 &&
+            size == message.size());
     transfer();
     require(last_result.turn_requested == progress.turn_requested &&
             last_result.turn_at == progress.turn_at &&
@@ -195,14 +201,15 @@ void exercise(const char* certificate, const char* key, int version,
     exchange();
     exchange();
   }
-  // Corrupt a real authenticated application record after a verified handshake.
-  // A fatal record must deliver zero plaintext, even in partial RX blocks.
+  // Corrupt a record after a verified handshake. It must yield no plaintext,
+  // even when split across input blocks.
   *received = 0;
   constexpr std::string_view forbidden = "unauthenticated plaintext";
   std::size_t written = 0;
   ERR_clear_error();
   require(SSL_write_ex(client.get(), forbidden.data(), forbidden.size(),
-                       &written) == 1 && written == forbidden.size());
+                       &written) == 1 &&
+          written == forbidden.size());
   std::string corrupt;
   std::array<char, 8192> block{};
   while (BIO_ctrl_pending(output)) {
@@ -211,14 +218,13 @@ void exercise(const char* certificate, const char* key, int version,
     corrupt.append(block.data(), static_cast<std::size_t>(size));
   }
   require(!corrupt.empty());
-  // Authentication tag/MAC failure in a real record.
+  // Break the record authentication tag.
   corrupt.back() ^= 1;
   auto result = server.on_bytes_received(corrupt);
   require(closed && close_calls >= 1 && *received == 0);
   require(!result.turn_requested && !result.turn_at &&
           !result.turn_after_output_drained);
-  // Defensive late entry must not resurrect plaintext or scheduling. Close
-  // requests may repeat; TCP's contract stops engine entry once closing starts.
+  // Late input must not revive plaintext or processing. Close calls may repeat.
   server.on_bytes_received(corrupt);
   result = server.on_processing_turn(true);
   require(closed && *received == 0 && !result.turn_requested &&

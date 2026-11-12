@@ -35,26 +35,30 @@
 #include <thread>
 #include <vector>
 
+#include "../../../../helpers/concurrency.h"
 #include "http_server.h"
 #include "resilience_resources.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
 #include "wait_count.h"
-#include "../../../../helpers/concurrency.h"
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using namespace martianlabs::doba;
 using namespace martianlabs::doba::tests::integration;
 using namespace std::chrono_literals;
 using protocol::http::v11::request;
 using protocol::http::v11::response;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] require                                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void require(bool condition, const char* diagnostic) {
   if (!condition) throw std::runtime_error(diagnostic);
 }
@@ -66,19 +70,19 @@ void require(bool condition, const char* diagnostic) {
 // /////////////////////////////////////////////////////////////////////////////
 struct plain_peer {
   tcpip_client socket;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] connect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   bool connect(std::uint16_t port) { return socket.connect(port); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] send                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool send(std::string_view wire) { return socket.send_all(wire); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] receive                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   auto receive(std::size_t size) { return socket.receive(size); }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] drained                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   bool drained() { return socket.wait_for_close(5s); }
@@ -92,7 +96,7 @@ struct plain_peer {
 template <typename Server>
 struct observed_server : Server {
   using Server::Server;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] on_stopping                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void on_stopping(std::function<void()> callback) {
@@ -112,9 +116,11 @@ struct cycle_state {
   std::atomic<int> entered{0}, completed{0}, released{0}, live{0}, fast{0};
 };
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] receive_body                                             ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Peer>
 std::string receive_body(Peer& client, std::size_t capacity) {
   std::string head;
@@ -145,9 +151,11 @@ std::string receive_body(Peer& client, std::size_t capacity) {
   return result;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] measured_cycles                                          ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int measured_cycles() {
   const auto* setting = std::getenv("DOBA_RESILIENCE_CYCLES");
   if (!setting) return 6;
@@ -162,9 +170,11 @@ int measured_cycles() {
   return cycles;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] run_cycles                                               ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename Peer, typename Server>
 void run_cycles(Server& server, std::uint16_t port, const char* transport,
                 resilience_temp_directory& temporary) {
@@ -307,8 +317,7 @@ void run_cycles(Server& server, std::uint16_t port, const char* transport,
 }  // namespace
 
 // +===========================================================================+
-// | [>] resilience TCP drains mixed clients and restarts        ( test-case ) |
-// | without retained resources                                                |
+// | [>] mixed clients, drain and restart                        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
     "resilience TCP drains mixed clients and restarts without retained "
@@ -322,12 +331,11 @@ DOBA_TEST(
   DOBA_EXPECT(port != 0);
   protocol::http::v11::policies http;
   http.request_body_memory_threshold = 64;
-  // This fixture pipelines inline replies. Readers are terminal and tested
-  // separately with constrained receive windows and multiworker IOCP.
+  // This fixture pipelines inline replies. Separate tests cover readers with
+  // slow peers and multiple IOCP workers.
   http.response_body_memory_threshold = 64 * 1024;
   observed_server<http_server<>> server(
       {.worker_count = 2, .ip = "127.0.0.1", .port = std::to_string(port)},
       http);
   run_cycles<plain_peer>(server, port, "TCP", temporary);
 }
-

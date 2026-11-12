@@ -1,4 +1,12 @@
-# Common utilities
+<a name="common-utilities"></a>
+<h1>
+  <a href="../../resources/examples/common/h1-common-utilities.svg#gh-light-mode-only">
+    <img src="../../resources/examples/common/h1-common-utilities.svg" alt="Common utilities">
+  </a>
+  <a href="../../resources/examples/common/h1-common-utilities-dark.svg#gh-dark-mode-only">
+    <img src="../../resources/examples/common/h1-common-utilities-dark.svg" alt="Common utilities">
+  </a>
+</h1>
 
 These examples demonstrate public APIs in `martianlabs::doba::common` that can
 be used independently of HTTP. Build them from the repository root as
@@ -13,6 +21,5 @@ each directory.
 | [task_execution](task_execution/README.md) | Controlled coroutine ownership. |
 | `filesystem` | Confined file opening and direct reading with owned handles. |
 | [cache](cache/README.md) | Generic concurrent caching, invalidation and retained ownership. |
-| `console_logger` | Structured console log levels and formatting options. |
 | `date_server` | Cached HTTP-date production and lifecycle. |
 

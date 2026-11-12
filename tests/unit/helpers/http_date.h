@@ -39,8 +39,9 @@ inline bool valid_http_date(std::string_view value) {
   if (value.size() != 29 || value[3] != ',' || value[4] != ' ' ||
       value[7] != ' ' || value[11] != ' ' || value[16] != ' ' ||
       value[19] != ':' || value[22] != ':' || value[25] != ' ' ||
-      value.substr(26) != "GMT")
+      value.substr(26) != "GMT") {
     return false;
+  }
   constexpr std::string_view days[] = {"Sun", "Mon", "Tue", "Wed",
                                        "Thu", "Fri", "Sat"};
   constexpr std::string_view months[] = {"Jan", "Feb", "Mar", "Apr",
@@ -62,8 +63,9 @@ inline bool valid_http_date(std::string_view value) {
   const std::chrono::year_month_day date{
       std::chrono::year(year), std::chrono::month(month),
       std::chrono::day(static_cast<unsigned int>(number(5)))};
-  if (!date.ok() || number(17) > 23 || number(20) > 59 || number(23) > 60)
+  if (!date.ok() || number(17) > 23 || number(20) > 59 || number(23) > 60) {
     return false;
+  }
   const std::chrono::weekday weekday{std::chrono::sys_days(date)};
   return value.substr(0, 3) == days[weekday.c_encoding()];
 }

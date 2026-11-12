@@ -27,9 +27,9 @@
 #include <string_view>
 #include <thread>
 
-#include "test_helper.h"
 #include "native_peer.h"
 #include "tcpip_client.h"
+#include "test_helper.h"
 
 // +===========================================================================+
 // | [>] refused connection diagnostic                           ( test-case ) |

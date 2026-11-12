@@ -8,9 +8,8 @@
   </a>
 </h1>
 
-This is where doba earns the "fast" bit. These adapters expose the routes
-used by external HTTP/1.1 benchmarks; the upstream projects supply the load
-and collect the results.
+How fast does it go? These adapters let external benchmark runners find out.
+doba serves the requests; the upstream tools generate traffic and collect results.
 
 <a name="httparena"></a>
 <h2>
@@ -22,11 +21,13 @@ and collect the results.
   </a>
 </h2>
 
-The bundled HttpArena driver supports baseline, pipelined and real async delay
-requests over plain HTTP. It registers both handler types by default and has
-no TLS listener; the library offers TLS separately. A dynamic correctness group
-checks the driver in root test builds; throughput measurement is separate.
-[HttpArena adapter](http/v11/httparena/README.md).
+The full adapter handles eleven HTTP/1.1 profiles: simple replies, pipelines,
+delayed handlers, JSON, gzip, TLS and static files.
+[Build and run it](http/v11/httparena/README.md).
+
+Standalone and Docker builds include everything. Root test builds use a smaller
+TCP-only version unless you set `DOBA_HTTPARENA_FULL=ON`.
+The driver has correctness tests too; a passing test isn't a throughput score.
 
 <a name="web-frameworks"></a>
 <h2>
@@ -38,10 +39,9 @@ checks the driver in root test builds; throughput measurement is separate.
   </a>
 </h2>
 
-A small adapter for the Web Frameworks benchmark: a root route, a route that
-returns a user identifier, and a user POST route. Simple handlers, plenty
-of traffic. [Web Frameworks adapter](http/v11/web-frameworks/README.md).
+Three small routes: a root GET, a user GET and a user POST.
+[Use the adapter](http/v11/web-frameworks/README.md) on its own or with the
+Web Frameworks runner.
 
-Current transport comparisons use the HttpArena adapter above. Removed
-activity/flow-control simulations are not measurements of the current engine
-or its native processing turns.
+For current transport comparisons, use HttpArena. Older activity/flow-control
+simulations don't measure today's engine.

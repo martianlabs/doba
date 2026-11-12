@@ -34,19 +34,9 @@
 #include <utility>
 
 #include "common/byte_storage_helpers.h"
+#include "common/byte_storage_options.h"
 
 namespace martianlabs::doba::common {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] byte_storage_options                                       ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct byte_storage_options {
-  static constexpr std::size_t kDefaultSpillToDiskThreshold = 128 * 1024;
-  std::size_t spill_to_disk_threshold = kDefaultSpillToDiskThreshold;
-  std::string spill_dir;
-};
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] byte_storage                                                ( class ) |
@@ -115,8 +105,7 @@ class byte_storage {
   // | [>] spill                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   bool spill() { return spilled_ || spill_to_file(); }
-  // The open handle remains readable after removing the temporary name.
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] unlink_file                                              ( public ) |
   // +-------------------------------------------------------------------------+
   void unlink_file() noexcept {

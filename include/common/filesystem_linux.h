@@ -25,47 +25,54 @@
 #ifndef martianlabs_doba_common_filesystem_linux_h
 #define martianlabs_doba_common_filesystem_linux_h
 
-#include <algorithm>
-#include <cstddef>
-#include <limits>
-#include <span>
-#include <utility>
-#include <cerrno>
+#include <fcntl.h>
+#include <linux/openat2.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
-#if __has_include(<linux/openat2.h>)
-#include <linux/openat2.h>
-#endif
+#include <unistd.h>
 
-#include "common/filesystem.h"
+#include <algorithm>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <system_error>
+#include <utility>
+
+#include "common/filesystem_metadata.h"
 
 namespace martianlabs::doba::common {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] filesystem_file [linux]                                     ( class ) |
-// +---------------------------------------------------------------------------+
-// | Linux filesystem file implementation.                                     |
+// | [>] filesystem [linux]                                          ( class ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-class filesystem_file {
+class filesystem {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  filesystem_file() = default;
-  filesystem_file(const filesystem_file&) = delete;
-  filesystem_file(filesystem_file&& in) noexcept
+  filesystem() = default;
+  filesystem(const filesystem&) = delete;
+  filesystem(filesystem&& in) noexcept
       : file_(std::exchange(in.file_, -1)),
         size_(std::exchange(in.size_, 0)),
         position_(std::exchange(in.position_, 0)),
         failed_(std::exchange(in.failed_, false)) {}
-  ~filesystem_file() { close(); }
+  ~filesystem() { close(); }
   // +=========================================================================+
   // | [>] OPERATORs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  filesystem_file& operator=(const filesystem_file&) = delete;
-  filesystem_file& operator=(filesystem_file&& in) noexcept {
-    if (this == &in) return *this;
+  filesystem& operator=(const filesystem&) = delete;
+  filesystem& operator=(filesystem&& in) noexcept {
+    if (this == &in) {
+      return *this;
+    }
     close();
     file_ = std::exchange(in.file_, -1);
     size_ = std::exchange(in.size_, 0);
@@ -74,13 +81,64 @@ class filesystem_file {
     return *this;
   }
   // +=========================================================================+
+  // | [>] root                                                     ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] static std::filesystem::path root(
+      const std::filesystem::path& path, std::error_code& error) {
+    error.clear();
+    auto root = std::filesystem::canonical(path, error);
+    if (error) {
+      return {};
+    }
+    if (!std::filesystem::is_directory(root, error)) {
+      if (!error) {
+        error = std::make_error_code(std::errc::not_a_directory);
+      }
+      return {};
+    }
+    return root;
+  }
+  // +=========================================================================+
+  // | [>] valid_relative_path                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  [[nodiscard]] static bool valid_relative_path(std::string_view path,
+                                                std::error_code& error) {
+    if (path.empty()) {
+      error = std::make_error_code(std::errc::is_a_directory);
+      return false;
+    }
+    for (const unsigned char c : path) {
+      if (c < 0x20 || c == 0x7f || c == '\\' || c == ':') {
+        error = std::make_error_code(std::errc::permission_denied);
+        return false;
+      }
+    }
+    std::size_t position = 0;
+    for (;;) {
+      const auto end = path.find('/', position);
+      const auto part = path.substr(
+          position, end == path.npos ? path.size() - position : end - position);
+      if (part.empty() || part == "." || part == "..") {
+        error = std::make_error_code(std::errc::permission_denied);
+        return false;
+      }
+      if (end == path.npos) {
+        break;
+      }
+      position = end + 1;
+    }
+    return true;
+  }
+  // +=========================================================================+
   // | [>] open                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   bool open(const std::filesystem::path& root, std::string_view path,
             std::error_code& error) {
     close();
     error.clear();
-    if (!detail::filesystem_relative_path(path, error)) return false;
+    if (!valid_relative_path(path, error)) {
+      return false;
+    }
     if (!root.is_absolute()) {
       error = std::make_error_code(std::errc::invalid_argument);
       return false;
@@ -92,26 +150,25 @@ class filesystem_file {
   // +=========================================================================+
   // | [>] inspect                                                  ( public ) |
   // +-------------------------------------------------------------------------+
-  // Query attributes without opening the file for reading. Path resolution
-  // rejects links in every component, including a replaced root directory.
   [[nodiscard]] static std::optional<filesystem_metadata> inspect(
       const std::filesystem::path& root, std::string_view path,
       std::error_code& error) {
     error.clear();
-    if (!detail::filesystem_relative_path(path, error)) return {};
+    if (!valid_relative_path(path, error)) {
+      return {};
+    }
     if (!root.is_absolute()) {
       error = std::make_error_code(std::errc::invalid_argument);
       return {};
     }
-#if defined(SYS_openat2) && defined(RESOLVE_NO_SYMLINKS)
     const auto target = root.lexically_normal() / std::filesystem::path(path);
     struct open_how how{};
     how.flags = O_PATH | O_CLOEXEC;
     how.resolve = RESOLVE_NO_SYMLINKS;
-    const auto descriptor = ::syscall(SYS_openat2, AT_FDCWD, target.c_str(),
-                                      &how, sizeof(how));
+    const auto descriptor =
+        ::syscall(SYS_openat2, AT_FDCWD, target.c_str(), &how, sizeof(how));
     if (descriptor >= 0) {
-      filesystem_file file;
+      filesystem file;
       file.file_ = static_cast<int>(descriptor);
       struct stat info{};
       if (::fstat(file.file_, &info) != 0) {
@@ -132,24 +189,25 @@ class filesystem_file {
       return describe(info);
     }
     const auto code = errno;
-    // Older kernels/headers and sandbox profiles can lack openat2. Keep the
-    // component-by-component confined resolver as the compatibility path.
+    // Try the path walk if the kernel cannot use openat2.
     if (code != ENOSYS && code != EINVAL && code != E2BIG && code != EPERM) {
-      error = code == ELOOP
-                  ? std::make_error_code(std::errc::permission_denied)
-                  : std::error_code(code, std::generic_category());
+      error = code == ELOOP ? std::make_error_code(std::errc::permission_denied)
+                            : std::error_code(code, std::generic_category());
       return {};
     }
-#endif
-    filesystem_file file;
-    if (!file.open(root, path, error)) return {};
+    filesystem file;
+    if (!file.open(root, path, error)) {
+      return {};
+    }
     return file.metadata(error);
   }
   // +=========================================================================+
   // | [>] read                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   std::size_t read(std::span<std::byte> output) {
-    if (output.empty() || failed_) return 0;
+    if (output.empty() || failed_) {
+      return 0;
+    }
     if (file_ == -1) {
       failed_ = true;
       return 0;
@@ -157,7 +215,9 @@ class filesystem_file {
     const auto count = std::min(
         {output.size(), size_ - position_,
          static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
-    if (!count) return 0;
+    if (!count) {
+      return 0;
+    }
     ssize_t result;
     do {
       result = ::read(file_, output.data(), count);
@@ -186,7 +246,6 @@ class filesystem_file {
     }
     return describe(info);
   }
-  // Selects a bounded slice before moving the file into a reader.
   // +-------------------------------------------------------------------------+
   // | [>] select                                                   ( public ) |
   // +-------------------------------------------------------------------------+
@@ -221,7 +280,9 @@ class filesystem_file {
   // | [>] close                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   void close() noexcept {
-    if (file_ != -1) ::close(file_);
+    if (file_ != -1) {
+      ::close(file_);
+    }
     file_ = -1;
     size_ = 0;
     position_ = 0;
@@ -233,21 +294,22 @@ class filesystem_file {
   // | [>] describe                                                ( private ) |
   // +-------------------------------------------------------------------------+
   static filesystem_metadata describe(const struct stat& info) noexcept {
-    return filesystem_metadata{
-        static_cast<std::uintmax_t>(info.st_size), info.st_mtim.tv_sec,
-        static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
-        static_cast<std::uint64_t>(info.st_dev),
-        static_cast<std::uint64_t>(info.st_ino), info.st_ctim.tv_sec,
-        static_cast<std::uint32_t>(info.st_ctim.tv_nsec),
-        static_cast<std::uint32_t>(info.st_mode),
-        static_cast<std::uint64_t>(info.st_nlink)};
+    return filesystem_metadata{static_cast<std::uintmax_t>(info.st_size),
+                               info.st_mtim.tv_sec,
+                               static_cast<std::uint32_t>(info.st_mtim.tv_nsec),
+                               static_cast<std::uint64_t>(info.st_dev),
+                               static_cast<std::uint64_t>(info.st_ino),
+                               info.st_ctim.tv_sec,
+                               static_cast<std::uint32_t>(info.st_ctim.tv_nsec),
+                               static_cast<std::uint32_t>(info.st_mode),
+                               static_cast<std::uint64_t>(info.st_nlink)};
   }
   // +=========================================================================+
   // | [>] open_target                                             ( private ) |
   // +-------------------------------------------------------------------------+
   bool open_target(const std::filesystem::path& target,
                    std::error_code& error) {
-    filesystem_file current;
+    filesystem current;
     current.file_ = ::open("/", O_PATH | O_DIRECTORY | O_CLOEXEC);
     if (current.file_ == -1) {
       error = std::error_code(errno, std::generic_category());
@@ -256,8 +318,8 @@ class filesystem_file {
     const auto relative = target.relative_path();
     for (auto part = relative.begin(); part != relative.end(); ++part) {
       const bool last = std::next(part) == relative.end();
-      filesystem_file next;
-      // Pin each directory and never follow a request-path symlink.
+      filesystem next;
+      // Keep each directory open so a link cannot redirect the next step.
       next.file_ =
           ::openat(current.file_, part->c_str(),
                    O_CLOEXEC | O_NOFOLLOW |

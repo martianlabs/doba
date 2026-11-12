@@ -33,11 +33,22 @@ template <typename KEty, typename VAty>
 using hash_map = std::unordered_map<KEty, VAty, detail::base_hash, detail::base_equal>;
 ```
 
-Provides a generic hash based map.
+An ASCII-case-insensitive string-key table used by doba. The hash and equality
+objects fold `A` through `Z` only; embedded zero bytes and bytes above ASCII
+remain significant. This is not a locale or Unicode case-folding container.
+
+`KEty` must work with the `std::string_view` hash/equality operations, such as
+`std::string` or `std::string_view`; arbitrary key types are not supported by
+this alias. Transparent lookup accepts string views without building a key.
+Equivalent spellings refer to the same entry.
+
+Owning keys keep their bytes. View keys require stable, unchanged backing
+storage for the entire time they remain in the map. Other operations and
+iterator invalidation follow `std::unordered_map`; the alias adds no locking.
 
 **Template parameters:**
 
 - **KEty:** `typename KEty`.
 - **VAty:** `typename VAty`.
 
-**Source:** [include/common/hash_map.h:41](../../../include/common/hash_map.h#L41)
+**Source:** [include/common/hash_map.h](../../../include/common/hash_map.h)

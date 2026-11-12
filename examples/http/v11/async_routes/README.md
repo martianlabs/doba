@@ -1,4 +1,12 @@
-# Cooperative HTTP handlers on TCP
+<a name="cooperative-http-handlers-on-tcp"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/async_routes/h1-cooperative-http-handlers-on-tcp.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/async_routes/h1-cooperative-http-handlers-on-tcp.svg" alt="Cooperative HTTP handlers on TCP">
+  </a>
+  <a href="../../../../resources/examples/http/v11/async_routes/h1-cooperative-http-handlers-on-tcp-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/async_routes/h1-cooperative-http-handlers-on-tcp-dark.svg" alt="Cooperative HTTP handlers on TCP">
+  </a>
+</h1>
 
 Linux and Windows. Build `http_async_routes` with examples enabled, run it and press
 Enter to stop. It listens on `127.0.0.1:8080` with one transport worker.
@@ -14,7 +22,7 @@ worker. Other connections can progress during those sleeps. The engine chooses
 the handler path automatically; there is no executor injection or mode flag.
 
 [Executable-example checks](../../../../tests/integration/helpers/processing_examples.cpp)
-also run the standalone task owner and in-memory concurrent engine examples.
+also run the task_execution example and in-memory concurrent engine examples.
 
 Only `common::yield()` and `common::sleep_for()` are supported managed awaiters.
 A blocking handler still occupies its worker. TCP owns generic connection turn

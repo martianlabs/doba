@@ -31,9 +31,9 @@
 #include <utility>
 
 #include "common/task_execution.h"
-#include "protocol/processing_result.h"
 #include "protocol/http/common/router_match_result.h"
 #include "protocol/http/v11/decoder.h"
+#include "protocol/processing_result.h"
 
 namespace martianlabs::doba::protocol::http::v11::detail {
 // /////////////////////////////////////////////////////////////////////////////
@@ -106,8 +106,8 @@ class request_processor_async {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  RQty request_;                    // Owned before handler invocation.
-  RSty response_;                   // Independent of reusable sync storage.
+  RQty request_;                      // Owned before handler invocation.
+  RSty response_;                     // Independent of reusable sync storage.
   std::shared_ptr<void> parameters_;  // Typed route arguments, when needed.
   // Destroy the frame before its borrowed request/response/route arguments.
   std::optional<common::task_execution> execution_;

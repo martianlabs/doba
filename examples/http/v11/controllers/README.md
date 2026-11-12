@@ -1,10 +1,26 @@
-# Controllers
+<a name="controllers"></a>
+<h1>
+  <a href="../../../../resources/examples/http/v11/controllers/h1-controllers.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/controllers/h1-controllers.svg" alt="Controllers">
+  </a>
+  <a href="../../../../resources/examples/http/v11/controllers/h1-controllers-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/controllers/h1-controllers-dark.svg" alt="Controllers">
+  </a>
+</h1>
 
 This example registers two instances of `counter_controller`, each with a
 constructor-supplied prefix. `register_routes(registrar&)` binds member functions
 using `registrar.add(method, path, &controller::member)`.
 
-## Run
+<a name="run"></a>
+<h2>
+  <a href="../../../../resources/examples/http/v11/controllers/h2-run.svg#gh-light-mode-only">
+    <img src="../../../../resources/examples/http/v11/controllers/h2-run.svg" alt="Run">
+  </a>
+  <a href="../../../../resources/examples/http/v11/controllers/h2-run-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/examples/http/v11/controllers/h2-run-dark.svg" alt="Run">
+  </a>
+</h2>
 
 Build and run `controllers`, then:
 

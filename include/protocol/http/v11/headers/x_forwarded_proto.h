@@ -25,8 +25,8 @@
 #ifndef martianlabs_doba_protocol_http_v11_headers_x_forwarded_proto_h
 #define martianlabs_doba_protocol_http_v11_headers_x_forwarded_proto_h
 
-#include "protocol/http/v11/connection.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/v11/connection.h"
 #include "protocol/http/v11/parsed_types.h"
 #include "protocol/http/v11/policies.h"
 #include "protocol/http/v11/verdict.h"

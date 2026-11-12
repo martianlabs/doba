@@ -34,23 +34,21 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] writer_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Result of a body writer write() call.                                     |
-// | consumed  - bytes taken from the input span (wire bytes, including any    |
-// | chunked framing). Caller advances its buffer by this                      |
-// | amount; the remainder belongs to the next request.                        |
-// | complete  - body fully accumulated; no further write() calls needed.      |
-// | has_error - a protocol or size-limit error was detected.                  |
-// | error     - error code, if has_error is true.                             |
+// | State declared for body writing.                                          |
+// | Current writers return bool and do not use this type.                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct writer_state {
-  // Consumed bytes from the input span (wire bytes, including framing).
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Input payload bytes consumed.
   std::size_t consumed = 0;
-  // Body fully accumulated; no further write() calls needed.
+  // The body is finished.
   bool complete = false;
-  // A protocol or size-limit error was detected.
+  // Writing failed.
   bool has_error = false;
-  // Error code, if has_error is true.
+  // Only meaningful when has_error is true.
   writer_error error = writer_error::none;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body

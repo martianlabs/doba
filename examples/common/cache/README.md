@@ -1,33 +1,35 @@
-# Generic cache
+<a name="cache-storage"></a>
+<h1>
+  <a href="../../../resources/examples/common/cache/h1-cache-storage.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/common/cache/h1-cache-storage.svg" alt="Cache storage">
+  </a>
+  <a href="../../../resources/examples/common/cache/h1-cache-storage-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/common/cache/h1-cache-storage-dark.svg" alt="Cache storage">
+  </a>
+</h1>
 
 Build and run **common_cache** using the [examples instructions](../../README.md).
-The [source](main.cpp) caches a planet name without depending on HTTP or files.
 
 ```console
 cmake --build out/build/msvc-debug --target common_cache
 out/build/msvc-debug/examples/common/cache/common_cache.exe
 ```
 
-Two lookups invoke one loader. Invalidating the key removes the entry, while
-existing consumers keep **Mars** alive. Releasing them returns the charged cost
-to zero. See the [API reference](../../../docs/reference/common/cache.md).
+The [source](main.cpp) demonstrates the storage used by doba's static-file server
+with a small string payload. Two lookups invoke one loader. Invalidation removes
+the resident entry and its cost while existing consumers keep **Mars** alive.
+A replacement can be admitted before those consumers release their values.
 
-The cost argument is a caller-defined upper bound in consistent units. Capacity
-rejection returns a null pointer without running the loader. Loaders run outside
-the cache lock; concurrent callers for the same key share their result or error.
-Do not recursively load the cache from a loader. Stop/join callers before
-destroying it; returned values may outlive it.
+try_get_or_load() invokes an admitted loader synchronously outside the lock.
+Requests encountering an active same-key load or the concurrent load limit
+bypass loading; the static-file server streams directly in those cases.
+Successful loads evict LRU entries to fit the resident entry and cost limits.
+Null or failed loaders leave resident entries intact. Invalidation prevents
+obsolete loads from publishing over newer ones.
 
-Admission settings are declared in [cache_policies.h](../../../include/common/cache_policies.h);
-resource counters are declared in [cache_statistics.h](../../../include/common/cache_statistics.h).
-Both headers are self-contained and are also included by cache.h.
+Returned values use the loader's shared_ptr directly. The resident budget excludes
+values retained after eviction and loads in progress; it is not a total-memory
+bound. Stop/join callers before destroying the cache. Values may outlive it.
 
-Call try_get_or_load() when a protocol worker should fall back rather than wait
-for another caller's active load. Admitted loads remain synchronous. The
-conditional erase(key, expected) overload removes an observed value only while
-it is still resident, preserving newer generations published by other callers.
-
-Immutable lookups share a read lock. LRU promotions use a nonblocking exclusive
-lock, so concurrent hits can coalesce recency updates instead of waiting for one
-another. Sequential accesses retain LRU order. Custom clocks, hashers and equality
-functions must support concurrent calls.
+See [cache](../../../docs/reference/common/cache.md),
+[cache_policies](../../../docs/reference/common/cache_policies.md).

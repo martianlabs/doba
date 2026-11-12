@@ -30,13 +30,13 @@
 #include <string>
 #include <vector>
 
+#include "../../../../helpers/concurrency.h"
 #include "common/reader.h"
 #include "common/task.h"
 #include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "../../../../helpers/concurrency.h"
 
 namespace {
 using namespace martianlabs::doba;
@@ -44,9 +44,11 @@ using namespace martianlabs::doba::tests::integration;
 using protocol::http::v11::request;
 using protocol::http::v11::response;
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] payload                                                  ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 std::string payload(std::size_t id) {
   std::string value(id % 10 == 0 ? 512 * 1024 : 65536 + id * 17, '\0');
   std::uint64_t state = 0xd1b54a32d192ed03ULL ^ (id + 1);
@@ -74,16 +76,18 @@ DOBA_TEST("HTTP pipelines retain binary readers under default limits") {
     DOBA_EXPECT(port != 0);
     std::atomic<unsigned> sentinels{0};
     http_server<> server({.worker_count = workers,
-        .max_buffered_send_bytes = 8192, .ip = "127.0.0.1",
-        .port = std::to_string(port)});
+                          .max_buffered_send_bytes = 8192,
+                          .ip = "127.0.0.1",
+                          .port = std::to_string(port)});
     auto fill = [&](const request& req, response& res, int id) {
       const auto bytes = bodies.at(static_cast<std::size_t>(id));
-      res.ok_200().set_body(common::reader::shared(
-          bytes, std::as_bytes(std::span(*bytes))), bytes->size());
+      res.ok_200().set_body(
+          common::reader::shared(bytes, std::as_bytes(std::span(*bytes))),
+          bytes->size());
       res.add_header("X-Probe", req.get_header("X-Probe").second);
     };
     auto asynchronous = [&](const request& req, response& res,
-                             int id) -> common::task<> {
+                            int id) -> common::task<> {
       co_await common::yield();
       fill(req, res, id);
     };
@@ -101,15 +105,16 @@ DOBA_TEST("HTTP pipelines retain binary readers under default limits") {
     for (std::size_t client = 0; client < clients; ++client) {
       checks.push_back(std::async(std::launch::async, [&, client] {
         tcpip_client peer;
-        if (!peer.set_receive_buffer_size(32768) || !peer.connect(port))
+        if (!peer.set_receive_buffer_size(32768) || !peer.connect(port)) {
           return false;
+        }
         std::string batch;
         for (std::size_t n = 0; n < requests; ++n) {
           const auto id = std::to_string(client * requests + n);
           const bool head = n % 5 == 3;
           batch += std::string(head ? "HEAD" : "GET") +
-              (n % 2 ? " /async/" : " /sync/") + id +
-              " HTTP/1.1\r\nHost: localhost\r\nX-Probe: " + id + "\r\n";
+                   (n % 2 ? " /async/" : " /sync/") + id +
+                   " HTTP/1.1\r\nHost: localhost\r\nX-Probe: " + id + "\r\n";
           if (n + 1 == requests) batch += "Connection: close\r\n";
           batch += "\r\n";
         }
@@ -123,9 +128,10 @@ DOBA_TEST("HTTP pipelines retain binary readers under default limits") {
               reply->header("X-Probe") != std::to_string(id) ||
               reply->header("Content-Length") !=
                   std::to_string(bodies[id]->size()) ||
-              reply->body != (head ? std::string{} : *bodies[id])) return false;
+              reply->body != (head ? std::string{} : *bodies[id]))
+            return false;
         }
-        // EOF must be clean and immediate after the final exact body.
+        // The final body must be followed by a clean EOF.
         const auto extra = peer.receive_until_close(1);
         return extra && extra->empty() && peer.error() != "timeout";
       }));

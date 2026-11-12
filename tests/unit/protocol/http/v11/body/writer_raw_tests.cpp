@@ -30,8 +30,8 @@
 #include "common/reader.h"
 #include "common/writer.h"
 #include "protocol/http/v11/body/writer_raw.h"
-#include "writer_release.h"
 #include "test_helper.h"
+#include "writer_release.h"
 
 namespace {
 using martianlabs::doba::common::reader;

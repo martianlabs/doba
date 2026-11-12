@@ -23,10 +23,10 @@
 // permissions and limitations under the License.
 
 #include <concepts>
-#include <exception>
 #include <memory>
 #include <string>
 
+#include "common/task_execution.h"
 #include "protocol/http/common/router_handler_parametrized_async.h"
 #include "router_empty_request.h"
 #include "router_value_response.h"
@@ -39,6 +39,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 namespace {
 using martianlabs::doba::common::task;
+using martianlabs::doba::common::task_execution;
 using martianlabs::doba::protocol::http::detail::
     make_router_handler_parametrized_async;
 using martianlabs::doba::protocol::http::detail::
@@ -65,7 +66,9 @@ DOBA_TEST("asynchronous parametrized handler matches and invokes") {
   router_empty_request req;
   router_value_response res;
   std::shared_ptr<void> parameters;
-  auto work = handler.invoke(req, res, "/items/42", parameters);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution work(handler.invoke(req, res, "/items/42", parameters));
+  DOBA_EXPECT(work.resume());
+  DOBA_EXPECT(work.done());
+  DOBA_EXPECT(!work.error());
   DOBA_EXPECT_EQUAL(res.value, "42");
 }

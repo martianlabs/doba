@@ -8,56 +8,23 @@
 
 **Header:** [include/protocol/http/common/headers/access_control_request_headers.h](../../../../../../include/protocol/http/common/headers/access_control_request_headers.h)
 
-|                                            access-control-request-headers | | Fetch Standard S3.3.4 Access-Control-Request-Headers                      | | The "Access-Control-Request-Headers" header field is used by a user       | | agent when issuing a CORS-preflight request. It informs the server which  | | HTTP header field names the user age
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers
-
-[access_control_request_headers](#type-access-control-request-headers)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::headers::access_control_request_headers
-
-[check](#method-check)
+Requires at least one header-name token in a comma-separated list. It does not apply a CORS policy.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-access-control-request-headers"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> access_control_request_headers
 
-**TYPE** · *protocol::http::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class access_control_request_headers { ... };
-```
-
-|                                            access-control-request-headers | | Fetch Standard S3.3.4 Access-Control-Request-Headers                      | | The "Access-Control-Request-Headers" header field is used by a user       | | agent when issuing a CORS-preflight request. It informs the server which  | | HTTP header field names the user age
-
-**Source:** [include/protocol/http/common/headers/access_control_request_headers.h:91](../../../../../../include/protocol/http/common/headers/access_control_request_headers.h#L91)
+Stateless checker in `martianlabs::doba::protocol::http::headers`.
 
 <a id="method-check"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-**METHOD** · *protocol::http::headers::access_control_request_headers*
-
 ```cpp
 static constexpr bool check(std::string_view sv);
 ```
 
-Checks whether a value follows the HTTP access-control-request-headers header syntax.
+Returns `true` when the supplied value passes the checks above, otherwise `false`. The checker borrows the text for the call and does not retain or modify it.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/common/headers/access_control_request_headers.h:96](../../../../../../include/protocol/http/common/headers/access_control_request_headers.h#L96)
+List parsing skips empty comma elements and respects quoted commas. Spaces/tabs are trimmed before commas and after separators, but not uniformly at the outer edges; pass the field value after HTTP field-level trimming.

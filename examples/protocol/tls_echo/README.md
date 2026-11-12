@@ -1,4 +1,12 @@
-# Custom protocol over TLS
+<a name="custom-protocol-over-tls"></a>
+<h1>
+  <a href="../../../resources/examples/protocol/tls_echo/h1-custom-protocol-over-tls.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/protocol/tls_echo/h1-custom-protocol-over-tls.svg" alt="Custom protocol over TLS">
+  </a>
+  <a href="../../../resources/examples/protocol/tls_echo/h1-custom-protocol-over-tls-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/protocol/tls_echo/h1-custom-protocol-over-tls-dark.svg" alt="Custom protocol over TLS">
+  </a>
+</h1>
 
 Build with `-DDOBA_ENABLE_TLS=ON`, then run:
 

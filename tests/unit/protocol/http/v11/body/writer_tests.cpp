@@ -39,8 +39,7 @@ using martianlabs::doba::protocol::http::v11::body::body_writer;
 // +---------------------------------------------------------------------------+
 // | [>] release                                                  ( function ) |
 // +---------------------------------------------------------------------------+
-// |  This function releases the writer's buffer and reads it into a string.   |
-// | It is used to verify the wire output of the body writer.                  |
+// | Read the released buffer to check the bytes sent.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::string release(body_writer& value) {
@@ -126,4 +125,3 @@ DOBA_TEST("moves preserve encoding mode and payload accounting") {
                       chunked ? "1\r\na\r\n2\r\nbc\r\n0\r\n\r\n" : "abc");
   }
 }
-

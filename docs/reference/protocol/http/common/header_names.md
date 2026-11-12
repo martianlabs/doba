@@ -78,7 +78,7 @@ struct header_names { ... };
 
 Provides the http 1.1 header names specification.
 
-**Source:** [include/protocol/http/common/header_names.h:36](../../../../../include/protocol/http/common/header_names.h#L36)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kconnection"></a>
 
@@ -90,11 +90,12 @@ Provides the http 1.1 header names specification.
 static constexpr char kConnection[] = "Connection";
 ```
 
-Header          |       Seccion      |          Tipo Connection             | RFC 9110 S7.6.1    | General Date                   | RFC 9110 S8.6.1    | General Via                    | RFC 9110 S7.6.3    | General Cache-Control          | RFC 9111 S5.2      | General (caching) Pragma                 | RFC 9111 S5.4      | General (legacy caching)
+Constants for the HTTP field names listed below. Each value is the field name
+without a colon or field value.
 
 **Value:** `"Connection"`
 
-**Source:** [include/protocol/http/common/header_names.h:83](../../../../../include/protocol/http/common/header_names.h#L83)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kdate"></a>
 
@@ -110,7 +111,7 @@ Defines the date constant.
 
 **Value:** `"Date"`
 
-**Source:** [include/protocol/http/common/header_names.h:84](../../../../../include/protocol/http/common/header_names.h#L84)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kvia"></a>
 
@@ -126,7 +127,7 @@ Defines the via constant.
 
 **Value:** `"Via"`
 
-**Source:** [include/protocol/http/common/header_names.h:85](../../../../../include/protocol/http/common/header_names.h#L85)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcachecontrol"></a>
 
@@ -142,7 +143,7 @@ Defines the cache control constant.
 
 **Value:** `"Cache-Control"`
 
-**Source:** [include/protocol/http/common/header_names.h:86](../../../../../include/protocol/http/common/header_names.h#L86)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kpragma"></a>
 
@@ -158,7 +159,7 @@ Defines the pragma constant.
 
 **Value:** `"Pragma"`
 
-**Source:** [include/protocol/http/common/header_names.h:87](../../../../../include/protocol/http/common/header_names.h#L87)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kwarning"></a>
 
@@ -174,7 +175,7 @@ Defines the warning constant.
 
 **Value:** `"Warning"`
 
-**Source:** [include/protocol/http/common/header_names.h:88](../../../../../include/protocol/http/common/header_names.h#L88)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-khost"></a>
 
@@ -190,7 +191,7 @@ Defines the host constant.
 
 **Value:** `"Host"`
 
-**Source:** [include/protocol/http/common/header_names.h:89](../../../../../include/protocol/http/common/header_names.h#L89)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kuseragent"></a>
 
@@ -206,7 +207,7 @@ Defines the user agent constant.
 
 **Value:** `"User-agent"`
 
-**Source:** [include/protocol/http/common/header_names.h:90](../../../../../include/protocol/http/common/header_names.h#L90)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kaccept"></a>
 
@@ -222,7 +223,7 @@ Defines the accept constant.
 
 **Value:** `"Accept"`
 
-**Source:** [include/protocol/http/common/header_names.h:91](../../../../../include/protocol/http/common/header_names.h#L91)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kacceptencoding"></a>
 
@@ -238,7 +239,7 @@ Defines the accept encoding constant.
 
 **Value:** `"Accept-Encoding"`
 
-**Source:** [include/protocol/http/common/header_names.h:92](../../../../../include/protocol/http/common/header_names.h#L92)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kacceptlanguage"></a>
 
@@ -254,7 +255,7 @@ Defines the accept language constant.
 
 **Value:** `"Accept-Language"`
 
-**Source:** [include/protocol/http/common/header_names.h:93](../../../../../include/protocol/http/common/header_names.h#L93)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kauthorization"></a>
 
@@ -270,7 +271,7 @@ Defines the authorization constant.
 
 **Value:** `"Authorization"`
 
-**Source:** [include/protocol/http/common/header_names.h:94](../../../../../include/protocol/http/common/header_names.h#L94)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kexpect"></a>
 
@@ -286,7 +287,7 @@ Defines the expect constant.
 
 **Value:** `"Expect"`
 
-**Source:** [include/protocol/http/common/header_names.h:95](../../../../../include/protocol/http/common/header_names.h#L95)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kfrom"></a>
 
@@ -302,7 +303,7 @@ Defines the from constant.
 
 **Value:** `"From"`
 
-**Source:** [include/protocol/http/common/header_names.h:96](../../../../../include/protocol/http/common/header_names.h#L96)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kifmatch"></a>
 
@@ -318,7 +319,7 @@ Defines the if match constant.
 
 **Value:** `"If-Match"`
 
-**Source:** [include/protocol/http/common/header_names.h:97](../../../../../include/protocol/http/common/header_names.h#L97)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kifnonematch"></a>
 
@@ -334,7 +335,7 @@ Defines the if none match constant.
 
 **Value:** `"If-None-Match"`
 
-**Source:** [include/protocol/http/common/header_names.h:98](../../../../../include/protocol/http/common/header_names.h#L98)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kifmodifiedsince"></a>
 
@@ -350,7 +351,7 @@ Defines the if modified since constant.
 
 **Value:** `"If-Modified-Since"`
 
-**Source:** [include/protocol/http/common/header_names.h:99](../../../../../include/protocol/http/common/header_names.h#L99)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kifunmodifiedsince"></a>
 
@@ -366,7 +367,7 @@ Defines the if unmodified since constant.
 
 **Value:** `"If-Unmodified-Since"`
 
-**Source:** [include/protocol/http/common/header_names.h:100](../../../../../include/protocol/http/common/header_names.h#L100)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-krange"></a>
 
@@ -382,7 +383,7 @@ Defines the range constant.
 
 **Value:** `"Range"`
 
-**Source:** [include/protocol/http/common/header_names.h:101](../../../../../include/protocol/http/common/header_names.h#L101)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kreferer"></a>
 
@@ -398,7 +399,7 @@ Defines the referer constant.
 
 **Value:** `"Referer"`
 
-**Source:** [include/protocol/http/common/header_names.h:102](../../../../../include/protocol/http/common/header_names.h#L102)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kte"></a>
 
@@ -414,7 +415,7 @@ Defines the te constant.
 
 **Value:** `"TE"`
 
-**Source:** [include/protocol/http/common/header_names.h:103](../../../../../include/protocol/http/common/header_names.h#L103)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kupgrade"></a>
 
@@ -430,7 +431,7 @@ Defines the upgrade constant.
 
 **Value:** `"Upgrade"`
 
-**Source:** [include/protocol/http/common/header_names.h:104](../../../../../include/protocol/http/common/header_names.h#L104)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcookie"></a>
 
@@ -446,7 +447,7 @@ Defines the cookie constant.
 
 **Value:** `"Cookie"`
 
-**Source:** [include/protocol/http/common/header_names.h:105](../../../../../include/protocol/http/common/header_names.h#L105)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-klocation"></a>
 
@@ -462,7 +463,7 @@ Defines the location constant.
 
 **Value:** `"Location"`
 
-**Source:** [include/protocol/http/common/header_names.h:106](../../../../../include/protocol/http/common/header_names.h#L106)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kserver"></a>
 
@@ -478,7 +479,7 @@ Defines the server constant.
 
 **Value:** `"Server"`
 
-**Source:** [include/protocol/http/common/header_names.h:107](../../../../../include/protocol/http/common/header_names.h#L107)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kvary"></a>
 
@@ -494,7 +495,7 @@ Defines the vary constant.
 
 **Value:** `"Vary"`
 
-**Source:** [include/protocol/http/common/header_names.h:108](../../../../../include/protocol/http/common/header_names.h#L108)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kwwwauthenticate"></a>
 
@@ -510,7 +511,7 @@ Defines the www authenticate constant.
 
 **Value:** `"WWW-Authenticate"`
 
-**Source:** [include/protocol/http/common/header_names.h:109](../../../../../include/protocol/http/common/header_names.h#L109)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcontentlength"></a>
 
@@ -526,7 +527,7 @@ Defines the content length constant.
 
 **Value:** `"Content-Length"`
 
-**Source:** [include/protocol/http/common/header_names.h:110](../../../../../include/protocol/http/common/header_names.h#L110)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcontenttype"></a>
 
@@ -542,7 +543,7 @@ Defines the content type constant.
 
 **Value:** `"Content-Type"`
 
-**Source:** [include/protocol/http/common/header_names.h:111](../../../../../include/protocol/http/common/header_names.h#L111)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcontentencoding"></a>
 
@@ -558,7 +559,7 @@ Defines the content encoding constant.
 
 **Value:** `"Content-Encoding"`
 
-**Source:** [include/protocol/http/common/header_names.h:112](../../../../../include/protocol/http/common/header_names.h#L112)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcontentlanguage"></a>
 
@@ -574,7 +575,7 @@ Defines the content language constant.
 
 **Value:** `"Content-Language"`
 
-**Source:** [include/protocol/http/common/header_names.h:113](../../../../../include/protocol/http/common/header_names.h#L113)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kcontentrange"></a>
 
@@ -590,7 +591,7 @@ Defines the content range constant.
 
 **Value:** `"Content-Range"`
 
-**Source:** [include/protocol/http/common/header_names.h:114](../../../../../include/protocol/http/common/header_names.h#L114)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-ktrailer"></a>
 
@@ -606,7 +607,7 @@ Defines the trailer constant.
 
 **Value:** `"Trailer"`
 
-**Source:** [include/protocol/http/common/header_names.h:115](../../../../../include/protocol/http/common/header_names.h#L115)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-ktransferencoding"></a>
 
@@ -622,7 +623,7 @@ Defines the transfer encoding constant.
 
 **Value:** `"Transfer-Encoding"`
 
-**Source:** [include/protocol/http/common/header_names.h:116](../../../../../include/protocol/http/common/header_names.h#L116)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kallow"></a>
 
@@ -638,7 +639,7 @@ Defines the allow constant.
 
 **Value:** `"Allow"`
 
-**Source:** [include/protocol/http/common/header_names.h:117](../../../../../include/protocol/http/common/header_names.h#L117)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kretryafter"></a>
 
@@ -654,7 +655,7 @@ Defines the retry after constant.
 
 **Value:** `"Retry-After"`
 
-**Source:** [include/protocol/http/common/header_names.h:118](../../../../../include/protocol/http/common/header_names.h#L118)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-kacceptranges"></a>
 
@@ -670,7 +671,7 @@ Defines the accept ranges constant.
 
 **Value:** `"Accept-Ranges"`
 
-**Source:** [include/protocol/http/common/header_names.h:119](../../../../../include/protocol/http/common/header_names.h#L119)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-ketag"></a>
 
@@ -686,7 +687,7 @@ Defines the etag constant.
 
 **Value:** `"ETAG"`
 
-**Source:** [include/protocol/http/common/header_names.h:120](../../../../../include/protocol/http/common/header_names.h#L120)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)
 
 <a id="constant-klastmodified"></a>
 
@@ -702,4 +703,4 @@ Defines the last modified constant.
 
 **Value:** `"Last-Modified"`
 
-**Source:** [include/protocol/http/common/header_names.h:121](../../../../../include/protocol/http/common/header_names.h#L121)
+**Source:** [include/protocol/http/common/header_names.h](../../../../../include/protocol/http/common/header_names.h)

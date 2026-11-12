@@ -22,8 +22,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "fixture_process.h"
 #include "../../helpers/tool_response.h"
+#include "fixture_process.h"
 
 using namespace martianlabs::doba::tests::tools;
 
@@ -37,21 +37,22 @@ int main(int argc, char** argv) {
     require(argc == 4, "Expected TLS fixture, certificate and key");
     for (int version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
       {
-        fixture_process server(argv[1], argv[2], argv[3], "http-async",
-          1048576, 127);
+        fixture_process server(argv[1], argv[2], argv[3], "http-async", 1048576,
+                               127);
         {
           peer connection(server.port());
           connection.tls(argv[2], version, "http/1.1");
           connection.send(request("/gated") + request("/wait/2") +
-            request("/source") + request("/release"));
-          for (auto expected : std::vector<std::string>{"gated", "2",
-            std::string(32768, 's'), "release"}) {
+                          request("/source") + request("/release"));
+          for (auto expected : std::vector<std::string>{
+                   "gated", "2", std::string(32768, 's'), "release"}) {
             expect_response(connection, 200, expected);
           }
           connection.send(request("/state"));
           expect_response(connection, 200, "2:2:0");
           connection.send(request("/wait/3") +
-            request("/source", "Connection: close\r\n") + request("/hello"));
+                          request("/source", "Connection: close\r\n") +
+                          request("/hello"));
           expect_response(connection, 200, "3");
           expect_response(connection, 200, std::string(32768, 's'));
           require(connection.receive(1).empty(), "Ordered close lost");
@@ -102,7 +103,7 @@ int main(int argc, char** argv) {
         }
         server.stop();
         require(server.child().output() == "READY\nLIVE 0\n",
-          "Stop retained live async frames");
+                "Stop retained live async frames");
         require(slow.receive(1).empty(), "Stop retained TLS connection");
       }
     }

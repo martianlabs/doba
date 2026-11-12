@@ -23,8 +23,8 @@
 // permissions and limitations under the License.
 
 #include <array>
-#include <cstddef>
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <span>
@@ -34,13 +34,13 @@
 #include <system_error>
 #include <type_traits>
 
+#include "body_bytes.h"
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader.h"
-#include "body_bytes.h"
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::common::filesystem_file;
+using martianlabs::doba::common::filesystem;
 using martianlabs::doba::protocol::http::v11::body::reader;
 using martianlabs::doba::tests::unit::bytes;
 }  // namespace
@@ -70,7 +70,7 @@ DOBA_TEST("readers reject empty buffers and unopened files") {
   DOBA_EXPECT(empty_rejected);
   bool file_rejected = false;
   try {
-    reader::chunked(filesystem_file{});
+    reader::chunked(filesystem{});
   } catch (const std::invalid_argument&) {
     file_rejected = true;
   }
@@ -92,7 +92,7 @@ DOBA_TEST("chunked file source yields decoded payload") {
   }
   std::error_code error;
   {
-    filesystem_file file;
+    filesystem file;
     DOBA_EXPECT(file.open(path.parent_path(), path.filename().string(), error));
     DOBA_EXPECT(file.is_open());
     auto value = reader::chunked(std::move(file));

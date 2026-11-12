@@ -25,6 +25,8 @@
 #ifndef martianlabs_doba_tests_unit_directory_link_windows_h
 #define martianlabs_doba_tests_unit_directory_link_windows_h
 
+#include <winioctl.h>
+
 #include <algorithm>
 #include <filesystem>
 #include <stdexcept>
@@ -32,8 +34,6 @@
 #include <system_error>
 
 #include "platform.h"
-
-#include <winioctl.h>
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+

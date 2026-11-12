@@ -42,7 +42,7 @@ class writer_raw { ... };
 
 Encodes an outgoing Content-Length-framed body: the raw framing is a pure passthrough, so this simply forwards the caller-supplied payload bytes verbatim into the destination common::writer.
 
-**Source:** [include/protocol/http/v11/body/writer_raw.h:43](../../../../../../include/protocol/http/v11/body/writer_raw.h#L43)
+**Source:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
 
 <a id="method-write"></a>
 
@@ -63,7 +63,7 @@ Writes the given raw payload bytes into dst, unchanged.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_raw.h:50](../../../../../../include/protocol/http/v11/body/writer_raw.h#L50)
+**Source:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
 
 <a id="method-write-2"></a>
 
@@ -84,7 +84,7 @@ Writes data.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_raw.h:56](../../../../../../include/protocol/http/v11/body/writer_raw.h#L56)
+**Source:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)
 
 <a id="method-end"></a>
 
@@ -104,4 +104,4 @@ Raw (Content-Length) framing has no terminating sequence; provided for API symme
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_raw.h:65](../../../../../../include/protocol/http/v11/body/writer_raw.h#L65)
+**Source:** [include/protocol/http/v11/body/writer_raw.h](../../../../../../include/protocol/http/v11/body/writer_raw.h)

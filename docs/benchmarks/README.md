@@ -10,7 +10,7 @@
 
 [Back to doba](../../README.md#okay-how-fast)
 
-**The archived Scaleway run, in full.** The README shows the highlights. Here are the
+**The Scaleway run, in full.** The README shows the highlights. Here are the
 ranking, every measured workload, and the context behind the numbers.
 
 [Overall](#overall) / [Baseline](#baseline) / [Pipelined](#pipelined) /
@@ -21,7 +21,7 @@ ranking, every measured workload, and the context behind the numbers.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured on **Scaleway, 2026-10-28**, using the official HttpArena suite:
+Measured on **Scaleway, 2026-11-10**, using the official HttpArena suite:
 native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
 upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
 upstream from its repetitions, not averaged across runs.
@@ -271,9 +271,6 @@ and [complete parsed data](../../resources/benchmarks/data.json).
 These include every measured server, revisions, failures, skipped profiles
 and measurement warnings. Only the current dataset is retained here.
 
-This published campaign predates the current TCP and TLS implementations.
-Its charts are measurement history, not qualification of the current TLS class
-or asynchronous execution. The frozen pre-async reference covers baseline and
-pipelined; the [current driver](../../benchmarks/http/v11/httparena/README.md)
-now also supports real async. New throughput comparisons are qualified
-separately and do not replace this published historical dataset.
+The `scaleway-test-014-feature-ci` campaign completed **219 server/workload pairs**.
+The suite skipped nine unsubscribed pairs, and three server starts failed before measurement.
+[HttpArena adapter](../../benchmarks/http/v11/httparena/README.md).

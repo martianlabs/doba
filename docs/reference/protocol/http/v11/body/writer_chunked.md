@@ -42,7 +42,7 @@ class writer_chunked { ... };
 
 Encodes an outgoing chunked Transfer-Encoding body. Each call to write() wraps the caller-supplied raw payload into a single chunk: <hex-size>\r\n<payload>\r\n A zero-length payload is skipped (it would otherwise be mistaken for the terminating chunk). Call end() once, after the last write(), to emit the terminating "0\r\n\r\n" sequence (no
 
-**Source:** [include/protocol/http/v11/body/writer_chunked.h:49](../../../../../../include/protocol/http/v11/body/writer_chunked.h#L49)
+**Source:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
 
 <a id="method-write"></a>
 
@@ -63,7 +63,7 @@ Encodes payload as a single chunk and writes it into dst.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_chunked.h:56](../../../../../../include/protocol/http/v11/body/writer_chunked.h#L56)
+**Source:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
 
 <a id="method-write-2"></a>
 
@@ -84,7 +84,7 @@ Writes data.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_chunked.h:66](../../../../../../include/protocol/http/v11/body/writer_chunked.h#L66)
+**Source:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)
 
 <a id="method-end"></a>
 
@@ -104,4 +104,4 @@ Emits the terminating chunk (no trailers). Idempotent: subsequent calls are no-o
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/body/writer_chunked.h:78](../../../../../../include/protocol/http/v11/body/writer_chunked.h#L78)
+**Source:** [include/protocol/http/v11/body/writer_chunked.h](../../../../../../include/protocol/http/v11/body/writer_chunked.h)

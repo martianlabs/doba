@@ -8,116 +8,55 @@
 
 **Header:** [include/common/task.h](../../../include/common/task.h)
 
-Provides the task type.
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common
-
-[task](#type-task)
-
-### <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> common::task
-
-[promise_type](promise_type.md) ·
-[handle_type](#alias-handle-type) ·
-[start(completion)](#method-start) ·
-[start(completion, scheduler)](#method-start-2)
-
-<a id="api"></a>
-<a href="../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
+The lazy coroutine returned by doba's asynchronous HTTP handlers.
 
 <a id="type-task"></a>
 
 ## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> task
 
-**TYPE** · *common*
-
-**Declaration synopsis:**
-
 ```cpp
 template <typename Tty = void>
-class task { ... };
+  requires std::same_as<Tty, void>
+class task;
 ```
 
-Provides the task type.
+Only task<void> is supported. Creating a task leaves its body suspended.
+Transfer it to [task_execution](task_execution.md), which resumes it on the
+caller's processing turns and owns it until cancellation or destruction.
 
-**Template parameters:**
+A task can be move-constructed. Copying and assignment are disabled.
+Destroying a task before adoption releases its unstarted frame.
+Once adopted, the original task no longer owns that frame.
 
-- **Tty:** `typename Tty = void`.
+<a id="method-release"></a>
 
-**Source:** [include/common/task.h:46](../../../include/common/task.h#L46)
-
-<a id="alias-handle-type"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> handle_type
-
-**ALIAS** · *common::task*
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> release
 
 ```cpp
-using handle_type = std::coroutine_handle<promise_type>;
+[[nodiscard]] handle_type release() && noexcept;
 ```
 
-Alias for `std::coroutine_handle<promise_type>`.
+Transfers the frame and leaves the task empty. Call it on a moved task:
+std::move(value).release(). The returned handle belongs to the receiver,
+which must eventually destroy the frame. Releasing an empty task returns
+an empty handle.
 
-**Source:** [include/common/task.h:91](../../../include/common/task.h#L91)
+The receiver must install the scheduler hooks before resuming code that uses
+the managed awaiters; normally it is `task_execution`. Releasing transfers
+ownership, not permission to resume the frame later from unrelated threads.
 
-<a id="method-start"></a>
+handle_type is std::coroutine_handle<promise_type>. task_execution uses this
+transfer to adopt the frame. The promise creates the original task through
+its explicit constructor taking promise_type&.
 
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
+<a id="type-promise-type"></a>
 
-**METHOD** · *common::task*
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> promise_type
 
-```cpp
-void start(std::function<void(std::exception_ptr)> completion);
-```
+An alias for [task_promise](promise_type.md), declared in its own header.
+The promise captures errors and keeps the completed frame suspended until
+task_execution releases it.
 
-Starts the task lifecycle.
-
-**Parameters:**
-
-- **completion:** Callback notified on completion. Declaration: `std::function<void(std::exception_ptr)> completion`.
-
-**Returns:** No value (`void`).
-
-**Source:** [include/common/task.h:114](../../../include/common/task.h#L114)
-
-<a id="method-start-2"></a>
-
-## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> start
-
-**METHOD** · *common::task*
-
-```cpp
-void start(std::function<void(std::exception_ptr)> completion,
-             task_scheduler scheduler);
-```
-
-Starts the task lifecycle.
-
-**Parameters:**
-
-- **completion:** Callback notified on completion. Declaration: `std::function<void(std::exception_ptr)> completion`.
-- **scheduler:** Scheduler used for the coroutine. Declaration: `task_scheduler scheduler`.
-
-**Returns:** No value (`void`).
-
-**Source:** [include/common/task.h:120](../../../include/common/task.h#L120)
-
-## Ownership models
-
-A newly created task is lazy and owns its frame until moved, destroyed or
-transferred. `start` transfers ownership to the detached coroutine: completion
-runs once and the frame then destroys itself. A custom scheduler or awaiter
-must keep every published handle valid and resume it exactly once. Destruction
-of the moved-from task does not cancel detached work. Starting an empty or
-already-transferred task throws `std::logic_error` instead of dereferencing an
-empty handle. Exceptions from the completion callback remain suppressed.
-
-For caller-controlled resumption and cancellation, transfer the unstarted task
-to [task_execution](task_execution.md). It retains the frame at final
-suspension, exposes the exception without a callback and only accepts
-`yield()`/`sleep_for()`. The ownership choice is not an HTTP async-mode flag;
-the engine will select controlled ownership automatically for async handlers.
+Handlers use yield() and sleep_for() from [task_awaiters.h](task_awaiters.md).
+The execution owner reports readiness, deadlines and errors to the HTTP
+processor.

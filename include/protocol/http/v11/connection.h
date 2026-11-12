@@ -33,44 +33,33 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] connection                                                 ( struct ) |
 // +---------------------------------------------------------------------------+
-// | The hop-by-hop transport state that the semantic layer derives from a     |
-// | request. Framing and connection interpreters/rules read the parsed values |
-// | of Connection, Transfer-Encoding, TE, Trailer, and Upgrade and mutate     |
-// | this state accordingly. It is deliberately separate from both the         |
-// | agnostic deserialization result and the request itself, because it        |
-// | outlives a single request (it describes the connection) and is HTTP/1.1-  |
-// | specific.                                                                 |
-// |                                                                           |
-// | The std::string_view members are zero-copy and point back into the        |
-// | request's field-value buffer; that buffer MUST outlive this state.        |
+// | Connection and body-framing choices read from the request headers.        |
+// | Views borrow the request's header buffer; keep it alive while using them. |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct connection {
-  // Whether the connection is to be kept alive after the current message.
-  // HTTP/1.1 defaults to persistent unless "Connection: close" is present.
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Keep the connection open after this message unless told otherwise.
   bool persistent = true;
-  // Whether "Connection: close" was requested for this connection.
+  // The request included Connection: close.
   bool close_requested = false;
-  // The transfer-coding names of Transfer-Encoding, in order (outermost last).
+  // Transfer-Encoding names in order; the last coding wraps the others.
   std::vector<std::string_view> transfer_codings;
-  // Whether the final transfer-coding is "chunked" (message framing is then
-  // delimited by the chunked coding rather than by Content-Length).
+  // The final coding is chunked, so chunks mark the body boundaries.
   bool chunked = false;
-  // The transfer-coding names the client is willing to accept (TE), in order.
+  // Codings the client accepts through TE, in order.
   std::vector<std::string_view> te_codings;
-  // Whether the client signalled acceptance of the "trailers" TE token.
+  // TE includes trailers.
   bool accepts_trailers = false;
-  // The header field names announced in the Trailer header, in order.
+  // Header names announced by Trailer, in order.
   std::vector<std::string_view> trailer_names;
-  // The protocols offered in the Upgrade header, in order (empty when absent).
-  // Parsed and validated, but never acted upon: no upgrade is completed. See
-  // policies::allow_upgrade.
+  // Upgrade offers in order. Checked, but no protocol switch is performed.
   std::vector<std::string_view> upgrade_offer;
-  // Every connection-option token named by Connection, in order. These name
-  // header fields that are hop-by-hop for this connection.
+  // Connection tokens in order, including close and nominated header names.
   std::vector<std::string_view> options;
-  // Whether the client sent "Expect: 100-continue" and is therefore waiting
-  // for an interim response before sending the request body.
+  // The client sent Expect: 100-continue.
   bool expects_continue = false;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

@@ -30,46 +30,53 @@
 
 namespace martianlabs::doba::tests::tools {
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] fixture_process                                             ( class ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 class fixture_process {
   uint16_t port_{peer::available_port()};
   process child_;
   bool stopped_{};
 
  public:
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] PUBLIC INTERFACE                                         ( public ) |
   // +-------------------------------------------------------------------------+
   fixture_process(const std::string& binary, const std::string& certificate,
-    const std::string& key, const std::string& mode = "echo",
-    size_t plain = 1048576, size_t bio = 17408, size_t cipher = 2097152) :
-    child_({binary, certificate, key, std::to_string(port_), mode,
-      std::to_string(plain), std::to_string(bio), std::to_string(cipher)}) {
+                  const std::string& key, const std::string& mode = "echo",
+                  size_t plain = 1048576, size_t bio = 17408,
+                  size_t cipher = 2097152, size_t encrypted_rx = 17408,
+                  size_t plaintext_rx = 4096)
+      : child_({binary, certificate, key, std::to_string(port_), mode,
+                std::to_string(plain), std::to_string(bio),
+                std::to_string(cipher), std::to_string(encrypted_rx),
+                std::to_string(plaintext_rx)}) {
     child_.expect_output("READY\n");
   }
   fixture_process(const fixture_process&) = delete;
   fixture_process& operator=(const fixture_process&) = delete;
   ~fixture_process() {
     if (!stopped_) {
-      try { stop(); }
-      catch (const std::exception& error) {
-        // Fail even during exception unwinding; a broken cleanup cannot pass.
+      try {
+        stop();
+      } catch (const std::exception& error) {
+        // Failed cleanup must fail the test, even while unwinding.
         std::cerr << "TLS fixture cleanup failed: " << error.what() << '\n';
         std::abort();
       }
     }
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] port                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   uint16_t port() const { return port_; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] child                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   process& child() { return child_; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] stop                                                     ( public ) |
   // +-------------------------------------------------------------------------+
   void stop() {
@@ -82,6 +89,6 @@ class fixture_process {
   }
 };
 
-} // namespace martianlabs::doba::tests::tools
+}  // namespace martianlabs::doba::tests::tools
 
 #endif

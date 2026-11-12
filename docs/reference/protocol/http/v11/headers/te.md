@@ -8,67 +8,30 @@
 
 **Header:** [include/protocol/http/v11/headers/te.h](../../../../../../include/protocol/http/v11/headers/te.h)
 
-The "TE" request header field describes the client's capabilities with regard to transfer codings and trailer sections.
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
-
-[te](#type-te)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::te
-
-[check](#method-check) ·
-[interpret](#method-interpret)
+HTTP/1.1 `te` parsing and interpretation.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-te"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> te
 
-**TYPE** · *protocol::http::v11::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class te { ... };
-```
-
-The "TE" request header field describes the client's capabilities with regard to transfer codings and trailer sections.
-
-**Source:** [include/protocol/http/v11/headers/te.h:76](../../../../../../include/protocol/http/v11/headers/te.h#L76)
+Static operations in `martianlabs::doba::protocol::http::v11::headers`.
 
 <a id="method-check"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-**METHOD** · *protocol::http::v11::headers::te*
-
 ```cpp
 static bool check(std::string_view sv, parsed_parameter_list& out);
 ```
 
-Checks whether a value follows the HTTP te header syntax.
+Appends coding elements with parameters. A case-insensitive `q` weight must be unique and last, with no whitespace around `=`; other parameters allow such whitespace. Empty semicolon slots are rejected.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-- **out:** Output parameter that receives the result. Declaration: `parsed_parameter_list& out`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/v11/headers/te.h:81](../../../../../../include/protocol/http/v11/headers/te.h#L81)
+Output lists are appended to, not cleared. Parsed views borrow the input; keep its backing bytes alive and unchanged. Failure may leave earlier elements appended, and allocation failures may throw. Use a fresh output for a new field. Empty comma elements are skipped; field-level whitespace trimming is the caller's responsibility.
 
 <a id="method-interpret"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
-
-**METHOD** · *protocol::http::v11::headers::te*
 
 ```cpp
 static constexpr verdict interpret(
@@ -76,14 +39,4 @@ static constexpr verdict interpret(
       const policies&);
 ```
 
-Interprets the parsed header value for HTTP/1.1 processing.
-
-**Parameters:**
-
-- **parameters_list:** Parsed parameter list. Declaration: `const parsed_parameter_list& parameters_list`.
-- **conn:** Connection being processed. Declaration: `v11::connection& conn`.
-- **policies:** Configuration policies for this component. Declaration: `const policies&`.
-
-**Returns:** A `verdict` describing the result of applying this header or rule.
-
-**Source:** [include/protocol/http/v11/headers/te.h:94](../../../../../../include/protocol/http/v11/headers/te.h#L94)
+Sets `accepts_trailers` for the `trailers` token and appends other coding names to `te_codings`. Parameter/weight text is not retained there. Always accepts.

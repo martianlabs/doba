@@ -32,9 +32,11 @@ namespace martianlabs::doba::common::detail {
 // +---------------------------------------------------------------------------+
 // | [>] gm_time [windowsTM]                                      ( function ) |
 // +---------------------------------------------------------------------------+
+// | Converts the timestamp to UTC; false means conversion failed.             |
+// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
-static errno_t gm_time(struct tm* const gmt, time_t const* const now) {
-  return gmtime_s(gmt, now);
+static bool gm_time(struct tm* const gmt, time_t const* const now) {
+  return gmtime_s(gmt, now) == 0;
 }
 }  // namespace martianlabs::doba::common::detail
 

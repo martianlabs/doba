@@ -34,8 +34,6 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] package_controller                                          ( class ) |
 // +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class package_controller {
  public:
@@ -61,19 +59,16 @@ class package_controller {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is a simple example of how to use the HTTP/1.1 server with a package |
-// | controller and a static file server. It sets up routes for both the       |
-// | package controller and the static file server, and starts the server to   |
-// | listen for incoming requests.                                             |
+// | Check that an installed package can combine a controller and static files.|
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   std::error_code error;
-  const auto root = martianlabs::doba::common::filesystem_root(".", error);
+  const auto root = martianlabs::doba::common::filesystem::root(".", error);
   if (error) return 1;
-  martianlabs::doba::common::filesystem_file file;
+  martianlabs::doba::common::filesystem file;
   martianlabs::doba::common::reader input(std::move(file));
-  martianlabs::doba::transport::server::tcp_policies io;
+  martianlabs::doba::transport::tcp_policies io;
   io.max_connections = 65535;
   policies limits;
   limits.max_pending_requests = 128;

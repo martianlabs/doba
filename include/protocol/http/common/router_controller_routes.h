@@ -36,6 +36,11 @@
 #include "protocol/http/common/router_handler_signature.h"
 
 namespace martianlabs::doba::protocol::http {
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] router                                        ( forward-declaration ) |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty>
 class router;
 
@@ -44,10 +49,13 @@ namespace detail {
 // +---------------------------------------------------------------------------+
 // | [>] router_controller_routes                                    ( class ) |
 // +---------------------------------------------------------------------------+
+// | Collects a controller's routes before adding them to the router.          |
+// | The handlers keep the controller alive.                                   |
+// +---------------------------------------------------------------------------+
 // | Template parameters:                                                      |
-// | RQty - request being used                                                 |
-// | RSty - response being used                                                |
-// | CTty - controller being registered                                        |
+// |   RQty - request being used                                               |
+// |   RSty - response being used                                              |
+// |   CTty - controller being registered                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <typename RQty, typename RSty, typename CTty>
@@ -55,6 +63,8 @@ class router_controller_routes {
  public:
   // +=========================================================================+
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Keeps the controller instance used by all the collected handlers.       |
   // +-------------------------------------------------------------------------+
   explicit router_controller_routes(std::shared_ptr<CTty> instance)
       : instance_(std::move(instance)) {}
@@ -65,6 +75,9 @@ class router_controller_routes {
   router_controller_routes& operator=(const router_controller_routes&) = delete;
   // +=========================================================================+
   // | [>] add                                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Saves a route for later, copying the method and path.                   |
+  // | The handler calls member on the shared controller instance.             |
   // +-------------------------------------------------------------------------+
   template <typename Mty>
     requires std::is_member_function_pointer_v<Mty>
@@ -79,9 +92,14 @@ class router_controller_routes {
   // +=========================================================================+
   // | [>] empty                                                    ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Tells the router whether the controller supplied any routes.            |
+  // +-------------------------------------------------------------------------+
   bool empty() const { return registrations_.empty(); }
   // +=========================================================================+
   // | [>] apply                                                    ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds the saved routes in order, moving their handlers into target.      |
+  // | Call once; the router handles rollback if a registration throws.        |
   // +-------------------------------------------------------------------------+
   void apply(router<RQty, RSty>& target) {
     for (auto& register_route : registrations_) register_route(target);
@@ -90,6 +108,8 @@ class router_controller_routes {
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Shared controller and pending route registrations.                      |
   // +-------------------------------------------------------------------------+
   std::shared_ptr<CTty> instance_;
   std::vector<std::function<void(router<RQty, RSty>&)>> registrations_;

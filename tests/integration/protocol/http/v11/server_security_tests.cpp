@@ -28,8 +28,8 @@
 #include <string_view>
 #include <vector>
 
-#include "http_server.h"
 #include "echo_body.h"
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -40,9 +40,9 @@ namespace {
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
+using martianlabs::doba::http_server;
 using martianlabs::doba::protocol::http::v11::request;
 using martianlabs::doba::protocol::http::v11::response;
-using martianlabs::doba::http_server;
 using martianlabs::doba::tests::integration::echo_body;
 using martianlabs::doba::tests::integration::receive_http_response;
 using martianlabs::doba::tests::integration::tcpip_client;

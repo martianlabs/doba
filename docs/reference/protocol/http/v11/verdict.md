@@ -42,4 +42,4 @@ The outcome of the semantic interpretation layer. Unlike the syntactic checkers 
 - **kAccept:** Accept. Declaration: `kAccept`.
 - **kReject:** Reject. Declaration: `kReject`.
 
-**Source:** [include/protocol/http/v11/verdict.h:43](../../../../../include/protocol/http/v11/verdict.h#L43)
+**Source:** [include/protocol/http/v11/verdict.h](../../../../../include/protocol/http/v11/verdict.h)

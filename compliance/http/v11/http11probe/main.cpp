@@ -37,52 +37,43 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs the Http11Probe compliance routes on port 8080.                      |
+// | Serve the routes used by Http11Probe.                                     |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  // Root routes cover baseline, response metadata, and method handling probes.
-  http_server.add_route(
-      "GET", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Content-Type", "text/plain").set_body("OK");
-      });
-  http_server.add_route(
-      "HEAD", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Content-Type", "text/plain");
-      });
-  http_server.add_route(
-      "OPTIONS", "/",
-      [](const request&, response& res) {
-        res.ok_200();
-        res.add_header("Allow", "GET, HEAD, POST, OPTIONS");
-      });
-  // Echo decoded bytes so both request body framing modes are exercised.
-  http_server.add_route(
-      "POST", "/",
-      [](const request& req, response& res) {
-        res.ok_200();
-        std::string body;
-        if (req.has_body_reader()) {
-          std::array<std::byte, 4096> buffer{};
-          for (;;) {
-            const auto state = req.get_body_reader()->read(buffer);
-            if (state.has_error) {
-              res.bad_request_400();
-              return;
-            }
-            body.append(reinterpret_cast<const char*>(buffer.data()),
-                        state.produced);
-            if (state.complete) break;
-          }
+  http_server.add_route("GET", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Content-Type", "text/plain").set_body("OK");
+  });
+  http_server.add_route("HEAD", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Content-Type", "text/plain");
+  });
+  http_server.add_route("OPTIONS", "/", [](const request&, response& res) {
+    res.ok_200();
+    res.add_header("Allow", "GET, HEAD, POST, OPTIONS");
+  });
+  // Echo the decoded body for Content-Length and chunked requests.
+  http_server.add_route("POST", "/", [](const request& req, response& res) {
+    res.ok_200();
+    std::string body;
+    if (req.has_body_reader()) {
+      std::array<std::byte, 4096> buffer{};
+      for (;;) {
+        const auto state = req.get_body_reader()->read(buffer);
+        if (state.has_error) {
+          res.bad_request_400();
+          return;
         }
-        res.add_header("Content-Type", "text/plain").set_body(body);
-      });
-  // Http11Probe uses /echo to inspect received header fields verbatim.
+        body.append(reinterpret_cast<const char*>(buffer.data()),
+                    state.produced);
+        if (state.complete) break;
+      }
+    }
+    res.add_header("Content-Type", "text/plain").set_body(body);
+  });
+  // Return the parsed headers for the /echo checks.
   const auto echo_headers = [](const request& req, response& res) {
     res.ok_200();
     std::string body;
@@ -97,10 +88,9 @@ int main() {
   };
   http_server.add_route("GET", "/echo", echo_headers);
   http_server.add_route("POST", "/echo", echo_headers);
-  // The parsed-cookie probes query only these four fixed names.
+  // Http11Probe queries these four cookie names.
   http_server.add_route(
-      "GET", "/cookie",
-      [](const request& req, response& res) {
+      "GET", "/cookie", [](const request& req, response& res) {
         res.ok_200();
         constexpr std::string_view cookie_names[] = {"foo", "a", "b", "c"};
         std::string body;
@@ -115,7 +105,7 @@ int main() {
         res.add_header("Content-Type", "text/plain").set_body(body);
       });
   http_server.start();
-  // The test harness owns process shutdown; wait after the server starts.
+  // The harness stops this process.
   std::promise<void> shutdown;
   shutdown.get_future().wait();
   return 0;

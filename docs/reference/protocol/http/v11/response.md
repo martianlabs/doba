@@ -114,7 +114,7 @@ class response { ... };
 
 Provides the http 1.1 response implementation.
 
-**Source:** [include/protocol/http/v11/response.h:60](../../../../../include/protocol/http/v11/response.h#L60)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="alias-serialized-type"></a>
 
@@ -128,7 +128,7 @@ using serialized_type = serialization_result;
 
 Alias for `serialization_result`.
 
-**Source:** [include/protocol/http/v11/response.h:65](../../../../../include/protocol/http/v11/response.h#L65)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-from"></a>
 
@@ -149,7 +149,7 @@ Constructs the value from the supplied input.
 
 **Returns:** A value of type `response`.
 
-**Source:** [include/protocol/http/v11/response.h:122](../../../../../include/protocol/http/v11/response.h#L122)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-from-2"></a>
 
@@ -173,7 +173,7 @@ Constructs the value from the supplied input.
 
 **Returns:** A value of type `response`.
 
-**Source:** [include/protocol/http/v11/response.h:125](../../../../../include/protocol/http/v11/response.h#L125)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-serialize"></a>
 
@@ -191,7 +191,7 @@ Borrows head and body until on_send copies them; moves the source.
 
 **Errors:** Directly throws `std::logic_error`, `std::out_of_range`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:168](../../../../../include/protocol/http/v11/response.h#L168)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-add-header"></a>
 
@@ -214,7 +214,7 @@ Adds header.
 
 **Errors:** Directly throws `std::invalid_argument`, `std::out_of_range`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:239](../../../../../include/protocol/http/v11/response.h#L239)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-add-header-2"></a>
 
@@ -241,7 +241,7 @@ Adds header.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:280](../../../../../include/protocol/http/v11/response.h#L280)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-header"></a>
 
@@ -264,7 +264,7 @@ Sets header.
 
 **Errors:** Directly throws `std::invalid_argument`, `std::out_of_range`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:286](../../../../../include/protocol/http/v11/response.h#L286)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-header-2"></a>
 
@@ -291,7 +291,7 @@ Sets header.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:326](../../../../../include/protocol/http/v11/response.h#L326)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-has-header"></a>
 
@@ -311,7 +311,7 @@ Returns true if a header whose name case-insensitively matches 'k' is present. L
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/response.h:336](../../../../../include/protocol/http/v11/response.h#L336)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-wants-connection-close"></a>
 
@@ -327,7 +327,7 @@ Reports whether the connection should close.
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/response.h:344](../../../../../include/protocol/http/v11/response.h#L344)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-is-continue-100"></a>
 
@@ -343,7 +343,7 @@ Sets the HTTP response status to 100 (is continue).
 
 **Returns:** A boolean result; see the operation description for its meaning.
 
-**Source:** [include/protocol/http/v11/response.h:348](../../../../../include/protocol/http/v11/response.h#L348)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-get-header"></a>
 
@@ -365,7 +365,7 @@ Returns the (key, value) pair for the first header whose name case-insensitively
 
 **Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:357](../../../../../include/protocol/http/v11/response.h#L357)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-get-header-2"></a>
 
@@ -387,7 +387,7 @@ Returns the (key, value) pair for the header at position 'index' (in insertion o
 
 **Errors:** Directly throws `std::out_of_range`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:371](../../../../../include/protocol/http/v11/response.h#L371)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-get-headers-length"></a>
 
@@ -403,7 +403,7 @@ Returns the number of headers currently stored. Enables safe indexed iteration v
 
 **Returns:** The get headers length count or size.
 
-**Source:** [include/protocol/http/v11/response.h:401](../../../../../include/protocol/http/v11/response.h#L401)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-remove-header"></a>
 
@@ -423,7 +423,7 @@ Removes the first header whose name case-insensitively matches 'k' and compacts 
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:426](../../../../../include/protocol/http/v11/response.h#L426)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-body"></a>
 
@@ -445,7 +445,7 @@ Stores small payloads in response storage; larger ones use a raw writer.
 
 **Errors:** Directly throws `std::runtime_error`. Calls made by this operation may propagate additional errors.
 
-**Source:** [include/protocol/http/v11/response.h:449](../../../../../include/protocol/http/v11/response.h#L449)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-body-2"></a>
 
@@ -474,7 +474,7 @@ empty one. A common source is
 **Errors:** Throws `std::runtime_error` if reading or writing the body fails.
 Other errors from the reader or storage may propagate.
 
-**Source:** [include/protocol/http/v11/response.h:472](../../../../../include/protocol/http/v11/response.h#L472)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-body-3"></a>
 
@@ -494,7 +494,7 @@ Adopts a caller-built body::body_writer (possibly already written to) as the res
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:536](../../../../../include/protocol/http/v11/response.h#L536)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-body-4"></a>
 
@@ -520,7 +520,7 @@ Convenience overload for numeric types: converts the value to a string and store
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:551](../../../../../include/protocol/http/v11/response.h#L551)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-set-body-5"></a>
 
@@ -541,7 +541,7 @@ Sets body.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:558](../../../../../include/protocol/http/v11/response.h#L558)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-clear-body"></a>
 
@@ -557,7 +557,7 @@ Discards the body and restores empty-response framing.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:569](../../../../../include/protocol/http/v11/response.h#L569)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-suppress-body"></a>
 
@@ -573,7 +573,7 @@ Discards body bytes while retaining the advertised framing for HEAD.
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:591](../../../../../include/protocol/http/v11/response.h#L591)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-continue-100"></a>
 
@@ -589,7 +589,7 @@ Sets the HTTP response status to 100 (continue).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:601](../../../../../include/protocol/http/v11/response.h#L601)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-switching-protocols-101"></a>
 
@@ -605,7 +605,7 @@ Sets the HTTP response status to 101 (switching protocols).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:605](../../../../../include/protocol/http/v11/response.h#L605)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-ok-200"></a>
 
@@ -621,7 +621,7 @@ Sets the HTTP response status to 200 (ok).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:609](../../../../../include/protocol/http/v11/response.h#L609)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-created-201"></a>
 
@@ -637,7 +637,7 @@ Sets the HTTP response status to 201 (created).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:613](../../../../../include/protocol/http/v11/response.h#L613)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-accepted-202"></a>
 
@@ -653,7 +653,7 @@ Sets the HTTP response status to 202 (accepted).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:617](../../../../../include/protocol/http/v11/response.h#L617)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-non-authoritative-info-203"></a>
 
@@ -669,7 +669,7 @@ Sets the HTTP response status to 203 (non authoritative info).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:621](../../../../../include/protocol/http/v11/response.h#L621)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-no-content-204"></a>
 
@@ -685,7 +685,7 @@ Sets the HTTP response status to 204 (no content).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:626](../../../../../include/protocol/http/v11/response.h#L626)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-reset-content-205"></a>
 
@@ -701,7 +701,7 @@ Sets the HTTP response status to 205 (reset content).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:630](../../../../../include/protocol/http/v11/response.h#L630)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-partial-content-206"></a>
 
@@ -717,7 +717,7 @@ Sets the HTTP response status to 206 (partial content).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:634](../../../../../include/protocol/http/v11/response.h#L634)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-multiple-choices-300"></a>
 
@@ -733,7 +733,7 @@ Sets the HTTP response status to 300 (multiple choices).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:638](../../../../../include/protocol/http/v11/response.h#L638)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-moved-permanently-301"></a>
 
@@ -749,7 +749,7 @@ Sets the HTTP response status to 301 (moved permanently).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:642](../../../../../include/protocol/http/v11/response.h#L642)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-found-302"></a>
 
@@ -765,7 +765,7 @@ Sets the HTTP response status to 302 (found).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:646](../../../../../include/protocol/http/v11/response.h#L646)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-see-other-303"></a>
 
@@ -781,7 +781,7 @@ Sets the HTTP response status to 303 (see other).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:650](../../../../../include/protocol/http/v11/response.h#L650)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-not-modified-304"></a>
 
@@ -797,7 +797,7 @@ Sets the HTTP response status to 304 (not modified).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:654](../../../../../include/protocol/http/v11/response.h#L654)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-use-proxy-305"></a>
 
@@ -813,7 +813,7 @@ Sets the HTTP response status to 305 (use proxy).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:658](../../../../../include/protocol/http/v11/response.h#L658)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-unused-306"></a>
 
@@ -829,7 +829,7 @@ Sets the HTTP response status to 306 (unused).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:662](../../../../../include/protocol/http/v11/response.h#L662)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-temporary-redirect-307"></a>
 
@@ -845,7 +845,7 @@ Sets the HTTP response status to 307 (temporary redirect).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:666](../../../../../include/protocol/http/v11/response.h#L666)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-permanent-redirect-308"></a>
 
@@ -861,7 +861,7 @@ Sets the HTTP response status to 308 (permanent redirect).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:670](../../../../../include/protocol/http/v11/response.h#L670)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-bad-request-400"></a>
 
@@ -877,7 +877,7 @@ Sets the HTTP response status to 400 (bad request).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:674](../../../../../include/protocol/http/v11/response.h#L674)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-unauthorized-401"></a>
 
@@ -893,7 +893,7 @@ Sets the HTTP response status to 401 (unauthorized).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:678](../../../../../include/protocol/http/v11/response.h#L678)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-payment-required-402"></a>
 
@@ -909,7 +909,7 @@ Sets the HTTP response status to 402 (payment required).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:682](../../../../../include/protocol/http/v11/response.h#L682)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-forbidden-403"></a>
 
@@ -925,7 +925,7 @@ Sets the HTTP response status to 403 (forbidden).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:686](../../../../../include/protocol/http/v11/response.h#L686)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-not-found-404"></a>
 
@@ -941,7 +941,7 @@ Sets the HTTP response status to 404 (not found).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:690](../../../../../include/protocol/http/v11/response.h#L690)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-method-not-allowed-405"></a>
 
@@ -957,7 +957,7 @@ Sets the HTTP response status to 405 (method not allowed).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:694](../../../../../include/protocol/http/v11/response.h#L694)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-not-acceptable-406"></a>
 
@@ -973,7 +973,7 @@ Sets the HTTP response status to 406 (not acceptable).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:698](../../../../../include/protocol/http/v11/response.h#L698)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-proxy-auth-required-407"></a>
 
@@ -989,7 +989,7 @@ Sets the HTTP response status to 407 (proxy auth required).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:702](../../../../../include/protocol/http/v11/response.h#L702)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-request-timeout-408"></a>
 
@@ -1005,7 +1005,7 @@ Sets the HTTP response status to 408 (request timeout).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:707](../../../../../include/protocol/http/v11/response.h#L707)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-conflict-409"></a>
 
@@ -1021,7 +1021,7 @@ Sets the HTTP response status to 409 (conflict).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:711](../../../../../include/protocol/http/v11/response.h#L711)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-gone-410"></a>
 
@@ -1037,7 +1037,7 @@ Sets the HTTP response status to 410 (gone).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:715](../../../../../include/protocol/http/v11/response.h#L715)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-length-required-411"></a>
 
@@ -1053,7 +1053,7 @@ Sets the HTTP response status to 411 (length required).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:719](../../../../../include/protocol/http/v11/response.h#L719)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-precondition-failed-412"></a>
 
@@ -1069,7 +1069,7 @@ Sets the HTTP response status to 412 (precondition failed).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:723](../../../../../include/protocol/http/v11/response.h#L723)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-content-too-large-413"></a>
 
@@ -1085,7 +1085,7 @@ Sets the HTTP response status to 413 (content too large).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:727](../../../../../include/protocol/http/v11/response.h#L727)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-uri-too-long-414"></a>
 
@@ -1101,7 +1101,7 @@ Sets the HTTP response status to 414 (uri too long).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:731](../../../../../include/protocol/http/v11/response.h#L731)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-unsupported-media-type-415"></a>
 
@@ -1117,7 +1117,7 @@ Sets the HTTP response status to 415 (unsupported media type).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:735](../../../../../include/protocol/http/v11/response.h#L735)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-range-not-satisfiable-416"></a>
 
@@ -1133,7 +1133,7 @@ Sets the HTTP response status to 416 (range not satisfiable).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:739](../../../../../include/protocol/http/v11/response.h#L739)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-expectation-failed-417"></a>
 
@@ -1149,7 +1149,7 @@ Sets the HTTP response status to 417 (expectation failed).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:743](../../../../../include/protocol/http/v11/response.h#L743)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-unused-418"></a>
 
@@ -1165,7 +1165,7 @@ Sets the HTTP response status to 418 (unused).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:747](../../../../../include/protocol/http/v11/response.h#L747)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-misdirected-request-421"></a>
 
@@ -1181,7 +1181,7 @@ Sets the HTTP response status to 421 (misdirected request).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:751](../../../../../include/protocol/http/v11/response.h#L751)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-unprocessable-content-422"></a>
 
@@ -1197,7 +1197,7 @@ Sets the HTTP response status to 422 (unprocessable content).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:755](../../../../../include/protocol/http/v11/response.h#L755)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-upgrade-required-426"></a>
 
@@ -1213,7 +1213,7 @@ Sets the HTTP response status to 426 (upgrade required).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:759](../../../../../include/protocol/http/v11/response.h#L759)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-request-header-fields-too-large-431"></a>
 
@@ -1229,7 +1229,7 @@ Sets the HTTP response status to 431 (request header fields too large).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:763](../../../../../include/protocol/http/v11/response.h#L763)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-internal-server-error-500"></a>
 
@@ -1245,7 +1245,7 @@ Sets the HTTP response status to 500 (internal server error).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:768](../../../../../include/protocol/http/v11/response.h#L768)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-not-implemented-501"></a>
 
@@ -1261,7 +1261,7 @@ Sets the HTTP response status to 501 (not implemented).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:772](../../../../../include/protocol/http/v11/response.h#L772)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-bad-gateway-502"></a>
 
@@ -1277,7 +1277,7 @@ Sets the HTTP response status to 502 (bad gateway).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:776](../../../../../include/protocol/http/v11/response.h#L776)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-service-unavailable-503"></a>
 
@@ -1293,7 +1293,7 @@ Sets the HTTP response status to 503 (service unavailable).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:780](../../../../../include/protocol/http/v11/response.h#L780)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-gateway-timeout-504"></a>
 
@@ -1309,7 +1309,7 @@ Sets the HTTP response status to 504 (gateway timeout).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:784](../../../../../include/protocol/http/v11/response.h#L784)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)
 
 <a id="method-http-version-not-supported-505"></a>
 
@@ -1325,4 +1325,4 @@ Sets the HTTP response status to 505 (http version not supported).
 
 **Returns:** A reference to this object, for chaining calls.
 
-**Source:** [include/protocol/http/v11/response.h:788](../../../../../include/protocol/http/v11/response.h#L788)
+**Source:** [include/protocol/http/v11/response.h](../../../../../include/protocol/http/v11/response.h)

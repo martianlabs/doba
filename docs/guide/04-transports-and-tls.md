@@ -24,7 +24,7 @@ IOCP, AcceptEx, WSARecv and WSASend, allowing kernel RX/TX overlap while engine
 calls stay serialized. Both support inline pipelining and one terminal reader.
 Application scheduling, inactivity timers and pressure/resume integration
 are outside the current transport scope. The
-[TCP contract](../reference/transport/server/tcp.md#runtime-contract) defines
+[TCP contract](../reference/transport/tcp.md#runtime-contract) defines
 the full boundary and the differences in admission and stop behavior.
 
 <a name="tcp-by-default"></a>
@@ -70,8 +70,8 @@ Linux, they use epoll. Your handlers do not need a platform-specific path.
 
 The first **http_server<>** constructor argument is a *tcp_policies* value. It
 sets up the listener and its workers. The
-[policy definition](../../include/transport/server/tcp_policies.h) has the
-full list. The [policy reference](../reference/transport/server/tcp_policies.md)
+[policy definition](../../include/transport/tcp_policies.h) has the
+full list. The [policy reference](../reference/transport/tcp_policies.md)
 records platform ranges and coverage; the common settings are:
 
 - **Address.** *ip* is the IPv4 bind address, and *port* is a string holding
@@ -105,7 +105,7 @@ You can pass a named policy value when a designated initializer starts to
 feel crowded:
 
 ```cpp
-martianlabs::doba::transport::server::tcp_policies configuration;
+martianlabs::doba::transport::tcp_policies configuration;
 configuration.ip = "127.0.0.1";
 configuration.port = "8080";
 configuration.worker_count = 4;
@@ -138,8 +138,8 @@ It supports TLS 1.2/1.3, synchronous/cooperative handlers and bounded
 prefix/source output.
 A source is read completely during the send callback and counts toward the
 plaintext limit; this version does not stream arbitrarily large files.
-See the [complete contract](../reference/transport/server/tls.md),
-[policies](../reference/transport/server/tls_policies.md),
+See the [complete contract](../reference/transport/tls.md),
+[policies](../reference/transport/tls_policies.md),
 [HTTPS example](../../examples/http/v11/https_hello_world/README.md) and
 [custom TLS protocol](../../examples/protocol/tls_echo/README.md).
 
@@ -147,7 +147,7 @@ Configuration and start/stop belong to a sequential external owner. Engine close
 drains accepted valid output. Linux administrative stop cancels pending TX after
 the active call returns; Windows drains accepted TX and real I/O completions.
 Neither backend waits for application tasks or supplies a shutdown deadline.
-See the [lifecycle contract](../reference/transport/server/tcp.md#runtime-contract).
+See the [lifecycle contract](../reference/transport/tcp.md#runtime-contract).
 
 The shared [processing contract](../reference/protocol/processing_result.md)
 defines both returned results. Linux and Windows TCP deliver native turns;

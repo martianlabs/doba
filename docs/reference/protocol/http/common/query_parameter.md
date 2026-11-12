@@ -33,9 +33,9 @@ This header declares the types and operations listed below.
 using query_parameter = std::pair<std::string, std::string>;
 ```
 
-A query parameter is a key-value pair of strings. The key is the parameter name (case-insensitive) and the value is the parameter value (case-sensitive).
+Owns the parameter name in `first` and value in `second`. The alias itself does not decode text or change the case-sensitive comparisons of `std::string`.
 
-**Source:** [include/protocol/http/common/query_parameter.h:42](../../../../../include/protocol/http/common/query_parameter.h#L42)
+**Source:** [include/protocol/http/common/query_parameter.h](../../../../../include/protocol/http/common/query_parameter.h)
 
 <a id="alias-query-parameter-view"></a>
 
@@ -47,6 +47,6 @@ A query parameter is a key-value pair of strings. The key is the parameter name 
 using query_parameter_view = std::pair<std::string_view, std::string_view>;
 ```
 
-Alias for `std::pair<std::string_view, std::string_view>`.
+Borrows the query parameter name and value. Both backing strings must remain alive and unchanged while the views are used. The pair does not validate or normalize either component.
 
-**Source:** [include/protocol/http/common/query_parameter.h:43](../../../../../include/protocol/http/common/query_parameter.h#L43)
+**Source:** [include/protocol/http/common/query_parameter.h](../../../../../include/protocol/http/common/query_parameter.h)

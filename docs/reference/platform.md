@@ -29,3 +29,13 @@ Selects or forwards the platform-specific declarations included by this header.
 **HEADER**
 
 This header configures platform includes and defines no C++ declarations of its own.
+
+Windows inclusion defines `_WIN32_DCOM` and `NOMINMAX`, includes Winsock headers,
+and contains MSVC pragmas disabling warning 4996 and requesting `Ws2_32.lib`,
+`wbemuuid.lib` and `Mswsock.lib`. These are visible effects on the including
+translation unit, not just declarations local to doba.
+
+Linux inclusion supplies the socket, epoll, eventfd, file-descriptor and TCP
+headers used by the native implementation. Platform selectors support Windows
+and Linux; they do not provide another backend or a dedicated unsupported-OS
+diagnostic branch.

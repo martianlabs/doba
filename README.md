@@ -16,25 +16,11 @@
 
 [![Build & Test](https://github.com/martianlabs/doba/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/martianlabs/doba/actions/workflows/ci.yml?query=branch%3Amain)
 
-**Meet doba:** a header-only C++20 server framework. Protocols and transports
-mind their own business. HTTP/1.1 comes first; the architecture leaves room
-for more.
+**Meet doba**, a header-only C++20 framework for building servers on Linux
+and Windows. Bring your own protocol or use the HTTP/1.1 engine that ships
+with doba. Both work over TCP, with optional TLS when you need encryption.
 
-**Native IOCP on Windows. Native epoll on Linux.**
-
-Both backends support TCP with cooperative engine turns, inline pipelining
-and one terminal
-prefix/source reader per connection. Linux uses independent SO_REUSEPORT
-workers; Windows uses IOCP. See the
-[TCP runtime contract](docs/reference/transport/server/tcp.md#runtime-contract)
-and [policy limits](docs/reference/transport/server/tcp_policies.md).
-
-TCP needs no external libraries. Optional TLS is a separate class over TCP,
-using OpenSSL and its own buffers. One HTTP engine handles sync and coroutine
-routes automatically; transports deliver serialized turns and the engine owns
-frames, bounded concurrency and response order.
-
-[Try the examples](examples/README.md)
+[Read the docs](docs/README.md)
 
 <a name="okay-how-fast"></a>
 <h2>
@@ -48,18 +34,9 @@ frames, bounded concurrency and response order.
 
 Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
 
-Measured on **Scaleway, 2026-10-28**, using the official HttpArena suite:
-native **gcannon** and **wrk**, with **zrk** and servers in Docker, following
-upstream CPU affinity and host tuning. **RUNS=3**. Results are selected by
-upstream from its repetitions, not averaged across runs.
-The campaign's reference-model verification is **incomplete**; these are
-local results, not the published HttpArena leaderboard.
-
-Every chart shows the **same top 15 from the overall ranking**, ordered by each
-test's metric. Scores retain normalization across all **21 measured servers**.
-The total includes eight scored profiles and the upstream completeness factor;
-**pipelined**, **latency-500k-8cpu** and **static-tls** are reference-only profiles.
-Failed and skipped measurements are shown explicitly; they are not measured zeroes.
+On **10 November 2026**, doba finished **first of 21 servers** in our local
+run of the official HttpArena HTTP/1.1 suite on Scaleway. The chart shows
+the top 15 by overall score.
 
 The test machine uses an **AMD EPYC 8534P at 2.30 GHz**
 (**64 cores / 128 threads**), **576 GiB of DDR5 RAM** and
@@ -69,17 +46,17 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 <a href="resources/benchmarks/benchmark-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow.svg">
-    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary.svg" alt="HttpArena local run on Scaleway, 2026-11-10. doba ranks 1 of 21 with 7,256.51 overall points, 6.4% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
-<a href="resources/benchmarks/benchmark-summary.svg#gh-dark-mode-only" title="Open full-size light card">
+<a href="resources/benchmarks/benchmark-summary-dark.svg#gh-dark-mode-only" title="Open full-size dark card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/benchmarks/benchmark-summary-narrow-dark.svg">
-    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-10-28. doba ranks 1 of 21 with 7,366.65 overall points, 6.1% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
+    <img src="resources/benchmarks/benchmark-summary-dark.svg" alt="HttpArena local run on Scaleway, 2026-11-10. doba ranks 1 of 21 with 7,256.51 overall points, 6.4% more points than spliffy. Upstream totals include completeness. Top 15 shown. Overall ranking, not a claim of winning every profile. Reference-model verification is incomplete; see docs/benchmarks/README.md." width="100%">
   </picture>
 </a>
 
-[See the full ranking, all 11 workloads, and machine specs](docs/benchmarks/README.md).
+[See all 11 workloads, peak RAM, and how we measured them](docs/benchmarks/README.md).
 
 <a name="no-magic-a-few-deliberate-choices"></a>
 <h2>
@@ -91,17 +68,12 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
   </a>
 </h2>
 
-*A few deliberate choices.*
+Your protocol decides what counts as a message and how to reply. The
+transport looks after the connection and moves the bytes. Want to encrypt
+the conversation later? You can switch to TLS and keep the protocol you
+already wrote.
 
-- **HTTP does HTTP. I/O does I/O.** Protocols handle message rules; transports
-  move bytes. The same HTTP implementation runs on both native backends.
-
-- **Copies should earn their keep.** Metadata views, explicit ownership, and
-  a fixed buffer for small responses help avoid unnecessary copies.
-  Not "zero-copy everything". Just deliberate data movement.
-
-- **Handlers run directly.** Synchronous execution preserves request order
-  without a separate response scheduler.
+[How protocols and transports fit together](docs/guide/02-core-model.md)
 
 <a name="hello-world-lets-not-overcomplicate-it"></a>
 <h2>
@@ -136,40 +108,7 @@ int main() {
 }
 ```
 
-Once running: `curl http://localhost:8080/hello`
-
-**Build & integrate**
-
-<details>
-<summary>Build, install, and use with CMake</summary>
-
-With a C++20 compiler and CMake 3.20 or later, build the bundled examples and
-tests, then install the headers and package configuration:
-
-```sh
-cmake -S . -B out/build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build out/build/release --config Release
-cmake --install out/build/release --config Release --prefix out/install/release
-```
-
-In your application:
-
-```cmake
-find_package(doba CONFIG REQUIRED)
-target_link_libraries(application PRIVATE martianlabs::doba)
-```
-
-For TLS, build with `DOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or newer. Consumers use
-`find_package(doba CONFIG REQUIRED COMPONENTS TLS)` and link
-`martianlabs::doba_tls`. The plain target retains no OpenSSL dependency.
-See [TLS contracts and source limits](docs/reference/transport/server/tls.md)
-and the [HTTPS example](examples/http/v11/https_hello_world/README.md).
-
-Set `CMAKE_PREFIX_PATH` to the installation prefix when it is not in a
-standard system location. The exported target provides the include directory,
-C++20 requirement, and system threading dependency.
-
-</details>
+[Build and run your first server](docs/guide/01-getting-started.md)
 
 <a name="fast-is-nice-correct-is-non-negotiable"></a>
 <h2>
@@ -190,48 +129,21 @@ Here's what we put doba through before letting it brag about being fast.
 <a href="resources/readme/quality-summary.svg#gh-light-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow.svg">
-    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary.svg" alt="1,100+ unit test declarations and 230+ integration test declarations. CI runs 200 concurrency repetitions and checks eight mutation detectors. Local Release coverage for doba 0.1.0 on 2026-11-10. Linux covered 96.23% of executable lines and 89.39% of condition outcomes. Windows covered 95.65% and 89.35%, respectively. Only emitted mappings count." width="100%">
   </picture>
 </a>
 <a href="resources/readme/quality-summary.svg#gh-dark-mode-only" title="Open full-size light card">
   <picture>
     <source media="(max-width: 600px)" srcset="resources/readme/quality-summary-narrow-dark.svg">
-    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations; 190+ integration declarations; 200 concurrency repetitions in CI; eight mutation detectors. doba 0.1.0 local Release coverage: Linux, 2026-11-05, 95.17% lines and 88.87% condition outcomes; Windows, 2026-11-04, 94.64% lines and 88.50% outcomes. Emitted mappings only; unmapped headers inventoried. TCP and TLS, ASan and UBSan on both platforms, TSan on Linux. Configured CI is separate from these local results." width="100%">
+    <img src="resources/readme/quality-summary-dark.svg" alt="1,100+ unit test declarations and 230+ integration test declarations. CI runs 200 concurrency repetitions and checks eight mutation detectors. Local Release coverage for doba 0.1.0 on 2026-11-10. Linux covered 96.23% of executable lines and 89.39% of condition outcomes. Windows covered 95.65% and 89.35%, respectively. Only emitted mappings count." width="100%">
   </picture>
 </a>
 
-**Measured coverage for 0.1.0:** Linux **95.17% of executable lines /
-88.87% of condition outcomes** (2026-11-05); Windows **94.64% / 88.50%**
-(2026-11-04).
-These are local Release measurements of emitted production mappings;
-unmapped headers are inventoried separately.
-[See coverage by module, validation results and release history](docs/coverage/README.md).
-
-All of this has to get past the [CI matrix](.github/workflows/ci.yml):
-**GCC and Clang on Linux**, **MSVC on Windows**, strict warnings enabled.
-Linux validates synchronous TCP with **ASan, UBSan, and TSan**; Windows runs
-**ASan and UBSan**, including a Clang build alongside MSVC. Independent engine concurrency cases
-repeat **200 times** in CI; Windows
-also repeats its native IOCP lifecycle cases **20 times**. TSan checks Linux
-races. Per-module coverage gates and reproducible fault campaigns accompany
-longer nightly fuzzing. These are configured CI jobs, not a new remote run
-for this document.
-The illustrated counts describe source declarations across the tree, not cases
-executed on one platform.
 And yes, **the normal suite runs in Release, optimizations and all**. That's
-the code we care about running. Debug gets a compile check. Test tooling uses
-C++ and CMake; source-coverage builds additionally use Clang/LLVM.
-All project test and tooling logic is implemented in C++; interpreters are
-not required. CMake and workflow YAML describe the build and CI orchestration.
+the code we care about running.
 
-Fancy a second opinion? There are also adapters for manual protocol checks
-with [h1spec](compliance/http/v11/h1spec/README.md) and
-[Http11Probe](compliance/http/v11/http11probe/README.md). We wrote the server
-and the tests; letting somebody else's tools have a go seems only fair.
-
-[Inside the test suites](tests/README.md)
+[See what we test and how we measure coverage](docs/coverage/README.md)
 
 ---
 
 [Apache 2.0](LICENSE)
-

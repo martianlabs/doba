@@ -137,7 +137,7 @@ DOBA_TEST("check rejects protocol and comment boundaries") {
 // | [>] check rejects an IPv6 received by host                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check rejects an IPv6 received by host") {
-  // RFC 9110 S7.6.3: received-by uses a token pseudonym, not uri-host.
+  // RFC 9110 S7.6.3: received-by accepts a token alias, not a URI host.
   parsed_via_list parsed;
   DOBA_EXPECT(!via::check("HTTP/1.1 [::1]:8080", parsed));
   DOBA_EXPECT(parsed.elements.empty());
@@ -147,7 +147,7 @@ DOBA_TEST("check rejects an IPv6 received by host") {
 // | [>] check keeps commas inside comments in one member        ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check keeps commas inside comments in one member") {
-  // RFC 9110 S5.6.5: a comma is valid ctext inside a comment.
+  // RFC 9110 S5.6.5: comments may contain commas.
   for (const std::string_view comment : {"(a,b)", "(a(b,c),d)", "(a\\),b)"}) {
     for (bool empty_elements : {false, true}) {
       const std::string source =

@@ -33,7 +33,7 @@
 #include <utility>
 
 #include "protocol/contracts.h"
-#include "transport/server/contracts.h"
+#include "transport/contracts.h"
 
 namespace martianlabs::doba {
 // /////////////////////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ class server {
   // | [>] CONSTRUCTORs/DESTRUCTORs                                 ( public ) |
   // +-------------------------------------------------------------------------+
   template <protocol::contracts::engine_factory<ENty> EFy>
-    requires transport::server::contracts::transport<TRty, ENty, EFy>
+    requires transport::contracts::transport<TRty, ENty, EFy>
   explicit server(typename TRty::policies_type configuration, EFy factory) {
     auto transport_arguments =
         std::make_shared<std::pair<typename TRty::policies_type, EFy>>(

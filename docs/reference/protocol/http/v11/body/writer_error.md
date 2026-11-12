@@ -58,4 +58,4 @@ Error codes shared by writer_raw and writer_chunked.
 - **chunk_extension_size_limit_exceeded:** Chunk extension size limit exceeded. Declaration: `chunk_extension_size_limit_exceeded`.
 - **trailer_size_limit_exceeded:** Trailer size limit exceeded. Declaration: `trailer_size_limit_exceeded`.
 
-**Source:** [include/protocol/http/v11/body/writer_error.h:55](../../../../../../include/protocol/http/v11/body/writer_error.h#L55)
+**Source:** [include/protocol/http/v11/body/writer_error.h](../../../../../../include/protocol/http/v11/body/writer_error.h)

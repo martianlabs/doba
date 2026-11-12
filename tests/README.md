@@ -8,21 +8,20 @@
   </a>
 </h1>
 
-Fast code still has to behave. Here's where we check that doba does, from a
-single borrowed byte to a server full of unhelpful clients.
+Fast is nice. Sending the right bytes and cleaning up afterwards is nicer.
+Here's where we check both.
 
-The [security and integrity audit](security-audit.md) records verified test
-weaknesses, strengthened oracles, the coverage matrix and remaining assurance
-gaps. Normal suite execution in Release is intentional. Passing tests do not
-certify the absence of races or vulnerabilities.
+From the repo root, with CMake, Ninja and a C++20 compiler ready:
 
-[Release qualification](qualification/README.md) explains measured production
-coverage, per-module regression gates and reproducible sanitizer/fuzz campaigns.
+```sh
+cmake -S . -B out/build/tests -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build out/build/tests
+ctest --test-dir out/build/tests --output-on-failure --no-tests=error
+```
 
-All test runners and project tools must be implemented in C++20. They must not
-require Python or another interpreter. CMake and workflow YAML configure builds
-and CI steps. Native tool controls enforce the source policy and exercise child
-diagnostics, argument quoting, deadlines, stdin and large captured output.
+Add `-DDOBA_ENABLE_TLS=ON` at configure time for TLS; you'll need OpenSSL 3.0+.
+On Windows, use a developer shell. Tests run in Release, and their checks stay
+active there. Runners and test tools are C++20 too.
 
 <a name="unit-tests"></a>
 <h2>
@@ -34,9 +33,8 @@ diagnostics, argument quoting, deadlines, stdin and large captured output.
   </a>
 </h2>
 
-Parsers, routing, storage, ownership, and exact limits. That extra byte
-somebody swore would never arrive gets its own test.
-[Inside the unit suite](unit/README.md).
+Parsers, routes, storage and exact limits. That extra byte somebody swore would
+never arrive gets its own test. [Take a look](unit/README.md).
 
 <a name="integration-tests"></a>
 <h2>
@@ -48,9 +46,8 @@ somebody swore would never arrive gets its own test.
   </a>
 </h2>
 
-Real synchronous TCP connections, fragmented requests, inline pipelines,
-disconnects, prefix/source and shutdown with socket output pending. Clients aren't obliged to be polite.
-[Inside the integration suite](integration/README.md).
+Real sockets, fragmented requests, pipelines and clients that vanish halfway
+through a reply. [Put the pieces together](integration/README.md).
 
 <a name="resilience"></a>
 <h2>
@@ -62,10 +59,8 @@ disconnects, prefix/source and shutdown with socket output pending. Clients aren
   </a>
 </h2>
 
-Slow readers, resets, disk spill, drains, and restarts. Then we check payload
-order, handler cleanup, temporary files, and handles/descriptors. Surviving
-the party includes cleaning up afterwards.
-[Resilience checks](integration/README.md#drain-it-start-it-again).
+Slow readers, resets, disk spill and restarts. We check the reply bytes and what
+gets left behind. [Drain it, then start it again](integration/README.md#drain-it-start-it-again).
 
 <a name="fuzzing"></a>
 <h2>
@@ -77,10 +72,8 @@ the party includes cleaning up afterwards.
   </a>
 </h2>
 
-libFuzzer supplies questionable input. Decoder and chunked-body checks cover
-boundaries, fragmentation, ownership and memory/disk storage. The engine model
-checks mixed ordered responses, source lifetimes and terminal frontiers.
-[What the fuzzers check](fuzz/README.md).
+libFuzzer brings questionable input. We check boundaries, ownership and whether
+splitting a message changes its meaning. [Meet the fuzzers](fuzz/README.md).
 
 <a name="mutation-checks"></a>
 <h2>
@@ -92,9 +85,8 @@ checks mixed ordered responses, source lifetimes and terminal frontiers.
   </a>
 </h2>
 
-We plant eight bugs in private header copies. The original tests must pass;
-each broken version must trip its intended assertion. Green needs a sanity
-check too. [The planted bugs](mutation/README.md).
+We plant eight bugs in private copies and make the tests catch them.
+[Green needs a sanity check too](mutation/README.md).
 
 <a name="package-tests"></a>
 <h2>
@@ -106,11 +98,8 @@ check too. [The planted bugs](mutation/README.md).
   </a>
 </h2>
 
-Separate projects consume installed and source CMake targets and construct
-public HTTP/TCP/HTTPS types. Plain consumers do not import TLS dependencies.
-The [TLS integration groups](integration/tls/README.md) exercise negotiation,
-BIO progress, KeyUpdate, source limits and HTTPS pipelining.
-[Package checks](package/README.md).
+A separate project tries to use doba through its CMake targets.
+[No special treatment for being in the same repo](package/README.md).
 
 <a name="runner-metatests"></a>
 <h2>
@@ -122,43 +111,11 @@ BIO progress, KeyUpdate, source limits and HTTPS pipelining.
   </a>
 </h2>
 
-Filters, failure reports, exceptions, deadlines, and cleanup get tested too.
-A stuck test must leave something more useful than a spinning CI job.
-[Unit runner](unit/README.md#the-runner-gets-checked-too) and
-[integration runner](integration/README.md#when-a-test-goes-wrong).
+A broken test shouldn't take the suite hostage. We test filters, failure
+reports, timeouts and cleanup in the [unit](unit/README.md#the-runner-gets-checked-too)
+and [integration](integration/README.md#when-a-test-goes-wrong) runners.
 
-Native Linux and Windows transport coverage follows the
-[TCP runtime contract](../docs/reference/transport/server/tcp.md#runtime-contract).
-Protocol-only async tests supply serialized processing turns and controlled
-eligibility times. Native TCP and TLS groups validate real-socket coroutine
-handlers, mixed ordered output, cancellation and independent connection progress.
-Common::task standalone scheduling remains a separate API. Inactivity and
-pressure/resume remain outside the transport contract.
-
-CI preserves historical Release TLS required-check names for branch protection,
-and keeps those TCP jobs configured with TLS=OFF. Dedicated TLS jobs build and
-run the current TLS tests and examples with TLS=ON. TCP jobs validate the native
-cases listed in the suite documentation. Engine concurrency repeats 200 times;
-native Linux transport/processing or Windows IOCP/processing groups repeat
-20 times in their jobs. Dedicated TLS jobs build the processing probe and run
-both processing groups alongside the existing TLS coverage.
-Local inventory can be collected without Git by providing
--DDOBA_CI_SOURCE_DESCRIPTION=working-tree to cmake/ci_test_inventory.cmake and
-preserving source hashes. These statements describe configured coverage, not a
-new remote CI run.
-
-Protocol processing-contract tests qualify the result value, exact entry-point
-return types and unchanged factory construction without HTTP dependencies.
-TCP holder tests verify complete RX delivery and buffer reuse. Native tests
-exercise immediate/deadline/output-drain interests, coalescing, cancellation,
-publication interleavings and restart. TLS processing checks preserve interests
-through control records and advance handlers during encrypted output drain.
-CI inventory requires the current native and TLS groups, the HttpArena dynamic
-correctness test and actual executable processing examples when built.
-
-The [async retirement inventory](../docs/reference/protocol/http/v11/async-retirement.md)
-maps removed execution/pressure fixtures to current processing and admission
-coverage. Tests do not preserve unsupported contracts solely as fake hooks.
-
-See [CI processing coverage](ci-inventory.md) for mandatory groups, configured
-sanitizer runs and the separation between correctness and throughput checks.
+Looking for a particular answer? See [what CI runs](ci-inventory.md),
+[release checks](qualification/README.md), [policy tests](qualification/POLICIES.md)
+or [what the test review found](security-audit.md). Passing runs are useful
+evidence; they can't promise that every bug is gone.

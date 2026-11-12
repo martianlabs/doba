@@ -8,11 +8,9 @@
   </a>
 </h1>
 
-Shared plumbing for the unit and integration suites. The tests get to be
-awkward; their housekeeping shouldn't be.
+The tests can be awkward. Their housekeeping shouldn't be.
 
-[concurrency.h](concurrency.h) provides controlled waits, coroutine events,
-and automatic cleanup. [test_watchdog.h](test_watchdog.h) enforces deadlines
-and names the test that got stuck, including during cleanup.
-[platform.h](platform.h) selects native helper backends so Linux/Windows
-branches stay out of shared test code.
+- [concurrency.h](concurrency.h): hold work at a known point, then release it
+  safely during cleanup.
+- [test_watchdog.h](test_watchdog.h): stop a stuck test and tell us which one.
+- [platform.h](platform.h): pick the native helper so shared tests stay readable.

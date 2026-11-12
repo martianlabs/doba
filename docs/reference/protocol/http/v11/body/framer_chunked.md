@@ -42,7 +42,7 @@ class framer_chunked { ... };
 
 Validates a chunked Transfer-Encoding body.
 
-**Source:** [include/protocol/http/v11/body/framer_chunked.h:54](../../../../../../include/protocol/http/v11/body/framer_chunked.h#L54)
+**Source:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)
 
 <a id="constant-kdefaultmaxchunkextensionsize"></a>
 
@@ -59,7 +59,7 @@ Defines the default max chunk extension size constant.
 
 **Value:** `policies::kDefaultMaxChunkExtensionSize`
 
-**Source:** [include/protocol/http/v11/body/framer_chunked.h:86](../../../../../../include/protocol/http/v11/body/framer_chunked.h#L86)
+**Source:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)
 
 <a id="constant-kdefaultmaxtrailersectionsize"></a>
 
@@ -76,7 +76,7 @@ Defines the default max trailer section size constant.
 
 **Value:** `policies::kDefaultMaxTrailerSectionSize`
 
-**Source:** [include/protocol/http/v11/body/framer_chunked.h:88](../../../../../../include/protocol/http/v11/body/framer_chunked.h#L88)
+**Source:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)
 
 <a id="method-consume"></a>
 
@@ -96,4 +96,4 @@ Validates the chunked framing in input. Returns bytes consumed and whether the b
 
 **Returns:** A `framer_state` describing progress, completion, and errors.
 
-**Source:** [include/protocol/http/v11/body/framer_chunked.h:107](../../../../../../include/protocol/http/v11/body/framer_chunked.h#L107)
+**Source:** [include/protocol/http/v11/body/framer_chunked.h](../../../../../../include/protocol/http/v11/body/framer_chunked.h)

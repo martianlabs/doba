@@ -40,13 +40,13 @@
 
 #include "common/date_server.h"
 #include "platform.h"
+#include "protocol/http/common/header_names.h"
 #include "protocol/http/common/helpers.h"
+#include "protocol/http/common/status_codes.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
 #include "protocol/http/v11/policies.h"
-#include "protocol/http/common/header_names.h"
 #include "protocol/http/v11/results.h"
-#include "protocol/http/common/status_codes.h"
 #include "status_lines.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -54,7 +54,7 @@ namespace martianlabs::doba::protocol::http::v11 {
 // +---------------------------------------------------------------------------+
 // | [>] response                                                    ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the http 1.1 response implementation.                |
+// | Builds an HTTP/1.1 response and prepares it for sending.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class response {
@@ -119,6 +119,9 @@ class response {
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Creates a response with its own storage, or with the supplied strings.  |
+  // | Supplied strings are cleared and must outlive the response.             |
+  // +-------------------------------------------------------------------------+
   static response from(std::size_t head_limit, std::size_t body_threshold) {
     return response(head_limit, body_threshold);
   }
@@ -163,18 +166,14 @@ class response {
   // +=========================================================================+
   // | [>] serialize                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Borrows head and body until on_send copies them; moves the source.      |
+  // | Consumes the output; head/body views borrow response storage.           |
+  // | Copy the views before changing their storage. The source is moved out.  |
   // +-------------------------------------------------------------------------+
   [[nodiscard]] serialization_result serialize() {
     if (!head_size_) throw std::logic_error("response has no status!");
-    // +-----------------------------------------------------------------------+
-    // | RFC 9110 S8.6/S15.3.5/S15.3.6/S15.4.5: 1xx, 204, 205 and 304          |
-    // | responses must never carry a message body, regardless of what a       |
-    // | handler may have set via set_body(). 1xx/204 must not advertise any   |
-    // | body framing at all, while 205 uses Content-Length: 0. 304 may still  |
-    // | describe the resource via Content-Length (mirroring a                 |
-    // | hypothetical 200).                                                    |
-    // +-----------------------------------------------------------------------+
+    // No body for 1xx, 204, 205 or 304.
+    // 1xx/204 omit framing; 205 uses length 0.
+    // 304 may keep the length of the matching 200 response.
     bool is_informational = status_code_ < SC_200_OK;
     bool must_omit_body = is_informational ||
                           status_code_ == SC_204_NO_CONTENT ||
@@ -212,9 +211,7 @@ class response {
     serialization_result result;
     if (bdy_writer_.has_value()) {
       if (!must_omit_body) {
-        // Finalizes the framing and transfers the accumulated bytes to the
-        // transport; the writer is consumed, so this response no longer owns
-        // a body afterwards.
+        // Finish the writer and transfer its bytes to the result.
         result.source = std::make_unique<common::reader>();
         *result.source = common::reader(bdy_writer_->release());
       }
@@ -236,6 +233,8 @@ class response {
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Appends a checked header. Existing entries with this name stay.         |
+  // +-------------------------------------------------------------------------+
   response& add_header(std::string_view k, std::string_view v) {
     if (!helpers::is_token(k)) {
       throw std::invalid_argument("invalid header name!");
@@ -249,8 +248,7 @@ class response {
     std::size_t k_size = k.size();
     std::size_t v_size = v.size();
     std::size_t space_left = max_head_size_ - sln_len_ - hdr_len_;
-    // Bytes written by this call: key + ':' + ' ' + value + '\r' + '\n' = k + v
-    // + 4. Reserve the 2 bytes of the header-terminating CRLF.
+    // Allow 4 bytes for ": " and CRLF, plus 2 for the final CRLF.
     if (k_size > space_left || v_size > space_left - k_size ||
         space_left - k_size - v_size < 6) {
       throw std::out_of_range("not enough space to add header!");
@@ -275,6 +273,11 @@ class response {
   // +=========================================================================+
   // | [>] add_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Template parameters:                                                    |
+  // |   T - numeric value type                                                |
+  // +-------------------------------------------------------------------------+
+  // | Converts the value to text and appends a header.                        |
+  // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& add_header(std::string_view key, const T& val) {
@@ -282,6 +285,8 @@ class response {
   }
   // +=========================================================================+
   // | [>] set_header                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Replaces the first name match, ignoring case; adds it if absent.        |
   // +-------------------------------------------------------------------------+
   response& set_header(std::string_view k, std::string_view v) {
     if (!helpers::is_token(k)) {
@@ -295,7 +300,6 @@ class response {
     }
     std::size_t line_off, val_off, val_len, line_len;
     if (!find_header(k, line_off, val_off, val_len, line_len)) {
-      // Header not present: reuse add_header to append it.
       return add_header(k, v);
     }
     std::size_t new_v_size = v.size();
@@ -321,6 +325,11 @@ class response {
   // +=========================================================================+
   // | [>] set_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Template parameters:                                                    |
+  // |   T - numeric value type                                                |
+  // +-------------------------------------------------------------------------+
+  // | Converts the value to text, then replaces or adds the header.           |
+  // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
   response& set_header(std::string_view key, const T& val) {
@@ -329,12 +338,10 @@ class response {
   // +=========================================================================+
   // | [>] has_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns true if a header whose name case-insensitively matches 'k' is   |
-  // | present. Lets callers probe for a header without incurring the cost (or |
-  // | control flow) of catching the exception thrown by get_header.           |
+  // | Checks stored headers by name, ignoring case.                           |
+  // | Automatic framing headers appear only when serialize() adds them.       |
   // +-------------------------------------------------------------------------+
   bool has_header(std::string_view k) const {
-    // Automatic framing headers are emitted only by serialize().
     std::size_t line_off, val_off, val_len, line_len;
     return find_header(k, line_off, val_off, val_len, line_len);
   }
@@ -349,10 +356,8 @@ class response {
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the (key, value) pair for the first header whose name           |
-  // | case-insensitively matches 'k'. Throws std::runtime_error if the header |
-  // | is not present. The returned strings are owned copies: they do NOT      |
-  // | alias response storage and stay valid across later mutations.           |
+  // | Copies the first name match, ignoring case.                             |
+  // | Throws std::runtime_error if absent. Returned strings own their bytes.  |
   // +-------------------------------------------------------------------------+
   std::pair<std::string, std::string> get_header(std::string_view k) const {
     std::size_t line_off, val_off, val_len, line_len;
@@ -364,9 +369,8 @@ class response {
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the (key, value) pair for the header at position 'index' (in    |
-  // | insertion order). Throws std::out_of_range if 'index' is beyond the     |
-  // | number of headers. The returned strings are owned copies (see above).   |
+  // | Copies the header at index, in stored order.                            |
+  // | Throws std::out_of_range for an invalid index.                          |
   // +-------------------------------------------------------------------------+
   std::pair<std::string, std::string> get_header(std::size_t index) const {
     std::size_t pos = sln_len_;
@@ -382,12 +386,10 @@ class response {
       while (cr < end && head_bytes()[cr] != '\r') cr++;
       if (cr >= end) break;
       if (current == index) {
-        // Copy into caller-owned std::strings (see rationale above).
         return {std::string(&head_bytes()[name_beg], colon - name_beg),
                 std::string(&head_bytes()[val_beg], cr - val_beg)};
       }
       current++;
-      // Advance past CRLF (\r\n) to the next header line.
       pos = cr + 2;
     }
     throw std::out_of_range("header index out of range!");
@@ -395,8 +397,7 @@ class response {
   // +=========================================================================+
   // | [>] get_headers_length                                       ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns the number of headers currently stored. Enables safe indexed    |
-  // | iteration via get_header(index) without relying on catching exceptions. |
+  // | Counts currently stored headers, including duplicates.                  |
   // +-------------------------------------------------------------------------+
   std::size_t get_headers_length() const {
     std::size_t pos = sln_len_;
@@ -410,7 +411,6 @@ class response {
       while (cr < end && head_bytes()[cr] != '\r') cr++;
       if (cr >= end) break;
       count++;
-      // Advance past CRLF (\r\n) to the next header line.
       pos = cr + 2;
     }
     return count;
@@ -418,10 +418,7 @@ class response {
   // +=========================================================================+
   // | [>] remove_header                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Removes the first header whose name case-insensitively matches 'k' and  |
-  // | compacts the header block. Removing an absent header is an intentional  |
-  // | no-op (idempotent): unlike get_header, it does not throw when 'k' is    |
-  // | not present.                                                            |
+  // | Removes the first name match, ignoring case. Does nothing if absent.    |
   // +-------------------------------------------------------------------------+
   response& remove_header(std::string_view k) {
     std::size_t line_off, val_off, val_len, line_len;
@@ -444,8 +441,7 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Stores small payloads in response storage; larger ones use a raw        |
-  // | writer.                                                                 |
+  // | Copies small bodies into response storage; larger ones use a writer.    |
   // +-------------------------------------------------------------------------+
   response& set_body(std::string_view sv) {
     std::size_t body_size = sv.size();
@@ -456,7 +452,6 @@ class response {
       content_length_ = body_size;
       return *this;
     }
-    // The raw writer may offload the body to disk.
     auto writer = body::body_writer::raw();
     if (!writer.write(sv)) {
       throw std::runtime_error("unable to write body!");
@@ -468,7 +463,8 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Copies decoded payloads into response storage.                          |
+  // | Reads decoded payload bytes from source and replaces the body.          |
+  // | Copies the bytes; does not take ownership of source. Null clears it.    |
   // +-------------------------------------------------------------------------+
   response& set_body(body::reader* source) {
     reset_body();
@@ -530,9 +526,8 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Adopts a caller-built body::body_writer (possibly already written to)   |
-  // | as the response body, replacing any previously set body. Framing        |
-  // | headers are emitted at serialization from the writer's mode and size.   |
+  // | Takes the writer as the new body, including bytes already written.      |
+  // | serialize() adds framing from the writer mode and size.                 |
   // +-------------------------------------------------------------------------+
   response& set_body(body::body_writer&& writer) {
     reset_body();
@@ -544,8 +539,10 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Convenience overload for numeric types: converts the value to a string  |
-  // | and stores it as the response body with deferred framing.               |
+  // | Template parameters:                                                    |
+  // |   T - numeric body type                                                 |
+  // +-------------------------------------------------------------------------+
+  // | Converts the number to text and replaces the body.                      |
   // +-------------------------------------------------------------------------+
   template <typename T>
     requires std::is_arithmetic_v<T>
@@ -555,7 +552,9 @@ class response {
   // +=========================================================================+
   // | [>] set_body                                                 ( public ) |
   // +-------------------------------------------------------------------------+
-  // length is the exact number of bytes remaining in source.
+  // | Takes the source as the new body.                                       |
+  // | length must be the exact number of bytes remaining in source.           |
+  // +-------------------------------------------------------------------------+
   response& set_body(common::reader&& source, std::size_t length) {
     reset_body();
     bdy_reader_.emplace(std::move(source));
@@ -565,7 +564,7 @@ class response {
   // +=========================================================================+
   // | [>] clear_body                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Discards the body and restores empty-response framing.                  |
+  // | Drops the body and its framing headers. Resets the body length.         |
   // +-------------------------------------------------------------------------+
   response& clear_body() {
     suppress_body();
@@ -587,7 +586,7 @@ class response {
   // +=========================================================================+
   // | [>] suppress_body                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Discards body bytes while retaining the advertised framing for HEAD.    |
+  // | Drops body bytes but keeps the advertised framing for HEAD.             |
   // +-------------------------------------------------------------------------+
   response& suppress_body() {
     body_bytes().clear();
@@ -599,216 +598,191 @@ class response {
   // +=========================================================================+
   // | [>] STATUS-LINEs                                             ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Each status setter starts fresh, clearing headers and body.             |
+  // +-------------------------------------------------------------------------+
   response& continue_100() {
-    // 100_CONTINUE
     return set_status_line(status_lines::k100, SC_100_CONTINUE);
   }
   response& switching_protocols_101() {
-    // 101_SWITCHING_PROTOCOLS
     return set_status_line(status_lines::k101, SC_101_SWITCHING_PROTOCOLS);
   }
-  response& ok_200() {
-    // 200_OK
-    return set_status_line(status_lines::k200, SC_200_OK);
-  }
+  response& ok_200() { return set_status_line(status_lines::k200, SC_200_OK); }
   response& created_201() {
-    // 201_CREATED
     return set_status_line(status_lines::k201, SC_201_CREATED);
   }
   response& accepted_202() {
-    // 202_ACCEPTED
     return set_status_line(status_lines::k202, SC_202_ACCEPTED);
   }
   response& non_authoritative_info_203() {
-    // 203_NON_AUTHORITATIVE_INFORMATION
     return set_status_line(status_lines::k203,
                            SC_203_NON_AUTHORITATIVE_INFORMATION);
   }
   response& no_content_204() {
-    // 204_NO_CONTENT
     return set_status_line(status_lines::k204, SC_204_NO_CONTENT);
   }
   response& reset_content_205() {
-    // 205_RESET_CONTENT
     return set_status_line(status_lines::k205, SC_205_RESET_CONTENT);
   }
   response& partial_content_206() {
-    // 206_PARTIAL_CONTENT
     return set_status_line(status_lines::k206, SC_206_PARTIAL_CONTENT);
   }
   response& multiple_choices_300() {
-    // 300_MULTIPLE_CHOICES
     return set_status_line(status_lines::k300, SC_300_MULTIPLE_CHOICES);
   }
   response& moved_permanently_301() {
-    // 301_MOVED_PERMANENTLY
     return set_status_line(status_lines::k301, SC_301_MOVED_PERMANENTLY);
   }
   response& found_302() {
-    // 302_FOUND
     return set_status_line(status_lines::k302, SC_302_FOUND);
   }
   response& see_other_303() {
-    // 303_SEE_OTHER
     return set_status_line(status_lines::k303, SC_303_SEE_OTHER);
   }
   response& not_modified_304() {
-    // 304_NOT_MODIFIED
     return set_status_line(status_lines::k304, SC_304_NOT_MODIFIED);
   }
   response& use_proxy_305() {
-    // 305_USE_PROXY
     return set_status_line(status_lines::k305, SC_305_USE_PROXY);
   }
   response& unused_306() {
-    // 306_UNUSED
     return set_status_line(status_lines::k306, SC_306_UNUSED);
   }
   response& temporary_redirect_307() {
-    // 307_TEMPORARY_REDIRECT
     return set_status_line(status_lines::k307, SC_307_TEMPORARY_REDIRECT);
   }
   response& permanent_redirect_308() {
-    // 308_PERMANENT_REDIRECT
     return set_status_line(status_lines::k308, SC_308_PERMANENT_REDIRECT);
   }
   response& bad_request_400() {
-    // 400_BAD_REQUEST
     return set_status_line(status_lines::k400, SC_400_BAD_REQUEST);
   }
   response& unauthorized_401() {
-    // 401_UNAUTHORIZED
     return set_status_line(status_lines::k401, SC_401_UNAUTHORIZED);
   }
   response& payment_required_402() {
-    // 402_PAYMENT_REQUIRED
     return set_status_line(status_lines::k402, SC_402_PAYMENT_REQUIRED);
   }
   response& forbidden_403() {
-    // 403_FORBIDDEN
     return set_status_line(status_lines::k403, SC_403_FORBIDDEN);
   }
   response& not_found_404() {
-    // 404_NOT_FOUND
     return set_status_line(status_lines::k404, SC_404_NOT_FOUND);
   }
   response& method_not_allowed_405() {
-    // 405_METHOD_NOT_ALLOWED
     return set_status_line(status_lines::k405, SC_405_METHOD_NOT_ALLOWED);
   }
   response& not_acceptable_406() {
-    // 406_NOT_ACCEPTABLE
     return set_status_line(status_lines::k406, SC_406_NOT_ACCEPTABLE);
   }
   response& proxy_auth_required_407() {
-    // 407_PROXY_AUTHENTICATION_REQUIRED
     return set_status_line(status_lines::k407,
                            SC_407_PROXY_AUTHENTICATION_REQUIRED);
   }
   response& request_timeout_408() {
-    // 408_REQUEST_TIMEOUT
     return set_status_line(status_lines::k408, SC_408_REQUEST_TIMEOUT);
   }
   response& conflict_409() {
-    // 409_CONFLICT
     return set_status_line(status_lines::k409, SC_409_CONFLICT);
   }
   response& gone_410() {
-    // 410_GONE
     return set_status_line(status_lines::k410, SC_410_GONE);
   }
   response& length_required_411() {
-    // 411_LENGTH_REQUIRED
     return set_status_line(status_lines::k411, SC_411_LENGTH_REQUIRED);
   }
   response& precondition_failed_412() {
-    // 412_PRECONDITION_FAILED
     return set_status_line(status_lines::k412, SC_412_PRECONDITION_FAILED);
   }
   response& content_too_large_413() {
-    // 413_CONTENT_TOO_LARGE
     return set_status_line(status_lines::k413, SC_413_CONTENT_TOO_LARGE);
   }
   response& uri_too_long_414() {
-    // 414_URI_TOO_LONG
     return set_status_line(status_lines::k414, SC_414_URI_TOO_LONG);
   }
   response& unsupported_media_type_415() {
-    // 415_UNSUPPORTED_MEDIA_TYPE
     return set_status_line(status_lines::k415, SC_415_UNSUPPORTED_MEDIA_TYPE);
   }
   response& range_not_satisfiable_416() {
-    // 416_RANGE_NOT_SATISFIABLE
     return set_status_line(status_lines::k416, SC_416_RANGE_NOT_SATISFIABLE);
   }
   response& expectation_failed_417() {
-    // 417_EXPECTATION_FAILED
     return set_status_line(status_lines::k417, SC_417_EXPECTATION_FAILED);
   }
   response& unused_418() {
-    // 418_IM_A_TEAPOT
     return set_status_line(status_lines::k418, SC_418_IM_A_TEAPOT);
   }
   response& misdirected_request_421() {
-    // 421_MISDIRECTED_REQUEST
     return set_status_line(status_lines::k421, SC_421_MISDIRECTED_REQUEST);
   }
   response& unprocessable_content_422() {
-    // 422_UNPROCESSABLE_CONTENT
     return set_status_line(status_lines::k422, SC_422_UNPROCESSABLE_CONTENT);
   }
   response& upgrade_required_426() {
-    // 426_UPGRADE_REQUIRED
     return set_status_line(status_lines::k426, SC_426_UPGRADE_REQUIRED);
   }
   response& request_header_fields_too_large_431() {
-    // 431_REQUEST_HEADER_FIELDS_TOO_LARGE
     return set_status_line(status_lines::k431,
                            SC_431_REQUEST_HEADER_FIELDS_TOO_LARGE);
   }
   response& internal_server_error_500() {
-    // 500_INTERNAL_SERVER_ERROR
     return set_status_line(status_lines::k500, SC_500_INTERNAL_SERVER_ERROR);
   }
   response& not_implemented_501() {
-    // 501_NOT_IMPLEMENTED
     return set_status_line(status_lines::k501, SC_501_NOT_IMPLEMENTED);
   }
   response& bad_gateway_502() {
-    // 502_BAD_GATEWAY
     return set_status_line(status_lines::k502, SC_502_BAD_GATEWAY);
   }
   response& service_unavailable_503() {
-    // 503_SERVICE_UNAVAILABLE
     return set_status_line(status_lines::k503, SC_503_SERVICE_UNAVAILABLE);
   }
   response& gateway_timeout_504() {
-    // 504_GATEWAY_TIMEOUT
     return set_status_line(status_lines::k504, SC_504_GATEWAY_TIMEOUT);
   }
   response& http_version_not_supported_505() {
-    // 505_HTTP_VERSION_NOT_SUPPORTED
     return set_status_line(status_lines::k505,
                            SC_505_HTTP_VERSION_NOT_SUPPORTED);
   }
 
  private:
+  // +=========================================================================+
+  // | [>] head_bytes                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Uses supplied storage when borrowing; otherwise uses its own string.    |
+  // +-------------------------------------------------------------------------+
   std::string& head_bytes() noexcept {
     if (auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[0];
     return std::get<0>(storage_)[0];
   }
+  // +=========================================================================+
+  // | [>] head_bytes                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Uses supplied storage when borrowing; otherwise uses its own string.    |
+  // +-------------------------------------------------------------------------+
   const std::string& head_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_))
+    if (const auto* borrowed = std::get_if<1>(&storage_)) {
       return *(*borrowed)[0];
+    }
     return std::get<0>(storage_)[0];
   }
+  // +=========================================================================+
+  // | [>] body_bytes                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Uses supplied storage when borrowing; otherwise uses its own string.    |
+  // +-------------------------------------------------------------------------+
   std::string& body_bytes() noexcept {
     if (auto* borrowed = std::get_if<1>(&storage_)) return *(*borrowed)[1];
     return std::get<0>(storage_)[1];
   }
+  // +=========================================================================+
+  // | [>] body_bytes                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Uses supplied storage when borrowing; otherwise uses its own string.    |
+  // +-------------------------------------------------------------------------+
   const std::string& body_bytes() const noexcept {
-    if (const auto* borrowed = std::get_if<1>(&storage_))
+    if (const auto* borrowed = std::get_if<1>(&storage_)) {
       return *(*borrowed)[1];
+    }
     return std::get<0>(storage_)[1];
   }
   // +=========================================================================+
@@ -818,16 +792,20 @@ class response {
   static constexpr std::size_t kDateLength = 29;
   static constexpr std::size_t kDateLineLength =
       kDatePrefix.size() + kDateLength + 2;
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] append_head                                             ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Appends bytes after the current head.                                   |
   // +-------------------------------------------------------------------------+
   void append_head(std::string_view value) {
     head_bytes().resize(head_size_);
     head_bytes().append(value);
     head_size_ = head_bytes().size();
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] replace_head                                            ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Replaces a head range and shifts the following bytes.                   |
   // +-------------------------------------------------------------------------+
   void replace_head(std::size_t offset, std::size_t length,
                     std::string_view value) {
@@ -842,8 +820,10 @@ class response {
     head_size_ = next_size;
     head_bytes().resize(next_size);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] erase_head                                              ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Removes a head range and closes the gap.                                |
   // +-------------------------------------------------------------------------+
   void erase_head(std::size_t offset, std::size_t length) {
     std::memmove(head_bytes().data() + offset,
@@ -852,8 +832,10 @@ class response {
     head_size_ -= length;
     head_bytes().resize(head_size_);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] set_status_line                                         ( private ) |
+  // +-------------------------------------------------------------------------+
+  // | Sets the status and clears the previous headers, body and framing.      |
   // +-------------------------------------------------------------------------+
   response& set_status_line(std::string_view line, int code) {
     if (line.size() > max_head_size_) {
@@ -899,18 +881,15 @@ class response {
   // +=========================================================================+
   // | [>] reset_body                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Drops any previously set body (in-memory payload or adopted writer) and |
-  // | clears the framing headers, so every set_body() call fully replaces the |
-  // | former body instead of accumulating state.                              |
+  // | Clears the previous body and framing before a replacement.              |
   // +-------------------------------------------------------------------------+
   void reset_body() { clear_body(); }
   // +=========================================================================+
   // | [>] apply_body_framing                                      ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Emits deferred framing unless an explicit header already supplies it.   |
+  // | Adds missing framing headers; rejects conflicting length and coding.    |
   // +-------------------------------------------------------------------------+
   void apply_body_framing() {
-    // RFC 9112 S6.2: a sender must not combine Content-Length and TE.
     if (has_content_length_header_ &&
         (has_transfer_encoding_header_ || chunked_)) {
       throw std::invalid_argument("conflicting response framing headers!");
@@ -974,10 +953,8 @@ class response {
   // +=========================================================================+
   // | [>] find_header                                             ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Scans the serialized header block [sln_len_, sln_len_ + hdr_len_) for   |
-  // | the first header whose name case-insensitively matches 'k'. On success  |
-  // | reports the line start, value start, value length and full line length  |
-  // | (CRLF included). Reused by get_header/set_header/remove_header.         |
+  // | Finds the first name match, ignoring case.                              |
+  // | Returns line/value offsets and lengths. Line length includes CRLF.      |
   // +-------------------------------------------------------------------------+
   bool find_header(std::string_view k, std::size_t& line_off,
                    std::size_t& val_off, std::size_t& val_len,
@@ -1001,18 +978,17 @@ class response {
         line_len = (cr + 2) - name_beg;
         return true;
       }
-      // Advance past CRLF (\r\n) to the next header line.
       pos = cr + 2;
     }
     return false;
   }
   // +=========================================================================+
-  // | [>] ATTRIBUTES                                              ( private ) |
+  // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
   std::size_t max_head_size_;
   std::size_t body_memory_threshold_;
-  std::variant<std::array<std::string, 2>,
-               std::array<std::string*, 2>> storage_;
+  std::variant<std::array<std::string, 2>, std::array<std::string*, 2>>
+      storage_;
   std::size_t head_size_{0};
   std::size_t body_size_{0};
   std::size_t sln_len_{0};

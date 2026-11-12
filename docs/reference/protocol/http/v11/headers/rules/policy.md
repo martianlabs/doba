@@ -40,7 +40,7 @@ class policy { ... };
 
 Inbound policy limits that span several headers Transversal policy rules that enforce limits no single intra-header interpreter can, because the quantity being limited is an aggregate of several headers. Applied by deserialize() after the single header pass has populated the context.
 
-**Source:** [include/protocol/http/v11/headers/rules/policy.h:51](../../../../../../../include/protocol/http/v11/headers/rules/policy.h#L51)
+**Source:** [include/protocol/http/v11/headers/rules/policy.h](../../../../../../../include/protocol/http/v11/headers/rules/policy.h)
 
 <a id="method-apply"></a>
 
@@ -60,4 +60,4 @@ Applies these rules to the supplied state.
 
 **Returns:** A `verdict` describing the result of applying this header or rule.
 
-**Source:** [include/protocol/http/v11/headers/rules/policy.h:56](../../../../../../../include/protocol/http/v11/headers/rules/policy.h#L56)
+**Source:** [include/protocol/http/v11/headers/rules/policy.h](../../../../../../../include/protocol/http/v11/headers/rules/policy.h)

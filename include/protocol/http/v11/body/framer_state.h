@@ -35,22 +35,19 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // | [>] framer_state                                               ( struct ) |
 // +---------------------------------------------------------------------------+
 // | Result of a body framer consume() call.                                   |
-// | consumed  - bytes taken from the input span (wire bytes, including any    |
-// | chunked framing). Caller advances its buffer by this                      |
-// | amount; the remainder belongs to the next request.                        |
-// | complete  - body fully parsed; no further consume() calls needed.         |
-// | has_error - a protocol or size-limit error was detected.                  |
-// | error     - error code, if has_error is true.                             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct framer_state {
-  // Consumed bytes from the input span (wire bytes, including framing).
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Bytes taken by this call, including framing. Advance input by this amount.
   std::size_t consumed = 0;
-  // Body fully parsed; no further consume() calls needed.
+  // The body ended; any remaining input belongs to the next request.
   bool complete = false;
-  // A protocol or size-limit error was detected.
+  // Framing was invalid or a size limit was exceeded.
   bool has_error = false;
-  // Error code, if has_error is true.
+  // Only meaningful when has_error is true.
   framer_error error = framer_error::none;
 };
 }  // namespace martianlabs::doba::protocol::http::v11::body

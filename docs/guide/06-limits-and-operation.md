@@ -46,7 +46,7 @@ configure them independently. The [TCP policy][tcp-policy] and
 [HTTP policy][http-policy] definitions list every setting. Chapter 4's
 [TCP section][tcp-section] covers listener and worker choices.
 
-[tcp-policy]: ../../include/transport/server/tcp_policies.h
+[tcp-policy]: ../../include/transport/tcp_policies.h
 [http-policy]: ../../include/protocol/http/v11/policies.h
 [tcp-section]: 04-transports-and-tls.md#tcp-policies
 
@@ -256,7 +256,7 @@ one closes the connection instead of pausing and resuming input.
 For example, configure transport and HTTP budgets independently:
 
 ```cpp
-martianlabs::doba::transport::server::tcp_policies io;
+martianlabs::doba::transport::tcp_policies io;
 io.ip = "0.0.0.0";
 io.port = "8080";
 io.max_connections = 65535;
@@ -269,7 +269,7 @@ http_server<> server(io, http);
 Zero disables the connection limit; the one-reader restriction is fixed. Transport receive
 and send capacities must remain positive. Optional TLS adds independent plaintext and ciphertext budgets; its sources
 are consumed synchronously and count toward the plaintext budget. See the
-[TLS policy reference](../reference/transport/server/tls_policies.md). The public
+[TLS policy reference](../reference/transport/tls_policies.md). The public
 HTTP server constructs its transport on first start; invalid transport
 settings fail before listening. Servers
 copy configuration: later changes to the original policy object do not update

@@ -1,95 +1,79 @@
-# CI processing coverage
+<a name="ci-processing-coverage"></a>
+<h1>
+  <a href="../resources/tests/ci-inventory/h1-ci-processing-coverage.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h1-ci-processing-coverage.svg" alt="What CI runs">
+  </a>
+  <a href="../resources/tests/ci-inventory/h1-ci-processing-coverage-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h1-ci-processing-coverage-dark.svg" alt="What CI runs">
+  </a>
+</h1>
 
-This inventory describes the configured workflow, not a new GitHub run.
-[ci.yml](../.github/workflows/ci.yml) retains its existing job identifiers,
-required-check names, compiler/sanitizer axes, triggers, permissions and release
-prerequisites. New processing checks run inside those jobs.
+A green job is less useful if it quietly stopped building half the tests.
+The [inventory check](../cmake/ci_test_inventory.cmake) lists what was built
+and refuses to continue when a required group is missing.
 
-| Area | Required coverage |
+| Area | What runs |
 | --- | --- |
-| Common and engine unit binary | Controlled task owner, processing result contract, concurrent engine cases and processing-turn cases; Linux also includes the ready/deadline registry tests. |
-| Portable integration | Factory configuration, close precedence, RX/TX/reader rules and policy limits in the ordinary integration binary. |
-| Linux native processing | doba_linux_processing_tests alongside transport and accept-fault groups; transport and processing repeat under TSan. |
-| Windows native processing | Actual processing cases in the integration binary and doba_windows_processing_tests for forced early publication/cancellation/faults; repeated with IOCP/lifecycle probes under Windows sanitizers. |
-| TLS | Existing wire/core/configuration/header/example groups plus doba_tls_processing_tests and doba_tls_processing_wire_tests. Dedicated TLS jobs explicitly build doba_tls_processing and execute both new groups. |
-| Executable processing examples | doba_processing_examples_tests runs the standalone task owner, in-memory concurrent engine and native TCP example. Required when examples are enabled. |
-| HttpArena driver | doba_httparena_tests checks metadata and actual baseline/pipelined/async behavior with dynamic values on isolated ports. It is always part of root test builds, not a throughput campaign. |
-| Existing broader gates | Minimum CMake, package/source consumers, fuzzers and private-copy mutation campaigns remain configured; final qualification belongs to async-plan block 10. |
+| Unit tests | Tasks, HTTP engine, policies and the fixed engine model. |
+| Integration tests | Real HTTP/TCP traffic, policy limits and binary reply checks. |
+| Linux probes | Transport, processing turns and accept failures. |
+| Windows probes | IOCP completion, startup, timer/cancellation and Winsock failures. |
+| TLS builds | Core, sockets, configuration, processing and both example programs. |
+| Examples and driver | Built processing examples and the actual HttpArena driver. |
+| Other checks | Package consumers, minimum CMake, fuzzing, mutations and source coverage. |
 
-[ci_test_inventory.cmake](../cmake/ci_test_inventory.cmake) requires Release,
-records selected build options, lists the registered unit/integration cases and
-native probe inventories, then checks mandatory groups. It requires TLS groups
-when TLS is requested and executable examples when enabled. This is a minimum
-inventory guard, not a line-coverage score or proof that every possible behavior
-is tested. The subsequent CTest run executes the complete registered suite.
+Root jobs build the full suite, check the inventory, then run CTest. Examples
+are required when enabled; TLS groups are required when TLS is requested.
+Dedicated TLS jobs build and run their named targets separately.
 
-Run locally without a Git lookup:
+To check a local Release build without looking up a Git revision:
 
-```text
-cmake -DDOBA_CI_BUILD_DIR=<release-build> -DDOBA_CI_REQUIRE_TLS=ON
-      -DDOBA_CI_SOURCE_DESCRIPTION=local-source-snapshot
-      -P cmake/ci_test_inventory.cmake
+```sh
+cmake -DDOBA_CI_BUILD_DIR=<release-build> -DDOBA_CI_REQUIRE_TLS=ON -DDOBA_CI_SOURCE_DESCRIPTION=local-source-snapshot -P cmake/ci_test_inventory.cmake
 ```
 
-Use one command line when running it. Build normally first; a dedicated TLS
-job builds only its named TLS targets and checks them with explicit CTest
-filters and --no-tests=error. Root jobs build all test targets and use the full
-inventory guard. Debug jobs retain their existing execution scope.
+Set `DOBA_CI_REQUIRE_TLS=OFF` for a plain TCP build. Lists and build options
+go to `<build>/ci-evidence`; the workflow uploads them with the test logs.
+We also try inventories with required groups removed and check that they fail
+for the right reason.
 
-Normal suite execution in Release is the intended policy. The security audit
-does not require normal Debug execution. Inventory now also requires
-`doba_security_model_tests`, `doba_stream_integrity_tests` and
-`doba_test_diagnostics_tests`, plus their source fixtures. The first checks
-144 bounded engine configurations; the second independently validates binary
-pipelines under default admission limits; the third checks sanitizer-report
-propagation from exit-zero child processes. Native sanitizer repetitions include
-stream integrity, and concurrency repetitions include the state model.
+<a name="measurement-and-reliability-boundaries"></a>
+<h2>
+  <a href="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries.svg" alt="Correct answers before fast answers">
+  </a>
+  <a href="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-measurement-and-reliability-boundaries-dark.svg" alt="Correct answers before fast answers">
+  </a>
+</h2>
 
-Decoder fuzz jobs additionally replay twelve canonical engine seeds and run
-`fuzz_engine` for 60 seconds on each OS. Job identifiers, matrix entries and
-required-check names remain unchanged. These are configured gates; local
-qualification and remote workflow execution must be distinguished.
+The [HttpArena check](integration/benchmarks/httparena.cpp) tries dynamic GET/POST
+values, chunked and fragmented bodies, sixteen-reply pipelines and overlapping
+delays. It checks response order and minimum waits with a monotonic clock.
+It doesn't demand a throughput score or a tight upper latency bound.
 
-Evidence is written under <build>/ci-evidence and uploaded by the workflow.
-The current block-9 local checks also use private CTest inventories omitting,
-one at a time, native processing, driver, TLS processing wire and executable
-examples. Each omission must fail its intended diagnostic on Linux and Windows;
-a generic process failure cannot count as a successful negative check.
+All child-process stderr is checked for sanitizer reports, including when the
+runner stops the server itself. Otherwise a good reply could hide a bad shutdown.
 
-## Measurement and reliability boundaries
+<a name="release-coverage-and-systematic-qualification"></a>
+<h2>
+  <a href="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification.svg#gh-light-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification.svg" alt="More than one green run">
+  </a>
+  <a href="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification-dark.svg#gh-dark-mode-only">
+    <img src="../resources/tests/ci-inventory/h2-release-coverage-and-systematic-qualification-dark.svg" alt="More than one green run">
+  </a>
+</h2>
 
-The [driver check](integration/benchmarks/httparena.cpp) draws path values after
-server startup and verifies their bodies, text/plain and minimum waits. It also
-checks zero, different overlapping delays, mixed same-connection order, dynamic
-GET/POST, chunked/fragmented bodies and sixteen-response pipelines. It reports
-batch elapsed time without asserting a throughput target.
+Linux TSan repeats engine/model groups 200 times and native socket/processing
+groups 20 times. Windows ASan jobs repeat the matching engine and native groups.
+Dedicated TLS groups get five runs.
 
-Minimum-delay checks use C++ `std::chrono::steady_clock`, require monotonicity
-and verify its resolution. This preserves strict minimum waits with the native
-high-resolution monotonic performance counter on Windows. Socket/process waits
-remain bounded. Driver stderr is checked for sanitizer diagnostics even when
-the harness terminates the benchmark-owned process; a reported race must not
-be lost merely because that process did not exit normally. No tight concurrent
-batch latency limit is imposed.
+Sanitizer jobs also run [seeded campaigns](qualification/README.md#systematic-campaigns).
+[Fuzzing](fuzz/README.md) and [coverage checks](qualification/README.md#source-coverage)
+have their own budgets. Coverage is a release prerequisite; required branch
+checks still have to be selected in repository rules.
 
-These checks do not activate an async mode in the library and do not configure
-an injected executor. Both route kinds are registered in the driver and examples
-by default. Published benchmark data and the frozen pre-async reference remain
-unchanged; final throughput comparisons are a separate campaign.
-
-## Release coverage and systematic qualification
-
-[Qualification](qualification/README.md) adds separate Linux/Windows Release
-source-coverage jobs, reviewed module floors and explicit mapped/unmapped
-header inventories. Previously measured headers cannot disappear, and new
-unmapped headers require review. Per-target profiles prevent cross-executable
-counter contamination. The release job also depends on coverage; repository
-rules must select the two new coverage checks separately after their first run.
-
-The diagnostic qualification group is mandatory on both platforms; Windows
-also requires isolated Winsock failure/cleanup tests. Existing sanitizer jobs
-run seeded case-order campaigns (two rounds normally, twelve nightly).
-Fuzzers retain 60-second normal budgets and use 600 seconds nightly, with a
-separate persisted engine corpus. Dedicated TLS repetitions retain their scope.
-See the [measured reference](qualification/BASELINE.md) for actual local results
-and the distinction between emitted mappings, condition outcomes and safety.
+[ci.yml](../.github/workflows/ci.yml) is the source for the exact job matrix.
+This page describes that setup. Recorded local results live in the
+[coverage snapshot](qualification/BASELINE.md) and [policy checks](qualification/POLICIES.md).

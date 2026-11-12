@@ -48,4 +48,4 @@ This enum class holds for the http 1.1 request-target types.
 - **kAuthorityForm:** Authority form. Declaration: `kAuthorityForm`.
 - **kAsteriskForm:** Asterisk form. Declaration: `kAsteriskForm`.
 
-**Source:** [include/protocol/http/common/target.h:36](../../../../../include/protocol/http/common/target.h#L36)
+**Source:** [include/protocol/http/common/target.h](../../../../../include/protocol/http/common/target.h)

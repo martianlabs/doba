@@ -31,6 +31,7 @@
 #include <cstring>
 #include <ctime>
 #include <mutex>
+#include <string>
 #include <string_view>
 #include <thread>
 
@@ -114,9 +115,20 @@ class date_server {
     thread_local std::time_t previous = 0;
     thread_local char buffer[kBufSize]{};
     if (previous != current || buffer[0] == '\0') {
-      write_date(buffer, current);
+      if (!write_date(buffer, current)) return {};
       previous = current;
     }
+    return {buffer, kDateLen};
+  }
+  // +=========================================================================+
+  // | [>] format                                                   ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Formats a timestamp as an HTTP date in GMT; empty on invalid input.     |
+  // | Does not need the date server to be running.                            |
+  // +-------------------------------------------------------------------------+
+  static std::string format(std::time_t timestamp) {
+    char buffer[kBufSize];
+    if (!write_date(buffer, timestamp)) return {};
     return {buffer, kDateLen};
   }
 
@@ -150,9 +162,12 @@ class date_server {
   // +=========================================================================+
   // | [>] write_date                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  static void write_date(char* out, std::time_t now) noexcept {
+  static bool write_date(char* out, std::time_t now) noexcept {
     std::tm gmt{};
-    detail::gm_time(&gmt, &now);
+    if (!detail::gm_time(&gmt, &now) || gmt.tm_year < -1900 ||
+        gmt.tm_year > 8099) {
+      return false;
+    }
     std::memcpy(out + 0, kWeekDays[gmt.tm_wday], 3);
     out[3] = ',';
     out[4] = ' ';
@@ -170,6 +185,7 @@ class date_server {
     out[25] = ' ';
     std::memcpy(out + 26, "GMT", 3);
     out[29] = '\0';
+    return true;
   }
   // +=========================================================================+
   // | [>] update                                                  ( private ) |

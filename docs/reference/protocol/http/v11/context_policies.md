@@ -38,4 +38,4 @@ struct policies { ... };
 
 Policies coming from the inbound configuration; they are not derived from the request.
 
-**Source:** [include/protocol/http/v11/context.h:61](../../../../../include/protocol/http/v11/context.h#L61)
+**Source:** [include/protocol/http/v11/context.h](../../../../../include/protocol/http/v11/context.h)

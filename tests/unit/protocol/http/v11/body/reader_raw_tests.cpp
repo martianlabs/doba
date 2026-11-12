@@ -27,9 +27,9 @@
 #include <span>
 #include <string_view>
 
+#include "body_bytes.h"
 #include "common/reader.h"
 #include "protocol/http/v11/body/reader_raw.h"
-#include "body_bytes.h"
 #include "test_helper.h"
 
 namespace {
@@ -143,4 +143,3 @@ DOBA_TEST("partial reads preserve output guards and completion") {
   DOBA_EXPECT(source.fetch(next));
   DOBA_EXPECT_EQUAL(next, std::byte{'N'});
 }
-

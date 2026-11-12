@@ -31,20 +31,20 @@
 #include <string>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "https_server.h"
-#include "transport/server/tls.h"
 #include "protocol/http/common/auth/basic.h"
+#include "protocol/processing_result.h"
+#include "transport/tls.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
-namespace tr = martianlabs::doba::transport::server;
+namespace tr = martianlabs::doba::transport;
 namespace common = martianlabs::doba::common;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] echo_engine                                                ( struct ) |
 // +---------------------------------------------------------------------------+
-// | A deliberately non-HTTP protocol exercises the unchanged TCP contract.    |
+// | Use a non-HTTP protocol to check the TCP contract through TLS.            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct echo_engine {
@@ -63,23 +63,32 @@ struct echo_engine {
   // | [>] on_bytes_received                                        ( public ) |
   // +-------------------------------------------------------------------------+
   processing_result on_bytes_received(std::string_view input) {
-    if (input.size() > 4096) throw std::runtime_error("RX bound exceeded");
+    if (input.size() > input_limit_) {
+      throw std::runtime_error("RX bound exceeded");
+    }
     pending.append(input);
     for (;;) {
       const auto end = pending.find('\n');
       if (end == std::string::npos) return {};
       const auto line = pending.substr(0, end);
       pending.erase(0, end + 1);
-      if (line == "close") { close(); return {}; }
-      if (line == "bad") { send({}, {}, source("x")); send("!", {}, {}); }
-      else if (line == "source") {
+      if (line == "close") {
+        close();
+        return {};
+      }
+      if (line == "bad") {
+        send({}, {}, source("x"));
+        send("!", {}, {});
+      } else if (line == "source") {
         send("pre:", "body:", source("tail"));
         send({}, {}, {});
       } else if (line == "second-source") {
         send("discard:", {}, source(""));
         send({}, {}, source(""));
       } else if (line == "empty-close") {
-        send("pre:", "body:", source("")); close(); return {};
+        send("pre:", "body:", source(""));
+        close();
+        return {};
       } else if (line == "inline-exact") {
         send("pre:", std::string(4092, 'e'), {});
       } else if (line == "inline-over") {
@@ -89,11 +98,12 @@ struct echo_engine {
         send({}, std::string(2049, 'e'), {});
       } else if (line == "released") {
         auto owner = std::make_shared<const std::string>("tail");
-        send({}, {}, std::make_unique<common::reader>(common::reader::shared(
-            owner, std::as_bytes(std::span(*owner)))));
+        send({}, {},
+             std::make_unique<common::reader>(common::reader::shared(
+                 owner, std::as_bytes(std::span(*owner)))));
         if (owner.use_count() != 1) throw std::runtime_error("Reader retained");
       } else if (line == "failed") {
-        common::filesystem_file file;
+        common::filesystem file;
         std::byte byte{};
         file.read(std::span<std::byte>(&byte, 1));
         send("discard:", {}, std::make_unique<common::reader>(std::move(file)));
@@ -103,11 +113,16 @@ struct echo_engine {
         send("pre:", {}, source(std::string(4 * 1024 * 1024, 's')));
       } else if (line == "large") {
         send("pre:", {}, source(std::string(128 * 1024, 's')));
-      } else if (line == "exact") send({}, {}, source(std::string(4096, 'e')));
-      else if (line == "over") send({}, {}, source(std::string(4097, 'e')));
+      } else if (line == "exact")
+        send({}, {}, source(std::string(4096, 'e')));
+      else if (line == "over")
+        send({}, {}, source(std::string(4097, 'e')));
       else if (line == "source-close") {
-        send("pre:", "body:", source("tail")); close(); return {};
-      } else send("echo:", line + "\n", {});
+        send("pre:", "body:", source("tail"));
+        close();
+        return {};
+      } else
+        send("echo:", line + "\n", {});
     }
   }
   // +=========================================================================+
@@ -120,15 +135,16 @@ struct echo_engine {
   // +-------------------------------------------------------------------------+
   static std::unique_ptr<common::reader> source(std::string text) {
     auto owner = std::make_shared<const std::string>(std::move(text));
-    return std::make_unique<common::reader>(common::reader::shared(
-        owner, std::as_bytes(std::span(*owner))));
+    return std::make_unique<common::reader>(
+        common::reader::shared(owner, std::as_bytes(std::span(*owner))));
   }
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // Incomplete input retained by the protocol between receive blocks.
+  // Keep partial input until the next receive.
   std::string pending;
-  // Callbacks are used only during the synchronous input call.
+  std::size_t input_limit_{4096};
+  // Call these only while handling input.
   martianlabs::doba::protocol::send_delegate send;
   std::function<void()> close;
 };
@@ -167,8 +183,13 @@ int main(int count, char** args) {
     policies.private_key_file = args[2];
     if (count > 5) policies.max_buffered_send_bytes = std::stoull(args[5]);
     if (count > 6) policies.network_bio_buffer_capacity = std::stoull(args[6]);
-    if (count > 7)
+    if (count > 7) {
       policies.max_buffered_ciphertext_bytes = std::stoull(args[7]);
+    }
+    if (count > 8) {
+      policies.encrypted_receive_buffer_capacity = std::stoull(args[8]);
+    }
+    if (count > 9) policies.receive_buffer_capacity = std::stoull(args[9]);
     const std::string_view mode(args[4]);
     if (mode == "admission") {
       policies.worker_count = 1;
@@ -177,16 +198,18 @@ int main(int count, char** args) {
     if (mode == "http-auth") {
       namespace http = martianlabs::doba::protocol::http;
       namespace auth = http::auth;
-      auth::basic provider("test", [](std::string_view user,
-                                      std::string_view password) {
-        return user == "alice" && password == "secret";
-      });
-      martianlabs::doba::https_server<http::v11::request, http::v11::response,
+      auth::basic provider(
+          "test", [](std::string_view user, std::string_view password) {
+            return user == "alice" && password == "secret";
+          });
+      martianlabs::doba::https_server<
+          http::v11::request, http::v11::response,
           http::router<http::v11::request, http::v11::response>,
           http::v11::engine<http::v11::request, http::v11::response>,
-          auth::basic> server(
-              policies, {}, std::tuple{std::move(provider)});
-      server.add_route<auth::basic>("GET", "/private",
+          auth::basic>
+          server(policies, {}, std::tuple{std::move(provider)});
+      server.add_route<auth::basic>(
+          "GET", "/private",
           [](const http::v11::request&, http::v11::response& response) {
             response.ok_200().set_body("private");
           });
@@ -198,63 +221,69 @@ int main(int count, char** args) {
       policies.alpn_protocol =
           std::string_view(args[4]) == "http-invalid" ? "h2" : "http/1.1";
       martianlabs::doba::https_server<> server(std::move(policies));
-      server.add_route("GET", "/hello",
-      [](const martianlabs::doba::protocol::http::v11::request&,
+      server.add_route(
+          "GET", "/hello",
+          [](const martianlabs::doba::protocol::http::v11::request&,
              martianlabs::doba::protocol::http::v11::response& response) {
-        response.ok_200().set_body("hello");
-      });
+            response.ok_200().set_body("hello");
+          });
       if (mode == "http-async") {
         namespace http = martianlabs::doba::protocol::http::v11;
         using namespace std::chrono_literals;
         server.add_route("GET", "/wait/:id",
-            [&](const http::request&, http::response& response,
-                int id) -> common::task<> {
-          ++started;
-          co_await common::sleep_for(1ms);
-          ++finished;
-          response.ok_200().set_body(std::to_string(id));
-        });
+                         [&](const http::request&, http::response& response,
+                             int id) -> common::task<> {
+                           ++started;
+                           co_await common::sleep_for(1ms);
+                           ++finished;
+                           response.ok_200().set_body(std::to_string(id));
+                         });
         server.add_route("GET", "/gated",
-            [&](const http::request&, http::response& response)
-                -> common::task<> {
-          ++started;
-          while (!released.load()) co_await common::yield();
-          ++finished;
-          response.ok_200().set_body("gated");
-        });
+                         [&](const http::request&,
+                             http::response& response) -> common::task<> {
+                           ++started;
+                           while (!released.load()) co_await common::yield();
+                           ++finished;
+                           response.ok_200().set_body("gated");
+                         });
         server.add_route("GET", "/release",
-            [&](const http::request&, http::response& response) {
-          released = true;
-          response.ok_200().set_body("release");
-        });
-        server.add_route("GET", "/source",
-            [](const http::request&, http::response& response)
-                -> common::task<> {
-          co_await common::sleep_for(1ms);
-          response.ok_200().set_body(std::move(*echo_engine::source(
-              std::string(32768, 's'))), 32768);
-        });
-        server.add_route("GET", "/fail",
+                         [&](const http::request&, http::response& response) {
+                           released = true;
+                           response.ok_200().set_body("release");
+                         });
+        server.add_route(
+            "GET", "/source",
+            [](const http::request&,
+               http::response& response) -> common::task<> {
+              co_await common::sleep_for(1ms);
+              response.ok_200().set_body(
+                  std::move(*echo_engine::source(std::string(32768, 's'))),
+                  32768);
+            });
+        server.add_route(
+            "GET", "/fail",
             [](const http::request&, http::response&) -> common::task<> {
-          co_await common::yield();
-          throw std::runtime_error("async handler failed");
-        });
-        server.add_route("GET", "/sleep",
+              co_await common::yield();
+              throw std::runtime_error("async handler failed");
+            });
+        server.add_route(
+            "GET", "/sleep",
             [&](const http::request&, http::response&) -> common::task<> {
-          ++live;
-          auto guard = std::shared_ptr<int>(new int, [&](int* value) {
-            delete value;
-            --live;
-          });
-          ++started;
-          co_await common::sleep_for(1h);
-        });
-        server.add_route("GET", "/state",
+              ++live;
+              auto guard = std::shared_ptr<int>(new int, [&](int* value) {
+                delete value;
+                --live;
+              });
+              ++started;
+              co_await common::sleep_for(1h);
+            });
+        server.add_route(
+            "GET", "/state",
             [&](const http::request&, http::response& response) {
-          response.ok_200().set_body(std::to_string(started.load()) + ":" +
-              std::to_string(finished.load()) + ":" +
-              std::to_string(live.load()));
-        });
+              response.ok_200().set_body(std::to_string(started.load()) + ":" +
+                                         std::to_string(finished.load()) + ":" +
+                                         std::to_string(live.load()));
+            });
       }
       serve(server);
       if (mode == "http-async") {
@@ -262,7 +291,11 @@ int main(int count, char** args) {
       }
     } else {
       policies.alpn_protocol = "doba-echo";
-      auto factory = [] { return echo_engine{}; };
+      auto factory = [limit = policies.receive_buffer_capacity] {
+        echo_engine engine;
+        engine.input_limit_ = limit;
+        return engine;
+      };
       tr::tls<echo_engine, decltype(factory)> server(policies, factory);
       if (mode == "admission") {
         server.set_on_connection([] {

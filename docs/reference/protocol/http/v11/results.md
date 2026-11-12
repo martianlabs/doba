@@ -55,7 +55,7 @@ HTTP/1.1 decoding result for the selected request and response types.
 - **RQty:** `typename RQty`.
 - **RSty:** `typename RSty`.
 
-**Source:** [include/protocol/http/v11/results.h:44](../../../../../include/protocol/http/v11/results.h#L44)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-code"></a>
 
@@ -71,7 +71,7 @@ Stores the code value.
 
 **Value:** `deserialization_status::kInvalidSource`
 
-**Source:** [include/protocol/http/v11/results.h:60](../../../../../include/protocol/http/v11/results.h#L60)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-request"></a>
 
@@ -87,7 +87,7 @@ Stores the request value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/results.h:61](../../../../../include/protocol/http/v11/results.h#L61)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-response"></a>
 
@@ -103,7 +103,7 @@ Stores the response value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/results.h:62](../../../../../include/protocol/http/v11/results.h#L62)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="type-serialization-result"></a>
 
@@ -119,7 +119,7 @@ struct serialization_result { ... };
 
 Borrows head and body bytes and owns an optional source. The transport copies both views before the call returns.
 
-**Source:** [include/protocol/http/v11/results.h:73](../../../../../include/protocol/http/v11/results.h#L73)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-head"></a>
 
@@ -135,7 +135,7 @@ Stores the head value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/results.h:77](../../../../../include/protocol/http/v11/results.h#L77)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-body"></a>
 
@@ -151,7 +151,7 @@ Stores the body value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/results.h:78](../../../../../include/protocol/http/v11/results.h#L78)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)
 
 <a id="field-source"></a>
 
@@ -167,4 +167,4 @@ Stores the source value.
 
 **Value:** No explicit initializer appears in this declaration.
 
-**Source:** [include/protocol/http/v11/results.h:79](../../../../../include/protocol/http/v11/results.h#L79)
+**Source:** [include/protocol/http/v11/results.h](../../../../../include/protocol/http/v11/results.h)

@@ -33,14 +33,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has a single route "/headers" that responds to GET requests.   |
-// | The lambda function demonstrates adding, replacing, and removing headers  |
-// | in the response. It sets the "X-Example" header to "first", then replaces |
-// | it with "replaced", adds an "X-Remove" header, and finally removes it.    |
-// | The response body is set to the value of the "X-Example" header.          |
-// | The server runs until a termination signal is received.                   |
+// | Add, replace and remove response headers.                                 |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

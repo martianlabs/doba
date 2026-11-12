@@ -32,22 +32,9 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] framer_error                                           ( enum-class ) |
 // +---------------------------------------------------------------------------+
-// | Error codes shared by framer_raw and framer_chunked.                      |
-// |                                                                           |
-// | Actively produced by these classes:                                       |
-// | invalid_chunk_size, chunk_size_overflow, invalid_chunk_crlf,              |
-// | invalid_trailer, chunk_extension_size_limit_exceeded,                     |
-// | trailer_size_limit_exceeded, chunked_size_limit_exceeded.                 |
-// |                                                                           |
-// | Reserved (declared for API parity / future use, never produced here):     |
-// | chunked_incomplete  - a body that never reaches its terminating CRLF      |
-// | simply keeps requesting more bytes (kMoreBytes-                           |
-// | Needed at the decoder level); premature-EOF                               |
-// | detection belongs to connection/channel handling,                         |
-// | not to this class.                                                        |
-// | raw_size_limit_exceeded - Content-Length vs. policy limits are enforced   |
-// | (or should be) at the header/policy layer before                          |
-// | a body framer is ever constructed.                                        |
+// | Errors used by the body framers.                                          |
+// | chunked_incomplete and raw_size_limit_exceeded are not emitted.           |
+// | The caller handles EOF; header checks enforce raw body size limits.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 enum class framer_error : std::uint8_t {

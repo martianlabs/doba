@@ -40,7 +40,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Sends an opened file through an owned response body reader.               |
+// | Keep the file open until the response reader finishes.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::error_code error;
-  const auto root = filesystem_root(argv[1], error);
+  const auto root = filesystem::root(argv[1], error);
   if (error) {
     std::cerr << error.message() << '\n';
     return 1;
@@ -57,9 +57,8 @@ int main(int argc, char* argv[]) {
   const std::string relative_file(argv[2]);
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
   http_server.add_route(
-      "GET", "/download",
-      [root, relative_file](const request&, response& res) {
-        filesystem_file file;
+      "GET", "/download", [root, relative_file](const request&, response& res) {
+        filesystem file;
         std::error_code error;
         if (!file.open(root, relative_file, error)) {
           if (error == std::errc::no_such_file_or_directory) {

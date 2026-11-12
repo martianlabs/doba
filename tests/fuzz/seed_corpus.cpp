@@ -30,13 +30,17 @@
 #include <string>
 
 namespace {
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] general                                                    ( usings ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 using corpus = std::map<std::string, std::string>;
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] write                                                    ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 void write(const std::filesystem::path& root, const char* harness,
            const corpus& seeds) {
   const auto directory = root / harness;
@@ -53,9 +57,11 @@ void write(const std::filesystem::path& root, const char* harness,
 }
 }  // namespace
 
+// /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] main                                                     ( function ) |
 // +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv) {
   if (argc != 2) {
     std::cerr << "Usage: doba_fuzz_seed_corpus <destination>\n";
@@ -87,10 +93,11 @@ int main(int argc, char** argv) {
     corpus requests{
         {"head-limit-incomplete",
          "GET / HTTP/1.1\r\nHost: x\r\nX: " + std::string(8192, 'a')},
-        {"head-limit-complete", "GET / HTTP/1.1\r\nHost: x\r\nX: " +
-         std::string(8192, 'a') + "\r\n\r\n" + successor},
+        {"head-limit-complete",
+         "GET / HTTP/1.1\r\nHost: x\r\nX: " + std::string(8192, 'a') +
+             "\r\n\r\n" + successor},
         {"head-boundary-delimiter", "GET / HTTP/1.1\r\nHost: x\r\nX: " +
-         std::string(4064, 'a') + "\r\n\r\n"},
+                                        std::string(4064, 'a') + "\r\n\r\n"},
         {"get", successor},
         {"pipeline", successor + successor},
         {"query",
@@ -149,7 +156,8 @@ int main(int argc, char** argv) {
         controls[1] = 11;
         controls[2] = char(window);
         engine.emplace("terminal-" + std::to_string(terminal) + "-window-" +
-                       std::to_string(window + 1), std::move(controls));
+                           std::to_string(window + 1),
+                       std::move(controls));
       }
     }
     write(argv[1], "engine", engine);

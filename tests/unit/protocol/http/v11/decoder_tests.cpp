@@ -24,16 +24,16 @@
 
 #include <algorithm>
 #include <array>
-#include <cstring>
+#include <charconv>
+#include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <functional>
 #include <limits>
 #include <optional>
-#include <stdexcept>
-#include <charconv>
-#include <cstddef>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -41,15 +41,15 @@
 #include <vector>
 
 #include "common/byte_storage.h"
+#include "decoder_target_case.h"
+#include "file_directory.h"
 #include "protocol/http/v11/contracts.h"
 #include "protocol/http/v11/decoder.h"
 #include "protocol/http/v11/request.h"
 #include "protocol/http/v11/response.h"
-#include "decoder_target_case.h"
 #include "response_wire.h"
-#include "test_helper.h"
 #include "temporary_directory.h"
-#include "file_directory.h"
+#include "test_helper.h"
 
 namespace {
 // /////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,6 @@ static_assert(!contracts::response<int>);
 constexpr std::size_t receive_capacity = 5120;
 constexpr std::size_t max_query_parameters = 128;
 
-
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] decoder_input                                              ( struct ) |
@@ -107,7 +106,7 @@ struct decoder_input {
     request_seen = false;
     std::string_view remaining(input);
     auto result = decoder.deserialize(remaining);
-    // This test helper returns requests that may outlive the next decode.
+    // Returned requests may outlive the next decode call.
     if (result.request) result.request->make_owned();
     input.erase(0, input.size() - remaining.size());
     request_seen = result.request.has_value();
@@ -127,9 +126,7 @@ struct decoder_input {
 // +---------------------------------------------------------------------------+
 // | [>] accumulate                                               ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function appends the given source to the decoder input and returns   |
-// | the number of bytes appended. It is used to simulate receiving data       |
-// | from a transport layer in chunks.                                         |
+// | Feed input in chunks, as a transport would.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::size_t accumulate(decoder_input& value, std::string_view source) {
@@ -140,9 +137,7 @@ std::size_t accumulate(decoder_input& value, std::string_view source) {
 // +---------------------------------------------------------------------------+
 // | [>] body_temp_files                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns a list of temporary files created by the decoder    |
-// | for request bodies. It is used to verify that the decoder cleans up       |
-// | temporary files after processing requests.                                |
+// | List spilled bodies to check they are cleaned up.                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::vector<std::filesystem::path> body_temp_files() {
@@ -161,11 +156,7 @@ std::vector<std::filesystem::path> body_temp_files() {
 // +---------------------------------------------------------------------------+
 // | [>] new_body_temp_file                                       ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function returns the path of a new temporary file created by the     |
-// | decoder for a request body. It is used to verify that the decoder creates |
-// | temporary files when needed. The function takes a list of paths that      |
-// | existed before the test and returns the first path that was not in        |
-// | that list. If no new file was created, it returns an empty path.          |
+// | Find a spill file created after the supplied snapshot.                    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 std::filesystem::path new_body_temp_file(
@@ -182,13 +173,7 @@ std::filesystem::path new_body_temp_file(
 // +---------------------------------------------------------------------------+
 // | [>] check_header                                             ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function checks that the decoder correctly parses a header field     |
-// | with the given name and value. It tests the header in three different     |
-// | cases (original, lower-case, upper-case) and with or without optional     |
-// | whitespace (OWS) around the field value. It also allows specifying a      |
-// | custom request line, extra headers, and a body for the request. The       |
-// | function verifies that the decoded request contains the expected header   |
-// | value and that the body is correctly handled if present.                  |
+// | Check header case and surrounding whitespace, then check any body too.    |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 void check_header(std::string_view name, std::string_view field_value,
@@ -257,8 +242,8 @@ DOBA_TEST("owned storage keeps a request valid across decoder reuse") {
   DOBA_EXPECT_EQUAL(following.request->get_absolute_path(), "/second");
   DOBA_EXPECT_EQUAL(original.request->get_absolute_path(), "/first");
   DOBA_EXPECT_EQUAL(original.request->get_header("X-Id").second, "retained");
-  DOBA_EXPECT_EQUAL(
-      original.request->get_query_parameter("token")->second, "old");
+  DOBA_EXPECT_EQUAL(original.request->get_query_parameter("token")->second,
+                    "old");
   std::array<std::byte, 4> output{};
   const auto state = original.request->get_body_reader()->read(output);
   DOBA_EXPECT(state.complete);
@@ -333,8 +318,7 @@ DOBA_TEST("request head may fill default receive buffer") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(head.data(), head.size());
-  const auto result =
-      value.deserialize(value_input);
+  const auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT(result.request.has_value());
 }
@@ -350,8 +334,7 @@ DOBA_TEST("incomplete head fails at configured head limit") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(head.data(), head.size());
-  const auto result =
-      value.deserialize(value_input);
+  const auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
 }
 
@@ -384,8 +367,7 @@ DOBA_TEST("request head size is bounded by HTTP policy") {
       std::string_view value_input;
       const std::size_t received = std::min(size, capacity);
       value_input = std::string_view(head.data(), received);
-      auto result =
-          value.deserialize(value_input);
+      auto result = value.deserialize(value_input);
       if (size <= capacity) {
         DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
         DOBA_EXPECT(result.request.has_value());
@@ -420,8 +402,7 @@ DOBA_TEST("header field count is bounded only by head size") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(head.data(), head.size());
-  const auto result =
-      value.deserialize(value_input);
+  const auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
 }
 
@@ -438,8 +419,7 @@ DOBA_TEST("request body spans default receive buffers") {
   decoder<request, response> value;
   std::string_view value_input;
   value_input = std::string_view(first.data(), first.size());
-  auto result =
-      value.deserialize(value_input);
+  auto result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kMoreBytesNeeded);
   DOBA_EXPECT(!result.request.has_value());
   const std::string_view remaining(body.data() + first_body_size,
@@ -2738,7 +2718,7 @@ DOBA_TEST("request retains its open temporary body after unlink") {
   DOBA_EXPECT(!error);
   const std::string body(16385, 'x');
   martianlabs::doba::protocol::http::v11::deserialization_result<request,
-                                                                response>
+                                                                 response>
       result;
   for (std::size_t offset = 0; offset < body.size();) {
     const auto count =
@@ -2794,8 +2774,9 @@ DOBA_TEST("absolute form uses its authority when Host differs") {
     const auto result = value.decode();
     if (!martianlabs::doba::tests::unit::test_helper::expect(
             result.code == deserialization_status::kSucceeded,
-            "absolute authority accepted", __FILE__, __LINE__))
+            "absolute authority accepted", __FILE__, __LINE__)) {
       continue;
+    }
     DOBA_EXPECT(value.request_seen);
   }
 }
@@ -2919,7 +2900,7 @@ DOBA_TEST("full body buffers remain consumable") {
 }
 
 // +===========================================================================+
-// | [>] unknown headers retain their complete normalized values ( test-case ) |
+// | [>] complete normalized unknown headers                     ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("unknown headers retain their complete normalized values") {
   check_header("Warning", "199 example \"diagnostic\"", true);
@@ -3140,8 +3121,7 @@ DOBA_TEST("decoder returns responses for rejection reasons") {
     decoder<request, response> value(configuration);
     std::string_view value_input;
     value_input = std::string_view(input.data(), input.size());
-    auto result =
-        value.deserialize(value_input);
+    auto result = value.deserialize(value_input);
     DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
     DOBA_EXPECT(!result.request.has_value());
     DOBA_EXPECT(result.response.has_value());
@@ -3413,10 +3393,9 @@ DOBA_TEST("decoder counts forwarding hops across header fields") {
 }
 
 DOBA_TEST("decoder applies the configured query parameter limit") {
-  const std::string source =
-      "GET /?a=1&b=2 HTTP/1.1\r\nHost: a\r\n\r\n";
-  for (const std::size_t limit : {std::size_t{1}, std::size_t{2},
-                                  std::size_t{0}}) {
+  const std::string source = "GET /?a=1&b=2 HTTP/1.1\r\nHost: a\r\n\r\n";
+  for (const std::size_t limit :
+       {std::size_t{1}, std::size_t{2}, std::size_t{0}}) {
     policies configuration;
     configuration.max_query_parameters = limit;
     decoder_input value(configuration);
@@ -3435,8 +3414,7 @@ DOBA_TEST("decoder applies the configured query parameter limit") {
   many += " HTTP/1.1\r\nHost: a\r\n\r\n";
   decoder_input value(expanded);
   DOBA_EXPECT_EQUAL(accumulate(value, many), many.size());
-  DOBA_EXPECT_EQUAL(value.decode().code,
-                    deserialization_status::kSucceeded);
+  DOBA_EXPECT_EQUAL(value.decode().code, deserialization_status::kSucceeded);
 }
 
 DOBA_TEST("decoder applies the configured request head limit") {
@@ -3465,13 +3443,56 @@ DOBA_TEST("decoder spills a body at the configured memory threshold") {
       std::array<std::byte, 2> output{};
       const auto state = req.get_body_reader()->read(output);
       DOBA_EXPECT(state.complete);
-      body.assign(reinterpret_cast<const char*>(output.data()),
-                  state.produced);
+      body.assign(reinterpret_cast<const char*>(output.data()), state.produced);
     };
     DOBA_EXPECT_EQUAL(accumulate(value, source), source.size());
-    DOBA_EXPECT_EQUAL(value.decode().code,
-                      deserialization_status::kSucceeded);
+    DOBA_EXPECT_EQUAL(value.decode().code, deserialization_status::kSucceeded);
     DOBA_EXPECT_EQUAL(body, "xy");
+  }
+}
+
+DOBA_TEST(
+    "custom body memory thresholds spill at exact raw and chunked sizes") {
+  martianlabs::doba::tests::file_directory directory;
+  martianlabs::doba::tests::unit::temporary_directory temp(
+      directory.path().string());
+  DOBA_EXPECT_EQUAL(temp.changed(), 0);
+  for (const bool chunked : {false, true}) {
+    const std::size_t buffered = chunked ? 13 : 8;
+    for (const auto threshold :
+         {std::size_t{0}, buffered - 1, buffered, buffered + 1}) {
+      const auto before = body_temp_files();
+      policies configuration;
+      configuration.request_body_memory_threshold = threshold;
+      {
+        decoder_input value(configuration);
+        value.append(
+            chunked
+                ? "POST / HTTP/1.1\r\nHost: a\r\nTransfer-Encoding: "
+                  "chunked\r\n\r\n"
+                : "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 8\r\n\r\n");
+        DOBA_EXPECT_EQUAL(value.decode().code,
+                          deserialization_status::kMoreBytesNeeded);
+        value.append(chunked ? "8\r\nabcdefgh\r\n" : "abcdefg");
+        DOBA_EXPECT_EQUAL(value.decode().code,
+                          deserialization_status::kMoreBytesNeeded);
+        const auto spill = new_body_temp_file(before);
+        DOBA_EXPECT_EQUAL(!spill.empty(), threshold < buffered);
+        value.append(chunked ? "0\r\n\r\n" : "h");
+        auto result = value.decode();
+        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
+        std::array<std::byte, 8> body{};
+        DOBA_EXPECT(result.request.has_value());
+        const auto read = result.request->get_body_reader()->read(body);
+        DOBA_EXPECT(read.complete && !read.has_error);
+        DOBA_EXPECT_EQUAL(read.produced, body.size());
+        DOBA_EXPECT_EQUAL(
+            std::string_view(reinterpret_cast<const char*>(body.data()),
+                             body.size()),
+            "abcdefgh");
+      }
+      DOBA_EXPECT(new_body_temp_file(before).empty());
+    }
   }
 }
 
@@ -3552,8 +3573,10 @@ DOBA_TEST("owned request survives fragmented input and decoder destruction") {
     DOBA_EXPECT_EQUAL(moved.get_query_parameter("token")->second, "old");
     std::array<std::byte, 3> bytes{};
     DOBA_EXPECT(moved.get_body_reader()->read(bytes).complete);
-    DOBA_EXPECT_EQUAL(std::string_view(
-        reinterpret_cast<const char*>(bytes.data()), bytes.size()), "abc");
+    DOBA_EXPECT_EQUAL(
+        std::string_view(reinterpret_cast<const char*>(bytes.data()),
+                         bytes.size()),
+        "abc");
   }
 }
 
@@ -3571,8 +3594,7 @@ DOBA_TEST("owned response survives decoder destruction") {
 
 DOBA_TEST("large operational limits do not reserve message buffers") {
   policies configuration;
-  configuration.max_request_head_size =
-      std::numeric_limits<std::size_t>::max();
+  configuration.max_request_head_size = std::numeric_limits<std::size_t>::max();
   configuration.max_response_head_size =
       std::numeric_limits<std::size_t>::max();
   configuration.request_body_memory_threshold =
@@ -3589,7 +3611,6 @@ DOBA_TEST("large operational limits do not reserve message buffers") {
   reply.ok_200().set_body("small");
   DOBA_EXPECT_EQUAL(reply.serialize().body, "small");
 }
-
 
 // +===========================================================================+
 // | [>] accumulator ownership and pipelining                    ( test-case ) |
@@ -3660,8 +3681,9 @@ DOBA_TEST("decoder accepts a receive block larger than the head limit") {
   const auto state = result.request->get_body_reader()->read(body);
   DOBA_EXPECT(state.complete);
   DOBA_EXPECT_EQUAL(state.produced, body.size());
-  DOBA_EXPECT_EQUAL(std::string(reinterpret_cast<const char*>(body.data()),
-                                body.size()), std::string(8192, 'x'));
+  DOBA_EXPECT_EQUAL(
+      std::string(reinterpret_cast<const char*>(body.data()), body.size()),
+      std::string(8192, 'x'));
   result = value.deserialize(value_input);
   DOBA_EXPECT_EQUAL(result.code, deserialization_status::kSucceeded);
   DOBA_EXPECT_EQUAL(result.request->get_absolute_path(), "/next");
@@ -3682,7 +3704,8 @@ DOBA_TEST(
         const std::string wire =
             std::string("POST /bor%72owed HTTP/1.1\r\nHost: example\r\n") +
             (chunked ? "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n"
-                     : "Content-Length: 3\r\n\r\nabc") + next;
+                     : "Content-Length: 3\r\n\r\nabc") +
+            next;
         const auto unchanged = wire;
         std::string_view input(wire);
         auto result = value.deserialize(input);
@@ -3716,9 +3739,10 @@ DOBA_TEST(
       }
       DOBA_EXPECT_EQUAL(held->get_absolute_path(), "/borrowed");
       DOBA_EXPECT_EQUAL(held->get_host(), "example");
-      if (payload)
+      if (payload) {
         DOBA_EXPECT_EQUAL(
             std::string_view(reinterpret_cast<const char*>(payload), 3), "abc");
+      }
       if (chunked) {
         std::array<std::byte, 3> body{};
         DOBA_EXPECT(held->get_body_reader()->read(body).complete);
@@ -3775,10 +3799,9 @@ DOBA_TEST(
 }
 
 DOBA_TEST("decoder rejects complete malformed CONNECT heads at every split") {
-  for (const std::string_view head : {
-           "CONNECT T- / HTTP/1.1\r\n\r\n",
-           "CONNECT missing-port HTTP/1.1\r\n\r\n",
-           "CONNECT [::1 HTTP/1.1\r\n\r\n"}) {
+  for (const std::string_view head : {"CONNECT T- / HTTP/1.1\r\n\r\n",
+                                      "CONNECT missing-port HTTP/1.1\r\n\r\n",
+                                      "CONNECT [::1 HTTP/1.1\r\n\r\n"}) {
     for (const std::string_view tail : {"", "X: later bytes"}) {
       const std::string wire = std::string(head) + std::string(tail);
       for (std::size_t split = 0; split <= wire.size(); ++split) {
@@ -3789,8 +3812,7 @@ DOBA_TEST("decoder rejects complete malformed CONNECT heads at every split") {
           input = std::string_view(wire).substr(split);
           result = value.deserialize(input);
         }
-        DOBA_EXPECT_EQUAL(result.code,
-                          deserialization_status::kInvalidSource);
+        DOBA_EXPECT_EQUAL(result.code, deserialization_status::kInvalidSource);
         DOBA_EXPECT(!result.request.has_value());
         DOBA_EXPECT(result.response.has_value());
         DOBA_EXPECT(result.response->serialize().head.starts_with(
@@ -3813,12 +3835,12 @@ DOBA_TEST("decoder rejects complete malformed CONNECT heads at every split") {
 }
 
 DOBA_TEST("decoder retains incomplete absolute URI userinfo at every split") {
-  for (const std::string_view authority : {
-           "user:pass@target.example", ":pass@target.example",
-           "user:p%40ss@target.example", "user:p:a@target.example:81",
-           "user:pass@[::1]:81", "user:pass@[v1.name]"}) {
+  for (const std::string_view authority :
+       {"user:pass@target.example", ":pass@target.example",
+        "user:p%40ss@target.example", "user:p:a@target.example:81",
+        "user:pass@[::1]:81", "user:pass@[v1.name]"}) {
     const std::string first = "GET custom://" + std::string(authority) +
-        "/path?key=value HTTP/1.1\r\nHost: x\r\n\r\n";
+                              "/path?key=value HTTP/1.1\r\nHost: x\r\n\r\n";
     const std::string second = "GET /next HTTP/1.1\r\nHost: x\r\n\r\n";
     const std::string wire = first + second;
     for (std::size_t split = 0; split <= wire.size(); ++split) {
@@ -3856,14 +3878,12 @@ DOBA_TEST("decoder retains incomplete absolute URI userinfo at every split") {
 }
 
 DOBA_TEST("decoder defers malformed URI prefixes until a delimiter or limit") {
-  for (const std::string_view wire : {
-           "GET custom://user:pass", "GET custom://:pass",
-           "POHost xpm://e*]***************%a",
-           "GET custom://[invalid]%a", "GET custom://host:x%a",
-           "GET /;twoV%00;two%0\r\n", "GET /%00",
-           "GET /%00%", "GET /%00%0", "GET /%00%gg",
-           "GET custom:/%00%0", "GET custom://host/%00%0",
-           "GET /%gg"}) {
+  for (const std::string_view wire :
+       {"GET custom://user:pass", "GET custom://:pass",
+        "POHost xpm://e*]***************%a", "GET custom://[invalid]%a",
+        "GET custom://host:x%a", "GET /;twoV%00;two%0\r\n", "GET /%00",
+        "GET /%00%", "GET /%00%0", "GET /%00%gg", "GET custom:/%00%0",
+        "GET custom://host/%00%0", "GET /%gg"}) {
     for (std::size_t split = 0; split <= wire.size(); ++split) {
       decoder<request, response> value({});
       for (auto piece : {wire.substr(0, split), wire.substr(split)}) {
@@ -3901,10 +3921,11 @@ DOBA_TEST("decoder replies own their bytes across reuse and destruction") {
     std::optional<response> held;
     {
       decoder<request, response> value({});
-      const std::string source = interim
-          ? "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n"
-            "Content-Length: 3\r\n\r\n"
-          : "GET / HTTP/1.1\r\n\r\n";
+      const std::string source =
+          interim
+              ? "POST / HTTP/1.1\r\nHost: localhost\r\nExpect: 100-continue\r\n"
+                "Content-Length: 3\r\n\r\n"
+              : "GET / HTTP/1.1\r\n\r\n";
       std::string_view input(source);
       auto result = value.deserialize(input);
       DOBA_EXPECT_EQUAL(result.code,

@@ -33,10 +33,20 @@ template <typename KEty>
 using hash_set = std::unordered_set<KEty, detail::base_hash, detail::base_equal>;
 ```
 
-Provides a generic hash based set.
+An ASCII-case-insensitive string-key set used by doba. The hash and equality
+objects fold `A` through `Z` only; embedded zero bytes and bytes above ASCII
+remain significant. This is not locale or Unicode case folding.
+
+`KEty` must work with the `std::string_view` hash/equality operations, such as
+`std::string` or `std::string_view`. Transparent lookup accepts string views
+without building a key. Equivalent spellings identify the same element.
+
+View keys require stable, unchanged backing bytes while stored. Other
+operations and iterator invalidation follow `std::unordered_set`; the alias
+adds no locking.
 
 **Template parameters:**
 
 - **KEty:** `typename KEty`.
 
-**Source:** [include/common/hash_set.h:41](../../../include/common/hash_set.h#L41)
+**Source:** [include/common/hash_set.h](../../../include/common/hash_set.h)

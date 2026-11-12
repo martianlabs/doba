@@ -1,4 +1,4 @@
-# HTTP/1.1 engine
+# <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> HTTP/1.1 engine
 
 Header: [engine.h](../../../../../include/protocol/http/v11/engine.h).
 
@@ -7,7 +7,7 @@ without an activation flag, executor injection or alternative engine type.
 The router must outlive its engines. All input, processing turns, callbacks
 and destruction for one instance must be serialized and nonreentrant.
 
-## Public interface
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Public interface
 
 ```cpp
 engine(policies configuration, const ROty& router);
@@ -23,7 +23,7 @@ headers, body and route parameters before first invocation. Unadmitted bytes
 are retained by the engine under a finite limit. There is no consumed-byte
 return, input pause/resume interface or application execution service.
 
-## Concurrent execution, ordered output
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Concurrent execution, ordered output
 
 The engine admits requests in wire order. Several async handlers on the same
 connection may be suspended simultaneously; later sync and async handlers can
@@ -50,7 +50,7 @@ calls close at its output frontier. Fatal byte-limit/delivery failures close
 and cancel pending work immediately, without an out-of-order error response.
 Accepted source ownership is retained through drain or engine destruction.
 
-## Synchronous path and ownership
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Synchronous path and ownership
 
 Uncontended synchronous inline responses use reusable engine storage and emit
 directly. They do not allocate or scan async records. Pending-state allocation
@@ -70,7 +70,7 @@ controlled task owner. Arbitrary foreign resumption is rejected. Handlers are
 cooperative: blocking or non-suspending computation occupies their worker.
 There is no preemption or background application pool.
 
-## Limits and current integration status
+## <a href="../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Limits and current integration status
 
 The [policies](policies.md) require positive finite limits: 128 pending request
 positions, 1 MiB deferred raw input, 1 MiB pending serialized head/inline body
@@ -83,10 +83,10 @@ transport workers, so cooperative HTTP handlers and reader continuation work
 over plain TCP. No application executor or mode switch is required.
 TLS forwards the same snapshots and engine turns over both TCP backends.
 Its existing finite plaintext and ciphertext batch limits apply to each
-input/processing entry. See the [TLS contract](../../../transport/server/tls.md).
+input/processing entry. See the [TLS contract](../../../transport/tls.md).
 
-See [the compiled example](../../../../../examples/http/v11/processing_turns/README.md)
-and [the plan](../../../../../ASYNC.md).
+See the [compiled in-memory example](../../../../../examples/http/v11/processing_turns/README.md)
+and the [native TCP example](../../../../../examples/http/v11/async_routes/README.md).
 
 See the [retirement inventory](async-retirement.md) for removed legacy
 mechanisms, preserved ownership and coverage mapping.

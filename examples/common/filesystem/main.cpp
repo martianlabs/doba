@@ -37,12 +37,7 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is a simple example of how to use the common filesystem and reader   |
-// | classes to read a file from a given root directory and relative path. The |
-// | program takes two command-line arguments: the root directory and the      |
-// | relative file path. It opens the file, reads its contents in blocks,      |
-// | and writes them to standard output. If any error occurs during the        |
-// | process, it prints an error message and returns a non-zero exit code.     |
+// | Read a file beneath a root, or print its metadata.                        |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
@@ -54,13 +49,13 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::error_code error;
-  const auto root = filesystem_root(argv[1], error);
+  const auto root = filesystem::root(argv[1], error);
   if (error) {
     std::cerr << error.message() << '\n';
     return 1;
   }
   if (attributes) {
-    const auto value = filesystem_file::inspect(root, argv[2], error);
+    const auto value = filesystem::inspect(root, argv[2], error);
     if (!value) {
       std::cerr << error.message() << '\n';
       return 1;
@@ -76,7 +71,7 @@ int main(int argc, char* argv[]) {
               << "links: " << value->links << '\n';
     return std::cout ? 0 : 1;
   }
-  filesystem_file file;
+  filesystem file;
   if (!file.open(root, argv[2], error)) {
     std::cerr << error.message() << '\n';
     return 1;

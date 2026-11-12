@@ -27,11 +27,11 @@
 #include <string_view>
 #include <utility>
 
-#include "protocol/processing_result.h"
 #include "common/signaler.h"
 #include "protocol/contracts.h"
+#include "protocol/processing_result.h"
 #include "server.h"
-#include "transport/server/tcp.h"
+#include "transport/tcp.h"
 
 namespace {
 using martianlabs::doba::protocol::processing_result;
@@ -41,7 +41,7 @@ using martianlabs::doba::protocol::processing_result;
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 namespace protocol = martianlabs::doba::protocol;
-namespace transport = martianlabs::doba::transport::server;
+namespace transport = martianlabs::doba::transport;
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
@@ -90,16 +90,15 @@ struct custom_protocol {
   // +-------------------------------------------------------------------------+
   processing_result on_processing_turn(bool) { return {}; }
 
-
  private:
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Protocol line limit, including the newline, independent of socket RX.
+  // Limit the whole line, including its newline, regardless of receive size.
   static constexpr std::size_t kMaximumLineSize = 4096;
-  // Incomplete line retained by the engine between input calls.
+  // Keep an unfinished line until more input arrives.
   std::string input_;
-  // Synchronous output and closure supplied by the transport.
+  // Call these only during the current engine call.
   protocol::send_delegate on_send_;
   std::function<void()> on_close_;
 };
@@ -109,7 +108,7 @@ struct custom_protocol {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | Runs a line-based protocol on doba's TCP transport.                       |
+// | Run a line-based protocol over TCP.                                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

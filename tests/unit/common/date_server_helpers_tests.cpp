@@ -22,9 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#include <limits>
 
 #include "common/date_server_helpers.h"
-
 #include "test_helper.h"
 
 namespace {
@@ -57,7 +57,7 @@ DOBA_TEST("utc conversion preserves calendar boundaries") {
   };
   for (const auto& value : cases) {
     struct tm output{};
-    gm_time(&output, &value.timestamp);
+    DOBA_EXPECT(gm_time(&output, &value.timestamp));
     DOBA_EXPECT_EQUAL(output.tm_year + 1900, value.year);
     DOBA_EXPECT_EQUAL(output.tm_mon + 1, value.month);
     DOBA_EXPECT_EQUAL(output.tm_mday, value.day);
@@ -76,8 +76,17 @@ DOBA_TEST("utc conversion preserves calendar boundaries") {
 DOBA_TEST("utc conversion reports success") {
   time_t timestamp = 0;
   struct tm output{};
-  gm_time(&output, &timestamp);
+  DOBA_EXPECT(gm_time(&output, &timestamp));
   DOBA_EXPECT_EQUAL(output.tm_year, 70);
+}
+
+// +===========================================================================+
+// | [>] utc conversion reports out-of-range timestamps          ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("utc conversion reports out-of-range timestamps") {
+  const auto timestamp = std::numeric_limits<time_t>::max();
+  struct tm output{};
+  DOBA_EXPECT(!gm_time(&output, &timestamp));
 }
 
 // +===========================================================================+

@@ -33,9 +33,9 @@ This header declares the types and operations listed below.
 using header = std::pair<std::string, std::string>;
 ```
 
-A header is a key-value pair of strings. The key is the header name
+Owns the header name in `first` and value in `second`. The pair itself does not validate, trim, or compare names case-insensitively.
 
-**Source:** [include/protocol/http/common/header.h:41](../../../../../include/protocol/http/common/header.h#L41)
+**Source:** [include/protocol/http/common/header.h](../../../../../include/protocol/http/common/header.h)
 
 <a id="alias-header-view"></a>
 
@@ -47,6 +47,6 @@ A header is a key-value pair of strings. The key is the header name
 using header_view = std::pair<std::string_view, std::string_view>;
 ```
 
-Alias for `std::pair<std::string_view, std::string_view>`.
+Borrows the header name and value. Both backing strings must remain alive and unchanged while the views are used. The pair does not validate or normalize either component.
 
-**Source:** [include/protocol/http/common/header.h:42](../../../../../include/protocol/http/common/header.h#L42)
+**Source:** [include/protocol/http/common/header.h](../../../../../include/protocol/http/common/header.h)

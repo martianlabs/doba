@@ -22,229 +22,94 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include <chrono>
-#include <coroutine>
-#include <exception>
 #include <memory>
-#include <stdexcept>
-#include <string_view>
-#include <thread>
 #include <type_traits>
 #include <utility>
 
-#include "common/task.h"
-#include "common/task_awaiters.h"
-#include "common/task_scheduler.h"
+#include "../../helpers/concurrency.h"
+#include "common/task_execution.h"
 #include "test_helper.h"
 
 namespace {
 using martianlabs::doba::common::task;
-using martianlabs::doba::common::task_scheduler;
+using martianlabs::doba::common::task_execution;
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] pause                                                      ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct pause {
-  std::coroutine_handle<>& next;
+template <typename Tty>
+concept task_available = requires { typename task<Tty>; };
 
-  // +-------------------------------------------------------------------------+
-  // | [>] await_ready                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool await_ready() const noexcept { return false; }
-  // +-------------------------------------------------------------------------+
-  // | [>] await_suspend                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_suspend(std::coroutine_handle<> handle) const noexcept {
-    next = handle;
-  }
-  // +-------------------------------------------------------------------------+
-  // | [>] await_resume                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_resume() const noexcept {}
-};
-
-task<void> run(std::coroutine_handle<>& next, int& steps) {
-  steps++;
-  co_await pause{next};
-  steps++;
-}
-
-task<void> fail() {
-  throw std::runtime_error("task failure");
-  co_return;
-}
-
-task<void> retain(std::shared_ptr<int>) {
-  co_return;
-}
-
-task<void> fail_after(std::coroutine_handle<>& next) {
-  co_await pause{next};
-  throw std::runtime_error("after suspension");
-}
-
-task<void> use_scheduler(int& steps) {
-  steps++;
+task<> run(int& steps) {
+  ++steps;
   co_await martianlabs::doba::common::yield();
-  steps++;
-  co_await martianlabs::doba::common::sleep_for(
-      std::chrono::milliseconds(10));
-  steps++;
+  ++steps;
 }
 
-task<void> immediate_sleep(int& steps) {
-  steps++;
-  co_await martianlabs::doba::common::sleep_for(
-      std::chrono::steady_clock::duration::zero());
-  steps++;
-}
-
-task<void> without_scheduler(bool timed) {
-  if (timed) {
-    co_await martianlabs::doba::common::sleep_for(
-        std::chrono::milliseconds(1));
-  } else {
-    co_await martianlabs::doba::common::yield();
-  }
-}
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] scheduled_handles                                          ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct scheduled_handles {
-  std::coroutine_handle<> ready;
-  std::coroutine_handle<> timed;
-  std::chrono::steady_clock::time_point due;
-};
+task<> retain(std::shared_ptr<int>) { co_return; }
 }  // namespace
 
-DOBA_TEST("task starts lazily and completes after resumption") {
-  static_assert(!std::is_copy_constructible_v<task<void>>);
-  static_assert(std::is_move_constructible_v<task<void>>);
-  std::coroutine_handle<> next;
+// +===========================================================================+
+// | [>] task result constraint                                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("task constraints reject unsupported result types") {
+  DOBA_EXPECT(task_available<void>);
+  DOBA_EXPECT(!task_available<int>);
+  DOBA_EXPECT(!task_available<void*>);
+  DOBA_EXPECT(!task_available<const void>);
+}
+
+// +===========================================================================+
+// | [>] lazy task ownership                                     ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("task transfers a lazy frame to its execution owner") {
+  static_assert(!std::is_copy_constructible_v<task<>>);
+  static_assert(std::is_move_constructible_v<task<>>);
   int steps = 0;
-  bool completed = false;
-  auto value = run(next, steps);
+  auto value = run(steps);
   DOBA_EXPECT_EQUAL(steps, 0);
   auto moved = std::move(value);
-  moved.start([&](std::exception_ptr error) {
-    DOBA_EXPECT(!error);
-    completed = true;
-  });
+  task_execution work(std::move(moved));
+  DOBA_EXPECT_EQUAL(steps, 0);
+  DOBA_EXPECT(work.resume());
   DOBA_EXPECT_EQUAL(steps, 1);
-  DOBA_EXPECT(!completed);
-  next.resume();
+  DOBA_EXPECT(!work.done());
+  DOBA_EXPECT(work.resume());
   DOBA_EXPECT_EQUAL(steps, 2);
-  DOBA_EXPECT(completed);
+  DOBA_EXPECT(work.done());
+  DOBA_EXPECT(!work.error());
 }
 
-DOBA_TEST("task reports coroutine exceptions") {
-  bool completed = false;
-  auto value = fail();
-  value.start([&](std::exception_ptr error) {
-    DOBA_EXPECT(static_cast<bool>(error));
-    try {
-      std::rethrow_exception(error);
-    } catch (const std::runtime_error&) {
-      completed = true;
+// +===========================================================================+
+// | [>] abandoned task cleanup                                  ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("task releases an unstarted frame after ownership moves") {
+  auto token = std::make_shared<int>(1);
+  {
+    auto value = retain(token);
+    DOBA_EXPECT_EQUAL(token.use_count(), 2);
+    auto moved = std::move(value);
+    DOBA_EXPECT_EQUAL(token.use_count(), 2);
+  }
+  DOBA_EXPECT_EQUAL(token.use_count(), 1);
+}
+
+// +===========================================================================+
+// | [>] explicit frame transfer                                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("released task frame survives the original task") {
+  auto token = std::make_shared<int>(1);
+  task<>::handle_type handle;
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    if (handle) {
+      handle.destroy();
     }
   });
-  DOBA_EXPECT(completed);
-}
-
-DOBA_TEST("task releases unstarted frames and replaced ownership") {
-  auto first = std::make_shared<int>(1);
-  auto second = std::make_shared<int>(2);
   {
-    auto value = retain(first);
-    auto replaced = retain(second);
-    DOBA_EXPECT_EQUAL(first.use_count(), 2);
-    DOBA_EXPECT_EQUAL(second.use_count(), 2);
-    replaced = std::move(value);
-    DOBA_EXPECT_EQUAL(second.use_count(), 1);
+    auto value = retain(token);
+    handle = std::move(value).release();
+    DOBA_EXPECT(static_cast<bool>(handle));
+    DOBA_EXPECT(!std::move(value).release());
   }
-  DOBA_EXPECT_EQUAL(first.use_count(), 1);
-}
-
-DOBA_TEST("task completes once on a different resuming thread") {
-  std::coroutine_handle<> next;
-  int completions = 0;
-  std::thread::id completed_on;
-  auto value = fail_after(next);
-  value.start([&](std::exception_ptr error) {
-    completions++;
-    completed_on = std::this_thread::get_id();
-    DOBA_EXPECT(static_cast<bool>(error));
-  });
-  DOBA_EXPECT_EQUAL(completions, 0);
-  std::jthread worker([&]() { next.resume(); });
-  const auto worker_id = worker.get_id();
-  worker.join();
-  DOBA_EXPECT_EQUAL(completions, 1);
-  DOBA_EXPECT(completed_on == worker_id);
-}
-
-DOBA_TEST("task yields and sleeps through its scheduler") {
-  scheduled_handles handles;
-  task_scheduler scheduler{
-      &handles,
-      [](void* owner, std::coroutine_handle<> handle) {
-        static_cast<scheduled_handles*>(owner)->ready = handle;
-      },
-      [](void* owner, std::chrono::steady_clock::time_point due,
-         std::coroutine_handle<> handle) {
-        auto& state = *static_cast<scheduled_handles*>(owner);
-        state.due = due;
-        state.timed = handle;
-      }};
-  int steps = 0;
-  bool completed = false;
-  auto value = use_scheduler(steps);
-  value.start([&](std::exception_ptr error) {
-    DOBA_EXPECT(!error);
-    completed = true;
-  }, scheduler);
-  DOBA_EXPECT_EQUAL(steps, 1);
-  DOBA_EXPECT(static_cast<bool>(handles.ready));
-  const auto before = std::chrono::steady_clock::now();
-  handles.ready.resume();
-  DOBA_EXPECT_EQUAL(steps, 2);
-  DOBA_EXPECT(static_cast<bool>(handles.timed));
-  DOBA_EXPECT(handles.due > before);
-  handles.timed.resume();
-  DOBA_EXPECT_EQUAL(steps, 3);
-  DOBA_EXPECT(completed);
-}
-
-DOBA_TEST("task skips zero sleep without a scheduler") {
-  int steps = 0;
-  int completions = 0;
-  auto value = immediate_sleep(steps);
-  value.start([&](std::exception_ptr error) {
-    DOBA_EXPECT(!error);
-    completions++;
-  });
-  DOBA_EXPECT_EQUAL(steps, 2);
-  DOBA_EXPECT_EQUAL(completions, 1);
-}
-
-DOBA_TEST("task reports a missing scheduler for yield and sleep") {
-  for (bool timed : {false, true}) {
-    int completions = 0;
-    auto value = without_scheduler(timed);
-    value.start([&](std::exception_ptr error) {
-      DOBA_EXPECT(static_cast<bool>(error));
-      try {
-        std::rethrow_exception(error);
-      } catch (const std::runtime_error& failure) {
-        DOBA_EXPECT_EQUAL(std::string_view(failure.what()),
-                          "No task scheduler");
-      }
-      completions++;
-    });
-    DOBA_EXPECT_EQUAL(completions, 1);
-  }
+  DOBA_EXPECT_EQUAL(token.use_count(), 2);
+  handle.destroy();
+  handle = {};
+  DOBA_EXPECT_EQUAL(token.use_count(), 1);
 }

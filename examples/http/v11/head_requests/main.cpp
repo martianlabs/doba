@@ -23,8 +23,8 @@
 // permissions and limitations under the License.
 
 #include "common/signaler.h"
-#include "protocol/http/common/method_names.h"
 #include "http_server.h"
+#include "protocol/http/common/method_names.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
@@ -35,11 +35,7 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | It defines a resource handler for the "/resource" endpoint that responds  |
-// | to both GET and HEAD requests. The server is started, and the application |
-// | waits for termination signals.                                            |
+// | Use one handler for GET and HEAD.                                         |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

@@ -32,9 +32,7 @@ using namespace martianlabs::doba::common;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the program. It initializes and starts the     |
-// | date server, prints the current date, and then stops the server           |
-// | before exiting.                                                           |
+// | Print the cached HTTP date.                                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

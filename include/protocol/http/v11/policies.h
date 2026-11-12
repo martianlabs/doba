@@ -28,76 +28,64 @@
 #include <cstddef>
 
 #include "common/byte_storage.h"
-#include "transport/server/tcp_policies.h"
+#include "transport/tcp_policies.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] policies                                                   ( struct ) |
 // +---------------------------------------------------------------------------+
-// | HTTP/1.1 resource limits, memory thresholds and feature switches.         |
-// | The defaults below preserve the standard server behavior.                 |
-// | A limit of 0 means unlimited unless noted.                                |
+// | HTTP/1.1 limits, memory thresholds and optional features.                 |
+// | Limits use 0 for unlimited unless noted below.                            |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct policies {
   // +=========================================================================+
   // | [>] CONSTANTs                                                ( public ) |
   // +-------------------------------------------------------------------------+
-  // Default maximum query parameter pairs per request.
   static constexpr std::size_t kDefaultMaxQueryParameters = 128;
-  // Default maximum chunk extension bytes per chunk.
   static constexpr std::size_t kDefaultMaxChunkExtensionSize = 1024;
-  // Default maximum trailer section bytes per chunked body.
   static constexpr std::size_t kDefaultMaxTrailerSectionSize = 4096;
-  // Maximum accepted request head bytes.
   static constexpr std::size_t kDefaultMaxRequestHeadSize = 4 * 1024;
-  // Request body wire bytes retained before spilling to disk.
   static constexpr std::size_t kDefaultRequestBodyMemoryThreshold = 16 * 1024;
-  // Maximum serialized response head bytes.
   static constexpr std::size_t kDefaultMaxResponseHeadSize = 4 * 1024;
-  // Response body bytes kept inline before using a writer.
   static constexpr std::size_t kDefaultResponseBodyMemoryThreshold = 16 * 1024;
-  // Maximum accepted body size, in octets (0 means unlimited).
+  // +=========================================================================+
+  // | [>] ATTRIBUTEs                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // Request body limit, in bytes.
   std::size_t max_request_body_size = 16 * 1024 * 1024;
-  // Maximum number of forwarding hops accepted across Via / Forwarded /
-  // X-Forwarded-For (0 means unlimited).
+  // Total hops across Via, Forwarded and X-Forwarded-For.
   std::size_t max_forwarding_hops = 32;
-  // Maximum number of transfer-codings accepted in Transfer-Encoding
-  // (0 means unlimited).
+  // Number of codings allowed in Transfer-Encoding.
   std::size_t max_transfer_codings = 4;
-  // Whether the server allows requests carrying a chunked Transfer-Encoding.
+  // Accept chunked request bodies.
   bool allow_chunked = true;
-  // Whether the server allows protocol upgrades offered via Upgrade.
-  //
-  // NOTE: no protocol upgrade is ever completed. This flag only decides
-  // whether an offer is rejected or ignored: true accepts the request and
-  // serves it over HTTP/1.1, discarding the offer (RFC 9110 S7.8 allows a
-  // server to ignore Upgrade); false rejects the request outright. Honouring
-  // an upgrade is deferred to a future release.
+  // Ignore valid Upgrade offers when true; reject them when false.
+  // Requests still use HTTP/1.1.
   bool allow_upgrade = true;
-  // Admitted requests and completed responses awaiting emission (positive).
+  // Queued requests and responses; must be positive.
   std::size_t max_pending_requests = 128;
-  // Serialized head/inline body bytes awaiting acceptance (positive).
+  // Queued response head and inline body bytes; must be positive.
   std::size_t max_pending_response_bytes = 1024 * 1024;
-  // Async starts/resumes and buffered admissions per entry (positive).
+  // Work budget per engine turn; must be positive.
   std::size_t max_task_steps_per_turn = 64;
-  // Raw input retained behind a suspended handler/output source (positive).
+  // Input bytes waiting for processing capacity; must be positive.
   std::size_t max_deferred_input_size = 1024 * 1024;
-  // Maximum query parameter pairs (0 means unlimited).
+  // Query parameter pairs per request.
   std::size_t max_query_parameters = kDefaultMaxQueryParameters;
-  // Maximum chunk extension bytes (0 means unlimited).
+  // Extension bytes per chunk.
   std::size_t max_chunk_extension_size = kDefaultMaxChunkExtensionSize;
-  // Maximum trailer section bytes (0 means unlimited).
+  // Trailer section bytes per chunked body.
   std::size_t max_trailer_section_size = kDefaultMaxTrailerSectionSize;
-  // Maximum request head bytes (must be positive).
+  // Request head bytes; must be positive.
   std::size_t max_request_head_size = kDefaultMaxRequestHeadSize;
-  // Request body wire bytes kept in memory (0 spills immediately).
+  // Body bytes kept as received before spilling to disk; 0 spills immediately.
   std::size_t request_body_memory_threshold =
       kDefaultRequestBodyMemoryThreshold;
-  // Maximum response head bytes (must be positive).
+  // Response head bytes; must be positive.
   std::size_t max_response_head_size = kDefaultMaxResponseHeadSize;
-  // Response body bytes kept inline (0 disables inline storage).
+  // Response body bytes kept inline; 0 disables inline storage.
   std::size_t response_body_memory_threshold =
       kDefaultResponseBodyMemoryThreshold;
 };

@@ -24,18 +24,16 @@
 
 #include <concepts>
 #include <memory>
-#include <exception>
-#include <coroutine>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include "protocol/http/common/router_match_result.h"
+#include "common/task_execution.h"
 #include "protocol/http/common/router.h"
+#include "protocol/http/common/router_match_result.h"
 #include "protocol/http/v11/contracts.h"
-#include "common/task.h"
 #include "router_value_response.h"
 #include "test_helper.h"
 
@@ -45,8 +43,6 @@ using martianlabs::doba::tests::unit::router_value_response;
 // +---------------------------------------------------------------------------+
 // | [>] request                                                    ( struct ) |
 // +---------------------------------------------------------------------------+
-// | Test message representation.                                              |
-// +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct request {
   // +=========================================================================+
@@ -55,9 +51,10 @@ struct request {
   int event{0};
 };
 
+using martianlabs::doba::common::task;
+using martianlabs::doba::common::task_execution;
 using martianlabs::doba::protocol::http::router;
 using martianlabs::doba::protocol::http::router_match_result;
-using martianlabs::doba::common::task;
 
 static_assert(
     std::same_as<decltype(router<request, router_value_response>{}.match("GET",
@@ -76,27 +73,27 @@ static_assert(!martianlabs::doba::protocol::http::v11::contracts::router<
 // /////////////////////////////////////////////////////////////////////////////
 struct route_only_router {
   template <typename Hty>
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] add                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   void add(std::string_view method, std::string_view path, Hty handler) {
     routes_.add(method, path, std::move(handler));
   }
   template <typename CTty, typename... Args>
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] add_controller                                           ( public ) |
   // +-------------------------------------------------------------------------+
   void add_controller(Args&&... args) {
     routes_.template add_controller<CTty>(std::forward<Args>(args)...);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] match                                                    ( public ) |
   // +-------------------------------------------------------------------------+
   router_match_result<request, router_value_response> match(
       std::string_view method, std::string_view path) const {
     return routes_.match(method, path);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] allowed_methods                                          ( public ) |
   // +-------------------------------------------------------------------------+
   std::string allowed_methods(std::string_view path) const {
@@ -109,28 +106,6 @@ struct route_only_router {
 static_assert(martianlabs::doba::protocol::http::v11::contracts::router<
               route_only_router, request, router_value_response>);
 
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] suspend_once                                               ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct suspend_once {
-  std::coroutine_handle<>& next;
-  // +-------------------------------------------------------------------------+
-  // | [>] await_ready                                              ( public ) |
-  // +-------------------------------------------------------------------------+
-  bool await_ready() const noexcept { return false; }
-  // +-------------------------------------------------------------------------+
-  // | [>] await_suspend                                            ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_suspend(std::coroutine_handle<> handle) const noexcept {
-    next = handle;
-  }
-  // +-------------------------------------------------------------------------+
-  // | [>] await_resume                                             ( public ) |
-  // +-------------------------------------------------------------------------+
-  void await_resume() const noexcept {}
-};
 }  // namespace
 
 DOBA_TEST("router selects asynchronous route forms") {
@@ -155,30 +130,35 @@ DOBA_TEST("router selects asynchronous route forms") {
   router_value_response res;
   auto match = value.match("GET", "/items/42");
   DOBA_EXPECT(match.async_handler != nullptr);
-  auto selected = (*match.async_handler)(req, res);
-  selected.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution selected((*match.async_handler)(req, res));
+  DOBA_EXPECT(selected.resume());
+  DOBA_EXPECT(selected.done());
+  DOBA_EXPECT(!selected.error());
   DOBA_EXPECT_EQUAL(res.value, "static");
   match = value.match("GET", "/items/7");
   DOBA_EXPECT(match.async_parametrized_handler != nullptr);
   std::shared_ptr<void> parameters;
-  auto parametrized = match.async_parametrized_handler->invoke(
-      req, res, "/items/7", parameters);
-  parametrized.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution parametrized(match.async_parametrized_handler->invoke(
+      req, res, "/items/7", parameters));
+  DOBA_EXPECT(parametrized.resume());
+  DOBA_EXPECT(parametrized.done());
+  DOBA_EXPECT(!parametrized.error());
   DOBA_EXPECT_EQUAL(res.value, "7");
   match = value.match("GET", "/items/name/extra");
   DOBA_EXPECT(match.async_handler != nullptr);
-  auto wildcard = (*match.async_handler)(req, res);
-  wildcard.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution wildcard((*match.async_handler)(req, res));
+  DOBA_EXPECT(wildcard.resume());
+  DOBA_EXPECT(wildcard.done());
+  DOBA_EXPECT(!wildcard.error());
   DOBA_EXPECT_EQUAL(res.value, "wildcard");
 }
 
 DOBA_TEST("asynchronous route parameters survive suspension") {
   router<request, router_value_response> value;
-  std::coroutine_handle<> next;
   value.add("GET", "/items/:name",
-            [&next](const request&, router_value_response& res,
-                    const std::string& name) -> task<void> {
-              co_await suspend_once{next};
+            [](const request&, router_value_response& res,
+               const std::string& name) -> task<void> {
+              co_await martianlabs::doba::common::yield();
               res.value = name;
             });
   request req;
@@ -186,11 +166,15 @@ DOBA_TEST("asynchronous route parameters survive suspension") {
   std::shared_ptr<void> parameters;
   auto match = value.match("GET", "/items/example");
   DOBA_EXPECT(match.async_parametrized_handler != nullptr);
-  auto work = match.async_parametrized_handler->invoke(
-      req, res, "/items/example", parameters);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution work(match.async_parametrized_handler->invoke(
+      req, res, "/items/example", parameters));
+  DOBA_EXPECT(work.resume());
+  DOBA_EXPECT(!work.done());
+  DOBA_EXPECT(!work.error());
   DOBA_EXPECT(res.value.empty());
-  next.resume();
+  DOBA_EXPECT(work.resume());
+  DOBA_EXPECT(work.done());
+  DOBA_EXPECT(!work.error());
   DOBA_EXPECT_EQUAL(res.value, "example");
 }
 
@@ -581,7 +565,7 @@ DOBA_TEST("registration owns method and all route pattern forms") {
 }
 
 // +===========================================================================+
-// | [>] invalid registration preserves existing route selection ( test-case ) |
+// | [>] invalid registration keeps existing routes              ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("invalid registration preserves existing route selection") {
   router<request, router_value_response> value;
@@ -612,8 +596,6 @@ namespace {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] controller_probe                                            ( class ) |
-// +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class controller_probe {
@@ -669,8 +651,6 @@ class controller_probe {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] failing_controller                                         ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 struct failing_controller {
@@ -740,13 +720,13 @@ struct staged_controller {
 // /////////////////////////////////////////////////////////////////////////////
 struct async_controller {
   template <typename Rty>
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] register_routes                                          ( public ) |
   // +-------------------------------------------------------------------------+
   void register_routes(Rty& routes) {
     routes.add("GET", "/async/:id", &async_controller::get);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] get                                                      ( public ) |
   // +-------------------------------------------------------------------------+
   task<void> get(const request&, router_value_response& res, int id) {
@@ -791,9 +771,11 @@ DOBA_TEST("controller registers an asynchronous parametrized route") {
   request req;
   router_value_response res;
   std::shared_ptr<void> parameters;
-  auto work = match.async_parametrized_handler->invoke(
-      req, res, "/async/7", parameters);
-  work.start([](std::exception_ptr error) { DOBA_EXPECT(!error); });
+  task_execution work(match.async_parametrized_handler->invoke(
+      req, res, "/async/7", parameters));
+  DOBA_EXPECT(work.resume());
+  DOBA_EXPECT(work.done());
+  DOBA_EXPECT(!work.error());
   DOBA_EXPECT_EQUAL(res.value, "7");
 }
 
@@ -809,7 +791,7 @@ DOBA_TEST("controller routes are staged before registration") {
 }
 
 // +===========================================================================+
-// | [>] controller registration rolls back every route category ( test-case ) |
+// | [>] controller rollback covers every route type             ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("controller registration rolls back every route category") {
   router<request, router_value_response> value;
@@ -843,7 +825,6 @@ DOBA_TEST("controller registration rolls back every route category") {
     DOBA_EXPECT(value.match("GET", "/old/x").handler);
   }
 }
-
 
 DOBA_TEST("router associates authentication with selected route only") {
   namespace auth = martianlabs::doba::protocol::http::auth;

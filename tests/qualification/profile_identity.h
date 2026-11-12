@@ -25,8 +25,8 @@
 #ifndef martianlabs_doba_tests_qualification_profile_identity_h
 #define martianlabs_doba_tests_qualification_profile_identity_h
 
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 extern "C" int __llvm_profile_write_file();
@@ -39,9 +39,9 @@ namespace martianlabs::doba::tests::qualification {
 // +---------------------------------------------------------------------------+
 // | [>] profile_identity                                         ( constant ) |
 // +---------------------------------------------------------------------------+
-// | Only injected into instrumented qualification builds. The private probe   |
-// | namespaces profiles by target, including subprocesses. The probe resets   |
-// | counters and exits before main, preserving an explicit zero denominator.  |
+// | Only used in instrumented builds. Give each target its own profiles,      |
+// | including child processes. Reset counters and exit before main for the    |
+// | zero-profile probe.                                                       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline const bool profile_identity = [] {
@@ -54,15 +54,15 @@ inline const bool profile_identity = [] {
   const char* pattern = std::getenv("LLVM_PROFILE_FILE");
   if (!pattern) return false;
 #endif
-  // The parent directory is retained; child processes replace any parent
-  // target prefix instead of accumulating it. Storage outlives profile flush.
+  // Keep the directory, but replace the parent target prefix in child profiles.
+  // Keep the path alive until profiles are flushed.
   const char* separator = std::strrchr(pattern, '/');
   if (!separator) separator = std::strrchr(pattern, '\\');
   if (!separator) std::_Exit(3);
   static char filename[8192];
-  const auto size = std::snprintf(filename, sizeof(filename),
-      "%.*s%s-%%p-%%m.profraw", int(separator - pattern + 1), pattern,
-      DOBA_PROFILE_BINARY);
+  const auto size =
+      std::snprintf(filename, sizeof(filename), "%.*s%s-%%p-%%m.profraw",
+                    int(separator - pattern + 1), pattern, DOBA_PROFILE_BINARY);
   if (size < 0 || std::size_t(size) >= sizeof(filename)) std::_Exit(3);
 #if defined(_WIN32)
   std::free(pattern);

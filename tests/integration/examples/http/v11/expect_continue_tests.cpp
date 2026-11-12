@@ -26,10 +26,10 @@
 #include <cstddef>
 #include <string>
 
+#include "http_server.h"
 #include "http_test_helper.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
-#include "http_server.h"
 
 namespace {
 using martianlabs::doba::http_server;
@@ -39,29 +39,26 @@ using martianlabs::doba::tests::integration::test_helper;
 void register_echo_route(http_server<>& http_server) {
   using martianlabs::doba::protocol::http::v11::request;
   using martianlabs::doba::protocol::http::v11::response;
-  http_server.add_route(
-      "POST", "/echo",
-      [](const request& req, response& res) {
-        res.ok_200();
-        if (!req.has_body_reader()) {
-          res.set_body("");
-          return;
-        }
-        std::array<std::byte, 1024> buffer{};
-        std::string body;
-        for (;;) {
-          const auto state = req.get_body_reader()->read(buffer);
-          if (state.has_error) {
-            res.bad_request_400();
-            return;
-          }
-          body.append(reinterpret_cast<const char*>(buffer.data()),
-                      state.produced);
-          if (state.complete) break;
-        }
-        res.set_body(body);
+  http_server.add_route("POST", "/echo", [](const request& req, response& res) {
+    res.ok_200();
+    if (!req.has_body_reader()) {
+      res.set_body("");
+      return;
+    }
+    std::array<std::byte, 1024> buffer{};
+    std::string body;
+    for (;;) {
+      const auto state = req.get_body_reader()->read(buffer);
+      if (state.has_error) {
+        res.bad_request_400();
         return;
-      });
+      }
+      body.append(reinterpret_cast<const char*>(buffer.data()), state.produced);
+      if (state.complete) break;
+    }
+    res.set_body(body);
+    return;
+  });
 }
 }  // namespace
 
@@ -139,9 +136,9 @@ DOBA_TEST("expect continue example accepts empty chunked bodies") {
   register_echo_route(http_server);
   http_server.start();
   DOBA_EXPECT(client.connect(port));
-  DOBA_EXPECT(client.send_all(
-      "POST /echo HTTP/1.1\r\nHost: a\r\n"
-      "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n"));
+  DOBA_EXPECT(
+      client.send_all("POST /echo HTTP/1.1\r\nHost: a\r\n"
+                      "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n"));
   const auto result = receive_http_response(client);
   DOBA_EXPECT(result.has_value());
   DOBA_EXPECT_EQUAL(result->status, "HTTP/1.1 200 OK");

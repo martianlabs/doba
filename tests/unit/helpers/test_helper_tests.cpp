@@ -26,8 +26,8 @@
 #include <initializer_list>
 #include <string>
 
-#include "test_helper_process.h"
 #include "test_helper.h"
+#include "test_helper_process.h"
 
 namespace {
 using martianlabs::doba::tests::test_helper_result;
@@ -37,8 +37,7 @@ using martianlabs::doba::tests::unit::test_helper;
 // +---------------------------------------------------------------------------+
 // | [>] run_probe                                                ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test helper with the specified arguments and       |
-// | timeout. It captures the output and sets the test context accordingly.    |
+// | Keep probe output as the assertion context.                               |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 test_helper_result run_probe(
@@ -70,6 +69,8 @@ DOBA_TEST("file and name filters select one test") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 0);
   DOBA_EXPECT(result.output.find("probe body") != std::string::npos);
+  DOBA_EXPECT(result.output.find("running 1 unit tests") != std::string::npos);
+  DOBA_EXPECT(result.output.find("probe passes passed") != std::string::npos);
   DOBA_EXPECT(result.output.find("probe continued") == std::string::npos);
 }
 
@@ -91,6 +92,9 @@ DOBA_TEST("assertion failure reports expression and location") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("2 + 2 == 5") != std::string::npos);
+  DOBA_EXPECT(result.output.find("probe assertion fails failed") !=
+              std::string::npos);
+  DOBA_EXPECT(result.output.find("1 test(s) failed") != std::string::npos);
   const std::string marker{"test_helper_probe.cpp:"};
   const auto location = result.output.find(marker);
   DOBA_EXPECT(location != std::string::npos);
@@ -168,8 +172,8 @@ DOBA_TEST("blocked test is identified before timeout") {
 }
 
 DOBA_TEST("watchdog exits blocked cleanup with test identity") {
-  const auto result = run_probe(
-      {"--name", "probe blocks", "--timeout-ms", "50"});
+  const auto result =
+      run_probe({"--name", "probe blocks", "--timeout-ms", "50"});
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 124);
   DOBA_EXPECT(result.output.find("probe blocked cleanup") != std::string::npos);
@@ -180,8 +184,8 @@ DOBA_TEST("watchdog exits blocked cleanup with test identity") {
 
 DOBA_TEST("watchdog rejects invalid timeout arguments") {
   for (const char* timeout : {"0", "-1", "invalid", "3600001"}) {
-    const auto result = run_probe(
-        {"--name", "probe passes", "--timeout-ms", timeout});
+    const auto result =
+        run_probe({"--name", "probe passes", "--timeout-ms", timeout});
     DOBA_EXPECT(!result.timed_out);
     DOBA_EXPECT_EQUAL(result.exit_code, 2);
     DOBA_EXPECT(result.output.find("Invalid test timeout") !=
@@ -236,6 +240,9 @@ DOBA_TEST("exclusion does not match another file") {
   DOBA_EXPECT(!result.timed_out);
   DOBA_EXPECT_EQUAL(result.exit_code, 1);
   DOBA_EXPECT(result.output.find("2 + 2 == 5") != std::string::npos);
+  DOBA_EXPECT(result.output.find("probe assertion fails failed") !=
+              std::string::npos);
+  DOBA_EXPECT(result.output.find("1 test(s) failed") != std::string::npos);
 }
 
 // +===========================================================================+

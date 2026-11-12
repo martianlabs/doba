@@ -29,8 +29,8 @@
 #include "test_helper.h"
 
 namespace {
-using martianlabs::doba::protocol::http::v11::deserialization_result;
 using martianlabs::doba::protocol::deserialization_status;
+using martianlabs::doba::protocol::http::v11::deserialization_result;
 }  // namespace
 
 // +===========================================================================+

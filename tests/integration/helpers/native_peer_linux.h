@@ -47,12 +47,14 @@ class native_peer {
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     if (::bind(listener_, reinterpret_cast<sockaddr*>(&address),
-               sizeof(address)) != 0)
+               sizeof(address)) != 0) {
       return;
+    }
     socklen_t size = sizeof(address);
     if (::getsockname(listener_, reinterpret_cast<sockaddr*>(&address),
-                      &size) != 0)
+                      &size) != 0) {
       return;
+    }
     if (listening && ::listen(listener_, 1) != 0) return;
     port_ = ntohs(address.sin_port);
   }
@@ -105,12 +107,11 @@ class native_peer {
  private:
   // +=========================================================================+
   // | [>] TYPEs                                                   ( private ) |
-  // +-------------------------------------------------------------------------+
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] invalid_socket                                          ( private ) |
   // +-------------------------------------------------------------------------+
   static int invalid_socket() { return -1; }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] close_socket                                            ( private ) |
   // +-------------------------------------------------------------------------+
   static void close_socket(int socket) { ::close(socket); }

@@ -106,6 +106,29 @@ cmake --build build --config Release --target hello_world
 
 CMake builds your app; you don't need to build doba's examples or tests.
 
+<details>
+<summary>Use an installed doba package</summary>
+
+To share one install across projects, run these commands from the doba
+checkout with a C++20 compiler and CMake 3.20 or newer.
+
+```sh
+cmake -S . -B out/build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build out/build/release --config Release
+cmake --install out/build/release --config Release --prefix out/install/release
+```
+
+In the app's CMakeLists.txt, replace `add_subdirectory(doba)` with
+`find_package(doba CONFIG REQUIRED)`. Keep linking `martianlabs::doba`.
+When configuring the app, set `CMAKE_PREFIX_PATH` to the absolute path of
+the installation prefix so CMake can find the package.
+
+For TLS, configure doba with `-DDOBA_ENABLE_TLS=ON` and OpenSSL 3.0 or
+newer. In the app, use `find_package(doba CONFIG REQUIRED COMPONENTS TLS)`
+and link `martianlabs::doba_tls`.
+
+</details>
+
 <a name="run-it"></a>
 <h2>
   <a href="../../resources/docs/guide/h2-run-it.svg#gh-light-mode-only">

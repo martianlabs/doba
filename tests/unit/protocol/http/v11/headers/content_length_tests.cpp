@@ -108,7 +108,7 @@ DOBA_TEST("interpret applies the configured limit") {
 }
 
 // +===========================================================================+
-// | [>] check preserves output at the decimal overflow boundary ( test-case ) |
+// | [>] unchanged output on decimal overflow                    ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check preserves output at the decimal overflow boundary") {
   const std::string maximum =

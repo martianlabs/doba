@@ -25,7 +25,13 @@
 #ifndef martianlabs_doba_tests_unit_test_helper_process_linux_h
 #define martianlabs_doba_tests_unit_test_helper_process_linux_h
 
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <cerrno>
 #include <chrono>
+#include <csignal>
 #include <filesystem>
 #include <initializer_list>
 #include <string>
@@ -33,27 +39,18 @@
 #include <thread>
 #include <vector>
 
-#include <cerrno>
-#include <csignal>
-#include <fcntl.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
 namespace martianlabs::doba::tests {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
-// | [>] run_test_helper                                           ( function) |
+// | [>] run_test_helper                                          ( function ) |
 // +---------------------------------------------------------------------------+
-// | This function runs the test helper process with the specified             |
-// | command-line arguments and waits for its completion or a timeout.         |
-// | It captures the exit code, whether the process timed out, and the output  |
-// | written to stdout and stderr.                                             |
+// | Run the probe and collect its output, exit code and timeout result.       |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 inline test_helper_result run_test_helper(
     std::initializer_list<const char*> arguments,
     std::chrono::milliseconds timeout = std::chrono::seconds(3)) {
-  // Reap the probe and close its pipes even when output allocation fails.
+  // Clean up the child and pipes even if storing output throws.
   struct process {
     int pipes[2]{-1, -1};
     pid_t pid{-1};

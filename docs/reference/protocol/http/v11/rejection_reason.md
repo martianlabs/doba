@@ -42,7 +42,8 @@ enum class rejection_reason {
 };
 ```
 
-Why a verdict::kReject (or a syntactic kInvalidSource) happened, at the granularity the HTTP/1.1 layer needs to pick a status code. kNone                 | no rejection (or reason not tracked yet). kSyntax               | malformed message; maps to 400 Bad Request. kPayloadTooLarge      | a policy limit on message size was exceeded; maps | to 413
+Records why HTTP processing rejected a message. The decoder and engine use it
+to choose the error response; `kNone` means no rejection reason is recorded.
 
 **Values:**
 
@@ -56,4 +57,4 @@ Why a verdict::kReject (or a syntactic kInvalidSource) happened, at the granular
 - **kHandlerError:** Handler error. Declaration: `kHandlerError`.
 - **kExpectationFailed:** Expectation failed. Declaration: `kExpectationFailed`.
 
-**Source:** [include/protocol/http/v11/rejection_reason.h:64](../../../../../include/protocol/http/v11/rejection_reason.h#L64)
+**Source:** [include/protocol/http/v11/rejection_reason.h](../../../../../include/protocol/http/v11/rejection_reason.h)

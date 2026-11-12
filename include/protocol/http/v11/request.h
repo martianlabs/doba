@@ -37,20 +37,11 @@
 #include <utility>
 #include <vector>
 
-#include "platform.h"
 #include "common/byte_storage.h"
 #include "common/hash_map.h"
-#include "protocol/http/v11/context.h"
-#include "protocol/http/common/query_parameter.h"
-#include "protocol/http/common/method_names.h"
-#include "protocol/http/common/header_names.h"
+#include "platform.h"
 #include "protocol/http/common/header.h"
-#include "protocol/http/common/helpers.h"
-#include "protocol/http/v11/parsed_types.h"
-#include "protocol/http/v11/body/reader.h"
-#include "protocol/http/v11/policies.h"
-#include "protocol/http/v11/verdict.h"
-#include "protocol/http/common/target.h"
+#include "protocol/http/common/header_names.h"
 #include "protocol/http/common/headers/accept.h"
 #include "protocol/http/common/headers/accept_charset.h"
 #include "protocol/http/common/headers/accept_encoding.h"
@@ -69,21 +60,16 @@
 #include "protocol/http/common/headers/authentication_info.h"
 #include "protocol/http/common/headers/authorization.h"
 #include "protocol/http/common/headers/cache_control.h"
-#include "protocol/http/v11/headers/connection.h"
 #include "protocol/http/common/headers/content_encoding.h"
 #include "protocol/http/common/headers/content_language.h"
-#include "protocol/http/v11/headers/content_length.h"
 #include "protocol/http/common/headers/content_location.h"
 #include "protocol/http/common/headers/content_range.h"
 #include "protocol/http/common/headers/content_type.h"
 #include "protocol/http/common/headers/cookie.h"
 #include "protocol/http/common/headers/date.h"
 #include "protocol/http/common/headers/etag.h"
-#include "protocol/http/v11/headers/expect.h"
 #include "protocol/http/common/headers/expires.h"
-#include "protocol/http/v11/headers/forwarded.h"
 #include "protocol/http/common/headers/from.h"
-#include "protocol/http/v11/headers/host.h"
 #include "protocol/http/common/headers/if_match.h"
 #include "protocol/http/common/headers/if_modified_since.h"
 #include "protocol/http/common/headers/if_none_match.h"
@@ -92,7 +78,6 @@
 #include "protocol/http/common/headers/keep_alive.h"
 #include "protocol/http/common/headers/last_modified.h"
 #include "protocol/http/common/headers/location.h"
-#include "protocol/http/v11/headers/max_forwards.h"
 #include "protocol/http/common/headers/origin.h"
 #include "protocol/http/common/headers/pragma.h"
 #include "protocol/http/common/headers/proxy_connection.h"
@@ -106,28 +91,43 @@
 #include "protocol/http/common/headers/sec_websocket_version.h"
 #include "protocol/http/common/headers/server.h"
 #include "protocol/http/common/headers/set_cookie.h"
-#include "protocol/http/v11/headers/te.h"
-#include "protocol/http/v11/headers/trailer.h"
-#include "protocol/http/v11/headers/transfer_encoding.h"
-#include "protocol/http/v11/headers/upgrade.h"
 #include "protocol/http/common/headers/user_agent.h"
 #include "protocol/http/common/headers/vary.h"
-#include "protocol/http/v11/headers/via.h"
 #include "protocol/http/common/headers/www_authenticate.h"
-#include "protocol/http/v11/headers/x_forwarded_for.h"
-#include "protocol/http/v11/headers/x_forwarded_host.h"
-#include "protocol/http/v11/headers/x_forwarded_proto.h"
+#include "protocol/http/common/helpers.h"
+#include "protocol/http/common/method_names.h"
+#include "protocol/http/common/query_parameter.h"
+#include "protocol/http/common/target.h"
+#include "protocol/http/v11/body/reader.h"
+#include "protocol/http/v11/context.h"
+#include "protocol/http/v11/headers/connection.h"
+#include "protocol/http/v11/headers/content_length.h"
+#include "protocol/http/v11/headers/expect.h"
+#include "protocol/http/v11/headers/forwarded.h"
+#include "protocol/http/v11/headers/host.h"
+#include "protocol/http/v11/headers/max_forwards.h"
 #include "protocol/http/v11/headers/rules/directives.h"
 #include "protocol/http/v11/headers/rules/framing.h"
 #include "protocol/http/v11/headers/rules/policy.h"
 #include "protocol/http/v11/headers/rules/routing.h"
+#include "protocol/http/v11/headers/te.h"
+#include "protocol/http/v11/headers/trailer.h"
+#include "protocol/http/v11/headers/transfer_encoding.h"
+#include "protocol/http/v11/headers/upgrade.h"
+#include "protocol/http/v11/headers/via.h"
+#include "protocol/http/v11/headers/x_forwarded_for.h"
+#include "protocol/http/v11/headers/x_forwarded_host.h"
+#include "protocol/http/v11/headers/x_forwarded_proto.h"
+#include "protocol/http/v11/parsed_types.h"
+#include "protocol/http/v11/policies.h"
+#include "protocol/http/v11/verdict.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] request                                                     ( class ) |
 // +---------------------------------------------------------------------------+
-// | This class holds for the http 1.1 request implementation.                 |
+// | Stores parsed request fields and manages their backing bytes.             |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class request {
@@ -141,18 +141,21 @@ class request {
   // +=========================================================================+
   // | [>] from                                                     ( public ) |
   // +-------------------------------------------------------------------------+
-  static request from(
-      std::string_view method, std::string_view abs_path, target target_form,
-      std::vector<header_view> headers,
-      std::vector<query_parameter_view> query_parameters,
-      std::optional<std::string_view> host,
-      std::optional<std::string_view> port,
-      std::optional<helpers::host_type> type,
-      std::optional<std::string_view> target_authority_host,
-      std::optional<std::string_view> target_authority_port,
-      std::optional<helpers::host_type> target_authority_type,
-      bool wants_connection_close, std::optional<body::reader> body_reader,
-      bool borrow_bytes = false) {
+  // | Expects parsed fields and a validated path. Copies bytes by default.    |
+  // | With borrow_bytes, keep input alive until make_owned() or destruction.  |
+  // +-------------------------------------------------------------------------+
+  static request from(std::string_view method, std::string_view abs_path,
+                      target target_form, std::vector<header_view> headers,
+                      std::vector<query_parameter_view> query_parameters,
+                      std::optional<std::string_view> host,
+                      std::optional<std::string_view> port,
+                      std::optional<helpers::host_type> type,
+                      std::optional<std::string_view> target_authority_host,
+                      std::optional<std::string_view> target_authority_port,
+                      std::optional<helpers::host_type> target_authority_type,
+                      bool wants_connection_close,
+                      std::optional<body::reader> body_reader,
+                      bool borrow_bytes = false) {
     return request(method, abs_path, target_form, std::move(headers),
                    std::move(query_parameters), host, port, type,
                    target_authority_host, target_authority_port,
@@ -175,13 +178,20 @@ class request {
   // +=========================================================================+
   // | [>] get_absolute_path                                        ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Returns the path with %HH sequences decoded.                            |
+  // +-------------------------------------------------------------------------+
   auto get_absolute_path() const { return abs_path_; }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Index must be less than get_headers_length(); no bounds check here.     |
+  // +-------------------------------------------------------------------------+
   auto get_header(std::size_t i) const { return headers_[i]; }
   // +=========================================================================+
   // | [>] get_header                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Finds the first matching header, ignoring name case.                    |
+  // | Throws std::out_of_range when absent.                                   |
   // +-------------------------------------------------------------------------+
   auto get_header(std::string_view name) const {
     for (const auto& header : headers_) {
@@ -205,9 +215,13 @@ class request {
   // +=========================================================================+
   // | [>] get_query_parameter                                      ( public ) |
   // +-------------------------------------------------------------------------+
+  // | Index must be less than get_query_parameters_length().                  |
+  // +-------------------------------------------------------------------------+
   auto get_query_parameter(std::size_t i) const { return query_parameters_[i]; }
   // +=========================================================================+
   // | [>] get_query_parameter                                      ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Finds the first exact name match; returns an empty optional if absent.  |
   // +-------------------------------------------------------------------------+
   auto get_query_parameter(std::string_view name) const
       -> std::optional<query_parameter_view> {
@@ -221,7 +235,7 @@ class request {
   // +-------------------------------------------------------------------------+
   auto get_query_parameters_length() const { return query_parameters_.size(); }
   // +=========================================================================+
-  // | [>] has_hosts                                                ( public ) |
+  // | [>] has_host                                                 ( public ) |
   // +-------------------------------------------------------------------------+
   auto has_host() const { return !host_.empty(); }
   // +=========================================================================+
@@ -269,9 +283,8 @@ class request {
   // +=========================================================================+
   // | [>] get_cookie                                               ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Looks up a single cookie-pair by name in the (unparsed) Cookie header,  |
-  // | if present. Parsing is done on demand; nothing is cached, mirroring how |
-  // | headers_ and query_parameters_ are already accessed by linear scan.     |
+  // | Reads the first matching cookie from the first Cookie header.           |
+  // | Returns an empty optional when absent. The view borrows request bytes.  |
   // +-------------------------------------------------------------------------+
   std::optional<std::string_view> get_cookie(std::string_view name) const {
     std::string_view raw;
@@ -287,8 +300,8 @@ class request {
   // +=========================================================================+
   // | [>] get_cookies                                              ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Returns every cookie-pair present in the (unparsed) Cookie header,      |
-  // | or an empty vector when the header is absent.                           |
+  // | Reads all pairs from the first Cookie header; empty when absent.        |
+  // | Names and values borrow request bytes. Quotes stay in the values.       |
   // +-------------------------------------------------------------------------+
   std::vector<std::pair<std::string_view, std::string_view>> get_cookies()
       const {
@@ -301,14 +314,17 @@ class request {
         });
     return cookies;
   }
-
-  // Async execution must own its bytes before calling user code.
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] borrows_bytes                                            ( public ) |
   // +-------------------------------------------------------------------------+
-  bool borrows_bytes() const noexcept { return borrowed_; }
+  // | True while some request bytes still belong to the caller.               |
   // +-------------------------------------------------------------------------+
+  bool borrows_bytes() const noexcept { return borrowed_; }
+  // +=========================================================================+
   // | [>] make_owned                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Copies borrowed fields and body bytes into request-owned storage.       |
+  // | Async handlers need this before user code can suspend.                  |
   // +-------------------------------------------------------------------------+
   void make_owned() {
     if (!borrowed_) return;
@@ -349,21 +365,26 @@ class request {
     copy(host_port_);
     copy(ta_host_);
     copy(ta_port_);
-    for (auto& field : headers_) { copy(field.first); copy(field.second); }
+    for (auto& field : headers_) {
+      copy(field.first);
+      copy(field.second);
+    }
     for (auto& field : query_parameters_) {
       copy(field.first);
       copy(field.second);
     }
     copy(body_bytes_);
     if (body_reader_ && !body_bytes_.empty()) {
-      body_reader_->rebind_borrowed(std::as_bytes(
-          std::span(body_bytes_.data(), body_bytes_.size())));
+      body_reader_->rebind_borrowed(
+          std::as_bytes(std::span(body_bytes_.data(), body_bytes_.size())));
     }
     head_bytes_ = std::move(owned);
     borrowed_ = false;
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] rebase_bytes                                             ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Updates views after the decoder buffer moves. Keeps an owned path.      |
   // +-------------------------------------------------------------------------+
   void rebase_bytes(std::uintptr_t previous, const char* current) noexcept {
     auto rebase = [&](std::string_view& text) {
@@ -379,25 +400,33 @@ class request {
     rebase(host_port_);
     rebase(ta_host_);
     rebase(ta_port_);
-    for (auto& field : headers_) { rebase(field.first); rebase(field.second); }
+    for (auto& field : headers_) {
+      rebase(field.first);
+      rebase(field.second);
+    }
     for (auto& field : query_parameters_) {
       rebase(field.first);
       rebase(field.second);
     }
     rebase(body_bytes_);
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] body_is_stored                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  bool body_is_stored() const noexcept { return body_storage_.has_value(); }
+  // | True while the body is being collected in byte_storage.                 |
   // +-------------------------------------------------------------------------+
+  bool body_is_stored() const noexcept { return body_storage_.has_value(); }
+  // +=========================================================================+
   // | [>] body_wire_size                                           ( public ) |
   // +-------------------------------------------------------------------------+
-  std::size_t body_wire_size() const noexcept { return body_wire_size_; }
-
-  // Inline wire bytes stay in the decoder; larger bodies use existing storage.
+  // | Counts received body bytes, including chunk framing when present.       |
   // +-------------------------------------------------------------------------+
+  std::size_t body_wire_size() const noexcept { return body_wire_size_; }
+  // +=========================================================================+
   // | [>] begin_body                                               ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Borrows small bodies from the decoder when possible.                    |
+  // | Otherwise uses byte_storage; 0 spills to disk immediately.              |
   // +-------------------------------------------------------------------------+
   bool begin_body(std::size_t memory_threshold, std::size_t declared_size) {
     body_threshold_ = memory_threshold;
@@ -410,31 +439,40 @@ class request {
     return (memory_threshold && declared_size <= memory_threshold) ||
            body_storage_->spill();
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] append_body                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Adds received bytes, spilling to disk past the memory threshold.        |
+  // | Borrowed input must be contiguous. False means storage failed.          |
   // +-------------------------------------------------------------------------+
   bool append_body(std::string_view bytes) {
     if (bytes.empty()) return true;
     if (!body_storage_ && bytes.size() <= body_threshold_ - body_wire_size_) {
-      if (body_bytes_.empty()) body_bytes_ = bytes;
-      else
+      if (body_bytes_.empty()) {
+        body_bytes_ = bytes;
+      } else {
         body_bytes_ = {body_bytes_.data(), body_bytes_.size() + bytes.size()};
+      }
       body_wire_size_ += bytes.size();
       return true;
     }
     if (!body_storage_) {
       body_storage_.emplace(common::byte_storage_options{body_threshold_, {}});
       if (!body_storage_->spill() ||
-          !body_storage_->write(body_bytes_.data(), body_bytes_.size()))
+          !body_storage_->write(body_bytes_.data(), body_bytes_.size())) {
         return false;
+      }
       body_bytes_ = {};
     }
     if (!body_storage_->write(bytes.data(), bytes.size())) return false;
     body_wire_size_ += bytes.size();
     return true;
   }
-  // +-------------------------------------------------------------------------+
+  // +=========================================================================+
   // | [>] finish_body                                              ( public ) |
+  // +-------------------------------------------------------------------------+
+  // | Builds a raw or chunked reader from the collected body bytes.           |
+  // | False means the stored body could not be finished.                      |
   // +-------------------------------------------------------------------------+
   bool finish_body(bool chunked, std::size_t content_length,
                    std::size_t extension_limit, std::size_t trailer_limit) {
@@ -461,6 +499,8 @@ class request {
   // +=========================================================================+
   // | [>] find_cookie_header                                      ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Returns the first Cookie header, ignoring header-name case.             |
+  // +-------------------------------------------------------------------------+
   bool find_cookie_header(std::string_view& out) const {
     for (const auto& header : headers_) {
       if (helpers::iequals(header.first, header_names::kCookie)) {
@@ -473,8 +513,11 @@ class request {
   // +=========================================================================+
   // | [>] for_each_cookie_pair                                    ( private ) |
   // +-------------------------------------------------------------------------+
-  // | Splits a Cookie header field-value on the exact "; " separator (RFC     |
-  // | 6265 S4.2.1) and invokes fn(name, value) for every cookie-pair found.   |
+  // | Template parameters:                                                    |
+  // |   FNty - cookie callback type                                           |
+  // +-------------------------------------------------------------------------+
+  // | Splits on the exact separator "; " and calls fn(name, value).           |
+  // | Names and values stay as received, including any quotes.                |
   // +-------------------------------------------------------------------------+
   template <typename FNty>
   static void for_each_cookie_pair(std::string_view raw, FNty&& fn) {
@@ -494,6 +537,11 @@ class request {
   // +=========================================================================+
   // | [>] emit_cookie_pair                                        ( private ) |
   // +-------------------------------------------------------------------------+
+  // | Template parameters:                                                    |
+  // |   FNty - cookie callback type                                           |
+  // +-------------------------------------------------------------------------+
+  // | Splits on the first = and calls fn. Skips pairs without =.              |
+  // +-------------------------------------------------------------------------+
   template <typename FNty>
   static void emit_cookie_pair(std::string_view pair, FNty&& fn) {
     std::size_t eq = pair.find('=');
@@ -512,8 +560,8 @@ class request {
           std::optional<std::string_view> target_authority_host,
           std::optional<std::string_view> target_authority_port,
           std::optional<helpers::host_type> target_authority_type,
-          bool wants_connection_close,
-          std::optional<body::reader> body_reader, bool borrow_bytes) {
+          bool wants_connection_close, std::optional<body::reader> body_reader,
+          bool borrow_bytes) {
     std::size_t size = 0;
     auto count = [&](std::string_view text) {
       if (text.size() > std::numeric_limits<std::size_t>::max() - size) {
@@ -533,8 +581,8 @@ class request {
         count(field.first);
         count(field.second);
       }
-      for (const auto field : {host, port, target_authority_host,
-                              target_authority_port}) {
+      for (const auto field :
+           {host, port, target_authority_host, target_authority_port}) {
         if (field) count(*field);
       }
       head_bytes_.resize(size);
@@ -581,8 +629,8 @@ class request {
       for (;;) {
         const auto state = body_reader->read(bytes);
         if (state.has_error || (!state.produced && !state.complete) ||
-            !append_body(std::string_view(
-                reinterpret_cast<const char*>(bytes), state.produced))) {
+            !append_body(std::string_view(reinterpret_cast<const char*>(bytes),
+                                          state.produced))) {
           throw std::runtime_error("unable to copy request body");
         }
         if (state.complete) break;
@@ -595,24 +643,26 @@ class request {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  std::string_view method_;           // HTTP method (e.g., GET, POST, etc.)
-  std::string_view abs_path_;         // absolute path from the request-target
+  std::string_view method_;
+  std::string_view abs_path_;
+  // Owns copied fields, or just the decoded path when other bytes are borrowed.
   std::vector<char> head_bytes_;
   std::optional<common::byte_storage> body_storage_;
   std::size_t body_wire_size_{0};
   std::size_t body_threshold_{0};
   std::string_view body_bytes_;
   bool borrowed_{false};
-  target target_ = target::kUnknown;  // request-target form
-  std::string_view host_;             // host from the Host header
-  std::string_view host_port_;        // port from the Host header
+  target target_ = target::kUnknown;
+  std::string_view host_;
+  std::string_view host_port_;
   helpers::host_type host_type_ = helpers::host_type::kUnknown;
-  std::string_view ta_host_;  // target authority host
-  std::string_view ta_port_;  // target authority port
+  std::string_view ta_host_;
+  std::string_view ta_port_;
   helpers::host_type ta_type_ = helpers::host_type::kUnknown;
-  std::vector<header_view> headers_;                    // vector of headers
-  std::vector<query_parameter_view> query_parameters_;  // query parameters
-  bool wants_connection_close_ = false;  // protocol decided to close channel
+  std::vector<header_view> headers_;
+  std::vector<query_parameter_view> query_parameters_;
+  bool wants_connection_close_ = false;
+  // Reading advances the body even when the request itself is const.
   mutable std::optional<body::reader> body_reader_;
 };
 }  // namespace martianlabs::doba::protocol::http::v11

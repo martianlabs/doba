@@ -8,7 +8,9 @@
   </a>
 </h1>
 
-Looking for a precise signature or a default? Start with the header that owns it. The index lists supported public headers; implementation-only headers retain short status pages. For a walkthrough, see the [guide](../guide/README.md).
+Looking for a signature or a default? Start with the header that owns it.
+Public API pages describe signatures and behavior; internal pages are marked
+as implementation details. For a walkthrough, see the [guide](../guide/README.md).
 
 Implementation declarations live in *detail* namespaces and are not supported API.
 Use route registration, public server/transport constructors and documented
@@ -27,16 +29,13 @@ there are no supported compatibility aliases for detail declarations.
 </h2>
 
 - [common/byte_storage.h](common/byte_storage.md)
+- [common/byte_storage_options.h](common/byte_storage_options.md)
 - [common/cache.h](common/cache.md)
+- [common/cache_entry.h](common/cache_entry.md) (internal bookkeeping)
 - [common/cache_policies.h](common/cache_policies.md)
-- [common/cache_statistics.h](common/cache_statistics.md)
-- [common/console_line_linux.h](common/console_line_linux.md)
-- [common/console_line_windows.h](common/console_line_windows.md)
-- [common/console_logger.h](common/console_logger.md)
-- [common/console_logger_linux.h](common/console_logger_linux.md)
-- [common/console_logger_windows.h](common/console_logger_windows.md)
 - [common/date_server.h](common/date_server.md)
 - [common/filesystem.h](common/filesystem.md)
+- [common/filesystem_metadata.h](common/filesystem_metadata.md)
 - [common/filesystem_linux.h](common/filesystem_linux.md)
 - [common/filesystem_windows.h](common/filesystem_windows.md)
 - [common/hash_map.h](common/hash_map.md)
@@ -47,10 +46,11 @@ there are no supported compatibility aliases for detail declarations.
 - [common/signaler_windows.h](common/signaler_windows.md)
 - [common/task.h](common/task.md)
 - [common/task_execution.h](common/task_execution.md)
-  - [task::promise_type](common/promise_type.md)
-    - [task::promise_type::final_awaiter](common/final_awaiter.md)
+- [common/task_promise.h](common/promise_type.md)
 - [common/task_awaiters.h](common/task_awaiters.md)
 - [common/task_scheduler.h](common/task_scheduler.md)
+- [common/yield_awaiter.h](common/task_awaiters.md#type-yield-awaiter)
+- [common/sleep_awaiter.h](common/task_awaiters.md#type-sleep-awaiter)
 - [common/writer.h](common/writer.md)
 
 <a name="top-level"></a>
@@ -80,6 +80,12 @@ there are no supported compatibility aliases for detail declarations.
   </a>
 </h2>
 
+
+The network environment headers are implementation details:
+
+- [network/environment.h](network/environment.md)
+- [network/environment_linux.h](network/environment_linux.md)
+- [network/environment_windows.h](network/environment_windows.md)
 
 <a name="protocol"></a>
 <h2>
@@ -221,13 +227,14 @@ there are no supported compatibility aliases for detail declarations.
   </a>
 </h2>
 
-- [transport/server/contracts.h](transport/server/contracts.md)
-- [Connection admission](transport/server/connection_admission.md)
-- [transport/server/tcp.h](transport/server/tcp.md)
-- [Linux processing turns](transport/server/tcp_linux_processing.md)
-- [Windows processing turns](transport/server/tcp_windows_processing.md)
-- [transport/server/tcp_policies.h](transport/server/tcp_policies.md)
-- [transport/server/tls.h](transport/server/tls.md)
-- [transport/server/tls_engine.h](transport/server/tls_engine.md) (internal)
-- [transport/server/tls_configuration.h](transport/server/tls_configuration.md) (internal)
-- [transport/server/tls_policies.h](transport/server/tls_policies.md)
+- [transport/contracts.h](transport/contracts.md)
+- [Connection admission](transport/connection_admission.md)
+- [transport/tcp.h](transport/tcp.md)
+- [Linux processing turns](transport/tcp_linux_processing.md)
+- [Windows processing turns](transport/tcp_windows_processing.md)
+- [transport/tcp_policies.h](transport/tcp_policies.md)
+- [transport/tls.h](transport/tls.md)
+- [transport/tls_engine.h](transport/tls_engine.md) (internal)
+- [transport/tls_factory.h](transport/tls_factory.md) (internal)
+- [transport/tls_configuration.h](transport/tls_configuration.md) (internal)
+- [transport/tls_policies.h](transport/tls_policies.md)

@@ -35,17 +35,13 @@ namespace martianlabs::doba::protocol::http::v11::body {
 // +---------------------------------------------------------------------------+
 // | [>] writer_raw                                                  ( class ) |
 // +---------------------------------------------------------------------------+
-// | Encodes an outgoing Content-Length-framed body: the raw framing is a      |
-// | pure passthrough, so this simply forwards the caller-supplied payload     |
-// | bytes verbatim into the destination common::writer.                       |
+// | Writes payload bytes unchanged, without adding body framing.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class writer_raw {
  public:
   // +=========================================================================+
   // | [>] write                                                    ( public ) |
-  // +-------------------------------------------------------------------------+
-  // | Writes the given raw payload bytes into dst, unchanged.                 |
   // +-------------------------------------------------------------------------+
   static bool write(std::span<const std::byte> payload, common::writer& dst) {
     return dst.write(payload);
@@ -59,8 +55,7 @@ class writer_raw {
   // +=========================================================================+
   // | [>] end                                                      ( public ) |
   // +-------------------------------------------------------------------------+
-  // | Raw (Content-Length) framing has no terminating sequence; provided for  |
-  // | API symmetry with writer_chunked so callers can treat both uniformly.   |
+  // | Raw bodies need no terminator.                                          |
   // +-------------------------------------------------------------------------+
   static bool end(common::writer&) { return true; }
 };

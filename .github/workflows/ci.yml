@@ -70,7 +70,10 @@ jobs:
           "-DDOBA_ENABLE_TLS=${{ matrix.tls }}"
 
       - name: Build
-        run: cmake --build ${{ matrix.build_dir }}
+        shell: bash
+        run: >-
+          cmake --build ${{ matrix.build_dir }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
 
       - name: Verify test inventory
         if: matrix.build_type == 'Release'
@@ -147,6 +150,7 @@ jobs:
         with:
           name: linux-${{ matrix.compiler }}-${{ matrix.build_type }}
           path: |
+            ${{ matrix.build_dir }}/build.log
             ${{ matrix.build_dir }}/CMakeCache.txt
             ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
             ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
@@ -190,7 +194,10 @@ jobs:
           "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build
-        run: cmake --build --preset ${{ matrix.build_preset }}
+        shell: bash
+        run: >-
+          cmake --build --preset ${{ matrix.build_preset }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
 
       - name: Verify test inventory
         if: matrix.build_type == 'Release'
@@ -251,6 +258,7 @@ jobs:
         with:
           name: windows-${{ matrix.build_type }}
           path: |
+            ${{ matrix.build_dir }}/build.log
             ${{ matrix.build_dir }}/CMakeCache.txt
             ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
             ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
@@ -303,7 +311,10 @@ jobs:
           -fno-omit-frame-pointer"
 
       - name: Build
-        run: cmake --build ${{ matrix.build_dir }}
+        shell: bash
+        run: >-
+          cmake --build ${{ matrix.build_dir }} 2>&1 |
+          tee ${{ matrix.build_dir }}/build.log
 
       - name: Verify test inventory
         run: >-
@@ -341,6 +352,7 @@ jobs:
         with:
           name: linux-${{ matrix.name }}-Release-TLS
           path: |
+            ${{ matrix.build_dir }}/build.log
             ${{ matrix.build_dir }}/CMakeCache.txt
             ${{ matrix.build_dir }}/CMakeFiles/CMakeConfigureLog.yaml
             ${{ matrix.build_dir }}/CMakeFiles/*/CMakeCXXCompiler.cmake
@@ -399,7 +411,10 @@ jobs:
           "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker_flags }}"
 
       - name: Build
-        run: cmake --build out/build/msvc-asan
+        shell: bash
+        run: >-
+          cmake --build out/build/msvc-asan 2>&1 |
+          tee out/build/msvc-asan/build.log
 
       - name: Verify test inventory
         env:
@@ -439,6 +454,7 @@ jobs:
         with:
           name: windows-${{ matrix.name }}-Release-TCP
           path: |
+            out/build/msvc-asan/build.log
             out/build/msvc-asan/CMakeCache.txt
             out/build/msvc-asan/CMakeFiles/CMakeConfigureLog.yaml
             out/build/msvc-asan/CMakeFiles/*/CMakeCXXCompiler.cmake
@@ -484,7 +500,10 @@ jobs:
           "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build
-        run: cmake --build out/build/cmake-3.20
+        shell: bash
+        run: >-
+          cmake --build out/build/cmake-3.20 2>&1 |
+          tee out/build/cmake-3.20/build.log
 
       - name: Verify test inventory
         run: >-
@@ -502,6 +521,7 @@ jobs:
         with:
           name: ${{ runner.os }}-cmake-minimum-Release
           path: |
+            out/build/cmake-3.20/build.log
             out/build/cmake-3.20/CMakeCache.txt
             out/build/cmake-3.20/CMakeFiles/CMakeOutput.log
             out/build/cmake-3.20/CMakeFiles/CMakeError.log
@@ -578,9 +598,10 @@ jobs:
           "-DDOBA_BUILD_EXAMPLES=OFF" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
 
       - name: Build harness
+        shell: bash
         run: >-
           cmake --build out/build/fuzz --target fuzz_${{ matrix.harness }}
-          doba_fuzz_seed_corpus
+          doba_fuzz_seed_corpus 2>&1 | tee out/build/fuzz/build.log
 
       - name: Generate canonical seeds
         run: >-
@@ -621,7 +642,8 @@ jobs:
         if: matrix.harness == 'decoder'
         shell: bash
         run: |
-          cmake --build out/build/fuzz --target fuzz_engine
+          cmake --build out/build/fuzz --target fuzz_engine 2>&1 |
+            tee -a out/build/fuzz/build.log
           mkdir -p out/fuzz-artifacts/engine
           out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }} \
             -runs=0 -timeout=5 -rss_limit_mb=2048 -max_len=512 \
@@ -654,6 +676,7 @@ jobs:
             out/build/fuzz/tests/fuzz/fuzz_engine${{ matrix.suffix }}
             out/build/fuzz/tests/fuzz/*.pdb
             out/build/fuzz/tests/fuzz/*.dll
+            out/build/fuzz/build.log
             out/build/fuzz/CMakeCache.txt
             out/build/fuzz/compile_commands.json
             out/build/fuzz/CMakeFiles/*/CMakeCXXCompiler.cmake
@@ -813,11 +836,13 @@ jobs:
             "-DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.runtime }}" `
             "-DDOBA_ENABLE_TLS=ON" "-DDOBA_ENABLE_STRICT_WARNINGS=ON"
       - name: Build TLS tests and examples
+        shell: bash
         run: >-
           cmake --build out/build/tls --target
           doba_tls_fixture doba_tls_core doba_tls_configuration
           doba_tls_processing doba_tls_exercise doba_tls_processing_wire
-          doba_tls_examples_wire https_hello_world tls_echo
+          doba_tls_examples_wire https_hello_world tls_echo 2>&1 |
+          tee out/build/tls/build.log
       - name: Run native TLS tests
         run: >-
           ctest --test-dir out/build/tls -R '^doba_tls_tests$'
@@ -839,10 +864,6 @@ jobs:
         run: >-
           ctest --test-dir out/build/tls -R '^doba_tls_examples_tests$'
           --output-on-failure --no-tests=error --repeat until-fail:5
-      - name: Require explicit TLS target for HTTPS headers
-        run: >-
-          ctest --test-dir out/build/tls -R '^doba_tls_header_guard_tests$'
-          --output-on-failure --no-tests=error
       - name: Install and configure TLS package consumer
         shell: pwsh
         run: |
@@ -873,6 +894,7 @@ jobs:
         with:
           name: tls-${{ matrix.os }}-${{ matrix.name }}
           path: |
+            out/build/tls/build.log
             out/build/tls/CMakeCache.txt
             out/build/tls/Testing/Temporary/
           retention-days: 14

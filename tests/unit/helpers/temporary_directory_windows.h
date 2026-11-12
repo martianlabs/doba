@@ -27,9 +27,9 @@
 
 #include <cstdlib>
 #include <memory>
-#include <string>
-#include <stdexcept>
 #include <optional>
+#include <stdexcept>
+#include <string>
 
 namespace martianlabs::doba::tests::unit {
 // /////////////////////////////////////////////////////////////////////////////
@@ -52,15 +52,18 @@ class temporary_directory {
   }
   temporary_directory(const temporary_directory&) = delete;
   temporary_directory& operator=(const temporary_directory&) = delete;
-  ~temporary_directory() { if (changed_ == 0) (void)restore(); }
+  ~temporary_directory() {
+    if (changed_ == 0) (void)restore();
+  }
   // +=========================================================================+
   // | [>] current                                                  ( public ) |
   // +-------------------------------------------------------------------------+
   static std::optional<std::string> current() {
     char* raw = nullptr;
     std::size_t size = 0;
-    if (_dupenv_s(&raw, &size, "TMP") != 0)
+    if (_dupenv_s(&raw, &size, "TMP") != 0) {
       throw std::runtime_error("Unable to read TMP");
+    }
     const std::unique_ptr<char, decltype(&std::free)> owner(raw, std::free);
     if (!owner) return std::nullopt;
     return std::string(owner.get());
@@ -83,7 +86,6 @@ class temporary_directory {
   // +=========================================================================+
   // | [>] ATTRIBUTEs                                              ( private ) |
   // +-------------------------------------------------------------------------+
-  // Whether the original environment has already been restored.
   bool restored_ = false;
   std::string previous_;
   int saved_ = -1;

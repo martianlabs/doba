@@ -8,9 +8,7 @@
   </a>
 </h1>
 
-Working inside doba's own project is the easy part. These checks put a
-separate consumer on the other side of the CMake targets and check what it
-actually receives.
+It works in doba's own build. Does it work for someone else's project?
 
 <a name="a-project-of-its-own"></a>
 <h2>
@@ -22,14 +20,12 @@ actually receives.
   </a>
 </h2>
 
-The [consumer project](CMakeLists.txt) checks both the installed package and
-source inclusion through **add_subdirectory**. Its targets take their public
-headers, C++20 requirement, and link dependencies from **martianlabs::doba**
-and, for TLS, **martianlabs::doba_tls**.
+The [consumer project](CMakeLists.txt) tries both an installed package and
+`add_subdirectory`. It gets headers, C++20 and link dependencies from
+`martianlabs::doba`; TLS uses `martianlabs::doba_tls`.
 
-The source-inclusion case also rejects accidental example or test targets
-appearing in the parent project. Depending on a library shouldn't quietly
-adopt its homework.
+Adding doba as a subdirectory must not bring its examples and tests into the
+parent project. Nobody ordered those.
 
 <a name="public-types-real-dependencies"></a>
 <h2>
@@ -47,22 +43,13 @@ adopt its homework.
   </a>
 </h2>
 
-The [HTTP consumer](protocol/http/v11/server_tests.cpp) exercises filesystem
-and reader types, an HTTP server, a controller with a typed route parameter,
-and the static-file controller.
+The [consumer](protocol/http/v11/server_tests.cpp) constructs an HTTP server,
+a typed controller route, readers and the static-file controller.
+`DOBA_PACKAGE_USE_TLS=ON` also requests the installed `TLS` component and
+builds `doba_tls_consumer`.
 
-The installed package exports the synchronous TCP interface and its thread
-and Windows socket dependencies. `DOBA_PACKAGE_USE_TLS=ON` additionally requests
-the installed `TLS` component and builds `doba_tls_consumer`, linked with
-`martianlabs::doba_tls`. Source consumers enable the same optional target.
-Plain package consumers do not discover OpenSSL, including from a TLS-enabled
-installation.
+A plain consumer must work without finding OpenSSL, even when doba was installed
+with TLS enabled. CI checks that with OpenSSL discovery switched off.
 
-These are consumption and construction checks. The consumer programs do
-not open listening sockets or exchange requests; those behaviors belong to
-the [integration suite](../integration/README.md).
-
-The [TLS header guard](tls_guard/CMakeLists.txt) is a negative compilation test.
-It requires the specific missing-TLS-target diagnostic, not just any compiler
-failure. TLS CI also consumes a TLS-enabled installation through the plain
-export while OpenSSL package discovery is explicitly disabled.
+These programs check that consuming the package works. Real requests and
+listening sockets belong to the [integration tests](../integration/README.md).

@@ -8,67 +8,30 @@
 
 **Header:** [include/protocol/http/v11/headers/forwarded.h](../../../../../../include/protocol/http/v11/headers/forwarded.h)
 
-|                                                                 forwarded | | RFC 7239 S4 Forwarded                                                     | | The "Forwarded" header field is an optional request header field used by  | | proxies to disclose information that is altered or lost when a request    | | is forwarded. It can carry, for exam
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers
-
-[forwarded](#type-forwarded)
-
-### <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> protocol::http::v11::headers::forwarded
-
-[check](#method-check) ·
-[interpret](#method-interpret)
+HTTP/1.1 `forwarded` parsing and interpretation.
 
 <a id="api"></a>
-<a href="../../../../../../resources/docs/reference/api.svg#gh-light-mode-only">
-  <img src="../../../../../../resources/docs/reference/api.svg" alt="API">
-</a>
-<a href="../../../../../../resources/docs/reference/api-dark.svg#gh-dark-mode-only">
-  <img src="../../../../../../resources/docs/reference/api-dark.svg" alt="API">
-</a>
-
 <a id="type-forwarded"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> forwarded
 
-**TYPE** · *protocol::http::v11::headers*
-
-**Declaration synopsis:**
-
-```cpp
-class forwarded { ... };
-```
-
-|                                                                 forwarded | | RFC 7239 S4 Forwarded                                                     | | The "Forwarded" header field is an optional request header field used by  | | proxies to disclose information that is altered or lost when a request    | | is forwarded. It can carry, for exam
-
-**Source:** [include/protocol/http/v11/headers/forwarded.h:108](../../../../../../include/protocol/http/v11/headers/forwarded.h#L108)
+Static operations in `martianlabs::doba::protocol::http::v11::headers`.
 
 <a id="method-check"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> check
 
-**METHOD** · *protocol::http::v11::headers::forwarded*
-
 ```cpp
 static bool check(std::string_view sv, parsed_forwarded_list& out);
 ```
 
-Checks whether a value follows the HTTP forwarded header syntax.
+Appends comma-separated elements containing semicolon-separated `name=value` pairs. No whitespace is allowed around `=` or after semicolons; quoted values retain their quotes and escapes. Empty semicolon slots are skipped. Success requires `out.elements` to be nonempty, so use a fresh output for each field.
 
-**Parameters:**
-
-- **sv:** Text to check or parse. Declaration: `std::string_view sv`.
-- **out:** Output parameter that receives the result. Declaration: `parsed_forwarded_list& out`.
-
-**Returns:** A boolean result; see the operation description for its meaning.
-
-**Source:** [include/protocol/http/v11/headers/forwarded.h:113](../../../../../../include/protocol/http/v11/headers/forwarded.h#L113)
+Output lists are appended to, not cleared. Parsed views borrow the input; keep its backing bytes alive and unchanged. Failure may leave earlier elements appended, and allocation failures may throw. Use a fresh output for a new field. Empty comma elements are skipped; field-level whitespace trimming is the caller's responsibility.
 
 <a id="method-interpret"></a>
 
 ## <a href="../../../../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> interpret
-
-**METHOD** · *protocol::http::v11::headers::forwarded*
 
 ```cpp
 static constexpr verdict interpret(
@@ -76,14 +39,4 @@ static constexpr verdict interpret(
       const policies& pol);
 ```
 
-Interprets the parsed header value for HTTP/1.1 processing.
-
-**Parameters:**
-
-- **forwarded_list:** Parsed Forwarded header elements. Declaration: `const parsed_forwarded_list& forwarded_list`.
-- **connection:** Connection being processed. Declaration: `v11::connection&`.
-- **pol:** Policies controlling this operation. Declaration: `const policies& pol`.
-
-**Returns:** A `verdict` describing the result of applying this header or rule.
-
-**Source:** [include/protocol/http/v11/headers/forwarded.h:129](../../../../../../include/protocol/http/v11/headers/forwarded.h#L129)
+Rejects when this parsed list exceeds a nonzero `max_forwarding_hops`; otherwise accepts without changing the connection. It does not establish proxy trust.

@@ -38,6 +38,7 @@
 
 #include "common/reader.h"
 #include "common/task.h"
+#include "protocol/contracts.h"
 #include "protocol/http/common/header.h"
 #include "protocol/http/common/helpers.h"
 #include "protocol/http/common/query_parameter.h"
@@ -45,7 +46,6 @@
 #include "protocol/http/common/target.h"
 #include "protocol/http/v11/body/reader.h"
 #include "protocol/http/v11/body/writer.h"
-#include "protocol/contracts.h"
 #include "protocol/http/v11/results.h"
 
 namespace martianlabs::doba::protocol::http::v11 {
@@ -53,8 +53,6 @@ namespace detail {
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] make_engine_factory                                      ( function ) |
-// +---------------------------------------------------------------------------+
-// | Creates a factory function for engines.                                   |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename ROty>
@@ -68,8 +66,6 @@ auto make_engine_factory(typename ENty::policies_type configuration,
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] engine_factory                                               ( type ) |
-// +---------------------------------------------------------------------------+
-// | Type of the engine factory function.                                      |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 template <protocol::contracts::engine ENty, typename ROty>
@@ -88,8 +84,7 @@ template <typename RQty>
 concept request =
     std::move_constructible<RQty> && std::assignable_from<RQty&, RQty> &&
     requires(RQty& mutable_value, const RQty& value, std::string_view text,
-             std::size_t index,
-             std::vector<http::header_view> headers,
+             std::size_t index, std::vector<http::header_view> headers,
              std::vector<http::query_parameter_view> query_parameters,
              std::optional<body::reader> body_reader) {
       {
@@ -107,12 +102,14 @@ concept request =
       { value.body_is_stored() } -> std::same_as<bool>;
       { mutable_value.make_owned() } -> std::same_as<void>;
       { value.body_wire_size() } -> std::same_as<std::size_t>;
-      { mutable_value.rebase_bytes(std::uintptr_t{}, text.data()) } noexcept
-          -> std::same_as<void>;
+      {
+        mutable_value.rebase_bytes(std::uintptr_t{}, text.data())
+      } noexcept -> std::same_as<void>;
       { mutable_value.begin_body(index, index) } -> std::same_as<bool>;
       { mutable_value.append_body(text) } -> std::same_as<bool>;
-      { mutable_value.finish_body(false, index, index, index) }
-          -> std::same_as<bool>;
+      {
+        mutable_value.finish_body(false, index, index, index)
+      } -> std::same_as<bool>;
       { value.get_method() } -> std::same_as<std::string_view>;
       { value.get_target() } -> std::same_as<http::target>;
       { value.get_absolute_path() } -> std::same_as<std::string_view>;
@@ -163,8 +160,9 @@ concept response =
              std::string_view text, body::reader* body_reader,
              body::body_writer body_writer, common::reader source) {
       { RSty::from(size, size) } -> std::same_as<RSty>;
-      { RSty::from(size, size, head_storage, body_storage) }
-          -> std::same_as<RSty>;
+      {
+        RSty::from(size, size, head_storage, body_storage)
+      } -> std::same_as<RSty>;
       { value.serialize() } -> std::same_as<serialization_result>;
       { value.add_header(text, text) } -> std::same_as<RSty&>;
       { value.add_header(text, 1) } -> std::same_as<RSty&>;

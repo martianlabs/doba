@@ -126,7 +126,7 @@ DOBA_TEST("check rejects pair and separator boundaries") {
 // | [>] check accepts only cookie-octet bytes in values         ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("check accepts only cookie-octet bytes in values") {
-  // RFC 6265 S4.1.1: semicolon separates pairs; it is not a cookie-octet value.
+  // RFC 6265 S4.1.1: a semicolon separates pairs; it cannot be in the value.
   for (unsigned int byte = 0; byte <= 255; ++byte) {
     if (byte == ';') {
       DOBA_EXPECT(cookie::check("a=x; y=z"));

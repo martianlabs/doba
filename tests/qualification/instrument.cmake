@@ -22,7 +22,7 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-# Instrumentation belongs to the qualification build, never exported targets.
+# Instrument only the qualification build.
 function(doba_profile_targets directory)
   get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
   foreach(target IN LISTS targets)

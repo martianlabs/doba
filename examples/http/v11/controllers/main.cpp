@@ -26,10 +26,9 @@
 #include <string>
 #include <utility>
 
-#include "common/console_logger.h"
 #include "common/signaler.h"
-#include "protocol/http/common/method_names.h"
 #include "http_server.h"
+#include "protocol/http/common/method_names.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
@@ -39,8 +38,6 @@ using namespace martianlabs::doba::protocol::http::v11;
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
 // | [>] counter_controller                                          ( class ) |
-// +---------------------------------------------------------------------------+
-// | Controller implementation.                                                |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 class counter_controller {
@@ -89,13 +86,7 @@ class counter_controller {
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server has two controllers registered: one for the "/first" route     |
-// | and another for the "/second" route. Each controller is an instance of    |
-// | the counter_controller class, which maintains a count of requests and     |
-// | can echo back an ID provided in the request. The server runs until a      |
-// | termination signal is received, at which point it stops gracefully.       |
+// | Give two controller instances their own routes and counters.              |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {

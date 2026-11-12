@@ -1,63 +1,86 @@
-# Web Frameworks HTTP/1.1 benchmark adapter
+<a name="web-frameworks-http11-benchmark-adapter"></a>
+<h1>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter.svg" alt="Web Frameworks">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h1-web-frameworks-http11-benchmark-adapter-dark.svg" alt="Web Frameworks">
+  </a>
+</h1>
 
-This target exposes the routes used by the Web Frameworks benchmark. It
-contains only the doba server adapter; the upstream project owns validation,
-load generation, and result collection.
+Three routes, plenty of traffic. doba serves them on port 3000; the upstream
+runner checks replies, generates load and collects the numbers.
 
-The upstream project inspected for this adapter is:
+| Route | Reply |
+| --- | --- |
+| `GET /` | Empty body. |
+| `GET /user/:id` | The path parameter. |
+| `POST /user` | Empty body. |
 
-```text
-https://github.com/the-benchmarker/web-frameworks.git
-50cb0223f095878106e3115ed06261056870032b
+The route checks cover all three. The default benchmark times only `GET /`.
+The runner setup below matches [upstream revision 50cb022](https://github.com/the-benchmarker/web-frameworks/tree/50cb0223f095878106e3115ed06261056870032b).
+
+<a name="run-it-here"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-here.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-here.svg" alt="Run it here">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-here-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-here-dark.svg" alt="Run it here">
+  </a>
+</h2>
+
+With C++20, CMake 3.20+ and Ninja ready, from the repo root in a Unix shell:
+
+```sh
+cmake -S benchmarks/http/v11/web-frameworks -B out/web-frameworks -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build out/web-frameworks --parallel
+./out/web-frameworks/doba_web_frameworks_http_v11
 ```
 
-Build and start the adapter locally:
+<a name="run-it-in-docker"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-in-docker.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-in-docker.svg" alt="Run it in Docker">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-in-docker-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-run-it-in-docker-dark.svg" alt="Run it in Docker">
+  </a>
+</h2>
 
-```text
-cmake -S benchmarks/http/v11/web-frameworks \
-  -B build/http/v11/web-frameworks
-cmake --build build/http/v11/web-frameworks --config Release
-build/http/v11/web-frameworks/doba_web_frameworks_http_v11
-```
-
-The adapter implements `GET /`, `GET /user/:id`, and `POST /user` on port
-3000. The user route returns the path parameter; the other routes return an
-empty body. The upstream route specification checks all three routes. The
-default benchmark measures only `GET /`.
-
-Build and start the standalone adapter container:
-
-```text
-docker build --tag doba-web-frameworks-http-v11 \
-  benchmarks/http/v11/web-frameworks
+```sh
+docker build --tag doba-web-frameworks-http-v11 benchmarks/http/v11/web-frameworks
 docker run --rm --publish 3000:3000 doba-web-frameworks-http-v11
 ```
 
-The Dockerfile accepts `DOBA_REF` as a build argument and defaults to the
-published `feature/pipelined` commit used by the upstream configuration.
-Use another published tag or commit to test a different doba revision:
+The Dockerfile defaults to the published `7be948e` doba commit used by the
+upstream configuration. To try another published revision, add
+`--build-arg DOBA_REF=<tag-or-commit>` to `docker build`.
+Local library edits need the local build; Docker fetches its copy remotely.
 
-```text
-docker build --tag doba-web-frameworks-http-v11 \
-  --build-arg DOBA_REF=<published-tag-or-commit> \
-  benchmarks/http/v11/web-frameworks
-```
+<a name="use-the-upstream-runner"></a>
+<h2>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-use-the-upstream-runner.svg#gh-light-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-use-the-upstream-runner.svg" alt="Use the upstream runner">
+  </a>
+  <a href="../../../../resources/benchmarks/http/v11/web-frameworks/h2-use-the-upstream-runner-dark.svg#gh-dark-mode-only">
+    <img src="../../../../resources/benchmarks/http/v11/web-frameworks/h2-use-the-upstream-runner-dark.svg" alt="Use the upstream runner">
+  </a>
+</h2>
 
-To use the upstream runner, copy `CMakeLists.txt`, `config.yaml`, and `main.cpp`
-to `cpp/doba` in a checkout of the pinned revision. Install Ruby, Bundler,
-Docker, `jq`, and `zrk` 2.4 or newer. Generate the upstream manifests for
-the three routes and concurrency levels:
+Copy `CMakeLists.txt`, `config.yaml` and `main.cpp` from this folder to
+`cpp/doba` in the pinned upstream checkout. Have Ruby, Bundler, Docker,
+`jq` and `zrk` 2.4+ ready, then generate the manifests:
 
-```text
+```sh
 bundle install
-CONCURRENCIES=64,256,512 \
-ROUTES='GET:/,GET:/user/0,POST:/user' \
-SERVER_CPUS=0-3 LOAD_CPUS=4-15 bundle exec rake config
+CONCURRENCIES=64,256,512 ROUTES='GET:/,GET:/user/0,POST:/user' \
+  SERVER_CPUS=0-3 LOAD_CPUS=4-15 bundle exec rake config
 ```
 
-Run the generated targets for each adapter under the same conditions:
+Run the generated targets:
 
-```text
+```sh
 make -f cpp/doba/.Makefile build
 make -f cpp/doba/.Makefile test
 make -f cpp/doba/.Makefile warmup
@@ -66,8 +89,7 @@ make -f cpp/doba/.Makefile collect
 make -f cpp/doba/.Makefile unbuild
 ```
 
-Apply the same targets to `cpp/drogon` and `cpp/oatpp`. The `collect` target
-uses `zrk --closed` for 15 seconds per route by default and records request
-rate, latency, and server CPU saturation. The upstream checkout, generated
-manifests, and benchmark results are external artifacts and must not be
-committed to this repository.
+Use the same targets and conditions for `cpp/drogon` and `cpp/oatpp`.
+By default, collect uses `zrk --closed` for 15 seconds per route and records
+request rate, latency and CPU saturation. Keep the upstream checkout,
+generated manifests and results outside this repo.

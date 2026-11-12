@@ -37,7 +37,7 @@ concept http_server =
     protocol::http::v11::contracts::router<ROty, RQty, RSty> &&
     std::constructible_from<ENty, const typename ENty::policies_type&,
                             const ROty&> &&
-    transport::server::contracts::transport<
+    transport::contracts::transport<
         TRty<ENty, protocol::http::v11::detail::engine_factory<ENty, ROty>>, ENty,
         protocol::http::v11::detail::engine_factory<ENty, ROty>>;
 ```
@@ -52,4 +52,4 @@ HTTP/1.1 server composition contract.
 - **ENty:** `typename ENty`.
 - **TRty:** `template <typename, typename> class TRty`.
 
-**Source:** [include/contracts.h:43](../../include/contracts.h#L43)
+**Source:** [include/contracts.h](../../include/contracts.h)

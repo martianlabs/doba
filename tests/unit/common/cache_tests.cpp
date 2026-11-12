@@ -23,7 +23,7 @@
 // permissions and limitations under the License.
 
 #include <atomic>
-#include <chrono>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -33,261 +33,302 @@
 #include "../../helpers/concurrency.h"
 #include "common/cache.h"
 #include "common/cache_policies.h"
-#include "common/cache_statistics.h"
 #include "common/reader.h"
 #include "test_helper.h"
 
 namespace {
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] usings                                                     ( public ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
 using namespace martianlabs::doba::common;
 using martianlabs::doba::tests::manual_event;
 using martianlabs::doba::tests::scope_exit;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] clock_stub                                                 ( struct ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct clock_stub {
-  // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  using duration = std::chrono::milliseconds;
-  using time_point = std::chrono::time_point<clock_stub>;
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  static inline duration ticks{};
-  // +=========================================================================+
-  // | [>] now                                                      ( public ) |
-  // +-------------------------------------------------------------------------+
-  static time_point now() { return time_point(ticks); }
-};
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] parallel_clock                                             ( struct ) |
-// +---------------------------------------------------------------------------+
-// | Gate two lookups inside now() to verify overlapping read access.          |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
-struct parallel_clock {
-  // +=========================================================================+
-  // | [>] USINGs                                                   ( public ) |
-  // +-------------------------------------------------------------------------+
-  using duration = std::chrono::milliseconds;
-  using time_point = std::chrono::time_point<parallel_clock>;
-  // +=========================================================================+
-  // | [>] ATTRIBUTEs                                               ( public ) |
-  // +-------------------------------------------------------------------------+
-  // Enabled only after the initial value has been admitted.
-  static inline std::atomic<bool> gated{false};
-  // Number of concurrent calls that reached the gate.
-  static inline std::atomic<unsigned> arrivals{0};
-  // Test-owned events, valid until all lookup threads have joined.
-  static inline manual_event* entered = nullptr;
-  static inline manual_event* release = nullptr;
-  // +=========================================================================+
-  // | [>] now                                                      ( public ) |
-  // +-------------------------------------------------------------------------+
-  static time_point now() {
-    if (gated.load()) {
-      if (arrivals.fetch_add(1) + 1 == 2) entered->open();
-      release->wait();
-    }
-    return time_point{};
-  }
-};
-using test_cache = cache<std::string, std::string, clock_stub>;
-// /////////////////////////////////////////////////////////////////////////////
-// +---------------------------------------------------------------------------+
-// | [>] text                                                     ( function ) |
-// +---------------------------------------------------------------------------+
-// /////////////////////////////////////////////////////////////////////////////
+
 auto text(std::string value) {
   return std::make_shared<const std::string>(std::move(value));
 }
 }  // namespace
 
 // +===========================================================================+
-// | [>] cache retained cost and LRU                             ( test-case ) |
+// | [>] resident entries and LRU recency                        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("cache bounds retained cost and updates LRU recency") {
-  test_cache value({.max_entries = 2, .max_cost = 6});
-  value.get_or_load("a", 2, [] {
-    return text("aa");
-  });
-  value.get_or_load("b", 2, [] {
-    return text("bb");
-  });
-  auto pin = value.find("a");
-  value.get_or_load("c", 2, [] {
-    return text("cc");
-  });
+DOBA_TEST("cache bounds resident entries and promotes sequential hits") {
+  cache<std::string> value({.max_entries = 2});
+  value.try_get_or_load("a", 2, [] { return text("aa"); });
+  value.try_get_or_load("b", 2, [] { return text("bb"); });
+  auto pinned = value.find("a");
+  value.try_get_or_load("c", 2, [] { return text("cc"); });
   DOBA_EXPECT(!value.find("b"));
-  DOBA_EXPECT(value.find("a") != nullptr);
-  value.clear();
-  DOBA_EXPECT_EQUAL(value.statistics().resident_cost, 0);
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 2);
-  bool called = false;
-  DOBA_EXPECT(!value.get_or_load("d", 5, [&] {
-    called = true;
-    return text("12345");
-  }));
-  DOBA_EXPECT(!called);
-  pin.reset();
-  DOBA_EXPECT(value.get_or_load("d", 5, [] {
-    return text("12345");
-  }) != nullptr);
+  DOBA_EXPECT_EQUAL(value.find("a"), pinned);
+  DOBA_EXPECT(value.find("c") != nullptr);
 }
 
 // +===========================================================================+
-// | [>] cache expiration clock                                  ( test-case ) |
+// | [>] resident cost and response ownership                    ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("cache expiration uses its clock and starts after loading") {
-  clock_stub::ticks = std::chrono::milliseconds(0);
-  test_cache value({.ttl = std::chrono::milliseconds(10)});
-  auto first = value.get_or_load("a", 1, [] {
-    clock_stub::ticks += std::chrono::milliseconds(20);
-    return text("a");
-  });
-  clock_stub::ticks += std::chrono::milliseconds(9);
-  DOBA_EXPECT_EQUAL(value.find("a"), first);
-  clock_stub::ticks += std::chrono::milliseconds(1);
-  DOBA_EXPECT(!value.find("a"));
-  DOBA_EXPECT_EQUAL(*first, "a");
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 1);
+DOBA_TEST("cache bounds resident cost independently of retained responses") {
+  cache<std::string> value({.max_cost = 6});
+  auto old = value.try_get_or_load("old", 6, [] { return text("old"); });
+  auto fresh = value.try_get_or_load("new", 5, [] { return text("new"); });
+  DOBA_EXPECT(fresh != nullptr);
+  DOBA_EXPECT(!value.find("old"));
+  DOBA_EXPECT_EQUAL(*old, "old");
+  value.clear();
+  DOBA_EXPECT_EQUAL(*fresh, "new");
+  DOBA_EXPECT(!value.find("new"));
+  DOBA_EXPECT(value.try_get_or_load("full", 6, [] { return text("full"); }) !=
+              nullptr);
 }
 
 // +===========================================================================+
-// | [>] cache rejects excess loads and coalesces concurrent     ( test-case ) |
-// | same key loads                                                            |
+// | [>] direct shared ownership and cached hits                 ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache returns the loader ownership directly and reuses hits") {
+  cache<std::string> value;
+  auto source = text("data");
+  auto first = value.try_get_or_load("file", 4, [&] { return source; });
+  DOBA_EXPECT_EQUAL(first, source);
+  DOBA_EXPECT(!first.owner_before(source) && !source.owner_before(first));
+  bool called = false;
+  auto hit = value.try_get_or_load(
+      "file", std::numeric_limits<std::size_t>::max(), [&] {
+        called = true;
+        return text("wrong");
+      });
+  DOBA_EXPECT_EQUAL(hit, source);
+  DOBA_EXPECT(!called);
+}
+
+// +===========================================================================+
+// | [>] disabled and oversized admission                        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache disabled and oversize admission never invokes the loader") {
+  for (auto policies :
+       {cache_policies{.max_entries = 0}, cache_policies{.max_cost = 0},
+        cache_policies{.max_loads = 0}, cache_policies{.max_cost = 1}}) {
+    cache<std::string> value(policies);
+    bool called = false;
+    DOBA_EXPECT(!value.try_get_or_load("file", 2, [&] {
+      called = true;
+      return text("xx");
+    }));
+    DOBA_EXPECT(!called);
+  }
+  cache<std::string> value({.max_cost = 1});
+  auto old = value.try_get_or_load("old", 1, [] { return text("x"); });
+  DOBA_EXPECT(!value.try_get_or_load("large", 2, [] { return text("xx"); }));
+  DOBA_EXPECT_EQUAL(value.find("old"), old);
+}
+
+// +===========================================================================+
+// | [>] failed and empty loads                                  ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST(
-    "cache rejects excess loads and coalesces concurrent same key loads") {
-  cache<int, std::string> value({.max_loads = 1});
-  manual_event entered, release;
-  std::shared_ptr<const std::string> first, second;
-  std::atomic<int> calls{0};
-  std::jthread a([&] {
-    first = value.get_or_load(1, 5, [&] {
-      ++calls;
-      entered.open();
-      release.wait();
-      return text("hello");
-    });
-  });
-  std::jthread b;
-  scope_exit cleanup([&] {
-    release.open();
-  });
-  DOBA_EXPECT(entered.wait_for());
-  DOBA_EXPECT(!value.get_or_load(2, 1, [] {
-    return text("x");
-  }));
-  b = std::jthread([&] {
-    second = value.get_or_load(1, 5, [&] {
-      ++calls;
-      return text("bad");
-    });
-  });
-  const auto deadline =
-      std::chrono::steady_clock::now() + std::chrono::seconds(5);
-  while (!value.statistics().waiters &&
-         std::chrono::steady_clock::now() < deadline)
-    std::this_thread::yield();
-  DOBA_EXPECT_EQUAL(value.statistics().waiters, 1);
-  release.open();
-  a.join();
-  b.join();
-  DOBA_EXPECT_EQUAL(calls.load(), 1);
-  DOBA_EXPECT_EQUAL(first, second);
-  DOBA_EXPECT_EQUAL(*first, "hello");
-}
-
-// +===========================================================================+
-// | [>] cache invalidation generations                          ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache invalidation prevents obsolete loads from republishing") {
-  for (bool clear : {false, true}) {
-    cache<int, std::string> value;
-    manual_event entered, release;
-    std::shared_ptr<const std::string> old;
-    std::jthread worker([&] {
-      old = value.get_or_load(1, 3, [&] {
-        entered.open();
-        release.wait();
-        return text("old");
-      });
-    });
-    scope_exit cleanup([&] {
-      release.open();
-    });
-    DOBA_EXPECT(entered.wait_for());
-    if (clear)
-      value.clear();
-    else
-      value.erase(1);
-    auto fresh = value.get_or_load(1, 3, [] {
-      return text("new");
-    });
-    release.open();
-    worker.join();
-    DOBA_EXPECT(!old);
-    DOBA_EXPECT_EQUAL(value.find(1), fresh);
-    DOBA_EXPECT_EQUAL(value.statistics().live_cost, 3);
-  }
-}
-
-// +===========================================================================+
-// | [>] cache releases reservations after failures and detects  ( test-case ) |
-// | recursion                                                                 |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache releases reservations after failures and detects recursion") {
-  cache<int, std::string> value;
+    "cache null and failed loads preserve resident entries and permit retry") {
+  cache<std::string> value({.max_entries = 1, .max_cost = 4, .max_loads = 1});
+  auto old = value.try_get_or_load("old", 4, [] { return text("old"); });
+  DOBA_EXPECT(!value.try_get_or_load(
+      "new", 4, [] { return std::shared_ptr<const std::string>{}; }));
   bool failed = false;
   try {
-    value.get_or_load(1, 20, []() -> std::shared_ptr<const std::string> {
-      throw std::runtime_error("load failed");
+    value.try_get_or_load("new", 4, []() -> std::shared_ptr<const std::string> {
+      throw std::runtime_error("expected");
     });
   } catch (const std::runtime_error&) {
     failed = true;
   }
   DOBA_EXPECT(failed);
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 0);
-  DOBA_EXPECT_EQUAL(value.statistics().loads, 0);
-  DOBA_EXPECT(!value.get_or_load(1, 2, [] {
-    return std::shared_ptr<const std::string>{};
-  }));
-  failed = false;
-  try {
-    value.get_or_load(1, 1, [&] {
-      return value.get_or_load(1, 1, [] {
-        return text("x");
-      });
-    });
-  } catch (const std::logic_error&) {
-    failed = true;
-  }
-  DOBA_EXPECT(failed);
-  DOBA_EXPECT(value.get_or_load(1, 1, [] {
-    return text("x");
-  }) != nullptr);
+  DOBA_EXPECT_EQUAL(value.find("old"), old);
+  DOBA_EXPECT(value.try_get_or_load("new", 4, [] { return text("new"); }) !=
+              nullptr);
 }
 
 // +===========================================================================+
-// | [>] shared reader ownership                                 ( test-case ) |
+// | [>] active load bypass                                      ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache bypasses an active key while distinct keys load") {
+  cache<std::string> value({.max_loads = 2});
+  manual_event entered, release;
+  std::shared_ptr<const std::string> first;
+  std::jthread worker([&] {
+    first = value.try_get_or_load("a", 1, [&] {
+      entered.open();
+      release.wait();
+      return text("a");
+    });
+  });
+  scope_exit cleanup([&] { release.open(); });
+  DOBA_EXPECT(entered.wait_for());
+  bool called = false;
+  DOBA_EXPECT(!value.try_get_or_load("a", 1, [&] {
+    called = true;
+    return text("wrong");
+  }));
+  DOBA_EXPECT(!called);
+  DOBA_EXPECT(value.try_get_or_load("b", 1, [] { return text("b"); }) !=
+              nullptr);
+  release.open();
+  worker.join();
+  DOBA_EXPECT_EQUAL(value.find("a"), first);
+}
+
+// +===========================================================================+
+// | [>] load slots after invalidation                           ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache invalidation keeps obsolete loaders in the load limit") {
+  for (bool clear : {false, true}) {
+    cache<std::string> value({.max_loads = 1});
+    manual_event entered, release;
+    std::shared_ptr<const std::string> old;
+    std::jthread worker([&] {
+      old = value.try_get_or_load("a", 1, [&] {
+        entered.open();
+        release.wait();
+        return text("old");
+      });
+    });
+    scope_exit cleanup([&] { release.open(); });
+    DOBA_EXPECT(entered.wait_for());
+    if (clear) {
+      value.clear();
+    } else {
+      value.erase("a");
+    }
+    bool called = false;
+    DOBA_EXPECT(!value.try_get_or_load("b", 1, [&] {
+      called = true;
+      return text("b");
+    }));
+    DOBA_EXPECT(!called);
+    release.open();
+    worker.join();
+    DOBA_EXPECT(!old);
+    DOBA_EXPECT(!value.find("a"));
+    DOBA_EXPECT(value.try_get_or_load("b", 1, [] { return text("b"); }) !=
+                nullptr);
+  }
+}
+
+// +===========================================================================+
+// | [>] obsolete and replacement loaders                        ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache obsolete completion cannot remove or overwrite a newer load") {
+  for (bool clear : {false, true}) {
+    for (bool fail : {false, true}) {
+      cache<std::string> value({.max_loads = 2});
+      manual_event old_entered, old_release, new_entered, new_release;
+      std::shared_ptr<const std::string> old, fresh;
+      std::atomic<bool> failed{false};
+      std::jthread first([&] {
+        try {
+          old = value.try_get_or_load("file", 3, [&] {
+            old_entered.open();
+            old_release.wait();
+            if (fail) throw std::runtime_error("old load failed");
+            return text("old");
+          });
+        } catch (const std::runtime_error&) {
+          failed = true;
+        }
+      });
+      std::jthread second;
+      scope_exit cleanup([&] {
+        old_release.open();
+        new_release.open();
+      });
+      DOBA_EXPECT(old_entered.wait_for());
+      if (clear) {
+        value.clear();
+      } else {
+        value.erase("file");
+      }
+      second = std::jthread([&] {
+        fresh = value.try_get_or_load("file", 3, [&] {
+          new_entered.open();
+          new_release.wait();
+          return text("new");
+        });
+      });
+      DOBA_EXPECT(new_entered.wait_for());
+      old_release.open();
+      first.join();
+      DOBA_EXPECT(!old);
+      DOBA_EXPECT_EQUAL(failed.load(), fail);
+      // The old load frees its slot and leaves the new one alone.
+      DOBA_EXPECT(value.try_get_or_load(
+                      "probe", 1, [] { return text("probe"); }) != nullptr);
+      bool called = false;
+      DOBA_EXPECT(!value.try_get_or_load("file", 1, [&] {
+        called = true;
+        return text("wrong");
+      }));
+      DOBA_EXPECT(!called);
+      new_release.open();
+      second.join();
+      DOBA_EXPECT_EQUAL(value.find("file"), fresh);
+      DOBA_EXPECT_EQUAL(*fresh, "new");
+    }
+  }
+}
+
+// +===========================================================================+
+// | [>] obsolete completion after publication                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST(
+    "cache obsolete completion preserves an already published replacement") {
+  cache<std::string> value;
+  manual_event entered, release;
+  std::shared_ptr<const std::string> old;
+  std::jthread worker([&] {
+    old = value.try_get_or_load("file", 3, [&] {
+      entered.open();
+      release.wait();
+      return text("old");
+    });
+  });
+  scope_exit cleanup([&] { release.open(); });
+  DOBA_EXPECT(entered.wait_for());
+  value.erase("file");
+  auto fresh = value.try_get_or_load("file", 3, [] { return text("new"); });
+  release.open();
+  worker.join();
+  DOBA_EXPECT(!old);
+  DOBA_EXPECT_EQUAL(value.find("file"), fresh);
+}
+
+// +===========================================================================+
+// | [>] conditional invalidation                                ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache conditional erase preserves newer entries and active loads") {
+  cache<std::string> value;
+  auto old = value.try_get_or_load("file", 3, [] { return text("old"); });
+  DOBA_EXPECT(value.erase("file", old));
+  manual_event entered, release;
+  std::shared_ptr<const std::string> fresh;
+  std::jthread worker([&] {
+    fresh = value.try_get_or_load("file", 3, [&] {
+      entered.open();
+      release.wait();
+      return text("new");
+    });
+  });
+  scope_exit cleanup([&] { release.open(); });
+  DOBA_EXPECT(entered.wait_for());
+  DOBA_EXPECT(!value.erase("file", old));
+  release.open();
+  worker.join();
+  DOBA_EXPECT(!value.erase("file", old));
+  DOBA_EXPECT_EQUAL(value.find("file"), fresh);
+  DOBA_EXPECT_EQUAL(*old, "old");
+  DOBA_EXPECT(value.erase("file", fresh));
+}
+
+// +===========================================================================+
+// | [>] reader ownership after cache destruction                ( test-case ) |
 // +---------------------------------------------------------------------------+
 DOBA_TEST("shared readers retain evicted values after cache destruction") {
   reader first, second;
   std::weak_ptr<const std::string> weak;
   {
-    cache<int, std::string> value;
-    auto data = value.get_or_load(1, 4, [] {
-      return text("data");
-    });
+    cache<std::string> value;
+    auto data = value.try_get_or_load("file", 4, [] { return text("data"); });
     weak = data;
     const auto bytes = std::as_bytes(std::span(data->data(), data->size()));
     first = reader::shared(data, bytes);
@@ -307,237 +348,100 @@ DOBA_TEST("shared readers retain evicted values after cache destruction") {
 }
 
 // +===========================================================================+
-// | [>] cache handles concurrent distinct keys with bounded     ( test-case ) |
-// | live cost                                                                 |
+// | [>] concurrent publication bounds                           ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST("cache handles concurrent distinct keys with bounded live cost") {
-  cache<int, int> value({.max_entries = 8, .max_cost = 8, .max_loads = 4});
+DOBA_TEST("cache concurrent publication respects resident and loader bounds") {
+  cache<int> value({.max_entries = 3, .max_cost = 5, .max_loads = 4});
   std::atomic<bool> good{true};
+  std::atomic<unsigned> active{0};
   std::vector<std::jthread> workers;
   for (int thread = 0; thread < 8; ++thread)
     workers.emplace_back([&, thread] {
+      const auto key = std::to_string(thread);
       for (int i = 0; i < 100; ++i) {
-        auto result = value.get_or_load(thread, 1, [thread] {
+        auto result = value.try_get_or_load(key, 2, [&] {
+          if (active.fetch_add(1) >= 4) good = false;
+          std::this_thread::yield();
+          active.fetch_sub(1);
           return std::make_shared<const int>(thread);
         });
         if (result && *result != thread) good = false;
-        if (value.statistics().live_cost > 8) good = false;
-        if (i % 7 == 0) value.erase(thread);
+        if (i % 7 == 0) value.erase(key);
         if (i % 29 == 0) value.clear();
       }
     });
   workers.clear();
   DOBA_EXPECT(good.load());
   value.clear();
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 0);
-}
+  for (int key = 0; key < 8; ++key)
+    DOBA_EXPECT(!value.find(std::to_string(key)));
+  DOBA_EXPECT(value.try_get_or_load("after", 2, [] {
+    return std::make_shared<const int>(42);
+  }) != nullptr);
 
-// +===========================================================================+
-// | [>] cache shares loader exceptions with waiters and permits ( test-case ) |
-// | retry                                                                     |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache shares loader exceptions with waiters and permits retry") {
-  cache<int, std::string> value;
+  // Finish eight loads together. Only two values should fit.
+  cache<int> bounded({.max_entries = 3, .max_cost = 5, .max_loads = 8});
   manual_event entered, release;
-  std::atomic<unsigned> failures{0};
-  std::jthread first([&] {
-    try {
-      value.get_or_load(1, 5, [&]() -> std::shared_ptr<const std::string> {
-        entered.open();
-        release.wait();
-        throw std::runtime_error("expected");
-      });
-    } catch (const std::runtime_error&) {
-      ++failures;
-    }
-  });
-  std::jthread second;
+  std::atomic<unsigned> arrivals{0};
   scope_exit cleanup([&] {
     release.open();
+    workers.clear();
   });
-  DOBA_EXPECT(entered.wait_for());
-  second = std::jthread([&] {
-    try {
-      value.get_or_load(1, 5, [] {
-        return text("wrong");
+  for (int key = 0; key < 8; ++key)
+    workers.emplace_back([&, key] {
+      bounded.try_get_or_load(std::to_string(key), 2, [&] {
+        if (arrivals.fetch_add(1) + 1 == 8) entered.open();
+        release.wait();
+        return std::make_shared<const int>(key);
       });
-    } catch (const std::runtime_error&) {
-      ++failures;
-    }
-  });
-  const auto deadline =
-      std::chrono::steady_clock::now() + std::chrono::seconds(5);
-  while (!value.statistics().waiters &&
-         std::chrono::steady_clock::now() < deadline)
-    std::this_thread::yield();
-  DOBA_EXPECT_EQUAL(value.statistics().waiters, 1);
+    });
+  DOBA_EXPECT(entered.wait_for());
   release.open();
-  first.join();
-  second.join();
-  DOBA_EXPECT_EQUAL(failures.load(), 2);
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 0);
-  DOBA_EXPECT_EQUAL(*value.get_or_load(1, 2,
-                                       [] {
-                                         return text("ok");
-                                       }),
-                    "ok");
+  workers.clear();
+  unsigned residents = 0;
+  for (int key = 0; key < 8; ++key)
+    if (bounded.find(std::to_string(key))) ++residents;
+  DOBA_EXPECT_EQUAL(residents, 2);
 }
 
 // +===========================================================================+
-// | [>] cache invalidation wakes waiters before an obsolete     ( test-case ) |
-// | loader finishes                                                           |
+// | [>] concurrent hits and invalidation                        ( test-case ) |
 // +---------------------------------------------------------------------------+
-DOBA_TEST(
-    "cache invalidation wakes waiters before an obsolete loader finishes") {
-  cache<int, std::string> value;
-  manual_event entered, release, waiter_done;
-  std::shared_ptr<const std::string> old, waiting;
-  std::jthread first([&] {
-    old = value.get_or_load(1, 5, [&] {
-      entered.open();
-      release.wait();
-      return text("old");
+DOBA_TEST("cache concurrent hits retain valid values across invalidation") {
+  cache<std::string> value;
+  auto pinned = value.try_get_or_load("file", 4, [] { return text("data"); });
+  manual_event start;
+  std::atomic<bool> good{true};
+  std::vector<std::jthread> workers;
+  for (int i = 0; i < 8; ++i)
+    workers.emplace_back([&] {
+      start.wait();
+      for (int j = 0; j < 1000; ++j) {
+        auto hit = value.find("file");
+        if (hit && hit != pinned) good = false;
+      }
     });
-  });
-  std::jthread second;
-  scope_exit cleanup([&] {
-    release.open();
-  });
-  DOBA_EXPECT(entered.wait_for());
-  second = std::jthread([&] {
-    waiting = value.get_or_load(1, 5, [] {
+  start.open();
+  value.erase("file");
+  workers.clear();
+  DOBA_EXPECT(good.load());
+  DOBA_EXPECT(!value.find("file"));
+  DOBA_EXPECT_EQUAL(*pinned, "data");
+}
+
+// +===========================================================================+
+// | [>] recursive load bypass                                   ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("cache recursive same key load bypasses instead of waiting") {
+  cache<std::string> value;
+  bool called = false;
+  auto result = value.try_get_or_load("file", 1, [&] {
+    auto nested = value.try_get_or_load("file", 1, [&] {
+      called = true;
       return text("wrong");
     });
-    waiter_done.open();
+    return nested ? nested : text("ok");
   });
-  const auto deadline =
-      std::chrono::steady_clock::now() + std::chrono::seconds(5);
-  while (!value.statistics().waiters &&
-         std::chrono::steady_clock::now() < deadline)
-    std::this_thread::yield();
-  DOBA_EXPECT_EQUAL(value.statistics().waiters, 1);
-  value.clear();
-  DOBA_EXPECT(waiter_done.wait_for());
-  second.join();
-  DOBA_EXPECT(!waiting);
-  DOBA_EXPECT_EQUAL(value.statistics().loads, 1);
-  auto fresh = value.get_or_load(1, 3, [] {
-    return text("new");
-  });
-  release.open();
-  first.join();
-  DOBA_EXPECT(!old);
-  DOBA_EXPECT_EQUAL(value.find(1), fresh);
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 3);
-}
-
-// +===========================================================================+
-// | [>] cache disabled admission and TTL limits                 ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache disabled admission and extreme TTL preserve contracts") {
-  for (const auto policies :
-       {cache_policies{.max_entries = 0}, cache_policies{.max_cost = 0},
-        cache_policies{.max_loads = 0}}) {
-    cache<int, int> value(policies);
-    bool called = false;
-    DOBA_EXPECT(!value.get_or_load(1, 0, [&] {
-      called = true;
-      return std::make_shared<const int>(1);
-    }));
-    DOBA_EXPECT(!called);
-  }
-  clock_stub::ticks = std::chrono::milliseconds(-100);
-  test_cache value({.ttl = std::chrono::milliseconds::max()});
-  auto pinned = value.get_or_load("a", 1, [] {
-    return text("a");
-  });
-  clock_stub::ticks =
-      std::chrono::milliseconds::max() - std::chrono::milliseconds(1);
-  DOBA_EXPECT_EQUAL(value.find("a"), pinned);
-}
-
-// +===========================================================================+
-// | [>] cache nonwaiting load                                   ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache try loading bypasses an active loader without waiting") {
-  cache<int, std::string> value;
-  manual_event entered, release;
-  std::shared_ptr<const std::string> first;
-  std::jthread worker([&] {
-    first = value.get_or_load(1, 5, [&] {
-      entered.open();
-      release.wait();
-      return text("first");
-    });
-  });
-  scope_exit cleanup([&] {
-    release.open();
-  });
-  DOBA_EXPECT(entered.wait_for());
-  bool called = false;
-  auto skipped = value.try_get_or_load(1, 5, [&] {
-    called = true;
-    return text("wrong");
-  });
-  DOBA_EXPECT(!skipped);
   DOBA_EXPECT(!called);
-  DOBA_EXPECT_EQUAL(value.statistics().waiters, 0);
-  auto other = value.try_get_or_load(2, 5, [] {
-    return text("other");
-  });
-  DOBA_EXPECT(other != nullptr);
-  release.open();
-  worker.join();
-  DOBA_EXPECT_EQUAL(value.try_get_or_load(1, 99, [] {
-    return text("wrong");
-  }), first);
-}
-
-// +===========================================================================+
-// | [>] cache conditional invalidation                          ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST("cache conditional erase preserves a newer generation") {
-  cache<int, std::string> value;
-  auto first = value.get_or_load(1, 3, [] {
-    return text("old");
-  });
-  DOBA_EXPECT(value.erase(1, first));
-  auto second = value.get_or_load(1, 3, [] {
-    return text("new");
-  });
-  DOBA_EXPECT(!value.erase(1, first));
-  DOBA_EXPECT_EQUAL(value.find(1), second);
-  DOBA_EXPECT_EQUAL(*first, "old");
-  DOBA_EXPECT(value.erase(1, second));
-  DOBA_EXPECT(!value.find(1));
-}
-
-// +===========================================================================+
-// | [>] cache lookups overlap without serializing readers       ( test-case ) |
-// +---------------------------------------------------------------------------+
-DOBA_TEST(
-    "cache permits concurrent hits while retaining invalidation contracts") {
-  cache<int, int, parallel_clock> value;
-  auto pinned =
-      value.get_or_load(1, 4, [] { return std::make_shared<const int>(42); });
-  manual_event entered, release;
-  parallel_clock::arrivals = 0;
-  parallel_clock::entered = &entered;
-  parallel_clock::release = &release;
-  parallel_clock::gated = true;
-  std::shared_ptr<const int> first, second;
-  std::jthread one([&] { first = value.find(1); });
-  std::jthread two([&] { second = value.find(1); });
-  scope_exit cleanup([&] { release.open(); });
-  const bool concurrent = entered.wait_for();
-  release.open();
-  one.join(); two.join();
-  parallel_clock::gated = false;
-  DOBA_EXPECT(concurrent);
-  DOBA_EXPECT_EQUAL(first, pinned);
-  DOBA_EXPECT_EQUAL(second, pinned);
-  value.erase(1);
-  DOBA_EXPECT(!value.find(1));
-  DOBA_EXPECT_EQUAL(*first, 42);
-  DOBA_EXPECT_EQUAL(value.statistics().live_cost, 4);
+  DOBA_EXPECT_EQUAL(*result, "ok");
 }

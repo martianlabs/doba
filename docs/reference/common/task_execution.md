@@ -1,4 +1,4 @@
-# Controlled task execution
+# <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Controlled task execution
 
 Header: [task_execution.h](../../../include/common/task_execution.h).
 
@@ -9,10 +9,10 @@ to decide when another turn is needed. This is the ownership primitive for
 the current async processor. Native TCP workers provide serialized engine
 turns on Linux and Windows; TLS forwards them without owning task frames.
 
-## Ownership and limits
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Ownership and limits
 
 Construction consumes an unstarted task without running its body. A moved-from
-or already-started task throws `std::invalid_argument`. The owner cannot be
+or already-transferred task throws `std::invalid_argument`. The owner cannot be
 copied or moved: its local scheduler callbacks refer to its stable address.
 No coroutine handle escapes through this API.
 
@@ -31,7 +31,7 @@ must not arrange external resumption or access frame-owned state after
 cancellation. Coroutine parameters that borrow external objects require those
 objects to outlive the owner. Destructors must not throw.
 
-## Operations
+## <a href="../../../resources/docs/reference/entry-accent.svg#gh-light-mode-only"><img src="../../../resources/docs/reference/entry-accent.svg" alt="" width="4" height="20"></a><a href="../../../resources/docs/reference/entry-accent-dark.svg#gh-dark-mode-only"><img src="../../../resources/docs/reference/entry-accent-dark.svg" alt="" width="4" height="20"></a> Operations
 
 | Operation | Meaning |
 | --- | --- |
@@ -57,8 +57,7 @@ without sleeping. A new sleep is always computed from the real clock.
 
 Completed frames remain at final suspension until cancellation or destruction.
 Their parameters and exception remain owned, so the caller can finish handling
-the result before releasing the frame. No completion callback is invoked in
-this ownership model. Cancellation destroys local objects and parameters;
+the result before releasing the frame. Cancellation destroys local objects and parameters;
 it does not resume the body or execute code after the suspended await.
 
 The local scheduler callbacks only update readiness/deadline inside the
@@ -66,6 +65,5 @@ current resume call. They neither queue the handle nor run application work.
 The caller must remove its own pending turn/timer registrations before
 destroying the owner. `ready()` and `deadline()` are mutually exclusive.
 
-Standalone [task::start](task.md) retains its detached lifecycle and custom
-awaiters. See the [example](../../../examples/common/task_execution/README.md)
+See the [example](../../../examples/common/task_execution/README.md)
 and [tests](../../../tests/unit/common/task_execution_tests.cpp).

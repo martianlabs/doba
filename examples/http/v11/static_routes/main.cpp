@@ -22,10 +22,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#include "common/console_logger.h"
 #include "common/signaler.h"
-#include "protocol/http/common/method_names.h"
 #include "http_server.h"
+#include "protocol/http/common/method_names.h"
 
 using namespace martianlabs::doba::common;
 using namespace martianlabs::doba::protocol::http;
@@ -36,18 +35,11 @@ using namespace martianlabs::doba::protocol::http::v11;
 // +---------------------------------------------------------------------------+
 // | [>] main                                                  ( entry-point ) |
 // +---------------------------------------------------------------------------+
-// | This is the entry point of the application. It creates an HTTP server     |
-// | that listens on all interfaces (0.0.0.0) and port 8080.                   |
-// | The server registers four routes for the "/resources" path, each handling |
-// | a different HTTP method (GET, POST, PUT, DELETE).                         |
-// | Each route has a corresponding lambda function that constructs an         |
-// | appropriate response with different HTTP status codes and headers.        |
-// | The server runs until a termination signal is received.                   |
+// | Give each HTTP method its own handler for the same path.                  |
 // +---------------------------------------------------------------------------+
 // /////////////////////////////////////////////////////////////////////////////
 int main() {
   http_server<> http_server({.ip = "0.0.0.0", .port = "8080"});
-  // A path can expose an independent handler for each HTTP method.
   http_server.add_route(
       method_names::kGet, "/resources", [](const request&, response& res) {
         res.ok_200();
@@ -70,8 +62,7 @@ int main() {
   http_server.add_route(method_names::kDelete, "/resources",
                         [](const request&, response& res) {
                           res.no_content_204();
-                          // no_content_204() leaves the response without a
-                          // message body.
+                          // A 204 response has no body.
                           return;
                         });
   http_server.start();

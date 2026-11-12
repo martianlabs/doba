@@ -1,4 +1,12 @@
-# HTTP/1.1 examples
+<a name="http11-examples"></a>
+<h1>
+  <a href="../../../resources/examples/http/v11/h1-http11-examples.svg#gh-light-mode-only">
+    <img src="../../../resources/examples/http/v11/h1-http11-examples.svg" alt="HTTP/1.1 examples">
+  </a>
+  <a href="../../../resources/examples/http/v11/h1-http11-examples-dark.svg#gh-dark-mode-only">
+    <img src="../../../resources/examples/http/v11/h1-http11-examples-dark.svg" alt="HTTP/1.1 examples">
+  </a>
+</h1>
 
 Build the project from the repository root as described in the
 [examples index](../../README.md). The TCP examples listen on
@@ -65,7 +73,7 @@ Inline-response pipelining is supported; an
 input batch can own only one terminal reader. Later nonempty output or another
 reader closes the connection. Empty sends without a reader are no-ops.
 
-See the [runtime contract](../../../docs/reference/transport/server/tcp.md#runtime-contract)
+See the [runtime contract](../../../docs/reference/transport/tcp.md#runtime-contract)
 for ownership and Linux/Windows differences.
 
 [processing_turns](processing_turns/README.md) demonstrates concurrent async

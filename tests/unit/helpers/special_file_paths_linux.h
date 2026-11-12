@@ -25,12 +25,12 @@
 #ifndef martianlabs_doba_tests_unit_special_file_paths_linux_h
 #define martianlabs_doba_tests_unit_special_file_paths_linux_h
 
+#include <sys/stat.h>
+
 #include <filesystem>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
-
-#include <sys/stat.h>
 
 // /////////////////////////////////////////////////////////////////////////////
 // +---------------------------------------------------------------------------+
