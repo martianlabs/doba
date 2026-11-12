@@ -98,15 +98,18 @@ its full validation and timed workloads.
 For Docker, put the data and certificates under `./data` and `./certs`:
 
 ```sh
-docker build --build-arg DOBA_REF=main --tag doba-httparena-http-v11 benchmarks/http/v11/httparena
+docker build --build-arg DOBA_REF=v0.1.0 --tag doba-httparena-http-v11 benchmarks/http/v11/httparena
 docker run --rm --publish 8080:8080 --publish 8081:8081 \
   --mount type=bind,src="$PWD/data",dst=/data,readonly \
   --mount type=bind,src="$PWD/certs",dst=/certs,readonly doba-httparena-http-v11
 ```
 
-Docker fetches `DOBA_REF` from GitHub, defaulting to main. Pick the matching
-published revision; it won't include your uncommitted library changes.
-Use the local build above to try those.
+Docker fetches `v0.1.0` from GitHub by default. The tag must exist before
+building the image. Use `--build-arg DOBA_REF=<tag-or-commit>` to try another
+published revision. Local library edits need the local build above.
+
+For a published benchmark, take the adapter files from the same tag as the
+library: Docker copies `main.cpp` and `CMakeLists.txt` from your build context.
 
 <a name="historical-local-reference-against-spliffy"></a>
 <h2>
