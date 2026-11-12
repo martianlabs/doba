@@ -32,7 +32,7 @@ with doba. Both work over TCP, with optional TLS when you need encryption.
   </a>
 </h2>
 
-Big throughput numbers are fun. Waiting for a response isn't. Let's look at both.
+Big throughput numbers are fun. Waiting for a response is not. Let's look at both.
 
 On **10 November 2026**, doba finished **first of 21 servers** in our local
 run of the official HttpArena HTTP/1.1 suite on Scaleway. The chart shows
