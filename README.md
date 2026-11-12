@@ -70,7 +70,7 @@ and a **1 Gbps public connection**, upgradable to **25 Gbps**.
 
 Your protocol decides what counts as a message and how to reply. The
 transport looks after the connection and moves the bytes. Want to encrypt
-the conversation later? You can switch to TLS and keep the protocol you
+the conversation later? Sure, you can switch to TLS and keep the protocol you
 already wrote.
 
 [How protocols and transports fit together](docs/guide/02-core-model.md)
