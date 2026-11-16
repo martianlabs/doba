@@ -28,6 +28,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #include "../../helpers/concurrency.h"
@@ -323,13 +324,19 @@ void check_fault(fault injected) {
   // before the slot is freed.
   bool healthy = false;
   const auto deadline = std::chrono::steady_clock::now() + 5s;
-  do {
-    client.close();
+  for (unsigned attempt = 0;
+       attempt < 50 && !healthy && std::chrono::steady_clock::now() < deadline;
+       ++attempt) {
+    client.abort();
     if (client.connect(port, 500ms) && client.send_all("ok", 500ms)) {
       const auto response = client.receive(2, 500ms);
       healthy = response && *response == "ok";
     }
-  } while (!healthy && std::chrono::steady_clock::now() < deadline);
+    if (!healthy) {
+      client.abort();
+      std::this_thread::sleep_for(100ms);
+    }
+  }
   DOBA_EXPECT(healthy);
   if (injected == fault::kAssociate) DOBA_EXPECT_EQUAL(closes.load(), 1u);
   // Stop while the next receive is still pending.
