@@ -36,10 +36,18 @@ check partial-send accounting and reader ownership.
 | `ip` | Valid loopback, malformed addresses and embedded/trailing NUL. |
 | `port` | Valid ports, zero, overflow, signs, whitespace and NUL. |
 
-Overload keeps sixteen peers connected and starts 32 extra clients together.
+Overload keeps sixteen peers connected. Eight extra clients start together,
+each making four attempts per cycle.
 Admitted clients must still get their exact replies. We free half the slots
 and refill them, for eight cycles with one/four workers. Linux's per-worker
 partition may reject early while filling; a full server must reject every extra peer.
+Rejection may arrive as EOF or a reset. Once checked, test clients use abortive
+cleanup so repeated rounds don't pile up sockets in `TIME_WAIT`. The separate
+single-slot case checks recovery after a graceful client close too.
+Recovery probes have a deadline, an attempt cap and 100 ms between failures.
+The Windows progress case checks all 32 excess connections while its admitted
+peer exchanges data. Linux keeps its 128-peer ownership check and resets the
+test sockets after checking the replies and disconnection counts.
 
 <a name="tls"></a>
 <h2>

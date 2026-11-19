@@ -25,9 +25,10 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <future>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <thread>
 
 #include "../../helpers/concurrency.h"
 #include "protocol/processing_result.h"
@@ -118,18 +119,24 @@ void admission_fairness(Policies p) {
   server.set_on_disconnection([] {});
   server.start();
   Peer admitted;
+  tests::scope_exit cleanup([&] { admitted.socket.abort(); });
   DOBA_EXPECT(admitted.connect(port));
   DOBA_EXPECT(state->connected.wait_for());
-  std::atomic<bool> stop{false};
-  std::thread flooding([&] {
-    for (int i = 0; i < 1000 && !stop.load(); ++i) {
+  auto flooding = std::async(std::launch::async, [&] {
+    for (int i = 0; i < 32; ++i) {
       tcpip_client excess;
-      excess.connect(port);
+      const bool rejected =
+          (excess.connect(port) && excess.wait_for_close(5s)) ||
+          excess.connection_reset();
+      excess.abort();
+      if (!rejected) {
+        throw std::runtime_error(
+            "Admission rejection failed: operation=" +
+            std::string(excess.operation()) + ", error=" +
+            std::string(excess.error()) + ", native_error=" +
+            std::to_string(excess.native_error()));
+      }
     }
-  });
-  tests::scope_exit cleanup([&] {
-    stop = true;
-    flooding.join();
   });
   for (int i = 0; i < 20; ++i) {
     DOBA_EXPECT(admitted.send("x"));
@@ -142,6 +149,7 @@ void admission_fairness(Policies p) {
     }
     DOBA_EXPECT_EQUAL(body, payload);
   }
+  flooding.get();
   DOBA_EXPECT_EQUAL(created.load(), 1);
 }
 

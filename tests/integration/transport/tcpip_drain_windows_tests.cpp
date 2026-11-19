@@ -364,14 +364,16 @@ DOBA_TEST("stop rejects new engine input") {
   stopped = std::async(std::launch::async, [&]() { transport.stop(); });
   bool listener_closed = false;
   const auto deadline = std::chrono::steady_clock::now() + 5s;
-  while (std::chrono::steady_clock::now() < deadline) {
+  for (unsigned attempt = 0;
+       attempt < 50 && std::chrono::steady_clock::now() < deadline; ++attempt) {
     tcpip_client probe;
     // Loopback refusal can take Winsock about two seconds.
     if (!probe.connect(port, 3s) && probe.native_error() == WSAECONNREFUSED) {
       listener_closed = true;
       break;
     }
-    std::this_thread::yield();
+    probe.abort();
+    std::this_thread::sleep_for(100ms);
   }
   const bool draining = stopped.wait_for(0ms) == std::future_status::timeout;
   const bool sent = client.send_all("new request");

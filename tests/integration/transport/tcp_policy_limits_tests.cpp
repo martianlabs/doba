@@ -25,6 +25,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <future>
 #include <limits>
@@ -32,10 +33,12 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "../../helpers/concurrency.h"
+#include "native_peer.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
 #include "test_helper.h"
@@ -144,7 +147,86 @@ bool rejected_endpoint(bool address, bool suffix) {
   transport.stop();
   return false;
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+// +---------------------------------------------------------------------------+
+// | [>] require_admission_rejection                              ( function ) |
+// +---------------------------------------------------------------------------+
+// | An excess peer may see EOF or a reset, even during connect().             |
+// +---------------------------------------------------------------------------+
+// /////////////////////////////////////////////////////////////////////////////
+void require_admission_rejection(tcpip_client& peer, std::uint16_t port,
+                                 std::chrono::milliseconds timeout = 5s) {
+  if (peer.connect(port) && peer.wait_for_close(timeout)) {
+    // The rejection is checked; don't pile up TIME_WAIT sockets.
+    peer.abort();
+    return;
+  }
+  if (peer.connection_reset()) return;
+  throw std::runtime_error(
+      "Admission rejection failed: operation=" + std::string(peer.operation()) +
+      ", error=" + std::string(peer.error()) +
+      ", native_error=" + std::to_string(peer.native_error()));
+}
 }  // namespace
+
+// +===========================================================================+
+// | [>] admission rejection checks                              ( test-case ) |
+// +---------------------------------------------------------------------------+
+DOBA_TEST("TCP admission rejection accepts EOF and reset") {
+  for (const bool reset : {false, true}) {
+    native_peer server;
+    tcpip_client peer;
+    auto remote = std::async(std::launch::async, [&] {
+      if (!server.accept()) return false;
+      server.close(reset);
+      return true;
+    });
+    require_admission_rejection(peer, server.port());
+    DOBA_EXPECT(remote.get());
+    DOBA_EXPECT_EQUAL(peer.connection_reset(), reset);
+  }
+}
+
+DOBA_TEST("TCP admission rejection excludes data timeouts and refused connects") {
+  for (const bool send_data : {false, true}) {
+    native_peer server;
+    tcpip_client peer;
+    auto remote = std::async(std::launch::async, [&] {
+      return server.accept() && (!send_data || server.send("unexpected"));
+    });
+    std::string diagnostic;
+    try {
+      require_admission_rejection(peer, server.port(), send_data ? 5s : 100ms);
+    } catch (const std::runtime_error& error) {
+      diagnostic = error.what();
+    }
+    DOBA_EXPECT(remote.get());
+    DOBA_EXPECT(!diagnostic.empty());
+    DOBA_EXPECT_EQUAL(peer.operation(), "receive");
+    DOBA_EXPECT_EQUAL(peer.error(), send_data ? "" : "timeout");
+    DOBA_EXPECT_EQUAL(peer.native_error(), 0);
+    DOBA_EXPECT(diagnostic.find("operation=receive") != std::string::npos);
+    DOBA_EXPECT(diagnostic.find("native_error=0") != std::string::npos);
+  }
+  native_peer server(false);
+  tcpip_client peer;
+  std::string diagnostic;
+  try {
+    require_admission_rejection(peer, server.port());
+  } catch (const std::runtime_error& error) {
+    diagnostic = error.what();
+  }
+  DOBA_EXPECT(!diagnostic.empty());
+  DOBA_EXPECT_EQUAL(peer.operation(), "connect");
+  DOBA_EXPECT_EQUAL(peer.error(), "socket");
+  DOBA_EXPECT(peer.native_error() != 0);
+  DOBA_EXPECT(!peer.connection_reset());
+  DOBA_EXPECT(diagnostic.find("operation=connect") != std::string::npos);
+  DOBA_EXPECT(diagnostic.find("native_error=" +
+                              std::to_string(peer.native_error())) !=
+              std::string::npos);
+}
 
 // +===========================================================================+
 // | [>] endpoint strings are validated without truncation       ( test-case ) |
@@ -347,19 +429,24 @@ DOBA_TEST("TCP finite admission rejects before allocation and recovers") {
   DOBA_EXPECT(live.send_all("ok"));
   const auto first = live.receive(2, 5s);
   DOBA_EXPECT(first && *first == "ok");
-  DOBA_EXPECT(excess.connect(port));
-  DOBA_EXPECT(excess.wait_for_close(5s));
+  require_admission_rejection(excess, port);
   DOBA_EXPECT_EQUAL(state->created.load(), 1);
   live.close();
   bool recovered = false;
   const auto deadline = std::chrono::steady_clock::now() + 5s;
-  do {
-    healthy.close();
+  for (unsigned attempt = 0;
+       attempt < 50 && !recovered && std::chrono::steady_clock::now() < deadline;
+       ++attempt) {
+    healthy.abort();
     if (healthy.connect(port, 500ms) && healthy.send_all("ok", 500ms)) {
       const auto reply = healthy.receive(2, 500ms);
       recovered = reply && *reply == "ok";
     }
-  } while (!recovered && std::chrono::steady_clock::now() < deadline);
+    if (!recovered) {
+      healthy.abort();
+      std::this_thread::sleep_for(100ms);
+    }
+  }
   DOBA_EXPECT(recovered);
 }
 
@@ -386,31 +473,50 @@ DOBA_TEST(
         factory);
     std::vector<std::unique_ptr<tcpip_client>> live;
     martianlabs::doba::tests::scope_exit cleanup([&] {
+      for (auto& peer : live) peer->abort();
       live.clear();
       transport.stop();
     });
     transport.start();
     for (unsigned cycle = 0; cycle < 8; ++cycle) {
+      martianlabs::doba::tests::integration::test_helper::set_context(
+          "workers=" + std::to_string(workers) +
+          ", cycle=" + std::to_string(cycle));
       const auto deadline = std::chrono::steady_clock::now() + 10s;
       while (live.size() < capacity &&
              std::chrono::steady_clock::now() < deadline) {
         auto peer = std::make_unique<tcpip_client>();
         if (!peer->connect(port, 500ms) || !peer->send_all("ok", 500ms)) {
+          peer->abort();
           continue;
         }
         const auto output = peer->receive(2, 500ms);
-        if (output && *output == "ok") live.push_back(std::move(peer));
+        if (output && *output == "ok") {
+          live.push_back(std::move(peer));
+        } else {
+          peer->abort();
+        }
       }
       DOBA_EXPECT_EQUAL(live.size(), capacity);
       const auto created = state->created.load();
       martianlabs::doba::tests::manual_event begin;
-      std::vector<std::future<bool>> excess;
+      std::vector<std::future<void>> excess;
       martianlabs::doba::tests::scope_exit release_start([&] { begin.open(); });
-      for (unsigned i = 0; i < 32; ++i) {
-        excess.push_back(std::async(std::launch::async, [&] {
+      // Keep the same 32 attempts without starting 32 client threads at once.
+      for (unsigned i = 0; i < 8; ++i) {
+        excess.push_back(std::async(std::launch::async, [&, i] {
           begin.wait();
           tcpip_client peer;
-          return peer.connect(port) && peer.wait_for_close(5s);
+          try {
+            for (unsigned attempt = 0; attempt < 4; ++attempt) {
+              require_admission_rejection(peer, port);
+            }
+          } catch (const std::runtime_error& error) {
+            throw std::runtime_error(
+                "workers=" + std::to_string(workers) +
+                ", cycle=" + std::to_string(cycle) +
+                ", peer=" + std::to_string(i) + ": " + error.what());
+          }
         }));
       }
       begin.open();
@@ -421,10 +527,11 @@ DOBA_TEST(
         const auto output = live[i]->receive(payload.size(), 5s);
         DOBA_EXPECT(output && *output == payload);
       }
-      for (auto& result : excess) DOBA_EXPECT(result.get());
+      for (auto& result : excess) result.get();
       DOBA_EXPECT_EQUAL(state->created.load(), created);
       DOBA_EXPECT(state->bounded.load());
       // Free half the slots; the next cycle must refill them without a restart.
+      for (std::size_t i = capacity / 2; i < live.size(); ++i) live[i]->abort();
       live.resize(capacity / 2);
     }
   }

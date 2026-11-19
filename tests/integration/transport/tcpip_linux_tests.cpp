@@ -43,6 +43,7 @@
 #include <utility>
 #include <vector>
 
+#include "../../helpers/concurrency.h"
 #include "common/reader.h"
 #include "protocol/processing_result.h"
 #include "tcpip_client.h"
@@ -580,6 +581,9 @@ DOBA_TEST("Linux workers own independent connections and sources") {
   transport.start();
   transport.start();
   std::vector<std::unique_ptr<tcpip_client>> peers;
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    for (auto& peer : peers) peer->abort();
+  });
   std::vector<std::string> prefixes;
   std::set<std::string> owners;
   for (unsigned index = 0; index < 128; ++index) {
@@ -630,16 +634,22 @@ DOBA_TEST("Linux partitions finite admission without exceeding it") {
       factory);
   transport.start();
   std::vector<std::unique_ptr<tcpip_client>> peers;
+  martianlabs::doba::tests::scope_exit cleanup([&] {
+    for (auto& peer : peers) peer->abort();
+  });
   for (unsigned index = 0; index < 128 && peers.size() < 7; ++index) {
     auto peer = std::make_unique<tcpip_client>();
     DOBA_EXPECT(peer->connect(port));
     if (peer->send_all("x") &&
         peer->receive(1) == std::optional<std::string>("x")) {
       peers.push_back(std::move(peer));
+    } else {
+      peer->abort();
     }
   }
   DOBA_EXPECT_EQUAL(peers.size(), std::size_t{7});
   tcpip_client excess;
+  martianlabs::doba::tests::scope_exit close_excess([&] { excess.abort(); });
   DOBA_EXPECT(excess.connect(port));
   if (excess.send_all("x")) {
     DOBA_EXPECT(!excess.receive(1).has_value());

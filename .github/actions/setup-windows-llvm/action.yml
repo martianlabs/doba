@@ -1,0 +1,38 @@
+name: Set up qualified Windows LLVM
+description: Install and verify the LLVM version used by Windows Clang jobs.
+runs:
+  using: composite
+  steps:
+    - name: Install LLVM 22.1.8
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $compiler = 'C:/Program Files/LLVM/bin/clang++.exe'
+        $versionPattern = 'clang version 22\.1\.8\b'
+        if (Test-Path -LiteralPath $compiler) {
+          $version = & $compiler --version | Out-String
+          if ($LASTEXITCODE -eq 0 -and $version -match $versionPattern) {
+            Write-Output $version
+            exit 0
+          }
+        }
+        New-Item -ItemType Directory -Force out/tools | Out-Null
+        $installer = Join-Path $PWD 'out/tools/LLVM-22.1.8-win64.exe'
+        Invoke-WebRequest -OutFile $installer -Uri (
+          'https://github.com/llvm/llvm-project/releases/download/' +
+          'llvmorg-22.1.8/LLVM-22.1.8-win64.exe'
+        )
+        $expected = (
+          '16e5709785fef73c854646241c4a92c5cd574318d1b33c63330dd7721903e55c'
+        )
+        if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) {
+          throw 'LLVM installer checksum mismatch'
+        }
+        $process = Start-Process -FilePath $installer -Wait -PassThru `
+          -WindowStyle Hidden -ArgumentList '/S', '/D=C:\Program Files\LLVM'
+        if ($process.ExitCode -ne 0) { throw 'LLVM installation failed' }
+        $version = & $compiler --version | Out-String
+        if ($LASTEXITCODE -ne 0 -or $version -notmatch $versionPattern) {
+          throw "Unexpected LLVM version after installation: $version"
+        }
+        Write-Output $version

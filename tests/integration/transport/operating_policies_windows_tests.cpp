@@ -173,17 +173,20 @@ void admission(Policies p) {
   DOBA_EXPECT(two.send(get));
   DOBA_EXPECT(reply(two, "ok"));
   tcpip_client excess;
-  DOBA_EXPECT(excess.connect(port));
-  DOBA_EXPECT(closed(excess));
+  DOBA_EXPECT((excess.connect(port) && closed(excess)) ||
+              excess.connection_reset());
+  excess.abort();
   std::atomic<int> rejected{0};
   std::vector<std::thread> burst;
-  for (int i = 0; i < 8; ++i)
+  for (int i = 0; i < 8; ++i) {
     burst.emplace_back([&] {
       tcpip_client client;
-      if (client.connect(port) && closed(client)) {
+      if ((client.connect(port) && closed(client)) || client.connection_reset()) {
         ++rejected;
       }
+      client.abort();
     });
+  }
   for (auto& thread : burst) thread.join();
   DOBA_EXPECT_EQUAL(rejected.load(), 8);
   // Another transport must still accept while this one is full.
@@ -201,22 +204,29 @@ void admission(Policies p) {
   DOBA_EXPECT(separate.send(get));
   DOBA_EXPECT(reply(separate, "ok"));
   independent.stop();
+  separate.socket.abort();
   DOBA_EXPECT(one.send(get));
   DOBA_EXPECT(reply(one, "ok"));
   two.socket.close();
   bool recovered = false;
   const auto deadline = std::chrono::steady_clock::now() + 3s;
-  while (!recovered && std::chrono::steady_clock::now() < deadline) {
+  for (unsigned attempt = 0;
+       attempt < 30 && !recovered && std::chrono::steady_clock::now() < deadline;
+       ++attempt) {
     Peer next;
     recovered = next.connect(port) && next.send(get) && reply(next, "ok");
+    next.socket.abort();
+    if (!recovered) std::this_thread::sleep_for(100ms);
   }
   DOBA_EXPECT(recovered);
+  one.socket.abort();
   server.stop();
   server.start();
   Peer next;
   DOBA_EXPECT(next.connect(port));
   DOBA_EXPECT(next.send(get));
   DOBA_EXPECT(reply(next, "ok"));
+  next.socket.abort();
   server.stop();
 }
 
