@@ -398,6 +398,9 @@ jobs:
         with:
           arch: x64
 
+      - uses: ./.github/actions/setup-windows-llvm
+        if: matrix.name == 'Clang UBSan'
+
       - name: Configure TCP with cooperative engine turns (TLS disabled)
         run: >-
           cmake -S . -B out/build/msvc-asan -G Ninja
@@ -588,6 +591,9 @@ jobs:
         with:
           arch: x64
 
+      - uses: ./.github/actions/setup-windows-llvm
+        if: runner.os == 'Windows'
+
       - name: Configure Release fuzzers
         run: >-
           cmake -S . -B out/build/fuzz -G Ninja
@@ -706,6 +712,8 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: x64
+      - uses: ./.github/actions/setup-windows-llvm
+        if: runner.os == 'Windows'
       - name: Verify original tests and detect eight mutants
         run: >-
           cmake "-DDOBA_MUTATION_COMPILER=${{ matrix.compiler }}"
@@ -790,7 +798,7 @@ jobs:
           - os: windows-latest
             name: UBSan
             runtime: MultiThreaded
-            compiler: clang++
+            compiler: C:/Program Files/LLVM/bin/clang++.exe
             type: Release
             flags: >-
               -fsanitize=undefined -fno-sanitize-recover=undefined -g
@@ -823,6 +831,8 @@ jobs:
             "$ssl/debug/bin"
           } else { "$ssl/bin" }
           $dll >> $env:GITHUB_PATH
+      - uses: ./.github/actions/setup-windows-llvm
+        if: runner.os == 'Windows' && matrix.name == 'UBSan'
       - name: Configure TLS
         shell: pwsh
         run: |
@@ -939,31 +949,8 @@ jobs:
           $ssl = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows"
           "OPENSSL_ROOT_DIR=$ssl" >> $env:GITHUB_ENV
           "$ssl/bin" >> $env:GITHUB_PATH
-      - name: Install qualified LLVM on Windows
+      - uses: ./.github/actions/setup-windows-llvm
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $compiler = 'C:/Program Files/LLVM/bin/clang++.exe'
-          if ((Test-Path $compiler) -and
-              ((& $compiler --version | Out-String) -match
-                'clang version 22\.1\.8\b')) {
-            exit 0
-          }
-          New-Item -ItemType Directory -Force out/tools | Out-Null
-          $installer = Join-Path $PWD 'out/tools/LLVM-22.1.8-win64.exe'
-          Invoke-WebRequest -OutFile $installer -Uri (
-            'https://github.com/llvm/llvm-project/releases/download/' +
-            'llvmorg-22.1.8/LLVM-22.1.8-win64.exe'
-          )
-          $expected = (
-            '16e5709785fef73c854646241c4a92c5cd574318d1b33c63330dd7721903e55c'
-          )
-          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $expected) {
-            throw 'LLVM installer checksum mismatch'
-          }
-          $process = Start-Process -FilePath $installer -Wait -PassThru `
-            -WindowStyle Hidden -ArgumentList '/S', '/D=C:\Program Files\LLVM'
-          if ($process.ExitCode -ne 0) { throw 'LLVM installation failed' }
       - name: Build native qualification tools
         shell: pwsh
         run: |
